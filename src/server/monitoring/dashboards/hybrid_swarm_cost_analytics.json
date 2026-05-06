@@ -20,10 +20,29 @@
   "liveNow": false,
   "panels": [
     {
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n  .grafana-app {\n    background-color: #0b0c10 !important;\n  }\n</style>"
+      }
+    },
+    {
       "title": "Swarm Throughput",
       "type": "timeseries",
       "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 2
+      },
       "targets": [
         {
           "expr": "rate(ohc_agent_cost_total[5m])",
@@ -36,7 +55,12 @@
       "title": "Entity Latency",
       "type": "timeseries",
       "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 2
+      },
       "targets": [
         {
           "expr": "rate(ohc_swarm_job_latency_by_entity_seconds_sum[5m]) / rate(ohc_swarm_job_latency_by_entity_seconds_count[5m])",
@@ -49,7 +73,12 @@
       "title": "Contention Heatmap",
       "type": "heatmap",
       "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
       "targets": [
         {
           "expr": "sum by(operation) (rate(ohc_sqlite_lock_contention_total[5m]))",
@@ -62,7 +91,12 @@
       "title": "Cost Analytics Breakdown",
       "type": "barchart",
       "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
       "targets": [
         {
           "expr": "sum by(entity) (increase(ohc_agent_cost_total[1h]))",

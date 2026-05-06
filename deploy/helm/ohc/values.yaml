@@ -42,6 +42,18 @@ backend:
 # In cloud-native mode the core runs as a dedicated micro-service.
 ohcCore:
   enabled: true
+  resourceQuota:
+    enabled: true
+    requests:
+      cpu: "4"
+      memory: "8Gi"
+      ephemeralStorage: "20Gi"
+    limits:
+      cpu: "10"
+      memory: "16Gi"
+      ephemeralStorage: "40Gi"
+      pods: "20"
+
   image: onehumancorp/mono-core:latest
   replicas: 1
   service:
@@ -84,6 +96,18 @@ cnpg:
 # (agent-to-agent, agent-to-human, agent-to-customer, human-to-customer).
 chatwoot:
   enabled: true
+  resourceQuota:
+    enabled: true
+    requests:
+      cpu: "4"
+      memory: "8Gi"
+      ephemeralStorage: "20Gi"
+    limits:
+      cpu: "10"
+      memory: "16Gi"
+      ephemeralStorage: "40Gi"
+      pods: "20"
+
   image: chatwoot/chatwoot:v3.15.1
   replicas: 1
   service:
@@ -123,6 +147,18 @@ multiTenant:
 # PowerSync - synchronization engine
 powersync:
   enabled: true
+  resourceQuota:
+    enabled: true
+    requests:
+      cpu: "2"
+      memory: "4Gi"
+      ephemeralStorage: "10Gi"
+    limits:
+      cpu: "4"
+      memory: "8Gi"
+      ephemeralStorage: "20Gi"
+      pods: "10"
+
   image: journeyapps/powersync-service:latest
   replicas: 1
   service:
