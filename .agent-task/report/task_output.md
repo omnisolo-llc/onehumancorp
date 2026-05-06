@@ -1,127 +1,119 @@
-# OHC Small Business Platform Research Report
+# Scout: Tool Integration Research Q2
 
-## 1. Deep Competitor Audit
+This report details the evaluation of 7 integration tools across requested categories to expand OneHumanCorp's capabilities for small business owners.
 
-### Shopify (https://shopify.com)
-*   **Target:** E-commerce (mostly physical goods).
-*   **Onboarding:** Extensive, overwhelming. Requires significant configuration before going live.
-*   **Mobile App:** Excellent for managing an existing store (orders, inventory), poor for initial setup.
-*   **AI Features:** "Shopify Sidekick" (chat-based assistant), AI product descriptions. It's a copilot, not an autonomous agent.
-*   **Pricing:** Starts at $39/mo.
-*   **Free Tier:** 3-day trial. No useful free tier.
-*   **User Complaints:** Steep learning curve, expensive themes/apps, overwhelming interface for simple needs.
+## 1. Social Media Integration
+**Title**: Integrate Ayrshare for Unified Social Media Inbox and Cross-Posting
+**Problem Statement**: Maya the Baker and Carlos the Handyman spend too much time jumping between Instagram DMs, Facebook Comments, and TikTok. They want a single inbox and a way to post to multiple platforms at once without understanding technical integrations.
+**Research Report**:
+- Ayrshare provides a unified API for posting and retrieving messages across all major social networks (Instagram, Facebook, X, TikTok, LinkedIn).
+- Competitor Wix has basic integrations, but Ayrshare makes it easy to support a wider array natively.
+- Pricing: Free tier available, then scales per user.
+- Fits OHC’s "The Promoter" agent to automate posts and "The Ambassador" to draft replies.
+- Non-technical users benefit by never leaving the OHC interface.
+- Works in Cloud mode well; Standalone mode might require personal Ayrshare API keys or direct OAuth.
+**Design Doc**:
+- Users link their social accounts via a simple OAuth popup in the "Marketing & Advertising" tab.
+- "The Ambassador" AI monitors incoming DMs and drafts replies visible in a unified "Customer Inbox."
+- "The Promoter" AI schedules and auto-posts images (e.g., new cake designs) to all linked platforms.
+**Implementation Prompt**: Implement an integration where users can link Instagram and Facebook, allowing OHC AI agents to read incoming messages and draft replies in the unified inbox, and schedule out outbound picture posts.
+**Priority**: P1
+**Estimated Scope**: Large
 
-### Wix (https://wix.com)
-*   **Target:** General websites, service businesses, basic e-commerce.
-*   **Onboarding:** Easier than Shopify. Wix ADI (AI builder) helps create the initial site.
-*   **Mobile App:** Limited editing capabilities.
-*   **AI Features:** Wix ADI (generates site layout and text). Mostly focused on creation, not ongoing management.
-*   **Pricing:** Starts at $16/mo.
-*   **Free Tier:** Free tier available but with Wix ads and no custom domain.
-*   **User Complaints:** Sluggish editor, can feel bloated, "too many options."
+## 2. Calendar & Scheduling
+**Title**: Integrate Cal.com for Zero-Config Booking & Calendar Sync
+**Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
+**Research Report**:
+- Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box.
+- It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
+- Free tier available for individuals; great for our free tier users.
+- Alternative is building from scratch, which is error-prone.
+**Design Doc**:
+- "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
+- Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.
+- When a customer books a slot on the OHC public page, Cal.com manages the calendar event and conflict resolution transparently.
+**Implementation Prompt**: Embed Cal.com's infrastructure so users can sync their personal calendars and provide a public booking widget on their storefront that prevents double-booking.
+**Priority**: P0
+**Estimated Scope**: Medium
 
-### Squarespace (https://squarespace.com)
-*   **Target:** Creatives, portfolios, restaurants, basic e-commerce.
-*   **Onboarding:** Template-driven. Requires manual customization.
-*   **Mobile App:** Basic editing and management.
-*   **AI Features:** Basic AI text generation. No strong autonomous features.
-*   **Pricing:** Starts at $16/mo.
-*   **Free Tier:** 14-day trial. No useful free tier.
-*   **User Complaints:** Restrictive templates, limited flexibility, expensive for full e-commerce.
+## 3. Email Marketing
+**Title**: Integrate Listmonk for Embedded, No-Jargon Email Campaigns
+**Problem Statement**: Priya the Boutique Owner wants to email her past customers when new stock arrives but finds Mailchimp confusing and expensive. She just wants to say "send this to everyone who bought last month."
+**Research Report**:
+- Listmonk is an open-source, self-hosted newsletter and mailing list manager.
+- It is lightweight (Go + PostgreSQL), aligning perfectly with the OHC backend stack.
+- Zero extra SaaS costs for OHC Standalone users; minimal scaling costs for Cloud.
+- Simplifies list management and supports template-based sending without complex drag-and-drop builders.
+**Design Doc**:
+- Customer Success ("The Ambassador") tags customers automatically (e.g., "bought-shoes").
+- Users type a plain-text prompt: "Draft an email about our new summer dresses."
+- AI generates the HTML, Listmonk handles the reliable batch delivery, bounce tracking, and open rate analytics.
+**Implementation Prompt**: Integrate Listmonk as the underlying email engine to allow users to trigger marketing emails to specific customer segments directly from the OHC dashboard.
+**Priority**: P2
+**Estimated Scope**: Medium
 
-### GoDaddy / Airo (https://godaddy.com)
-*   **Target:** Absolute beginners, domain buyers.
-*   **Onboarding:** Extremely simple, but shallow. Airo helps with initial branding.
-*   **Mobile App:** Basic.
-*   **AI Features:** Airo (generates logo, tagline, basic site). Very limited post-launch AI.
-*   **Pricing:** Starts around $10/mo (often with aggressive introductory discounts).
-*   **Free Tier:** Basic free tier available.
-*   **User Complaints:** Aggressive upselling, hidden fees, poor reputation, very basic features.
+## 4. Payment Processing
+**Title**: Expand Payments with Mercado Pago for LATAM Users
+**Problem Statement**: Non-US users in Latin America cannot rely solely on Stripe due to high fees, lack of local currency support, and specific local payment methods (like Pix in Brazil or OXXO in Mexico).
+**Research Report**:
+- Mercado Pago is the dominant payment gateway in LATAM.
+- Supports local payment methods which are critical for conversion (often >50% of transactions).
+- API is well-documented. Settlement times are faster locally compared to cross-border Stripe.
+- Works for both Cloud (via OHC platform account) and Standalone (user supplies API keys).
+**Design Doc**:
+- In the "Finance & Payments" settings, users select their region. If in LATAM, Mercado Pago is highlighted as the recommended provider.
+- Setup involves standard OAuth flow or API key drop-in.
+- Supports one-off payments and split payments for the eventual marketplace feature.
+**Implementation Prompt**: Add Mercado Pago as a payment provider alternative to Stripe, allowing users in supported LATAM countries to accept local payment methods via the OHC checkout flow.
+**Priority**: P1
+**Estimated Scope**: Large
 
-### Square Online (https://squareup.com/online-store)
-*   **Target:** Retailers, restaurants, service businesses with physical presence.
-*   **Onboarding:** Driven by item catalog setup.
-*   **Mobile App:** Excellent for in-person sales (POS), basic for online store management.
-*   **AI Features:** Generative AI for item descriptions, basic photo editing.
-*   **Pricing:** Free tier available (pay only processing fees), paid plans start at $29/mo.
-*   **Free Tier:** Strong free tier (pay per transaction).
-*   **User Complaints:** Limited customization, less flexible than Shopify for pure e-commerce.
+## 5. Shipping & Logistics
+**Title**: Integrate EasyPost for Painless Shipping Labels & Tracking
+**Problem Statement**: Priya the Boutique Owner hates manually copying addresses to USPS/FedEx to buy shipping labels. She wants one button to print a label and auto-email the tracking number.
+**Research Report**:
+- EasyPost provides a single, unified API for 100+ carriers (USPS, FedEx, UPS, DHL).
+- Competitive pricing (free tier for low volume, pennies per label after).
+- Abstracts away complex carrier-specific APIs and handles tracking webhooks.
+- Great fit for OHC physical product merchants.
+**Design Doc**:
+- Upon order placement, "Operations" calculates the shipping rate via EasyPost and charges the customer.
+- In the Order details view, the business owner clicks "Print Label."
+- EasyPost generates a PDF (auto-compressed and stored in GCS).
+- Tracking updates via EasyPost webhooks trigger "The Ambassador" to email the customer automatically.
+**Implementation Prompt**: Connect EasyPost to the order fulfillment flow so users can generate shipping labels and automatically send tracking updates to customers.
+**Priority**: P1
+**Estimated Scope**: Medium
 
----
+## 6. SMS & Notifications
+**Title**: Integrate Twilio for Global SMS Alerts & Customer Notifications
+**Problem Statement**: Fatima the Food Cart Operator doesn't have a reliable internet connection at her cart and relies on SMS text messages to know when a pre-order arrives.
+**Research Report**:
+- Twilio is the industry standard for SMS and WhatsApp messaging globally.
+- Reliable delivery, deep global coverage.
+- Supports WhatsApp, which is critical for markets outside the US.
+- Simple API, integrates well with Go backend.
+- Costs per message, can be passed to the tenant or subsidized in premium tiers.
+**Design Doc**:
+- Users can enable "SMS Notifications" in the "Operations" settings.
+- When an order is placed, the OHC backend triggers a Twilio API call to text the business owner.
+- Additionally, "The Ambassador" can send order confirmation texts to customers who prefer SMS over email.
+**Implementation Prompt**: Add Twilio integration to dispatch SMS order notifications to the business owner and provide SMS-based order updates to end customers.
+**Priority**: P0
+**Estimated Scope**: Small
 
-## 2. Top 10 SMB Pain Points
-
-1.  **Setting up a website is too complex/technical.** (Source: Reddit `r/smallbusiness`, Trustpilot reviews for Shopify/Wix). Users get stuck on domains, DNS, and theme customization.
-2.  **Managing inventory across multiple channels is a nightmare.** (Source: Reddit `r/ecommerce`). Keeping physical store and online store in sync is difficult.
-3.  **Customer communication is scattered.** (Source: App Store reviews). DMs on Instagram, Facebook, emails, and SMS are hard to track.
-4.  **Booking and scheduling is manual.** (Source: Reddit `r/smallbusiness`). Service businesses spend too much time going back and forth via text/email.
-5.  **Writing product descriptions/copy takes too long.** (Source: General e-commerce forums).
-6.  **Figuring out marketing/SEO is overwhelming.** (Source: Reddit `r/smallbusiness`). Owners don't know where to start or don't have the budget for ads.
-7.  **Following up with leads/abandoned carts is forgotten.** (Source: Trustpilot reviews). Manual follow-ups are often missed when busy.
-8.  **Understanding analytics/finances is confusing.** (Source: Reddit `r/smallbusiness`). Dashboards have too much data and not enough actionable insights.
-9.  **Mobile management is limited.** (Source: App Store reviews). Owners want to do everything from their phone, but apps often lack desktop features.
-10. **The cost of tools adds up quickly.** (Source: Reddit `r/smallbusiness`). Subscribing to a website builder, booking tool, email marketing tool, etc., is expensive.
-
----
-
-## 3. OHC AI Differentiation Manifesto
-
-**The 5 AI Automations OHC Will Implement First:**
-
-1.  **Invisible Social Media Inbox (The Ambassador):** Automatically consolidate Instagram, Facebook, and email messages into one inbox and draft AI-suggested replies (or auto-reply for common questions like hours/location). Saves hours per day.
-2.  **One-Click Product Creation (The Manager):** Users upload a photo from their phone. AI automatically writes the title, description, and suggests pricing based on market data. Saves 30 min per upload.
-3.  **Auto-Pilot Follow-ups (The Salesperson):** AI automatically sends perfectly timed text/email follow-ups to inquiries or abandoned carts, maximizing conversion without manual effort.
-4.  **Generative Social Marketing (The Promoter):** AI analyzes the product catalog and generates weekly social media posts (image + caption) ready to be published with one click. Removes the biggest marketing barrier.
-5.  **Weekly Plain-English Business Insights (The Advisor):** Instead of complex dashboards, AI sends a weekly text/email: "You made $500 this week. Most of it came from [Product A]. Try promoting [Product B] next week." Makes owners feel smart and in control.
-
----
-
-## 4. Market Sizing & Strategic Direction
-
-*   **TAM:** Over 33 million small businesses in the US alone; globally, hundreds of millions. A significant percentage (estimated 30-40% of micro-businesses) have no real online presence beyond a social media page.
-*   **Beachhead Market:** Service-based solopreneurs (tutors, handymen, consultants like Leo and Carlos). Highest density of underserved users. They don't need complex inventory; they need simple booking, invoicing, and lead capture.
-*   **Geographic Expansion:** LATAM (Spanish/Portuguese). High rate of mobile-first entrepreneurship. OHC's mobile-first, AI-driven approach is perfect for regions skipping desktop entirely.
-*   **Vertical Expansion:** Focus horizontally first (simple e-commerce + booking), then deepen booking features.
-
----
-
-## 5. Feature Gap Matrix
-
-| Feature | Shopify | Wix | OHC (current) | OHC (gap/advantage) |
-| :--- | :--- | :--- | :--- | :--- |
-| **Setup Speed** | Slow | Medium | Fast (AI) | Advantage: AI handles setup. |
-| **Mobile App Setup** | Poor | Poor | Focus | Advantage: 10-minute mobile setup. |
-| **AI Assistant** | Copilot (Sidekick) | Builder (ADI) | Autonomous Agents | Gap: Need to build out the autonomous agents (Ambassador, Manager, etc.). |
-| **Booking/Scheduling** | Via App | Yes | Basic | Gap: Needs robust integrated booking (Cal.com integration). |
-| **Unified Inbox** | Basic | Yes | Missing | Gap: Needs Meta Graph API integration. |
-| **Automated Marketing** | Manual/Apps | Basic | Missing | Gap: Needs the "Promoter" agent for auto-social posts. |
-
----
-
-## Proposed Next Steps (Issue Briefs)
-
-Detailed issue briefs have been created in `docs/research/`.
-
-```mermaid
-pie title US Small Business Online Presence
-    "Active E-commerce Website" : 40
-    "Social Media Only" : 35
-    "No Online Presence" : 25
-```
-
-```mermaid
-graph TD
-    A[Small Business Owner] --> B(Instagram DMs);
-    A --> C(Facebook Messenger);
-    A --> D(Email);
-    B -.-> E[Overwhelm & Missed Sales];
-    C -.-> E;
-    D -.-> E;
-
-    F[Small Business Owner] -->|Using OHC| G{The Ambassador AI};
-    G --> H(Unified Inbox);
-    G --> I[AI Suggested Replies];
-    H --> J[Faster Response Time];
-    I --> J;
-    J --> K[Increased Sales];
-```
+## 7. Video Conferencing
+**Title**: Embed Jitsi Meet for Zero-Setup Online Lessons
+**Problem Statement**: Leo the Music Tutor currently has to manually create Zoom links, email them to students, and deal with students losing the link. He needs an automated, branded video room.
+**Research Report**:
+- Jitsi Meet is a fully open-source, WebRTC-based video conferencing tool.
+- Requires no account for the student. Works natively in the browser and mobile.
+- OHC can host a Jitsi instance (for Cloud mode) or point to public servers (for Standalone), saving users from needing a paid Zoom subscription.
+- Completely seamless integration with no technical setup required by the user.
+**Design Doc**:
+- When a service is marked as "Online Meeting", OHC auto-generates a unique Jitsi URL (e.g., `meet.ohc.com/leo-guitar-session`).
+- The link is automatically added to the calendar invite and the customer's dashboard.
+- Users just click the link at the scheduled time to join the browser-based call.
+**Implementation Prompt**: Integrate auto-generated Jitsi Meet links for bookings designated as "Online", providing a seamless, no-login video conferencing experience for service-based businesses.
+**Priority**: P2
+**Estimated Scope**: Small
