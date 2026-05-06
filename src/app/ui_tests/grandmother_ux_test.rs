@@ -130,3 +130,11 @@ fn test_landing_title() {
     let ui = crate::app::Landing::new().unwrap();
     assert_eq!(ui.get_test_title(), slint::SharedString::from("OneHumanCorp"));
 }
+
+#[test]
+fn test_dashboard_grandmother_ux_labels_2() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Dashboard::new().unwrap();
+    // Verify creation doesn't panic after label updates
+}

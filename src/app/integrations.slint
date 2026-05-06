@@ -39,7 +39,7 @@ export component Integrations inherits Window {
                     padding: 16px;
                     spacing: 8px;
                     Text { text: "✈️ Telegram"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Connect your bot for mobile alerts"; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Get mobile alerts"; color: #64748b; wrap: word-wrap; }
                     Button { 
                         text: "Configure"; 
                         clicked => { configure_integration("Telegram"); }
@@ -58,7 +58,7 @@ export component Integrations inherits Window {
                     padding: 16px;
                     spacing: 8px;
                     Text { text: "👾 Discord"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Stream agent logs to a channel"; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Send messages to your team"; color: #64748b; wrap: word-wrap; }
                     Button { 
                         text: "Configure"; 
                         clicked => { configure_integration("Discord"); }
@@ -81,7 +81,7 @@ export component Integrations inherits Window {
                     padding: 16px;
                     spacing: 8px;
                     Text { text: "💬 Twilio"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Send SMS alerts to customers"; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Send text messages to customers"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
                         clicked => { configure_integration("Twilio"); }
@@ -123,7 +123,7 @@ export component Integrations inherits Window {
                     padding: 16px;
                     spacing: 8px;
                     Text { text: "💬 ManyChat"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Unified Social Media DMs"; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Manage social media messages"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
                         clicked => { configure_integration("ManyChat"); }
@@ -147,7 +147,7 @@ export component Integrations inherits Window {
                     padding: 16px;
                     spacing: 8px;
                     Text { text: "📧 Resend"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Native Email Campaign Manager"; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Send email marketing campaigns"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
                         clicked => { configure_integration("Resend"); }
@@ -166,7 +166,7 @@ export component Integrations inherits Window {
                     padding: 16px;
                     spacing: 8px;
                     Text { text: "📦 Shippo"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Shipping Rate & Label Generation"; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Buy shipping labels"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
                         clicked => { configure_integration("Shippo"); }
@@ -231,7 +231,7 @@ export component Integrations inherits Window {
                     padding: 16px;
                     spacing: 8px;
                     Text { text: "📹 Zoom"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Native Link Generation"; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Create video meetings"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
                         clicked => { configure_integration("Zoom"); }
@@ -257,7 +257,7 @@ export component Integrations inherits Window {
                     Text { text: "🛠️ " + tool.name; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
                     Rectangle {} 
                     Button { 
-                        text: "Invoke"; 
+                        text: "Run Tool";
                         clicked => { invoke_tool(tool.id); }
                     }
                 }
