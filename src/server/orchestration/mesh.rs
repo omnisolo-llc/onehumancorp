@@ -87,6 +87,8 @@ impl TeammateMesh for CentrifugeNode {
         })).await?;
 
         let mut retries = 0;
+        tokio::task::yield_now().await;
+
         let mut backoff = 200;
 
         loop {
