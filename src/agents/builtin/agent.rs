@@ -989,6 +989,13 @@ impl Agent {
 
             let stop_reason = resp.stop_reason.as_str();
 
+            // Layered Termination Condition: Safety Refusal
+            if stop_reason == "content_filter" || stop_reason == "safety" {
+                let err_msg = "Terminal condition reached: Safety refusal. The model halted execution due to content safety policy.".to_string();
+                on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                return Err(err_msg.into());
+            }
+
             // Text content from assistant
             if !resp.message.content.is_empty() {
                 last_assistant_content = resp.message.content.clone();
@@ -1500,10 +1507,9 @@ impl Agent {
         }
 
         // Hit max iterations.
-        on_event(AgentEvent::TaskComplete {
-            content: last_assistant_content.clone(),
-        });
-        Ok(last_assistant_content)
+        let err_msg = format!("Terminal condition reached: max turn limit exceeded ({} iterations).", max_iterations);
+        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+        return Err(err_msg.into());
     }
 
 
