@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "orchestration",
     srcs = ["tasks_db.go"],
-    importpath = "github.com/onehumancorp/ohc/srcs/server/orchestration",
+    importpath = "github.com/onehumancorp/ohc/src/server/orchestration/go",
     visibility = ["//visibility:public"],
 )
 
