@@ -85,6 +85,7 @@ thread_local! {
     static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
+    static GLOBAL_GEO_VISIBILITY: RefCell<Option<slint::Weak<app::GeoVisibility>>> = RefCell::new(None);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -1668,6 +1669,84 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 unified_inbox_ui.set_conversations(slint::ModelRc::new(slint::VecModel::from(conversations)));
 
                 let unified_inbox_handle = unified_inbox_ui.as_weak();
+
+                let geo_ui = app::GeoVisibility::new().unwrap();
+                GLOBAL_GEO_VISIBILITY.with(|g| *g.borrow_mut() = Some(geo_ui.as_weak()));
+
+                let geo_handle_open = geo_ui.as_weak();
+                dashboard.on_action_open_geo_visibility(move || {
+                    if let Some(ui) = geo_handle_open.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                let geo_handle_scan = geo_ui.as_weak();
+                geo_ui.on_start_scan(move || {
+                    if let Some(ui) = geo_handle_scan.upgrade() {
+                        ui.set_is_scanning(true);
+
+                        let ui_weak = ui.as_weak();
+                        slint::Timer::single_shot(std::time::Duration::from_secs(2), move || {
+                            if let Some(ui) = ui_weak.upgrade() {
+                                ui.set_is_scanning(false);
+                                ui.set_generative_score("65".into());
+
+                                let steps = vec![
+                                    app::UiGeoRecommendation {
+                                        id: "geo-1".into(),
+                                        title: "Add Schema.org Markup".into(),
+                                        description: "Your site lacks structured data. LLMs need this to understand your business hours and location.".into(),
+                                        impact: "High".into(),
+                                        is_applied: false,
+                                    },
+                                    app::UiGeoRecommendation {
+                                        id: "geo-2".into(),
+                                        title: "Simplify 'About Us' Language".into(),
+                                        description: "Your current description uses too much marketing jargon. AI models prefer clear, plain-language summaries.".into(),
+                                        impact: "Medium".into(),
+                                        is_applied: false,
+                                    }
+                                ];
+                                ui.set_actionable_steps(slint::ModelRc::new(slint::VecModel::from(steps)));
+                            }
+                        });
+                    }
+                });
+
+                let geo_handle_apply = geo_ui.as_weak();
+                geo_ui.on_apply_recommendation(move |id| {
+                    if let Some(ui) = geo_handle_apply.upgrade() {
+                        let mut current_steps: Vec<app::UiGeoRecommendation> = ui.get_actionable_steps().iter().collect();
+                        for step in current_steps.iter_mut() {
+                            if step.id == id {
+                                step.is_applied = true;
+                            }
+                        }
+                        ui.set_actionable_steps(slint::ModelRc::new(slint::VecModel::from(current_steps)));
+
+                        // Increase score upon applying
+                        let current_score: i32 = ui.get_generative_score().parse().unwrap_or(65);
+                        let new_score = current_score + 15;
+                        ui.set_generative_score(new_score.to_string().into());
+
+                        ui.set_toast_message("Optimization Applied!".into());
+                        ui.set_show_toast(true);
+
+                        let ui_weak = ui.as_weak();
+                        slint::Timer::single_shot(std::time::Duration::from_secs(3), move || {
+                            if let Some(ui) = ui_weak.upgrade() {
+                                ui.set_show_toast(false);
+                            }
+                        });
+                    }
+                });
+
+                let geo_handle_close = geo_ui.as_weak();
+                geo_ui.on_close(move || {
+                    if let Some(ui) = geo_handle_close.upgrade() {
+                        let _ = ui.hide();
+                    }
+                });
 
                 dashboard.on_action_check_messages(move || {
                     *check_messages_called_clone.borrow_mut() = true;

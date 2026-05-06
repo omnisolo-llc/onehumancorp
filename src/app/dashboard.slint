@@ -52,6 +52,7 @@ export component Dashboard inherits Window {
     callback open_interactive_walkthrough();
     callback open_kairos_orchestration_walkthrough();
     callback open_video_tutorials();
+    callback action_open_geo_visibility();
     callback open_release_notes();
     callback open_api_docs();
     callback approve_task(string);
@@ -253,6 +254,7 @@ export component Dashboard inherits Window {
                 TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
                 TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } } }
                 TooltipElement { tooltip_id: "email_marketing"; Button { text: "Email Marketing"; height: 44px; clicked => { action_open_email_marketing(); } } }
+                TooltipElement { tooltip_id: "geo_visibility"; Button { text: "AI Visibility"; height: 44px; clicked => { action_open_geo_visibility(); } } }
                 if (new_orders_count > 0) : Button {
                     text: "Mark Order Ready";
                     height: 44px;

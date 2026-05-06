@@ -1,0 +1,154 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView, ProgressIndicator } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+import { TooltipElement } from "tooltip_element.slint";
+
+export struct UiGeoRecommendation {
+    id: string,
+    title: string,
+    description: string,
+    impact: string,
+    is_applied: bool,
+}
+
+export component GeoVisibility inherits Window {
+    preferred-width: 500px;
+    min-width: 375px;
+    height: 600px;
+    title: "Generative Engine Optimization (GEO)";
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    in property <string> generative_score: "N/A";
+    in property <bool> is_scanning: false;
+    in property <[UiGeoRecommendation]> actionable_steps;
+    in property <bool> show_toast: false;
+    in property <string> toast_message: "";
+
+    callback start_scan();
+    callback apply_recommendation(string);
+    callback close();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        // Header
+        HorizontalBox {
+            Text { text: "AI Visibility Score"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Rectangle {}
+            Button { text: "Close"; height: 44px; clicked => { close(); } }
+        }
+
+        // Score Card
+        GlassCard {
+            height: 120px;
+            background: rgba(168, 85, 247, 0.1);
+            border-color: rgba(168, 85, 247, 0.5);
+            VerticalBox {
+                alignment: center;
+                spacing: 8px;
+                Text {
+                    text: generative_score;
+                    font-size: 48px;
+                    font-family: "Outfit";
+                    font-weight: 700;
+                    color: generative_score == "N/A" ? #94a3b8 : (generative_score.to-float() > 80 ? #10b981 : (generative_score.to-float() > 50 ? #f59e0b : #ef4444));
+                    horizontal-alignment: center;
+                }
+                Text {
+                    text: "Generative Visibility Score";
+                    font-size: 14px;
+                    font-family: "Inter";
+                    color: #cbd5e1;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        // Action Section
+        if (!is_scanning && actionable_steps.length == 0) : VerticalBox {
+            alignment: center;
+            spacing: 16px;
+            Text {
+                text: "See how LLMs like ChatGPT and Gemini see your business.";
+                font-family: "Inter";
+                font-size: 16px;
+                color: #94a3b8;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+            HorizontalBox {
+                alignment: center;
+                Button {
+                    text: "Scan Business Metadata";
+                    primary: true;
+                    height: 44px;
+                    clicked => { start_scan(); }
+                }
+            }
+        }
+
+        if (is_scanning) : VerticalBox {
+            alignment: center;
+            spacing: 16px;
+            Text { text: "Scanning Business Profile & Schema..."; color: white; font-family: "Inter"; horizontal-alignment: center; }
+            ProgressIndicator { width: 100%; height: 8px; indeterminate: true; }
+        }
+
+        if (!is_scanning && actionable_steps.length > 0) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Actionable Steps to Improve AI Searchability"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 12px;
+                    for step in actionable_steps : GlassCard {
+                        border-color: step.is_applied ? rgba(16, 185, 129, 0.5) : rgba(255, 255, 255, 0.1);
+                        background: step.is_applied ? rgba(16, 185, 129, 0.1) : rgba(255, 255, 255, 0.05);
+
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 8px;
+                            HorizontalBox {
+                                Text { text: step.title; font-weight: 700; color: white; font-family: "Inter"; font-size: 16px; }
+                                Rectangle {}
+                                if (!step.is_applied) : Text { text: "Impact: " + step.impact; color: #a855f7; font-family: "Inter"; font-size: 12px; font-weight: 700; }
+                                if (step.is_applied) : Text { text: "✓ Applied"; color: #10b981; font-family: "Inter"; font-size: 12px; font-weight: 700; }
+                            }
+                            Text { text: step.description; color: #cbd5e1; font-family: "Inter"; font-size: 14px; wrap: word-wrap; }
+
+                            if (!step.is_applied) : HorizontalBox {
+                                alignment: end;
+                                Button {
+                                    text: "Auto-Apply (Pro)";
+                                    primary: true;
+                                    height: 36px;
+                                    clicked => { apply_recommendation(step.id); }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (show_toast) : GlassCard {
+        width: 300px;
+        height: 60px;
+        x: (parent.width - self.width) / 2;
+        y: parent.height - 100px;
+        background: rgba(16, 185, 129, 0.9); // Green background
+        VerticalBox {
+            alignment: center;
+            Text {
+                text: root.toast_message;
+                font-family: "Outfit";
+                font-size: 16px;
+                font-weight: 700;
+                color: white;
+                horizontal-alignment: center;
+            }
+        }
+    }
+}
