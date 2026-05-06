@@ -201,11 +201,21 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        // Ensure STANDALONE_MODE is true. Telemetry should be ignored
-        unsafe { std::env::set_var("STANDALONE_MODE", "true"); }
         let labels = json!({"user_id": "standalone_test"});
-        let res = buffer_metric(&pool, "test_standalone", "counter", 1.0, labels).await;
-        assert!(res.is_ok());
+        let labels_clone = labels.clone();
+
+        // Ensure STANDALONE_MODE is true. Telemetry should be ignored if opted out
+        temp_env::async_with_vars(
+            [
+                ("STANDALONE_MODE", Some("true")),
+                ("OHC_TELEMETRY_ENABLED", Some("false")),
+                ("DATABASE_URL", Some(db_url.as_str())),
+            ],
+            async {
+                let res = crate::telemetry::buffer_metric(&pool, "test_standalone", "counter", 1.0, labels_clone).await;
+                assert!(res.is_ok());
+            },
+        ).await;
 
         let row = sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'test_standalone'")
             .fetch_one(&pool)
@@ -214,7 +224,48 @@ mod tests {
 
         use sqlx::Row;
         let count: i64 = row.get(0);
-        assert_eq!(count, 0, "Metric should not be buffered in standalone mode");
+        assert_eq!(count, 0, "Metric should not be buffered in standalone mode if opted out");
+
+        // Telemetry SHOULD be buffered if explicitly opted in
+        temp_env::async_with_vars(
+            [
+                ("STANDALONE_MODE", Some("true")),
+                ("OHC_TELEMETRY_ENABLED", Some("true")),
+                ("DATABASE_URL", Some(db_url.as_str())),
+            ],
+            async {
+                let res2 = crate::telemetry::buffer_metric(&pool, "test_standalone_opt_in", "counter", 1.0, labels.clone()).await;
+                assert!(res2.is_ok());
+            },
+        ).await;
+
+        let row2 = sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'test_standalone_opt_in'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let count2: i64 = row2.get(0);
+        assert_eq!(count2, 1, "Metric should be buffered in standalone mode if explicitly opted in");
+
+        // Telemetry SHOULD NOT be buffered by default (unset) in standalone mode
+        temp_env::async_with_vars(
+            [
+                ("STANDALONE_MODE", Some("true")),
+                ("OHC_TELEMETRY_ENABLED", None::<&str>),
+                ("DATABASE_URL", Some(db_url.as_str())),
+            ],
+            async {
+                let res3 = crate::telemetry::buffer_metric(&pool, "test_standalone_default", "counter", 1.0, labels).await;
+                assert!(res3.is_ok());
+            },
+        ).await;
+
+        let row3 = sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'test_standalone_default'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let count3: i64 = row3.get(0);
+        assert_eq!(count3, 0, "Metric should not be buffered in standalone mode by default");
     }
 
     #[test]
@@ -267,6 +318,7 @@ mod tests {
                                lower_line.contains("payload") ||
                                lower_line.contains("email") ||
                                lower_line.contains("password") ||
+                               lower_line.contains("api_key") ||
                                lower_line.contains("pii") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }

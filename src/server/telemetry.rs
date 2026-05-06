@@ -134,11 +134,14 @@ pub async fn buffer_metric(
     value: f32,
     labels: Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // In standalone mode, do not sync telemetry to cloud
     let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
-    let is_telemetry_enabled = crate::config::get().telemetry_enabled;
+    let is_telemetry_enabled = if is_standalone {
+        std::env::var("OHC_TELEMETRY_ENABLED").map(|v| v.to_lowercase() == "true").unwrap_or(false)
+    } else {
+        crate::config::get().telemetry_enabled
+    };
 
-    if is_standalone || !is_telemetry_enabled {
+    if !is_telemetry_enabled {
         return Ok(());
     }
 
