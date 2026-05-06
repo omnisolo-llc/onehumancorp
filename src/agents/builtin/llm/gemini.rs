@@ -250,6 +250,7 @@ impl LlmClient for GeminiClient {
                 tool_calls: vec![], // Tools not supported in this simple impl
                 tool_results: vec![],
                 response_id: None,
+                previous_response_id: None,
             },
             usage,
             stop_reason: finish_reason,
