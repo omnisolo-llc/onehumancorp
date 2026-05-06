@@ -37,6 +37,7 @@ test('should display Quick Actions on mobile', async ({ page }) => {
 
   // Verify navigation actions
   await expect(page.locator('text=Business Advisory')).toBeVisible();
+  await expect(page.locator('text=Automated Workflows')).toBeVisible();
 
   // Verify First-Time User Tour ? icon toggle
   const questionMarkBtn = page.locator('button:has-text("?")');

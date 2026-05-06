@@ -30,7 +30,7 @@ export component Dashboard inherits Window {
     in property <int> new_orders_count: 0;
     in property <int> active_helpers_count: 0;
     in property <int> tasks_in_progress_count: 0;
-    in property <string> generative_score: "85";
+    in property <string> store_health: "85";
     in property <bool> is_loading: false;
 
     // AutoDream Memory Pipeline Telemetry
@@ -175,7 +175,7 @@ export component Dashboard inherits Window {
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Store Health"; value: generative_score; value_color: #34d399; }
+                    StatCard { label: "Store Health"; value: store_health; value_color: #34d399; }
                 }
             }
 
@@ -191,7 +191,7 @@ export component Dashboard inherits Window {
                 HorizontalBox {
                     spacing: 16px;
                     StatCard { label: "Ongoing Tasks"; value: tasks_in_progress_count; value_color: #f59e0b; }
-                    StatCard { label: "Store Health"; value: generative_score; value_color: #34d399; }
+                    StatCard { label: "Store Health"; value: store_health; value_color: #34d399; }
                 }
             }
         }
@@ -255,7 +255,7 @@ export component Dashboard inherits Window {
                 TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
                 TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } } }
                 TooltipElement { tooltip_id: "email_marketing"; Button { text: "Email Marketing"; height: 44px; clicked => { action_open_email_marketing(); } } }
-                TooltipElement { tooltip_id: "kairos_orchestration"; Button { text: "Kairos Orchestration"; height: 44px; clicked => { action_open_kairos_orchestration(); } } }
+                TooltipElement { tooltip_id: "kairos_orchestration"; Button { text: "Automated Workflows"; height: 44px; clicked => { action_open_kairos_orchestration(); } } }
                 if (new_orders_count > 0) : Button {
                     text: "Mark Order Ready";
                     height: 44px;

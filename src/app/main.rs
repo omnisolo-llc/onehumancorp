@@ -226,14 +226,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
-    // Mock locale-based currency detection
-    let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-        "GBP"
-    } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-        "EUR"
-    } else {
-        "USD"
-    };
+    let detected_currency = "USD";
     setup_wizard_ui.set_product_currency(detected_currency.into());
 
     let setup_wizard_handle = setup_wizard_ui.as_weak();
@@ -2733,14 +2726,7 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
-    // Mock locale-based currency detection
-    let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-        "GBP"
-    } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-        "EUR"
-    } else {
-        "USD"
-    };
+    let detected_currency = "USD";
     setup_wizard_ui.set_product_currency(detected_currency.into());
 
     let setup_wizard_handle = setup_wizard_ui.as_weak();
@@ -2834,13 +2820,7 @@ mod growth_e2e_tests {
 
         let setup_wizard_ui = app::SetupWizard::new().unwrap();
 
-        let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-            "GBP"
-        } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-            "EUR"
-        } else {
-            "USD"
-        };
+        let detected_currency = "USD";
         setup_wizard_ui.set_product_currency(detected_currency.into());
 
         let setup_wizard_handle = setup_wizard_ui.as_weak();
@@ -5666,11 +5646,11 @@ mod remaining_e2e_tests {
         dashboard_ui.set_new_orders_count(3);
         dashboard_ui.set_active_helpers_count(2);
         dashboard_ui.set_tasks_in_progress_count(1);
-        dashboard_ui.set_generative_score("85".into());
+        dashboard_ui.set_store_health("85".into());
 
         assert_eq!(dashboard_ui.get_todays_sales(), "$125.50");
         assert_eq!(dashboard_ui.get_new_orders_count(), 3);
-        assert_eq!(dashboard_ui.get_generative_score(), "85");
+        assert_eq!(dashboard_ui.get_store_health(), "85");
 
         // Assert toggling Quick Actions Hint via ? icon logic
         assert!(!dashboard_ui.get_show_quick_actions_hint());

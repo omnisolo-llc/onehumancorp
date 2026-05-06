@@ -138,12 +138,12 @@ fn create_verify_todays_sales() {
 }
 
 #[test]
-fn create_verify_generative_score() {
+fn create_verify_store_health() {
     let ui = create();
-    ui.set_generative_score("100".into());
-    assert_eq!(ui.get_generative_score(), "100");
-    ui.set_generative_score("0".into());
-    assert_eq!(ui.get_generative_score(), "0");
+    ui.set_store_health("100".into());
+    assert_eq!(ui.get_store_health(), "100");
+    ui.set_store_health("0".into());
+    assert_eq!(ui.get_store_health(), "0");
 }
 
 #[test]
