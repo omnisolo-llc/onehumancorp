@@ -30,6 +30,7 @@ pub async fn run_health_monitor(
                         to_fire.push(agent.id.clone());
                     }
                 }
+                let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
                 for agent_id in to_fire {
                     if is_cloud {
                         let count = pending_fires.entry(agent_id.clone()).or_insert(0);
@@ -161,17 +162,23 @@ mod tests {
         let monitor_transport: Arc<dyn MeshTransport> = transport.clone();
         let monitor_hub = hub.clone();
 
-        let handle = tokio::spawn(async move {
-            run_health_monitor(monitor_transport, monitor_hub, std::time::Duration::from_millis(10)).await;
+        let handle = std::thread::spawn(move || {
+            temp_env::with_var("STANDALONE_MODE", Some("false"), || {
+                let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+                rt.block_on(async move {
+                    let handle = tokio::spawn(async move {
+                        run_health_monitor(monitor_transport, monitor_hub, std::time::Duration::from_millis(10)).await;
+                    });
+                    tokio::time::sleep(std::time::Duration::from_millis(15)).await;
+                    // After 1 tick, the cloud agent should NOT be fired yet (retrying)
+                    assert!(hub.get_agent("agent_cloud").is_some(), "Agent should not be fired immediately in cloud mode");
+                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                    // After multiple ticks (3+), it should be fired
+                    assert!(hub.get_agent("agent_cloud").is_none(), "Agent should be fired after retries in cloud mode");
+                    handle.abort();
+                });
+            });
         });
-
-        tokio::time::sleep(std::time::Duration::from_millis(15)).await;
-        // After 1 tick, the cloud agent should NOT be fired yet (retrying)
-        assert!(hub.get_agent("agent_cloud").is_some(), "Agent should not be fired immediately in cloud mode");
-
-        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-        // After multiple ticks (3+), it should be fired
-        assert!(hub.get_agent("agent_cloud").is_none(), "Agent should be fired after retries in cloud mode");
-        handle.abort();
+        let _ = handle.join();
     }
 }
