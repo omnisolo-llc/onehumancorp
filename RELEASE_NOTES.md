@@ -1,3 +1,10 @@
+## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
+### Cloud Scaling Improvements
+- 🧹 Cleaner: Prune stale blobs and enforce RLS (#11298)
+
+### Privacy/Offline Improvements
+- 🧹 Cleaner: Offline support for blob pruning and RLS enforcement (#11298)
+
 ## [0.4.27] (Cloud) / v0.4.27+1 (Standalone) - 2024-05-06
 
 ### Cloud
