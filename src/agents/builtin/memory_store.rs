@@ -970,6 +970,78 @@ impl LongTermMemory for RedisMemoryStore {
 
 #[cfg(test)]
 mod get_conflicts_tests {
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_with_override_new() {
+        use std::str::FromStr;
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+        let r1 = EmbeddingRecord {
+            id: "rec1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "hello world".to_string(),
+            embedding: vec![1.0, 1.0, 1.0],
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+        let r2 = EmbeddingRecord {
+            id: "rec2".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "hello world too".to_string(),
+            embedding: vec![1.0, 1.0, 1.0],
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 10,
+            reliability_score: 100,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&r1).await.unwrap();
+        repo.upsert(&r2).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1);
+
+        let query = "SELECT id, owner_override FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+        assert_eq!(rows.len(), 1);
+        use sqlx::Row;
+        let row_id: String = rows[0].try_get("id").unwrap();
+        assert_eq!(row_id, "rec1");
+    }
     use super::*;
     use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
     use std::str::FromStr;
