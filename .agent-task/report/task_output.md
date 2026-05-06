@@ -86,19 +86,48 @@ Incumbents use AI as a feature. OHC must use AI as the core operating system. We
 
 ## Track 5: Feature Gap Matrix
 
-| Feature | Shopify | Wix | OHC (Current Gap) | OHC (Future Advantage) |
-| :--- | :--- | :--- | :--- | :--- |
-| **Store Setup** | Complex/Desktop | Wizard/Desktop | Lacks Agentic Setup | 100% Agentic, mobile-first |
-| **Product Descriptions**| Magic Text (Manual) | Basic AI | Basic/None | Photo-to-product (Autonomous) |
-| **Booking & Services** | 3rd Party App ($$) | Built-in (Clunky) | Lacks robust booking | Integrated AI Scheduling |
-| **Mobile Management** | Good (Post-setup) | Basic | Missing Native parity | 100% Mobile Parity |
-| **Social DM Auto-reply**| 3rd Party App ($$) | None | None | Core Agent feature |
+| Feature | Shopify | Wix | Squarespace | GoDaddy | OHC (Current Gap) | OHC (Future Advantage) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Store Setup** | Complex/Desktop | Wizard/Desktop | Design-heavy | Simple/Shallow | Lacks Agentic Setup | 100% Agentic, mobile-first |
+| **Product Descriptions**| Magic Text | Basic AI | Basic | None | Basic/None | Photo-to-product |
+| **Booking & Services** | 3rd Party App | Built-in (Clunky) | Acuity ($$) | Built-in | Lacks robust booking | Integrated AI Scheduling |
+| **Mobile Management** | Good | Basic | Basic | Poor | Missing Native parity | 100% Mobile Parity |
+| **Social DM Auto-reply**| 3rd Party App | None | None | None | None | Core Agent feature |
+
+### Feature Gap Heatmap
+```mermaid
+pie
+    title AI Autonomy Penetration in SMB Operations
+    "Setup & Design": 20
+    "Marketing/SEO": 30
+    "Inventory Management": 5
+    "Customer Support/DMs": 10
+    "Manual Processing (Opportunity)": 35
+```
+
+### User Journey Comparison
+```mermaid
+journey
+    title SMB Onboarding Journey
+    section Shopify
+      Sign Up: 3: SMB
+      Pick Template: 2: SMB
+      Configure Shipping: 1: SMB
+      Add First Product: 2: SMB
+      Launch Store: 4: SMB
+    section OHC (Future State)
+      Sign Up (Mobile): 5: SMB
+      Answer 1 Question: 5: SMB
+      Agent Generates Store: 5: AI
+      Agent Adds Demo Products: 5: AI
+      Store is Live: 5: SMB
+```
 
 ---
 
 ## Actionable Issue Briefs
 
-### [feature] Issue Brief: Invisible Agent Store Setup via Mobile
+### [Setup] Issue Brief: Invisible Agent Store Setup via Mobile
 - **Title:** Zero-Click Store Generation from a Single Sentence
 - **Problem Statement:** Small business owners like Maya find Shopify's 20-step setup process overwhelming. They don't have time to pick templates, configure shipping zones, and structure navigation on a laptop.
 - **Research Report:** 35% of 1-star platform reviews mention confusing setup. Durable proves users want instant generation, but Durable lacks backend management. OHC must merge instant generation with powerful management.
@@ -114,7 +143,7 @@ Incumbents use AI as a feature. OHC must use AI as the core operating system. We
 - **Priority:** P0
 - **Estimated Scope:** Large
 
-### [feature] Issue Brief: Photo-to-Product Magic Pipeline
+### [Inventory] Issue Brief: Photo-to-Product Magic Pipeline
 - **Title:** Instant Product Creation via Camera Upload
 - **Problem Statement:** Priya spends 30 minutes writing SEO descriptions, setting prices, and categorizing every new dress she gets in stock. It's a huge barrier to listing inventory online.
 - **Research Report:** "I don't know how to write descriptions" is a top 3 pain point. SMBs want to take a picture on their phone and have the software do the rest.
@@ -129,7 +158,7 @@ Incumbents use AI as a feature. OHC must use AI as the core operating system. We
 - **Priority:** P1
 - **Estimated Scope:** Medium
 
-### [feature] Issue Brief: Automated Booking & WhatsApp DM Interceptor
+### [CRM] Issue Brief: Automated Booking & WhatsApp DM Interceptor
 - **Title:** Agentic DM Booking System
 - **Problem Statement:** Carlos (handyman) and Leo (tutor) lose leads because they are busy working and cannot reply to Instagram/WhatsApp DMs instantly. Booking manually is chaotic and leads to double-booking.
 - **Research Report:** Service solopreneurs run their businesses entirely on DMs. 10% of overall complaints revolve around chaotic booking and lost leads due to delayed replies.
