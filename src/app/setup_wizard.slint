@@ -329,7 +329,7 @@ export component SetupWizard inherits Window {
                     background: payment_pref == "online" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🌐 Online only"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Get paid on your website (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "Estimated time to first payment: Instant"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("online"); save_state(); } }
                 }
@@ -337,8 +337,8 @@ export component SetupWizard inherits Window {
                     height: 70px;
                     background: payment_pref == "inperson" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🤝 In-person (Take payments on your phone)"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Use your phone as a card reader (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "🤝 In-person (POS)"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Estimated time to first payment: Instant via mobile POS"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("inperson"); save_state(); } }
                 }
@@ -346,8 +346,8 @@ export component SetupWizard inherits Window {
                     height: 70px;
                     background: payment_pref == "both" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🌍 Both Online & In-person"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Sell everywhere, synced in one place"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "🌍 Both"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Estimated time to first payment: Instant"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("both"); save_state(); } }
                 }
@@ -356,7 +356,7 @@ export component SetupWizard inherits Window {
                     background: payment_pref == "skip" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "⏭️ Skip for now"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "You can set up payments later from your dashboard"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "You can set up payments later"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("skip"); save_state(); } }
                 }
@@ -375,14 +375,31 @@ export component SetupWizard inherits Window {
 
                 Text { text: "Password"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 PasswordInput { text <=> admin_password; }
+
+                // Strength meter
+                HorizontalBox {
+                    spacing: 4px;
+                    Rectangle { height: 4px; border-radius: 2px; width: 33%; background: admin_password != "" ? #10b981 : #334155; }
+                    Rectangle { height: 4px; border-radius: 2px; width: 33%; background: admin_password != "" ? #10b981 : #334155; }
+                    Rectangle { height: 4px; border-radius: 2px; width: 33%; background: admin_password != "" ? #10b981 : #334155; }
+                }
                 Text { text: admin_password != "" ? "Strength: Strong" : "Strength: Weak"; font-size: 12px; color: admin_password != "" ? #10b981 : #ef4444; }
 
 
                 Text { text: "OR"; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center; }
 
-                Button { text: "Continue with Google"; height: 44px; }
-                Button { text: "Continue with Apple"; height: 44px; }
-                Button { text: "Next"; height: 44px; clicked => { next_step(); } }
+                GlassCard {
+                    height: 44px;
+                    background: rgba(255, 255, 255, 0.1);
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "Sign in with Google"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; } }
+                    TouchArea { clicked => { next_step(); } }
+                }
+                GlassCard {
+                    height: 44px;
+                    background: rgba(255, 255, 255, 0.1);
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "Sign in with Apple"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; } }
+                    TouchArea { clicked => { next_step(); } }
+                }
             }
 
             // Step 6: Choose a Template
@@ -767,6 +784,7 @@ export component SetupWizard inherits Window {
 
                 VerticalBox { alignment: center; Text { text: "Launch My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
+                    launch_status = "Your business is setting up…";
                     launching = true;
                     launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password);
                 } }
