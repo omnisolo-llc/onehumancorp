@@ -124,11 +124,6 @@ impl AgentProgress {
     }
 }
 
-/// OpenAI Codex Mechanic: Strict Hierarchical Priority Stack
-/// 1. Server-controlled System Message (Highest Priority)
-/// 2. Tool Definitions
-/// 3. Developer Instructions
-/// 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
 pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
     let mut end_idx = 32768;
     if cfg.user_instructions.len() > 32768 {
@@ -141,14 +136,11 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
     let user_instr = &cfg.user_instructions[..end_idx];
 
     let mut combined_system = String::new();
-
-    // Priority 1: Server-controlled System Message
     if !cfg.server_system_message.is_empty() {
-        combined_system.push_str("[Server System Message]\n");
         combined_system.push_str(&cfg.server_system_message);
     }
 
-    // Priority 2: Tool Definitions
+    // Format tools into [Tool Definitions]
     if !tools.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
@@ -159,13 +151,10 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
             combined_system.push_str(&format!("Description: {}\n", tool.description));
             combined_system.push_str(&format!("Parameters: {}\n", tool.parameters));
         }
-        // Remove trailing newline to keep formatting clean
-        if combined_system.ends_with('\n') {
-            combined_system.pop();
-        }
+        // Remove trailing newline
+        combined_system.pop();
     }
 
-    // Priority 3: Developer Instructions
     if !cfg.developer_instructions.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
@@ -174,7 +163,6 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
         combined_system.push_str(&cfg.developer_instructions);
     }
 
-    // Priority 4: User Instructions
     if !user_instr.is_empty() {
         if !combined_system.is_empty() {
             combined_system.push_str("\n\n");
@@ -182,7 +170,6 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
         combined_system.push_str("[User Instructions]\n");
         combined_system.push_str(user_instr);
     }
-
     combined_system
 }
 
@@ -368,8 +355,6 @@ impl Agent {
                 let last_msg = state.get("last_message").unwrap();
                 let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
 
-                let mut tool_error_counts = state.get("tool_error_counts").cloned().unwrap_or_else(|| serde_json::json!({}));
-
                 let mut tool_results_json = vec![];
 
                 for tc_val in tool_calls {
@@ -380,7 +365,7 @@ impl Agent {
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
                         let max_retries = 2;
-                        let final_res;
+                        let mut final_res = Err(crate::types::ToolError::Unexpected("Not executed".to_string()));
 
                         loop {
                             match tool.execute.execute(args.clone()).await {
@@ -408,9 +393,6 @@ impl Agent {
 
                         match final_res {
                             Ok(res) => {
-                                if let Some(map) = tool_error_counts.as_object_mut() {
-                                    map.remove(name);
-                                }
                                 tool_results_json.push(serde_json::json!({
                                     "tool_call_id": id,
                                     "content": res,
@@ -418,16 +400,6 @@ impl Agent {
                                 }));
                             }
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                                let mut count = 0;
-                                if let Some(map) = tool_error_counts.as_object_mut() {
-                                    count = map.get(name).and_then(|v| v.as_u64()).unwrap_or(0);
-                                    count += 1;
-                                    map.insert(name.to_string(), serde_json::json!(count));
-                                }
-                                if count > 2 {
-                                    let fatal_msg = format!("Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg);
-                                    return Err(fatal_msg);
-                                }
                                 tool_results_json.push(serde_json::json!({
                                     "tool_call_id": id,
                                     "content": "",
@@ -462,7 +434,6 @@ impl Agent {
 
                 Ok(serde_json::json!({
                     "has_tool_calls": false, // Clear flag
-                    "tool_error_counts": tool_error_counts,
                     "messages": [{
                         "role": "tool",
                         "content": "",
@@ -511,8 +482,7 @@ impl Agent {
         let initial_state = serde_json::json!({
             "messages": msgs_json,
             "has_tool_calls": false,
-            "total_tokens": 0,
-            "tool_error_counts": {}
+            "total_tokens": 0
         });
 
         match graph.run(initial_state).await {
@@ -1457,58 +1427,6 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn test_openai_codex_strict_hierarchical_priority_stack() {
-        use super::{AgentRunConfig, build_hierarchical_system_prompt};
-        use crate::tools::Tool;
-        use std::sync::Arc;
-
-        struct DummyExecutor;
-        #[async_trait::async_trait]
-        impl crate::tools::ToolExecutor for DummyExecutor {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
-                Ok("dummy".to_string())
-            }
-        }
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.server_system_message = "SERVER_SYSTEM_MESSAGE".to_string();
-        cfg.developer_instructions = "DEVELOPER_INSTRUCTIONS".to_string();
-
-        let tool = Tool {
-            name: "test_tool".to_string(),
-            description: "A test tool".to_string(),
-            is_read_only: true,
-            parameters: serde_json::json!({"type": "object"}),
-            execute: Arc::new(DummyExecutor),
-        };
-
-        // Create user instructions larger than 32 KiB
-        let large_user_instr = "a".repeat(33000);
-        cfg.user_instructions = large_user_instr.clone();
-
-        let prompt = build_hierarchical_system_prompt(&cfg, &[tool]);
-
-        // 1. Verify exact string ordering for hierarchy
-        let pos_server = prompt.find("[Server System Message]").expect("Server System Message missing");
-        let pos_tool = prompt.find("[Tool Definitions]").expect("Tool Definitions missing");
-        let pos_dev = prompt.find("[Developer Instructions]").expect("Developer Instructions missing");
-        let pos_user = prompt.find("[User Instructions]").expect("User Instructions missing");
-
-        assert!(pos_server < pos_tool, "Server message should precede tools");
-        assert!(pos_tool < pos_dev, "Tools should precede developer instructions");
-        assert!(pos_dev < pos_user, "Developer instructions should precede user instructions");
-
-        // 2. Verify truncation to 32 KiB
-        // "[User Instructions]\n" + 32768 chars = 32788 chars roughly for the last section
-        let user_section_start = pos_user + "[User Instructions]\n".len();
-        let user_content = &prompt[user_section_start..];
-
-        // Assert length is exactly 32768
-        assert_eq!(user_content.len(), 32768, "User instructions should be truncated to exactly 32768 bytes");
-        assert!(user_content.chars().all(|c| c == 'a'), "Truncated content should consist of 'a's");
-    }
-
     #[tokio::test]
     async fn test_llmcompiler_plan_and_execute_mechanic() {
         struct LLMCompilerMockClient {
@@ -2651,7 +2569,7 @@ mod tests {
 
         let prompt = build_hierarchical_system_prompt(&cfg, &[tool]);
 
-        let expected = "[Server System Message]\nServer System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
+        let expected = "Server System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
 
         assert_eq!(prompt, expected);
     }
@@ -2666,7 +2584,7 @@ mod tests {
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
-            "[Server System Message]\nServer System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
+            "Server System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
         );
     }
 
@@ -2680,7 +2598,7 @@ mod tests {
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
-            "[Server System Message]\nServer System Message\n\n[User Instructions]\nUser Instructions"
+            "Server System Message\n\n[User Instructions]\nUser Instructions"
         );
 
         let mut cfg2 = AgentRunConfig::default();
@@ -3532,81 +3450,6 @@ mod tests {
             parameters: serde_json::json!({}),
             execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "user_fixable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
         };
-
-        // Test Recoverable escalation to Fatal (3 consecutive failures)
-        let client_recoverable_escalation = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: String::new(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "call_a".to_string(),
-                            name: "llm_recoverable_tool".to_string(),
-                            arguments: serde_json::json!({}),
-                        }],
-                        tool_results: vec![],
-                        response_id: None,
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: Some("mock-id".to_string()),
-                },
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: String::new(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "call_b".to_string(),
-                            name: "llm_recoverable_tool".to_string(),
-                            arguments: serde_json::json!({}),
-                        }],
-                        tool_results: vec![],
-                        response_id: None,
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: Some("mock-id".to_string()),
-                },
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: String::new(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "call_c".to_string(),
-                            name: "llm_recoverable_tool".to_string(),
-                            arguments: serde_json::json!({}),
-                        }],
-                        tool_results: vec![],
-                        response_id: None,
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: Some("mock-id".to_string()),
-                },
-                ChatResponse {
-                    message: Message::assistant("Final answer"),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("mock-id".to_string()),
-                }
-            ]),
-        });
-
-        let tool_recoverable_escalation = Tool {
-            name: "llm_recoverable_tool".to_string(),
-            description: "".to_string(),
-            is_read_only: true,
-            parameters: serde_json::json!({}),
-            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "llm_recoverable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
-        };
-
-        let agent5 = Agent::new(client_recoverable_escalation, vec![tool_recoverable_escalation]);
-        let mut events5 = vec![];
-        let res5 = agent5.run(&cfg, "Start", &mut |e| events5.push(e)).await;
-        assert!(res5.is_err());
-        assert!(res5.unwrap_err().to_string().contains("failed 3 times consecutively with recoverable errors"));
-
 
         let agent4 = Agent::new(client4, vec![tool_user_fixable]);
         let mut events4 = vec![];

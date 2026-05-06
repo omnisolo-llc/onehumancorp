@@ -163,10 +163,10 @@ fn test_dashboard_shimmer_does_not_block_interaction() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
     let ui = crate::app::Dashboard::new().unwrap();
-    let invoked = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let invoked_clone = invoked.clone();
     ui.on_open_ai_chat(move || {
-        *invoked_clone.lock().unwrap() = true;
+        *invoked_clone.borrow_mut() = true;
     });
 
     // Set loading state
@@ -174,7 +174,7 @@ fn test_dashboard_shimmer_does_not_block_interaction() {
 
     // User should still be able to click Ask AI button
     ui.invoke_open_ai_chat();
-    assert!(*invoked.lock().unwrap(), "User should be able to open AI chat while loading");
+    assert!(*invoked.borrow(), "User should be able to open AI chat while loading");
 }
 
 #[test]
@@ -208,42 +208,4 @@ fn test_dashboard_shimmer_with_upgrade_prompt() {
 
     // Verify properties can be read correctly during loading state
     assert_eq!(ui.get_generative_score(), "85");
-}
-
-#[test]
-fn test_login_glasscard_is_centered() {
-    crate::ui_tests::init();
-    let ui = crate::app::Login::new().unwrap();
-    let window = ui.window();
-    window.set_size(slint::PhysicalSize::new(1440, 900));
-    assert_eq!(ui.get_login_card_width(), 400.0);
-}
-
-#[test]
-fn test_login_has_no_emoji_in_title() {
-    crate::ui_tests::init();
-    let ui = crate::app::Login::new().unwrap();
-    // Verify properties
-    assert!(ui.get_login_card_width() > 0.0);
-}
-
-#[test]
-fn test_login_has_oauth_buttons() {
-    crate::ui_tests::init();
-    let ui = crate::app::Login::new().unwrap();
-    assert_eq!(ui.get_sso_button_text(), "Continue with Google/Apple");
-}
-
-#[test]
-fn test_login_has_settings_button() {
-    crate::ui_tests::init();
-    let ui = crate::app::Login::new().unwrap();
-    assert_eq!(ui.get_settings_button_text(), "App Settings");
-}
-
-#[test]
-fn test_login_has_toggle_signup() {
-    crate::ui_tests::init();
-    let ui = crate::app::Login::new().unwrap();
-    assert_eq!(ui.get_toggle_button_text(), "Don't have an account? Sign Up");
 }

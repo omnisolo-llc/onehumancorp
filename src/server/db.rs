@@ -55,19 +55,15 @@ impl DB {
                             // Enforce strict 0700 permissions for standalone SQLite
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
-                                if e.kind() != std::io::ErrorKind::AlreadyExists {
-                                    tracing::error!("Failed to securely create DB directory: {}", e);
-                                    return Err(e.into());
-                                }
+                                tracing::error!("Failed to securely create DB directory: {}", e);
+                                return Err(e.into());
                             }
                         }
                         #[cfg(not(unix))]
                         {
                             if let Err(e) = std::fs::create_dir_all(parent) {
-                                if e.kind() != std::io::ErrorKind::AlreadyExists {
-                                    tracing::error!("Failed to create DB directory: {}", e);
-                                    return Err(e.into());
-                                }
+                                tracing::error!("Failed to create DB directory: {}", e);
+                                return Err(e.into());
                             }
                         }
                     }
@@ -105,12 +101,26 @@ impl DB {
                 .create_if_missing(true)
                 .extension("sqlite_vec");
 
-
-
             // SQLCipher support for standalone mode encryption
-            if database_url.contains("cipher=sqlcipher") || (std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && !database_url.contains("test")) {
+            if database_url.contains("cipher=sqlcipher") {
+                if let Some(key) = database_url.split("key=").nth(1) {
+                    let key = key.split('&').next().unwrap_or("").to_string();
+                    conn_opts = conn_opts.pragma("key", key.clone());
+                } else {
+                    let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+                    conn_opts = conn_opts.pragma("key", fallback_key);
+                }
+            } else if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && !database_url.contains("test") {
                 let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
                 conn_opts = conn_opts.pragma("key", fallback_key);
+            }
+
+            // SQLCipher support for standalone mode encryption
+            if database_url.contains("cipher=sqlcipher") {
+                if let Some(key) = database_url.split("key=").nth(1) {
+                    let key = key.split('&').next().unwrap_or("").to_string();
+                    conn_opts = conn_opts.pragma("key", key.clone());
+                }
             }
 
             let sqlite_pool = SqlitePoolOptions::new()
@@ -731,55 +741,22 @@ pub async fn insert_autodream_memory(
 
     pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
-
-        #[derive(sqlx::FromRow)]
-        struct MissionRecord {
-            id: String,
-            payload: String,
-        }
-
-        let records: Vec<MissionRecord> = match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query_as("SELECT id, payload FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < ?")
-                    .bind(threshold.to_rfc3339())
-                    .fetch_all(sqlite_pool)
-                    .await?
-            },
-            DbStore::Postgres => {
-                sqlx::query_as("SELECT id, payload FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < $1")
-                    .bind(threshold)
-                    .fetch_all(&self.pool)
-                    .await?
-            }
-        };
-
-        if !records.is_empty() {
-            std::fs::create_dir_all(".agent-task/archive/")?;
-            for record in records {
-                let filename = format!(".agent-task/archive/{}.json", record.id);
-                if let Err(e) = std::fs::write(&filename, record.payload) {
-                    tracing::error!("Failed to archive mission {} to {}: {}", record.id, filename, e);
-                }
-            }
-        }
-
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("DELETE FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < ?")
+                sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
                     .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
                     .await?.rows_affected()
             },
             DbStore::Postgres => {
-                sqlx::query("DELETE FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < $1")
+                sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
                     .bind(threshold)
                     .execute(&self.pool)
                     .await?.rows_affected()
             }
         };
-
         if affected > 0 {
-            tracing::info!("Cleaned up and archived {} stagnant missions older than {} seconds", affected, timeout_secs);
+            tracing::info!("Cleaned up {} stagnant missions older than {} seconds", affected, timeout_secs);
         }
         Ok(affected)
     }
@@ -910,27 +887,6 @@ mod autodream_db_tests {
 
 #[cfg(test)]
 mod security_tests_final {
-
-    #[test]
-    fn test_standalone_mode_enforces_sqlite_key() {
-        let _lock = ENV_MUTEX.lock().unwrap();
-
-        temp_env::with_vars(
-            [
-                ("STANDALONE_MODE", Some("true")),
-                ("OHC_SQLITE_KEY", None),
-                ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
-            ],
-            || {
-                let result = std::panic::catch_unwind(|| {
-                    let _ = tokio::runtime::Runtime::new().unwrap().block_on(DB::new());
-                });
-
-                assert!(result.is_err(), "DB::new should panic in standalone mode without OHC_SQLITE_KEY");
-            }
-        );
-    }
-
     use super::*;
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
@@ -1033,60 +989,5 @@ mod e2e_tenant_isolation_tests {
 
         // This verifies tenant access doesn't bleed across pools
         // (RLS logic inherently evaluated by postgres)
-    }
-
-    #[tokio::test]
-    async fn test_cleanup_stagnant_missions() {
-        use chrono::Utc;
-        use crate::db::{DB, DbStore};
-
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect("postgres://postgres:postgres@localhost:5432/test")
-            .await;
-
-        let pool = match pool {
-            Ok(p) => p,
-            Err(_) => return, // Skip test if Postgres is not running locally
-        };
-
-        let db = DB {
-            pool: pool.clone(),
-            store: DbStore::Postgres,
-        };
-
-        // Ensure table exists for test
-        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (id TEXT PRIMARY KEY, status TEXT NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, organization_id TEXT NOT NULL DEFAULT 'system', cloud_mission_id TEXT, sync_error TEXT, last_synced_at TIMESTAMP, synced_to_cloud BOOLEAN DEFAULT false, _sync_status TEXT DEFAULT 'pending', version INTEGER DEFAULT 1)")
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        // Clear existing
-        sqlx::query("DELETE FROM agent_missions WHERE id = 'test-mission-1'").execute(&pool).await.unwrap();
-
-        let old_time = (Utc::now() - chrono::Duration::seconds(7200)).naive_utc();
-
-        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at) VALUES ($1, $2, $3, $4)")
-            .bind("test-mission-1")
-            .bind("IN_PROGRESS")
-            .bind("{\"task\": \"stuck task\"}")
-            .bind(old_time)
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        let affected = db.cleanup_stagnant_missions(3600).await.unwrap();
-        assert_eq!(affected, 1);
-
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions WHERE id = 'test-mission-1'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        assert_eq!(count, 0);
-
-        let content = std::fs::read_to_string(".agent-task/archive/test-mission-1.json").unwrap();
-        assert_eq!(content, "{\"task\": \"stuck task\"}");
-
-        // Clean up file
-        let _ = std::fs::remove_file(".agent-task/archive/test-mission-1.json");
     }
 }

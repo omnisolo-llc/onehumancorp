@@ -61,11 +61,11 @@ fn create() -> app::Security { crate::ui_tests::init(); app::Security::new().unw
 
 #[test] fn security_flow_fix_callback() {
     let ui = create();
-    let called = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
-    ui.on_fix_issue(move |id| { *c.lock().unwrap() = id.to_string(); });
+    ui.on_fix_issue(move |id| { *c.borrow_mut() = id.to_string(); });
     ui.invoke_fix_issue("ISSUE-123".into());
-    assert_eq!(*called.lock().unwrap(), "ISSUE-123");
+    assert_eq!(*called.borrow(), "ISSUE-123");
 }
 
 // --- Unique Scenarios with Verification ---

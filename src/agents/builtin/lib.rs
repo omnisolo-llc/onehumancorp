@@ -15,7 +15,6 @@
 
 pub use ohc_builtin_agent_core::*;
 
-pub mod group_chat;
 pub mod agent;
 pub mod service;
 pub mod departments;
