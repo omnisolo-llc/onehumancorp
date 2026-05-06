@@ -350,6 +350,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
+        let wizard_handle_for_login = setup_wizard_handle.clone();
         move |_email, _password| {
             if let Some(ui) = login_handle.upgrade() {
                 // In a real app we'd authenticate. Here, if is_sign_up is true, we transition to wizard.
@@ -360,17 +361,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Login process started...");
                     ui.set_loading(true);
                     let ui_weak = login_handle.clone();
+                    let wizard_handle_clone = wizard_handle_for_login.clone();
                     tokio::spawn(async move {
                         let mut needs_wizard = false;
+                        let mut fetched_state: std::collections::HashMap<String, String> = std::collections::HashMap::new();
                         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                             let req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
                             if let Ok(resp) = client.get_wizard_state(req).await {
                                 let state = resp.into_inner().state;
-                                // In the SetupWizard, step 10 is the final welcome checklist.
-                                // If they haven't reached step 10, they need to complete the wizard.
+                                fetched_state = state.clone();
+                                // In the SetupWizard, step 100 is the final welcome checklist.
+                                // If they haven't reached step 100, they need to complete the wizard.
                                 if let Some(step) = state.get("step") {
                                     if let Ok(s) = step.parse::<i32>() {
-                                        if s < 10 {
+                                        if s < 100 {
                                             needs_wizard = true;
                                         }
                                     } else {
@@ -390,6 +394,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(ui) = ui_weak.upgrade() {
                                 ui.set_loading(false);
                                 if needs_wizard {
+                                    if let Some(wizard_ui) = wizard_handle_clone.upgrade() {
+                                        if let Some(val) = fetched_state.get("step") { if let Ok(s) = val.parse::<i32>() { wizard_ui.set_step(s); } }
+                                        if let Some(val) = fetched_state.get("business_type") { wizard_ui.set_business_type(val.into()); }
+                                        if let Some(val) = fetched_state.get("company_name") { wizard_ui.set_company_name(val.into()); }
+                                        if let Some(val) = fetched_state.get("company_description") { wizard_ui.set_company_description(val.into()); }
+                                        if let Some(val) = fetched_state.get("sell_physical") { wizard_ui.set_sell_physical(val == "true"); }
+                                        if let Some(val) = fetched_state.get("sell_digital") { wizard_ui.set_sell_digital(val == "true"); }
+                                        if let Some(val) = fetched_state.get("sell_services") { wizard_ui.set_sell_services(val == "true"); }
+                                        if let Some(val) = fetched_state.get("sell_food") { wizard_ui.set_sell_food(val == "true"); }
+                                        if let Some(val) = fetched_state.get("sell_subscriptions") { wizard_ui.set_sell_subscriptions(val == "true"); }
+                                        if let Some(val) = fetched_state.get("payment_pref") { wizard_ui.set_payment_pref(val.into()); }
+                                        if let Some(val) = fetched_state.get("admin_name") { wizard_ui.set_admin_name(val.into()); }
+                                        if let Some(val) = fetched_state.get("admin_email") { wizard_ui.set_admin_email(val.into()); }
+                                        if let Some(val) = fetched_state.get("website_template") { wizard_ui.set_website_template(val.into()); }
+                                        if let Some(val) = fetched_state.get("product_name") { wizard_ui.set_product_name(val.into()); }
+                                        if let Some(val) = fetched_state.get("product_price") { wizard_ui.set_product_price(val.into()); }
+                                        if let Some(val) = fetched_state.get("product_sku") { wizard_ui.set_product_sku(val.into()); }
+                                        if let Some(val) = fetched_state.get("product_inventory") { wizard_ui.set_product_inventory(val.into()); }
+                                        if let Some(val) = fetched_state.get("domain_choice") { wizard_ui.set_domain_choice(val.into()); }
+                                        if let Some(val) = fetched_state.get("custom_dns_target") { wizard_ui.set_custom_dns_target(val.into()); }
+                                        if let Some(val) = fetched_state.get("is_advanced") { wizard_ui.set_is_advanced(val == "true"); }
+                                        if let Some(val) = fetched_state.get("instant_bio") { wizard_ui.set_instant_bio(val.into()); }
+                                    }
                                     ui.invoke_start_setup_wizard();
                                 } else {
                                     ui.hide().unwrap();

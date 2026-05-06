@@ -1,4 +1,3 @@
-use slint::ComponentHandle;
 
 #[test]
 fn test_e2e_help_center_navigation_flow() {
