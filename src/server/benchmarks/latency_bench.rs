@@ -1,4 +1,3 @@
-use tracing::{info};
 
 use std::time::Instant;
 use std::sync::Arc;
