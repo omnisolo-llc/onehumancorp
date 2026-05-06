@@ -7139,4 +7139,141 @@ mod e2e_login_to_dashboard_tests {
         dashboard_ui.invoke_action_share_store();
         assert!(*share_opened.borrow(), "Share should be opened from Dashboard Add action");
     }
+
+    #[test]
+    fn test_grandmother_business_manager_flow_cancel() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let _main_app = app::AppWindow::new().unwrap();
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        dashboard_ui.invoke_action_add_product();
+        manager_ui.invoke_select_type("SERVICE".into());
+        manager_ui.invoke_next_step();
+
+        let closed = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let closed_clone = closed.clone();
+        manager_ui.on_close(move || {
+            *closed_clone.borrow_mut() = true;
+        });
+        manager_ui.invoke_close();
+        assert!(*closed.borrow());
+    }
+
+    #[test]
+    fn test_grandmother_business_manager_flow_digital() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let _main_app = app::AppWindow::new().unwrap();
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        dashboard_ui.invoke_action_add_product();
+        manager_ui.invoke_select_type("DIGITAL".into());
+        manager_ui.invoke_next_step();
+        manager_ui.set_product_name("E-book".into());
+
+        let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let sub_clone = submitted.clone();
+        manager_ui.on_submit(move |t, n, _d, _p, _dur, _sched| {
+            assert_eq!(t, "DIGITAL");
+            assert_eq!(n, "E-book");
+            *sub_clone.borrow_mut() = true;
+        });
+        manager_ui.invoke_submit("DIGITAL".into(), "E-book".into(), "".into(), "".into(), "".into(), "".into());
+        assert!(*submitted.borrow());
+    }
+
+    #[test]
+    fn test_grandmother_business_manager_flow_physical() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let _main_app = app::AppWindow::new().unwrap();
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        dashboard_ui.invoke_action_add_product();
+        manager_ui.invoke_select_type("PHYSICAL".into());
+        manager_ui.invoke_next_step();
+        manager_ui.set_product_name("Shirt".into());
+
+        let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let sub_clone = submitted.clone();
+        manager_ui.on_submit(move |t, n, _d, _p, _dur, _sched| {
+            assert_eq!(t, "PHYSICAL");
+            assert_eq!(n, "Shirt");
+            *sub_clone.borrow_mut() = true;
+        });
+        manager_ui.invoke_submit("PHYSICAL".into(), "Shirt".into(), "".into(), "".into(), "".into(), "".into());
+        assert!(*submitted.borrow());
+    }
+
+    #[test]
+    fn test_grandmother_business_manager_flow_back() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let _main_app = app::AppWindow::new().unwrap();
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        dashboard_ui.invoke_action_add_product();
+        manager_ui.invoke_select_type("SERVICE".into());
+        manager_ui.invoke_next_step();
+        assert_eq!(manager_ui.get_step(), 1);
+        manager_ui.invoke_prev_step();
+        assert_eq!(manager_ui.get_step(), 0);
+    }
+
+    #[test]
+    fn test_grandmother_business_manager_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let _main_app = app::AppWindow::new().unwrap();
+        // We ensure the system starts at login
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        let invoked_add = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let add_clone = invoked_add.clone();
+        dashboard_ui.on_action_add_product(move || {
+            *add_clone.borrow_mut() = true;
+        });
+        dashboard_ui.invoke_action_add_product();
+        assert!(*invoked_add.borrow());
+
+        // Assert step 0
+        assert_eq!(manager_ui.get_step(), 0);
+        manager_ui.invoke_select_type("SERVICE".into());
+        manager_ui.invoke_next_step();
+
+        // Assert step 1
+        assert_eq!(manager_ui.get_step(), 1);
+        manager_ui.set_product_name("Consulting".into());
+        manager_ui.set_product_price("100".into());
+        manager_ui.set_service_schedule("Mon-Fri 9am-5pm".into());
+
+        let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let sub_clone = submitted.clone();
+        manager_ui.on_submit(move |t, n, _d, p, _dur, sched| {
+            assert_eq!(t, "SERVICE");
+            assert_eq!(n, "Consulting");
+            assert_eq!(p, "100");
+            assert_eq!(sched, "Mon-Fri 9am-5pm");
+            *sub_clone.borrow_mut() = true;
+        });
+        manager_ui.invoke_submit("SERVICE".into(), "Consulting".into(), "".into(), "100".into(), "60".into(), "Mon-Fri 9am-5pm".into());
+        assert!(*submitted.borrow());
+    }
 }
