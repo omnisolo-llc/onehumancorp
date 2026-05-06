@@ -45,6 +45,10 @@ impl AutoDreamWorker {
                     debug!("AutoDream: pruning consolidated memory failed: {}", e);
                 }
 
+                if let Err(e) = Self::resolve_conflicts(&db).await {
+                    debug!("AutoDream: resolving conflicts failed: {}", e);
+                }
+
                 sleep(Duration::from_secs(60)).await;
             }
         });
