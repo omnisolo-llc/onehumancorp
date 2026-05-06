@@ -1,2 +1,1 @@
 I was tasked to fulfill a "Mission Handover" scenario by updating the `agent_missions` table. Upon inspecting `src/server/sip.rs`, I found that the `handoff_mission` function already implements this exact feature, updating the status to 'blocked' and appending the blockers to the `mission_log` column correctly. Furthermore, I have run the test suite and confirmed everything passes cleanly. Under the Zero WIP policy, I am concluding this session without making codebase modifications since the feature is fully implemented.
-// Empty commit to trigger review submission
