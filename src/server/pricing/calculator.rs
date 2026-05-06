@@ -158,6 +158,34 @@ mod tests {
     }
 
     #[test]
+    fn test_calculate_cost_with_config() {
+        let config = CostConfig {
+            cost_per_input_token: 0.001,
+            cost_per_output_token: 0.002,
+            cost_per_cached_input_token: 0.0005,
+            cost_per_local_embedding: 0.0001,
+            discount_factor: 0.1,
+            ..Default::default()
+        };
+
+        let cost = calculate_cost_with_config(1000, 500, 200, 100, &config);
+        assert_eq!(cost, 1.899);
+    }
+
+    #[test]
+    fn test_calculate_storage_savings() {
+        let config = CostConfig {
+            cost_per_gb_month: 0.10,
+            ..Default::default()
+        };
+
+        let original = 2 * 1024 * 1024 * 1024; // 2GB
+        let compressed = 1 * 1024 * 1024 * 1024; // 1GB
+        let savings = calculate_storage_savings(original, compressed, &config);
+        assert_eq!(savings, 0.10);
+    }
+
+    #[test]
     fn test_calculate_roi_and_efficiency_normal() {
         let cost = 10.0;
         let revenue = 15.0;
