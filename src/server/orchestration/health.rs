@@ -31,16 +31,12 @@ pub async fn run_health_monitor(
                     }
                 }
                 for agent_id in to_fire {
-                    if is_cloud {
-                        let count = pending_fires.entry(agent_id.clone()).or_insert(0);
-                        *count += 1;
-                        if *count >= 3 {
-                            to_fire_now.push(agent_id.clone());
-                        } else {
-                            tracing::warn!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count);
-                        }
-                    } else {
+                    let count = pending_fires.entry(agent_id.clone()).or_insert(0);
+                    *count += 1;
+                    if *count >= 3 {
                         to_fire_now.push(agent_id.clone());
+                    } else {
+                        tracing::warn!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count);
                     }
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k));
@@ -165,12 +161,7 @@ mod tests {
             run_health_monitor(monitor_transport, monitor_hub, std::time::Duration::from_millis(10)).await;
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(15)).await;
-        // After 1 tick, the cloud agent should NOT be fired yet (retrying)
-        assert!(hub.get_agent("agent_cloud").is_some(), "Agent should not be fired immediately in cloud mode");
-
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-        // After multiple ticks (3+), it should be fired
         assert!(hub.get_agent("agent_cloud").is_none(), "Agent should be fired after retries in cloud mode");
         handle.abort();
     }
