@@ -304,7 +304,17 @@ mod tests {
                                lower_line.contains("password") ||
                                lower_line.contains("pii") ||
                                lower_line.contains("api_key") ||
-                               lower_line.contains("secret_key") {
+                               lower_line.contains("secret_key") ||
+                               lower_line.contains("credit") ||
+                               lower_line.contains("card") ||
+                               lower_line.contains("cvv") ||
+                               lower_line.contains("dob") ||
+                               lower_line.contains("birth") ||
+                               lower_line.contains("passport") ||
+                               lower_line.contains("bank") ||
+                               lower_line.contains("account") ||
+                               lower_line.contains("stripe") ||
+                               lower_line.contains("billing") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }
@@ -389,4 +399,26 @@ async fn test_record_queue_length_with_deployment_mode() {
     let labels_json: String = row.get("labels_json");
     let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
     assert!(parsed.get("deployment_mode").is_some());
+}
+#[test]
+fn test_standalone_wrapper_audit() {
+    let mut script_path = std::path::PathBuf::from("deploy/scripts/ohc-standalone.sh");
+    if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
+        script_path = std::path::PathBuf::from(workspace_dir).join("deploy/scripts/ohc-standalone.sh");
+    } else if let Ok(runfiles_dir) = std::env::var("RUNFILES_DIR") {
+        script_path = std::path::PathBuf::from(runfiles_dir).join("ohc/deploy/scripts/ohc-standalone.sh");
+    }
+    if !script_path.exists() {
+        script_path = std::path::PathBuf::from("deploy/scripts/ohc-standalone.sh");
+    }
+    let content = std::fs::read_to_string(script_path).expect("Failed to read ohc-standalone.sh script");
+
+    let expected_telemetry_check = r#"if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
+  export OHC_TELEMETRY_ENABLED=false
+fi"#;
+
+    assert!(
+        content.contains(expected_telemetry_check),
+        "Local Sovereignty violation: ohc-standalone.sh does not properly strictly enforce OHC_TELEMETRY_ENABLED opt-in boundary."
+    );
 }
