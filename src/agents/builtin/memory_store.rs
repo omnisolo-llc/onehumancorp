@@ -320,16 +320,22 @@ impl VectorRepository {
     }
 
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
+        let query = "DELETE FROM consolidated_memory \
+                     WHERE last_referenced_at < $1 \
+                     AND owner_override = FALSE \
+                     AND reference_count < 5 \
+                     AND (source_type LIKE 'TASK%' OR source_type = 'SESSION_SUMMARY' OR source_type = 'AUTO_DREAM' OR source_type = 'SESSION_DATA')";
+
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                sqlx::query(query)
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                sqlx::query(&query.replace("$1", "?"))
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -369,7 +375,7 @@ impl VectorRepository {
     }
 
     pub async fn auto_resolve_conflicts(&self) -> Result<usize, String> {
-        let conflicts = self.get_conflicting_pairs().await?;
+        let conflicts = self.get_conflicting_pairs(0.05).await?;
         let mut resolved_count = 0;
 
         for (a, b) in conflicts {
@@ -406,21 +412,21 @@ impl VectorRepository {
     }
 
 
-    pub async fn get_conflicting_pairs(&self) -> Result<Vec<(EmbeddingRecord, EmbeddingRecord)>, String> {
+    pub async fn get_conflicting_pairs(&self, similarity_threshold: f32) -> Result<Vec<(EmbeddingRecord, EmbeddingRecord)>, String> {
         let mut conflicts = Vec::new();
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                let query = "
+                let query = format!("
                     SELECT
                         a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding::text AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
                         b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
                     FROM consolidated_memory a
                     JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
-                    WHERE a.embedding <=> b.embedding < 0.05
+                    WHERE a.embedding <=> b.embedding < {}
                     LIMIT 10
-                ";
-                let rows = sqlx::query(query)
+                ", similarity_threshold);
+                let rows = sqlx::query(&query)
                     .fetch_all(pool)
                     .await
                     .map_err(|e| e.to_string())?;
@@ -473,16 +479,16 @@ impl VectorRepository {
                     .is_ok();
 
                 if has_vec_extension {
-                    let query = "
+                    let query = format!("
                         SELECT
                             a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
                             b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
                         FROM consolidated_memory a
                         JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
-                        WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.05
+                        WHERE vec_distance_cosine(a.embedding, b.embedding) < {}
                         LIMIT 10
-                    ";
-                    let rows = sqlx::query(query)
+                    ", similarity_threshold);
+                    let rows = sqlx::query(&query)
                         .fetch_all(pool)
                         .await
                         .map_err(|e| e.to_string())?;
@@ -588,7 +594,7 @@ impl VectorRepository {
                                 // Ensure a consistent ordering to avoid duplicate pairs in different orders
                                 let (record_a, record_b) = if a.id < b.id { (a, b) } else { (b, a) };
                                 let distance = cosine_distance(&record_a.embedding, &record_b.embedding);
-                                if distance < 0.05 {
+                                if distance < similarity_threshold {
                                     conflicts.push((record_a.clone(), record_b.clone()));
                                     match_count += 1;
                                     if match_count >= 10 {
@@ -1613,7 +1619,7 @@ mod get_conflicts_tests {
         assert_eq!(id, "rec1", "The correct record should remain");
 
         // get_conflicting_pairs test
-        let conflicts = repo.get_conflicting_pairs().await.unwrap();
+        let conflicts = repo.get_conflicting_pairs(0.05).await.unwrap();
         assert!(conflicts.is_empty(), "Should have no conflicts");
     }
 
@@ -1865,13 +1871,14 @@ mod get_conflicts_tests {
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
 
+        // 1. Dept A (Ambassador) stores context
         let record1 = EmbeddingRecord {
             id: "dept_a_rec".to_string(),
             tenant_id: "org1".to_string(),
-            agent_id: "sales_agent".to_string(),
-            content: "customer unhappy with pricing".to_string(),
-            embedding: vec![0.5, 0.5, 0.5],
-            source_type: "SUPPORT_TICKET".to_string(),
+            agent_id: "ambassador".to_string(),
+            content: "Maya prefers dark chocolate for her bakery orders.".to_string(),
+            embedding: vec![0.1, 0.2, 0.3],
+            source_type: "SESSION_DATA".to_string(),
             created_at: now,
             last_referenced_at: now,
             reference_count: 1,
@@ -1879,13 +1886,65 @@ mod get_conflicts_tests {
             owner_override: false,
             metadata: None,
         };
-
         repo.upsert(&record1).await.unwrap();
 
-        let results = repo.semantic_search("org1", &[0.5, 0.5, 0.5], 5).await.unwrap();
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].content, "customer unhappy with pricing");
-        assert_eq!(results[0].agent_id, "sales_agent");
+        // 2. Dept B (Manager) retrieves context conceptually
+        // "Maya's chocolate preference" -> should find the dark chocolate entry
+        let results = repo.semantic_search("org1", &[0.11, 0.21, 0.31], 5).await.unwrap();
+
+        assert_eq!(results.len(), 1, "Should find the dark chocolate preference conceptually");
+        assert!(results[0].content.contains("dark chocolate"));
+        assert_eq!(results[0].agent_id, "ambassador", "Context should be shared across departments");
+    }
+
+    #[tokio::test]
+    async fn test_semantic_search_conceptual_queries() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+
+        let record1 = EmbeddingRecord {
+            id: "v1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "We received a large order for vegan cakes today.".to_string(),
+            embedding: vec![0.9, 0.0, 0.0],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: Utc::now(),
+            last_referenced_at: Utc::now(),
+            reference_count: 1,
+            reliability_score: 100,
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record1).await.unwrap();
+
+        // Querying for "plant-based pastries" (similar embedding)
+        let results = repo.semantic_search("org1", &[0.85, 0.05, 0.05], 5).await.unwrap();
+
+        assert!(!results.is_empty(), "Conceptual query should return relevant results");
+        assert!(results[0].content.contains("vegan cakes"));
     }
 
     #[tokio::test]

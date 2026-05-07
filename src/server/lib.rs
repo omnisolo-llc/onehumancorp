@@ -1203,6 +1203,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     });
     let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
     consolidation_worker.start();
+    tracing::info!("Memory Consolidation Worker started");
 
     // Start Competitor Audit Worker
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
