@@ -5824,6 +5824,90 @@ mod remaining_e2e_tests {
     }
 
     #[test]
+    fn test_e2e_growth_features_comprehensive() {
+        crate::ui_tests::init();
+
+        // 1. Referral Program
+        let referrals_ui = app::Referrals::new().unwrap();
+        referrals_ui.set_my_referral_link("ohc://join?ref=NOVA_123".into());
+        referrals_ui.set_total_referrals(5);
+        referrals_ui.set_reward_balance("$29.00".into());
+
+        let link_copied = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let link_copied_clone = link_copied.clone();
+        referrals_ui.on_copy_link(move || { *link_copied_clone.borrow_mut() = true; });
+        referrals_ui.invoke_copy_link();
+        assert!(*link_copied.borrow());
+
+        // 2. Business Share & Embed
+        let business_share_ui = app::BusinessShare::new().unwrap();
+        business_share_ui.set_business_name("Nova's Shop".into());
+        business_share_ui.set_business_tagline("Best stuff ever".into());
+
+        let ig_shared = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let ig_shared_clone = ig_shared.clone();
+        business_share_ui.on_share_to_instagram(move || { *ig_shared_clone.borrow_mut() = true; });
+        business_share_ui.invoke_share_to_instagram();
+        assert!(*ig_shared.borrow());
+
+        // 3. Social Media Auto-Posting
+        let social_ui = app::SocialPosting::new().unwrap();
+        social_ui.set_is_connected_instagram(false);
+
+        let ig_connected = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let ig_connected_clone = ig_connected.clone();
+        social_ui.on_connect_instagram(move || { *ig_connected_clone.borrow_mut() = true; });
+        social_ui.invoke_connect_instagram();
+        assert!(*ig_connected.borrow());
+
+        social_ui.set_post_content("Check out our new sale!".into());
+        let post_approved = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let post_approved_clone = post_approved.clone();
+        social_ui.on_approve_post(move || { *post_approved_clone.borrow_mut() = true; });
+        social_ui.invoke_approve_post();
+        assert!(*post_approved.borrow());
+
+        // 4. Email Marketing
+        let email_ui = app::EmailMarketing::new().unwrap();
+        email_ui.set_total_subscribers(250);
+        let template_generated = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+        let template_generated_clone = template_generated.clone();
+        email_ui.on_generate_template(move |tmpl| { *template_generated_clone.borrow_mut() = tmpl.to_string(); });
+        email_ui.invoke_generate_template("Flash sale".into());
+        assert_eq!(*template_generated.borrow(), "Flash sale");
+
+        let campaign_sent = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let campaign_sent_clone = campaign_sent.clone();
+        email_ui.on_send_campaign(move || { *campaign_sent_clone.borrow_mut() = true; });
+        email_ui.invoke_send_campaign();
+        assert!(*campaign_sent.borrow());
+
+        // 5. Upgrade Prompt / Free Tier
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        dashboard_ui.set_show_upgrade_prompt(true);
+        dashboard_ui.set_upgrade_prompt_message("You've reached your free tier limit.".into());
+        assert!(dashboard_ui.get_show_upgrade_prompt());
+        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit.");
+
+        // 6. Viral Storefront (Website Builder)
+        let wb_ui = app::WebsiteBuilder::new().unwrap();
+        wb_ui.set_domain_choice("subdomain".into());
+        assert_eq!(wb_ui.get_domain_choice(), "subdomain");
+
+        // 7. Success Milestones (Dashboard)
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        dashboard_ui.set_show_milestone(true);
+        dashboard_ui.set_milestone_title("🎉 You just got your 10th order!".into());
+        assert_eq!(dashboard_ui.get_milestone_title(), "🎉 You just got your 10th order!");
+
+        let milestone_dismissed = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let milestone_dismissed_clone = milestone_dismissed.clone();
+        dashboard_ui.on_dismiss_milestone(move || { *milestone_dismissed_clone.borrow_mut() = true; });
+        dashboard_ui.invoke_dismiss_milestone();
+        assert!(*milestone_dismissed.borrow());
+    }
+
+    #[test]
     fn test_e2e_success_milestones_flow() {
         crate::ui_tests::init();
 
