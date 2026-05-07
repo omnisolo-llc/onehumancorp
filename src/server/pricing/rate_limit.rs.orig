@@ -151,7 +151,7 @@ impl RedisRateLimiter {
         }
 
         if let Some(limit) = tier.agent_action_limit() {
-            if agent_used >= limit {
+            if agent_used > limit {
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit
                     soft_limit_reached: true,

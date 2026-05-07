@@ -1654,6 +1654,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     });
 
+    let my_plan_handle_add_credits = my_plan_handle.clone();
+    let pricing_handle_add_credits = pricing_handle.clone();
+    pricing_ui.on_add_credits(move || {
+        if let Some(ui) = pricing_handle_add_credits.upgrade() {
+            let _ = ui.hide();
+        }
+        if let Some(ui) = my_plan_handle_add_credits.upgrade() {
+            let _ = ui.show();
+            ui.invoke_upgrade();
+        }
+    });
+
     let pricing_handle_toggle = pricing_handle.clone();
     pricing_ui.on_toggle_billing_cycle(move || {
         if let Some(ui) = pricing_handle_toggle.upgrade() {
