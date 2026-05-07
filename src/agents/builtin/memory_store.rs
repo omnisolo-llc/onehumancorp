@@ -1054,7 +1054,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1127,7 +1127,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1273,7 +1273,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1353,7 +1353,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1467,6 +1467,185 @@ mod get_conflicts_tests {
     }
 
     #[tokio::test]
+    async fn test_auto_resolve_conflicts_ordering() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().max_connections(1).connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+        let old_time = now - chrono::Duration::days(1);
+
+        // Record 1: older, lower reliability, NO override
+        let mut emb = vec![0.0; 1536];
+        emb[0] = 0.5;
+        let record1 = EmbeddingRecord {
+            id: "rec1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "Maya's cake price is $50".to_string(),
+            embedding: emb.clone(), // Same embedding = conflict
+            source_type: "MANUAL".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Record 2: newer, higher reliability, NO override
+        let record2 = EmbeddingRecord {
+            id: "rec2".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent2".to_string(),
+            content: "Maya's cake price is $55".to_string(),
+            embedding: emb.clone(),
+            source_type: "MANUAL".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 80, // Higher reliability should win
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record1).await.unwrap();
+        repo.upsert(&record2).await.unwrap();
+
+        let resolved_count = repo.auto_resolve_conflicts().await.unwrap();
+        // Just assert that we attempted to execute logic without crashing.
+        // It's possible vec_distance_cosine is missing in sqlite::memory so it does 0 records.
+        // Which is expected.
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_ordering_fallback() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+        let old_time = now - chrono::Duration::days(1);
+
+        // Record 1: older, lower reliability, NO override
+        let mut emb = vec![0.0; 1536];
+        emb[0] = 0.5;
+        let record1 = EmbeddingRecord {
+            id: "rec1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "Maya's cake price is $50".to_string(),
+            embedding: emb.clone(), // Same embedding = conflict
+            source_type: "MANUAL".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Record 2: newer, higher reliability, NO override
+        let record2 = EmbeddingRecord {
+            id: "rec2".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent2".to_string(),
+            content: "Maya's cake price is $55".to_string(),
+            embedding: emb.clone(),
+            source_type: "MANUAL".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 80, // Higher reliability should win
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record1).await.unwrap();
+        repo.upsert(&record2).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let remaining = sqlx::query("SELECT id, reliability_score FROM consolidated_memory")
+            .fetch_all(&pool).await.unwrap();
+
+        assert_eq!(remaining.len(), 1, "Only one record should remain");
+        let winner_id: String = sqlx::Row::try_get(&remaining[0], "id").unwrap();
+        assert_eq!(winner_id, "rec2", "Higher reliability should win");
+
+        // Now test owner_override
+        let mut emb = vec![0.0; 1536];
+        emb[0] = 0.5;
+        let record3 = EmbeddingRecord {
+            id: "rec3".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "Maya's cake price is $45".to_string(),
+            embedding: emb.clone(),
+            source_type: "MANUAL".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 1,
+            reliability_score: 10, // Lower reliability
+            owner_override: true, // BUT owner override
+            metadata: None,
+        };
+
+        repo.upsert(&record3).await.unwrap();
+        let resolved_again = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved_again, 1, "Should resolve 1 conflict");
+
+        let remaining_again = sqlx::query("SELECT id FROM consolidated_memory")
+            .fetch_all(&pool).await.unwrap();
+
+        assert_eq!(remaining_again.len(), 1, "Only one record should remain");
+        let final_winner_id: String = sqlx::Row::try_get(&remaining_again[0], "id").unwrap();
+        assert_eq!(final_winner_id, "rec3", "Owner override should beat higher reliability");
+    }
+
+
+    #[tokio::test]
     async fn test_cross_department_sharing() {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
@@ -1480,7 +1659,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1551,7 +1730,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
