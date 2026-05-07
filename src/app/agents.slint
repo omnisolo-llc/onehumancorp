@@ -26,6 +26,7 @@ export component Agents inherits Window {
 
     callback hire_agent();
     callback fix_agent(string);
+    callback tune_agent(string);
 
     if (show_upgrade_prompt) : UpgradePrompt {
         message: root.upgrade_prompt_message;
@@ -77,6 +78,7 @@ export component Agents inherits Window {
                             horizontal-alignment: center; 
                         }
                         if (!agent.is_running) : Button { text: "Help me fix this"; clicked => { fix_agent(agent.id); } }
+                        Button { text: "Tune this agent"; clicked => { tune_agent(agent.id); } }
                     }
                 }
             }
