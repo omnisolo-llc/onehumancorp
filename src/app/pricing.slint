@@ -26,6 +26,7 @@ export component Pricing inherits Window {
     in-out property <int> step: 0;
     in property <string> current_usage: "450 / 1000 AI Actions";
     in property <string> projected_cost: "$9.00 / month";
+    in property <float> usage_progress: 0.45;
 
     in property <[UiPricingTier]> tiers: [
         {
@@ -122,13 +123,13 @@ export component Pricing inherits Window {
                     Text { text: "AI Actions"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                     Text { text: current_usage; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
 
-                    Rectangle {
+                    progress_bg := Rectangle {
                         height: 8px;
                         border-radius: 4px;
                         background: rgba(255, 255, 255, 0.1);
                         Rectangle {
                             x: 0;
-                            width: 45%; // Hardcoded for 450/1000
+                            width: usage_progress * progress_bg.width;
                             height: 100%;
                             background: #a855f7;
                             border-radius: 4px;

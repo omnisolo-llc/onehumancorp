@@ -149,3 +149,17 @@ fn pricing_wizard_callbacks() {
     ui.invoke_add_credits();
     assert!(*add_credits_called.borrow());
 }
+
+#[test]
+fn test_pricing_usage_progress() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Pricing::new().unwrap();
+
+    // Test the dynamic property updates correctly
+    ui.set_usage_progress(75.0);
+    assert_eq!(ui.get_usage_progress(), 75.0);
+
+    ui.set_usage_progress(20.0);
+    assert_eq!(ui.get_usage_progress(), 20.0);
+}

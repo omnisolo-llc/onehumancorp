@@ -5,7 +5,7 @@ test.describe('Autonomous Operations CUJ', () => {
   test.beforeEach(async ({ page }) => {
     // 1. Start from the home page after user login
     await page.goto('/');
-    // Assuming the app has a mock login or auto-login for E2E
+    // Assuming the app has a login or auto-login for E2E
     await expect(page).toHaveTitle(/OneHuman/);
   });
 
