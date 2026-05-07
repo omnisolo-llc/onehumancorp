@@ -1191,6 +1191,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();
 
+    // Start Agent Memory Pipeline
+    let memory_embedding_api = Arc::new(crate::workers::agent_memory_pipeline::DefaultMemoryEmbeddingApi::new());
+    let agent_memory_pipeline = Arc::new(crate::workers::agent_memory_pipeline::AgentMemoryPipeline::new(db.clone(), memory_embedding_api));
+    let agent_memory_pipeline_clone = agent_memory_pipeline.clone();
+    tokio::spawn(async move {
+        loop {
+            if let Err(e) = agent_memory_pipeline_clone.run().await {
+                tracing::error!("Agent Memory Pipeline error: {}", e);
+            }
+            tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+        }
+    });
+
     // Ensure local database permissions are secure in standalone mode
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
         // Initialize local tables required for standalone mode
@@ -1478,4 +1491,3 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 }
 pub mod tools;
 pub mod workers;
-pub mod autodream_pipeline;
