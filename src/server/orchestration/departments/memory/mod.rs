@@ -1,3 +1,3 @@
-pub mod layer;
+pub mod layer; // Persistent memory layer module
 pub mod pruning;
 pub mod conflict;
