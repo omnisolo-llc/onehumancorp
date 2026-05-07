@@ -1,0 +1,138 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export struct UiShippingRate {
+    id: string,
+    provider: string,
+    amount: string,
+    estimated_days: string,
+}
+
+export component ShippingFulfillment inherits Window {
+    preferred-width: 500px;
+    min-width: 375px;
+    height: 600px;
+    title: "Fulfill & Ship via Shippo";
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    in-out property <int> step: 0;
+    in property <string> order_id: "ORD-12345";
+    in property <string> customer_name: "Maya";
+    in property <string> destination: "123 Bakery Ln, New York, NY";
+
+    in property <[UiShippingRate]> rates: [
+        { id: "rate_1", provider: "USPS Priority", amount: "$8.50", estimated_days: "2-3 days" },
+        { id: "rate_2", provider: "UPS Ground", amount: "$11.20", estimated_days: "3-5 days" },
+        { id: "rate_3", provider: "FedEx Express", amount: "$24.00", estimated_days: "1 day" }
+    ];
+
+    in-out property <string> selected_rate_id: "";
+    in-out property <string> tracking_url: "";
+
+    callback close();
+    callback select_rate(string);
+    callback purchase_label(string);
+    callback print_label();
+
+    select_rate(id) => { selected_rate_id = id; }
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Fulfill Order " + order_id; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            Button { text: "Close"; clicked => { close(); } }
+        }
+
+        // Step 0: Select Rate
+        if (step == 0) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Shipping to: " + customer_name + " - " + destination; color: #cbd5e1; font-family: "Inter"; font-size: 14px; wrap: word-wrap; }
+            Text { text: "Select a shipping rate (powered by Shippo):"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 12px;
+
+                    for rate in rates : GlassCard {
+                        height: 70px;
+                        background: selected_rate_id == rate.id ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox {
+                            alignment: center; padding: 12px;
+                            HorizontalBox {
+                                Text { text: rate.provider; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Rectangle {}
+                                Text { text: rate.amount; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                            }
+                            Text { text: "Estimated delivery: " + rate.estimated_days; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        }
+                        TouchArea { clicked => { select_rate(rate.id); } }
+                    }
+                }
+            }
+
+            Rectangle {} // Spacer
+
+            HorizontalBox {
+                Rectangle {}
+                GlassCard {
+                    width: 200px;
+                    height: 44px;
+                    background: selected_rate_id != "" ? rgba(168, 85, 247, 1.0) : rgba(100, 116, 139, 0.4);
+                    VerticalBox { alignment: center; Text { text: "Purchase Label"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                    TouchArea {
+                        enabled: selected_rate_id != "";
+                        clicked => {
+                            purchase_label(selected_rate_id);
+                            step = 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Step 1: Label Generated
+        if (step == 1) : VerticalBox {
+            spacing: 16px;
+            alignment: center;
+
+            Text { text: "🎉 Label Purchased Successfully!"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: #10b981; horizontal-alignment: center; }
+            Text { text: "The tracking number has been automatically emailed to " + customer_name + "."; color: #cbd5e1; font-family: "Inter"; font-size: 14px; horizontal-alignment: center; wrap: word-wrap; }
+
+            if (tracking_url != "") : Text {
+                text: "Tracking: " + tracking_url;
+                color: #a855f7;
+                font-size: 14px;
+                horizontal-alignment: center;
+            }
+
+            Rectangle { height: 20px; }
+
+            HorizontalBox {
+                Rectangle {}
+                Button {
+                    text: "🖨️ Print Label PDF";
+                    primary: true;
+                    height: 44px;
+                    clicked => { print_label(); }
+                }
+                Rectangle {}
+            }
+
+            Rectangle { height: 10px; }
+
+            HorizontalBox {
+                Rectangle {}
+                Button {
+                    text: "Done";
+                    height: 44px;
+                    clicked => { close(); }
+                }
+                Rectangle {}
+            }
+        }
+    }
+}

@@ -1848,6 +1848,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let view_orders_called_clone = view_orders_called.clone();
                 dashboard.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+
+                let fulfill_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+                let fulfill_orders_called_clone = fulfill_orders_called.clone();
+
+                let shipping_ui = app::ShippingFulfillment::new().unwrap();
+                let shipping_ui_weak = shipping_ui.as_weak();
+                let shipping_ui_weak_close = shipping_ui.as_weak();
+
+                shipping_ui.on_close(move || {
+                    if let Some(ui) = shipping_ui_weak_close.upgrade() {
+                        let _ = ui.hide();
+                    }
+                });
+
+                dashboard.on_action_fulfill_orders(move || {
+                    *fulfill_orders_called_clone.borrow_mut() = true;
+                    if let Some(ui) = shipping_ui_weak.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
                 let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let check_messages_called_clone = check_messages_called.clone();
 
@@ -3422,6 +3443,9 @@ mod e2e_tests {
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let fulfill_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fulfill_orders_called_clone = fulfill_orders_called.clone();
+        ui.on_action_fulfill_orders(move || { *fulfill_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
         ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
@@ -4677,6 +4701,9 @@ mod docs_tests {
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let fulfill_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fulfill_orders_called_clone = fulfill_orders_called.clone();
+        dashboard_ui.on_action_fulfill_orders(move || { *fulfill_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
         dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
@@ -5364,6 +5391,9 @@ mod docs_tests {
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let fulfill_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fulfill_orders_called_clone = fulfill_orders_called.clone();
+        dashboard_ui.on_action_fulfill_orders(move || { *fulfill_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
         dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
@@ -5444,6 +5474,9 @@ mod dashboard_docs_tests {
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let fulfill_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fulfill_orders_called_clone = fulfill_orders_called.clone();
+        dashboard_ui.on_action_fulfill_orders(move || { *fulfill_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
         dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
@@ -5726,6 +5759,9 @@ mod remaining_e2e_tests {
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let fulfill_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fulfill_orders_called_clone = fulfill_orders_called.clone();
+        dashboard_ui.on_action_fulfill_orders(move || { *fulfill_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
         dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
@@ -5789,6 +5825,9 @@ mod remaining_e2e_tests {
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let fulfill_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fulfill_orders_called_clone = fulfill_orders_called.clone();
+        dashboard_ui.on_action_fulfill_orders(move || { *fulfill_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
         dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
@@ -5975,6 +6014,9 @@ mod remaining_e2e_tests {
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let fulfill_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fulfill_orders_called_clone = fulfill_orders_called.clone();
+        dashboard_ui.on_action_fulfill_orders(move || { *fulfill_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
         dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
@@ -6749,6 +6791,9 @@ mod e2e_hybrid_blob_tests {
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        let fulfill_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fulfill_orders_called_clone = fulfill_orders_called.clone();
+        dashboard_ui.on_action_fulfill_orders(move || { *fulfill_orders_called_clone.borrow_mut() = true; });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
 
@@ -7138,6 +7183,44 @@ fn test_business_share_flow() {
         assert!(*closed.borrow());
     }
 
+    #[test]
+    fn test_e2e_shipping_fulfillment() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let fulfillment_ui = app::ShippingFulfillment::new().unwrap();
+        assert_eq!(fulfillment_ui.get_step(), 0);
+
+        let purchased = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let purchased_clone = purchased.clone();
+
+        fulfillment_ui.on_purchase_label(move |rate_id| {
+            assert_eq!(rate_id, "rate_1");
+            *purchased_clone.borrow_mut() = true;
+        });
+
+        fulfillment_ui.set_selected_rate_id("rate_1".into());
+        fulfillment_ui.invoke_purchase_label("rate_1".into());
+
+        assert!(*purchased.borrow());
+
+        let printed = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let printed_clone = printed.clone();
+        fulfillment_ui.on_print_label(move || {
+            *printed_clone.borrow_mut() = true;
+        });
+        fulfillment_ui.invoke_print_label();
+        assert!(*printed.borrow());
+
+        let closed = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let closed_clone = closed.clone();
+        fulfillment_ui.on_close(move || {
+            *closed_clone.borrow_mut() = true;
+        });
+        fulfillment_ui.invoke_close();
+        assert!(*closed.borrow());
+    }
+
 #[cfg(test)]
 mod additional_pricing_tests {
     use super::*;
@@ -7301,6 +7384,23 @@ mod e2e_login_to_dashboard_tests {
 
         dashboard_ui.invoke_action_view_orders();
         assert!(*orders_opened.borrow(), "Orders should be opened from Dashboard Add action");
+    }
+
+    #[test]
+    fn test_e2e_dashboard_navigation_fulfill() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let fulfill_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let fulfill_opened_clone = fulfill_opened.clone();
+
+        dashboard_ui.on_action_fulfill_orders(move || {
+            *fulfill_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_fulfill_orders();
+        assert!(*fulfill_opened.borrow(), "Fulfill should be opened from Dashboard Fulfill action");
     }
 
     #[test]

@@ -62,6 +62,7 @@ export component Dashboard inherits Window {
 
     callback action_add_product();
     callback action_view_orders();
+    callback action_fulfill_orders();
     callback action_check_messages();
     callback action_see_analytics();
     callback action_share_store();
@@ -361,6 +362,13 @@ export component Dashboard inherits Window {
                 TooltipElement {
                     tooltip_id: "view_orders";
                     Button { text: "Orders"; width: 64px; height: 44px; clicked => { action_view_orders(); } }
+                }
+            }
+            VerticalBox {
+                alignment: center;
+                TooltipElement {
+                    tooltip_id: "fulfill_orders";
+                    Button { text: "Fulfill"; width: 64px; height: 44px; clicked => { action_fulfill_orders(); } }
                 }
             }
             VerticalBox {

@@ -161,6 +161,54 @@ test.describe('Integrations Page', () => {
     }
   });
 
+  test('should show nylas integration', async ({ page }) => {
+    await expect(page.locator('text=/Nylas/i')).toBeVisible();
+  });
+
+  test('should connect nylas integration', async ({ page }) => {
+    const nylasBtn = page.locator('button:has-text("Configure"), button:has-text("Nylas")').first();
+    if (await nylasBtn.isVisible()) {
+      await nylasBtn.click();
+      await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
+    }
+  });
+
+  test('should show stripe integration', async ({ page }) => {
+    await expect(page.locator('text=/Stripe/i')).toBeVisible();
+  });
+
+  test('should connect stripe integration', async ({ page }) => {
+    const stripeBtn = page.locator('button:has-text("Configure"), button:has-text("Stripe")').first();
+    if (await stripeBtn.isVisible()) {
+      await stripeBtn.click();
+      await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
+    }
+  });
+
+  test('should show mailchimp integration', async ({ page }) => {
+    await expect(page.locator('text=/Mailchimp/i')).toBeVisible();
+  });
+
+  test('should connect mailchimp integration', async ({ page }) => {
+    const mailchimpBtn = page.locator('button:has-text("Configure"), button:has-text("Mailchimp")').first();
+    if (await mailchimpBtn.isVisible()) {
+      await mailchimpBtn.click();
+      await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
+    }
+  });
+
+  test('should show messagebird integration', async ({ page }) => {
+    await expect(page.locator('text=/MessageBird/i')).toBeVisible();
+  });
+
+  test('should connect messagebird integration', async ({ page }) => {
+    const messagebirdBtn = page.locator('button:has-text("Configure"), button:has-text("MessageBird")').first();
+    if (await messagebirdBtn.isVisible()) {
+      await messagebirdBtn.click();
+      await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
+    }
+  });
+
 test.describe('Pipeline Management', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');

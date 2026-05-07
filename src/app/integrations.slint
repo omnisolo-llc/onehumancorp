@@ -80,6 +80,25 @@ export component Integrations inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
+                    Text { text: "💳 Stripe"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Global Payments and POS"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Stripe"); }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
                     Text { text: "💬 Twilio"; font-weight: 700; color: #1e293b; }
                     Text { text: "Send SMS alerts to customers"; color: #64748b; wrap: word-wrap; }
                     Button {
@@ -99,11 +118,11 @@ export component Integrations inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
-                    Text { text: "📅 Cal.com"; font-weight: 700; color: #1e293b; }
+                    Text { text: "📅 Nylas"; font-weight: 700; color: #1e293b; }
                     Text { text: "Automated appointment booking"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
-                        clicked => { configure_integration("Cal.com"); }
+                        clicked => { configure_integration("Nylas"); }
                     }
                 }
             }
@@ -122,11 +141,11 @@ export component Integrations inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
-                    Text { text: "💬 Chatwoot"; font-weight: 700; color: #1e293b; }
+                    Text { text: "💬 MessageBird"; font-weight: 700; color: #1e293b; }
                     Text { text: "Unified Social Media DMs"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
-                        clicked => { configure_integration("Chatwoot"); }
+                        clicked => { configure_integration("MessageBird"); }
                     }
                 }
             }
@@ -146,11 +165,11 @@ export component Integrations inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
-                    Text { text: "📧 Resend"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Native Email Campaign Manager"; color: #64748b; wrap: word-wrap; }
+                    Text { text: "📧 Mailchimp"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Email Campaigns"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
-                        clicked => { configure_integration("Resend"); }
+                        clicked => { configure_integration("Mailchimp"); }
                     }
                 }
             }
