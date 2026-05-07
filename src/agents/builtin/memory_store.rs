@@ -1185,9 +1185,13 @@ mod get_conflicts_tests {
         let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory")
             .fetch_one(&pool).await.unwrap();
 
-        // Might be 2 if vec_distance_cosine is missing in tests, or 1 if resolved.
-        // We just ensure it doesn't panic.
-        assert!(count.0 == 1 || count.0 == 2);
+        // We check the result length is what we expect based on test environment.
+        // In real execution, missing sqlite-vec fallback is handled securely without panics.
+        if resolved == 1 {
+            assert_eq!(count.0, 1);
+        } else {
+            assert_eq!(count.0, 2);
+        }
     }
 
     #[tokio::test]
