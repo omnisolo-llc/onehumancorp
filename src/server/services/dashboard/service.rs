@@ -1,16 +1,16 @@
-use tonic::{Request, Response, Status};
-use crate::ohc::app::*;
 use crate::ohc::app::dashboard_service_server::DashboardService;
+use crate::ohc::app::*;
 use std::sync::Arc;
+use tonic::{Request, Response, Status};
 
-
+use std::collections::HashMap;
 use std::sync::OnceLock;
 use std::sync::RwLock;
-use std::collections::HashMap;
 
-static PRODUCTS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::organization::Product>>>> = OnceLock::new();
-static ORDERS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::app::Order>>>> = OnceLock::new();
-
+static PRODUCTS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::organization::Product>>>> =
+    OnceLock::new();
+static ORDERS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::app::Order>>>> =
+    OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -29,17 +29,26 @@ impl DashboardService for MyDashboardService {
         &self,
         request: Request<GetDashboardRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        let auth_info = request.extensions().get::<crate::auth::orchestration::AuthInfo>()
+        let auth_info = request
+            .extensions()
+            .get::<crate::auth::orchestration::AuthInfo>()
             .cloned()
             .ok_or_else(|| Status::unauthenticated("Missing authentication information"))?;
 
         let req = request.into_inner();
 
         if crate::config::get().multitenant && req.organization_id.is_empty() {
-            return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+            return Err(Status::invalid_argument(
+                "organization_id is required in cloud mode to maintain tenant isolation",
+            ));
         }
-        if crate::config::get().multitenant && auth_info.org_id != "system" && auth_info.org_id != req.organization_id {
-            return Err(Status::permission_denied("You do not have permission to view this organization's dashboard."));
+        if crate::config::get().multitenant
+            && auth_info.org_id != "system"
+            && auth_info.org_id != req.organization_id
+        {
+            return Err(Status::permission_denied(
+                "You do not have permission to view this organization's dashboard.",
+            ));
         }
 
         let hub1 = self.hub.clone();
@@ -57,22 +66,24 @@ impl DashboardService for MyDashboardService {
         let hub_orders = self.hub.clone();
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || { hub1.get_agents() }),
-            tokio::task::spawn_blocking(move || { hub2.get_meetings() }),
-            tokio::task::spawn_blocking(move || {
+            async { Ok::<_, String>(hub1.get_agents()) },
+            async { Ok::<_, String>(hub2.get_meetings()) },
+            async {
                 let cost_auditor = hub3.get_cost_auditor();
-                (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-            }),
-            tokio::task::spawn_blocking(move || {
-                let org_id = org_id1;
-
-                // Caching layer logic (Phase 4)
+                Ok::<_, String>((
+                    cost_auditor.get_total_cost(),
+                    cost_auditor.get_total_tokens(),
+                    cost_auditor.get_agent_costs_snapshot(),
+                ))
+            },
+            async {
+                let org_id = org_id1; // Caching layer logic (Phase 4)
                 let cache_key = format!("hub:products:{}", org_id);
 
                 if let Some(client) = &hub_prod.redis_client {
-                    if let Ok(mut conn) = client.get_connection() {
-                        use redis::Commands;
-                        if let Ok(Some(data)) = conn.get::<&str, Option<String>>(&cache_key) {
+                    if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                        use redis::AsyncCommands; let redis_res: Result<Option<String>, redis::RedisError> = conn.get(&cache_key).await; if let Ok(Some(data)) = redis_res
+                        {
                             if let Ok(products) = serde_json::from_str(&data) {
                                 return Ok::<_, String>(products);
                             }
@@ -87,17 +98,18 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-
                 let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
                 match &db1.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(rows) = tokio::runtime::Handle::current().block_on(sqlx::query(q).bind(&org_id).fetch_all(&db1.pool)) {
+                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db1.pool).await {
                             for r in rows {
                                 let p = crate::ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
-                                    organization_id: r.try_get("organization_id").unwrap_or_default(),
+                                    organization_id: r
+                                        .try_get("organization_id")
+                                        .unwrap_or_default(),
                                     name: r.try_get("name").unwrap_or_default(),
                                     description: "".to_string(),
                                     price_cents: 0,
@@ -108,13 +120,15 @@ impl DashboardService for MyDashboardService {
                                 results.push(p);
                             }
                         }
-                    },
+                    }
                     crate::db::DbStore::Sqlite(pool) => {
-                        if let Ok(rows) = tokio::runtime::Handle::current().block_on(sqlx::query(q).bind(&org_id).fetch_all(pool)) {
+                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
                             for r in rows {
                                 let p = crate::ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
-                                    organization_id: r.try_get("organization_id").unwrap_or_default(),
+                                    organization_id: r
+                                        .try_get("organization_id")
+                                        .unwrap_or_default(),
                                     name: r.try_get("name").unwrap_or_default(),
                                     description: "".to_string(),
                                     price_cents: 0,
@@ -125,15 +139,19 @@ impl DashboardService for MyDashboardService {
                                 results.push(p);
                             }
                         }
-                    },
+                    }
                 }
 
-
                 if let Some(client) = &hub_prod.redis_client {
-                    if let Ok(mut conn) = client.get_connection() {
-                        use redis::Commands;
+                    if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
                         if let Ok(data) = serde_json::to_string(&results) {
-                            let _ = conn.set_ex::<_, _, ()>(&cache_key, data, 3600);
+                            let _: () = redis::cmd("SETEX")
+                                .arg(&cache_key)
+                                .arg(3600)
+                                .arg(data)
+                                .query_async(&mut conn)
+                                .await
+                                .unwrap_or_default();
                         }
                     }
                 }
@@ -143,16 +161,15 @@ impl DashboardService for MyDashboardService {
                     guard.insert(org_id, results.clone());
                 }
                 Ok::<_, String>(results)
-            }),
-
-            tokio::task::spawn_blocking(move || {
+            },
+            async {
                 let org_id = org_id2;
                 let cache_key = format!("hub:orders:{}", org_id);
 
                 if let Some(client) = &hub_orders.redis_client {
-                    if let Ok(mut conn) = client.get_connection() {
-                        use redis::Commands;
-                        if let Ok(Some(data)) = conn.get::<&str, Option<String>>(&cache_key) {
+                    if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                        use redis::AsyncCommands; let redis_res: Result<Option<String>, redis::RedisError> = conn.get(&cache_key).await; if let Ok(Some(data)) = redis_res
+                        {
                             if let Ok(orders) = serde_json::from_str(&data) {
                                 return Ok::<_, String>(orders);
                             }
@@ -171,7 +188,7 @@ impl DashboardService for MyDashboardService {
                 let mut results = Vec::new();
                 match &db2.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(rows) = tokio::runtime::Handle::current().block_on(sqlx::query(q).bind(&org_id).fetch_all(&db2.pool)) {
+                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db2.pool).await {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = crate::ohc::app::Order {
@@ -185,9 +202,9 @@ impl DashboardService for MyDashboardService {
                                 results.push(o);
                             }
                         }
-                    },
+                    }
                     crate::db::DbStore::Sqlite(pool) => {
-                        if let Ok(rows) = tokio::runtime::Handle::current().block_on(sqlx::query(q).bind(&org_id).fetch_all(pool)) {
+                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = crate::ohc::app::Order {
@@ -201,15 +218,19 @@ impl DashboardService for MyDashboardService {
                                 results.push(o);
                             }
                         }
-                    },
+                    }
                 }
 
-
                 if let Some(client) = &hub_orders.redis_client {
-                    if let Ok(mut conn) = client.get_connection() {
-                        use redis::Commands;
+                    if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
                         if let Ok(data) = serde_json::to_string(&results) {
-                            let _ = conn.set_ex::<_, _, ()>(&cache_key, data, 5);
+                            let _: () = redis::cmd("SETEX")
+                                .arg(&cache_key)
+                                .arg(5)
+                                .arg(data)
+                                .query_async(&mut conn)
+                                .await
+                                .unwrap_or_default();
                         }
                     }
                 }
@@ -219,16 +240,17 @@ impl DashboardService for MyDashboardService {
                     guard.insert(org_id, results.clone());
                 }
                 Ok::<_, String>(results)
-            }),
-
-            tokio::task::spawn_blocking(move || {
+            },
+            async {
                 let org_id = org_id3;
                 let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
                 use sqlx::Row;
                 let mut org = None;
                 match &db3.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(Some(row)) = tokio::runtime::Handle::current().block_on(sqlx::query(q).bind(&org_id).fetch_optional(&db3.pool)) {
+                        if let Ok(Some(row)) =
+                            sqlx::query(q).bind(&org_id).fetch_optional(&db3.pool).await
+                        {
                             org = Some(crate::ohc::organization::Organization {
                                 id: row.try_get("tenant_id").unwrap_or_default(),
                                 name: row.try_get("business_name").unwrap_or_default(),
@@ -240,9 +262,11 @@ impl DashboardService for MyDashboardService {
                                 tier: row.try_get("tier").unwrap_or_default(),
                             });
                         }
-                    },
+                    }
                     crate::db::DbStore::Sqlite(pool) => {
-                        if let Ok(Some(row)) = tokio::runtime::Handle::current().block_on(sqlx::query(q).bind(&org_id).fetch_optional(pool)) {
+                        if let Ok(Some(row)) =
+                            sqlx::query(q).bind(&org_id).fetch_optional(pool).await
+                        {
                             org = Some(crate::ohc::organization::Organization {
                                 id: row.try_get("tenant_id").unwrap_or_default(),
                                 name: row.try_get("business_name").unwrap_or_default(),
@@ -254,26 +278,30 @@ impl DashboardService for MyDashboardService {
                                 tier: row.try_get("tier").unwrap_or_default(),
                             });
                         }
-                    },
+                    }
                 }
                 Ok::<_, String>(org)
-            })
+            }
         );
 
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
-        let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens, _agent_costs_data) =
+            cost_res.map_err(|e| Status::internal(e.to_string()))?;
+        let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
+        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
+        let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
 
         let products = if req.mobile_optimized {
-            products.into_iter().map(|p| crate::ohc::organization::Product {
-                description: String::new(),
-                metadata_json: String::new(),
-                fulfillment_strategy: String::new(),
-                ..p
-            }).collect()
+            products
+                .into_iter()
+                .map(|p| crate::ohc::organization::Product {
+                    description: String::new(),
+                    metadata_json: String::new(),
+                    fulfillment_strategy: String::new(),
+                    ..p
+                })
+                .collect()
         } else {
             products
         };
@@ -301,20 +329,35 @@ impl DashboardService for MyDashboardService {
             });
         }
 
-        let _filtered_agents: Vec<crate::ohc::orchestration::Agent> = agents.iter().filter(|a| a.organization_id == req.organization_id || a.id.starts_with(&format!("{}-", req.organization_id))).cloned().collect();
+        let _filtered_agents: Vec<crate::ohc::orchestration::Agent> = agents
+            .iter()
+            .filter(|a| {
+                a.organization_id == req.organization_id
+                    || a.id.starts_with(&format!("{}-", req.organization_id))
+            })
+            .cloned()
+            .collect();
 
         let mut status_map = std::collections::HashMap::new();
         for a in agents.iter() {
             *status_map.entry(a.status.clone()).or_insert(0) += 1;
         }
-        let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
-
+        let statuses = status_map
+            .into_iter()
+            .map(|(status, count)| StatusCount { status, count })
+            .collect();
 
         // AI Token Efficiency (Phase 5): Audit system prompts for redundancy and compress
         let mut original_prompts_len = 0;
         let mut compressed_prompts_len = 0;
 
-        let org_agents: Vec<_> = agents.iter().filter(|a| a.organization_id == req.organization_id || a.id.starts_with(&format!("{}-", req.organization_id))).collect();
+        let org_agents: Vec<_> = agents
+            .iter()
+            .filter(|a| {
+                a.organization_id == req.organization_id
+                    || a.id.starts_with(&format!("{}-", req.organization_id))
+            })
+            .collect();
 
         for agent in org_agents {
             let prompt = &agent.name;
@@ -323,13 +366,15 @@ impl DashboardService for MyDashboardService {
                 original_prompts_len += orig_len;
 
                 let stop_words: std::collections::HashSet<&str> = [
-                    "a", "an", "the", "is", "are",
-                    "and", "or", "but", "in", "on",
-                    "at", "to", "for", "with", "by",
-                    "about", "as", "of",
-                ].iter().cloned().collect();
+                    "a", "an", "the", "is", "are", "and", "or", "but", "in", "on", "at", "to",
+                    "for", "with", "by", "about", "as", "of",
+                ]
+                .iter()
+                .cloned()
+                .collect();
 
-                let compressed = prompt.split_whitespace()
+                let compressed = prompt
+                    .split_whitespace()
                     .filter(|word| {
                         let clean_word = word.to_lowercase();
                         !stop_words.contains(clean_word.as_str())
@@ -347,7 +392,6 @@ impl DashboardService for MyDashboardService {
             optimized_total_tokens = (total_tokens as f64 * compression_ratio) as i64;
         }
 
-
         let cost_summary = crate::ohc::billing::CostSummary {
             organization_id: req.organization_id.clone(),
             total_cost_usd: total_cost,
@@ -356,13 +400,16 @@ impl DashboardService for MyDashboardService {
             agents: vec![],
         };
 
-        let mut final_agents = _filtered_agents.into_iter().map(|a| crate::ohc::agent::Agent {
-            id: a.id,
-            name: a.name,
-            role: crate::ohc::common::Role::Unspecified as i32,
-            status: crate::ohc::common::AgentStatus::Idle as i32,
-            organization_id: a.organization_id,
-        }).collect::<Vec<_>>();
+        let mut final_agents = _filtered_agents
+            .into_iter()
+            .map(|a| crate::ohc::agent::Agent {
+                id: a.id,
+                name: a.name,
+                role: crate::ohc::common::Role::Unspecified as i32,
+                status: crate::ohc::common::AgentStatus::Idle as i32,
+                organization_id: a.organization_id,
+            })
+            .collect::<Vec<_>>();
 
         if req.mobile_optimized {
             for agent in final_agents.iter_mut() {
@@ -400,7 +447,9 @@ impl DashboardService for MyDashboardService {
         &self,
         request: Request<GetOnboardingStateRequest>,
     ) -> Result<Response<GetOnboardingStateResponse>, Status> {
-        let auth_info = request.extensions().get::<crate::auth::orchestration::AuthInfo>()
+        let auth_info = request
+            .extensions()
+            .get::<crate::auth::orchestration::AuthInfo>()
             .cloned()
             .ok_or_else(|| Status::unauthenticated("Missing authentication information"))?;
 
@@ -408,10 +457,14 @@ impl DashboardService for MyDashboardService {
         let org_id = req.organization_id;
 
         if crate::config::get().multitenant && org_id.is_empty() {
-            return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+            return Err(Status::invalid_argument(
+                "organization_id is required in cloud mode to maintain tenant isolation",
+            ));
         }
         if auth_info.org_id != "system" && auth_info.org_id != org_id {
-            return Err(Status::permission_denied("You do not have permission to view this organization's state."));
+            return Err(Status::permission_denied(
+                "You do not have permission to view this organization's state.",
+            ));
         }
 
         use sqlx::Row;
@@ -422,7 +475,9 @@ impl DashboardService for MyDashboardService {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         if let Some(row) = res {
-            let state_json: serde_json::Value = row.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
+            let state_json: serde_json::Value = row
+                .try_get("state_json")
+                .unwrap_or_else(|_| serde_json::json!({}));
             Ok(Response::new(GetOnboardingStateResponse {
                 state: Some(OnboardingState {
                     organization_id: org_id,
@@ -446,14 +501,17 @@ impl DashboardService for MyDashboardService {
                 description: "A quick 60-second guide to listing items in your store.".to_string(),
                 duration_sec: 60,
                 url: "https://ohc-video.example.com/tutorials/add_product.mp4".to_string(),
-                thumbnail_url: "https://ohc-video.example.com/thumbnails/add_product.jpg".to_string(),
+                thumbnail_url: "https://ohc-video.example.com/thumbnails/add_product.jpg"
+                    .to_string(),
             },
             VideoMetadata {
                 title: "Setting up AI Helpers".to_string(),
-                description: "Learn how to let AI handle your customer emails and social media.".to_string(),
+                description: "Learn how to let AI handle your customer emails and social media."
+                    .to_string(),
                 duration_sec: 120,
                 url: "https://ohc-video.example.com/tutorials/ai_helpers.mp4".to_string(),
-                thumbnail_url: "https://ohc-video.example.com/thumbnails/ai_helpers.jpg".to_string(),
+                thumbnail_url: "https://ohc-video.example.com/thumbnails/ai_helpers.jpg"
+                    .to_string(),
             },
         ];
 
@@ -464,18 +522,25 @@ impl DashboardService for MyDashboardService {
         &self,
         request: Request<UpdateOnboardingStateRequest>,
     ) -> Result<Response<UpdateOnboardingStateResponse>, Status> {
-        let auth_info = request.extensions().get::<crate::auth::orchestration::AuthInfo>()
+        let auth_info = request
+            .extensions()
+            .get::<crate::auth::orchestration::AuthInfo>()
             .cloned()
             .ok_or_else(|| Status::unauthenticated("Missing authentication information"))?;
 
         let req = request.into_inner();
-        let state = req.state.ok_or_else(|| Status::invalid_argument("state is required"))?;
+        let state = req
+            .state
+            .ok_or_else(|| Status::invalid_argument("state is required"))?;
 
         if auth_info.org_id != "system" && auth_info.org_id != state.organization_id {
-            return Err(Status::permission_denied("You do not have permission to update this organization's state."));
+            return Err(Status::permission_denied(
+                "You do not have permission to update this organization's state.",
+            ));
         }
 
-        let state_json_val: serde_json::Value = serde_json::from_str(&state.state_json).map_err(|e| Status::invalid_argument(e.to_string()))?;
+        let state_json_val: serde_json::Value = serde_json::from_str(&state.state_json)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
 
         sqlx::query(
             "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $3"
@@ -487,6 +552,8 @@ impl DashboardService for MyDashboardService {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
+        Ok(Response::new(UpdateOnboardingStateResponse {
+            success: true,
+        }))
     }
 }
