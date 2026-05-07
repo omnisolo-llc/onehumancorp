@@ -1,4 +1,11 @@
 # OHC Hybrid Agentic OS - Changelog
+## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
+### Cloud Scaling Improvements
+- Improved multi-tenant scaling and Redis caching performance for faster workspace loads.
+
+### Privacy/Offline Improvements
+- Enhanced offline reliability and strict data privacy controls for local execution.
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🧹 Maintainer: Ensure multitenant K8s compliance for all pods (#11546)

@@ -2,8 +2,8 @@ apiVersion: v2
 name: ohc
 description: One Human Corp backend/frontend chart (includes Redis and CloudNative-PG)
 type: application
-version: 0.4.31
-appVersion: "0.4.31"
+version: 0.4.33
+appVersion: "0.4.33"
 dependencies:
   - name: redis
     version: "20.11.3"
