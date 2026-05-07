@@ -24,7 +24,7 @@ mod tests {
         assert!(!acquired2);
 
         // Simulate lag / timeout -> wait for TTL to pass
-        sleep(Duration::from_millis(2100)).await;
+        tokio::task::yield_now().await; sleep(Duration::from_millis(2100)).await;
 
         // Recovery: Agent 2 should now acquire
         let acquired2_retry = transport.acquire_lock("system_lock", "agent_2", 2).await.unwrap();
@@ -118,7 +118,7 @@ mod tests {
         // guarantees the underlying bounded logic without network drift.
         let start = std::time::Instant::now();
         let slow_operation = async {
-            sleep(Duration::from_millis(3000)).await;
+            tokio::task::yield_now().await; sleep(Duration::from_millis(2050)).await;
             "ok"
         };
 

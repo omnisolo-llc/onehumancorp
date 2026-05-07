@@ -844,7 +844,7 @@ mod chaos_tests {
 
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .acquire_timeout(Duration::from_millis(5000))
+            .acquire_timeout(std::time::Duration::from_millis(5000))
             .connect(database_url)
             .await
             .unwrap();
@@ -860,9 +860,9 @@ mod chaos_tests {
         let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
-        let db = Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
-        let mesh = Arc::new(ChaosMesh);
-        let service = Arc::new(TaskDecompositionService::new(db, mesh));
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+        let mesh = std::sync::Arc::new(ChaosMesh);
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
 
         // Insert 100 tasks
         for i in 0..100 {
@@ -879,14 +879,16 @@ mod chaos_tests {
                 let start = std::time::Instant::now();
                 let res = svc_clone.claim_task(&agent_id).await;
                 let elapsed = start.elapsed();
-                (res, elapsed)
+                (res, elapsed.as_micros() as u64)
             }));
         }
 
         let mut success = 0;
         let mut failed = 0;
+        let mut latencies = vec![];
         for handle in handles {
             let (res, elapsed) = handle.await.unwrap();
+            latencies.push(elapsed);
             match res {
                 Ok(Some(_task)) => success += 1,
                 Ok(None) => success += 1,
@@ -894,11 +896,16 @@ mod chaos_tests {
             }
         }
 
+        latencies.sort();
+        let p50 = latencies[latencies.len() / 2];
+        let p95 = latencies[(latencies.len() as f64 * 0.95) as usize];
+        let p99 = latencies[(latencies.len() as f64 * 0.99) as usize];
+        println!("Cloud load test latencies: p50={}us, p95={}us, p99={}us", p50, p95, p99);
+
         // In cloud chaos, we tolerate network drop failures
         assert!(success + failed == 100);
         println!("Cloud chaos results: {} success, {} failed", success, failed);
     }
-
     #[tokio::test]
     async fn test_chaos_degradation_validation_standalone() {
         // Chaos Engineering: Standalone mode
@@ -906,7 +913,7 @@ mod chaos_tests {
 
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .acquire_timeout(Duration::from_millis(5000))
+            .acquire_timeout(std::time::Duration::from_millis(5000))
             .connect(database_url)
             .await
             .unwrap();
@@ -922,9 +929,9 @@ mod chaos_tests {
         let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
-        let db = Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
-        let mesh = Arc::new(ChaosMesh);
-        let service = Arc::new(TaskDecompositionService::new(db, mesh));
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+        let mesh = std::sync::Arc::new(ChaosMesh);
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
 
         // Insert 10 tasks
         for i in 0..10 {
@@ -941,20 +948,28 @@ mod chaos_tests {
                 let start = std::time::Instant::now();
                 let res = svc_clone.claim_task(&agent_id).await;
                 let elapsed = start.elapsed();
-                (res, elapsed)
+                (res, elapsed.as_micros() as u64)
             }));
         }
 
         let mut success = 0;
         let mut failed = 0;
+        let mut latencies = vec![];
         for handle in handles {
             let (res, elapsed) = handle.await.unwrap();
+            latencies.push(elapsed);
             match res {
                 Ok(Some(_task)) => success += 1,
                 Ok(None) => success += 1,
                 Err(_) => failed += 1, // Will fail if latency > 60s or chaos triggers
             }
         }
+
+        latencies.sort();
+        let p50 = latencies[latencies.len() / 2];
+        let p95 = latencies[(latencies.len() as f64 * 0.95) as usize];
+        let p99 = latencies[(latencies.len() as f64 * 0.99) as usize];
+        println!("Standalone load test latencies: p50={}us, p95={}us, p99={}us", p50, p95, p99);
 
         assert!(success + failed == 10);
         println!("Standalone chaos results: {} success, {} failed", success, failed);

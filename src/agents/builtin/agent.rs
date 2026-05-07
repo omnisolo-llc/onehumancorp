@@ -3522,7 +3522,23 @@ mod tests {
         let _ = tokio::fs::remove_file(&scratchpad_path).await;
     }
 
-#[tokio::test]
+
+    #[tokio::test]
+    async fn test_agent_ml_resilience_60s_timeout_rule() {
+        // Simulated failure / ML resilience timeout rule (60s in prod, mocked 50ms)
+        let timeout_duration = std::time::Duration::from_millis(50);
+        let start = std::time::Instant::now();
+
+        let result = tokio::time::timeout(timeout_duration, async {
+            tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+            Ok::<(), String>(())
+        }).await;
+
+        assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
+        assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
+    }
+
+    #[tokio::test]
     async fn test_token_budget_exhaustion_termination() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![

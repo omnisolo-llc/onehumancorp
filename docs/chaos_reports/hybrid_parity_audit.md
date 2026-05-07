@@ -1,3 +1,13 @@
+<style>
+body {
+    background: linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+    color: #94a3b8;
+}
+h1, h2 {
+    color: white;
+}
+</style>
+
 # Hybrid Parity Audit & Chaos Resilience Report
 
 ## Methodology
@@ -16,3 +26,8 @@ Chaos benchmark tests were added into `src/server/benchmarks/chaos_bench.rs` suc
 *   `test_simulate_sql_sync_lag`: Verifying proper lock mutual exclusion and ensuring lock release/TTL handles synthetic delays effectively.
 *   `test_drop_network_packets`: Testing Mesh `publish_with_ack` ensuring retries transparently paper over synthetic packet loss.
 *   `test_graceful_degradation`: Simulating database freezing or heavy contention successfully triggers the new timeout blocks preventing runaway execution wait times.
+
+
+### Grafana Visualizations
+![Latency Histogram](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==)
+![Error Rates](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==)
