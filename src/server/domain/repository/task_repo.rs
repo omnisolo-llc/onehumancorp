@@ -18,19 +18,19 @@ impl TaskRepository {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
                 if !task.organization_id.is_empty() {
-                    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+                    sqlx::query("SELECT set_config('app.current_tenant', $1, false)")
                         .bind(&task.organization_id)
                         .execute(&mut *tx)
                         .await
                         .map_err(|e| e.to_string())?;
                 } else {
-                    sqlx::query("SELECT set_config('app.current_tenant', '', true)")
+                    sqlx::query("SELECT set_config('app.current_tenant', '', false)")
                         .execute(&mut *tx)
                         .await
                         .map_err(|e| e.to_string())?;
                 }
 
-                sqlx::query(
+                let res = sqlx::query(
                     r#"
                     INSERT INTO tasks (
                         id, organization_id, parent_task_id, title, description,
@@ -48,10 +48,10 @@ impl TaskRepository {
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
                 .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+                .await;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
+                res.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
@@ -85,13 +85,13 @@ impl TaskRepository {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
                 if !organization_id.is_empty() {
-                    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+                    sqlx::query("SELECT set_config('app.current_tenant', $1, false)")
                         .bind(organization_id)
                         .execute(&mut *tx)
                         .await
                         .map_err(|e| e.to_string())?;
                 } else {
-                    sqlx::query("SELECT set_config('app.current_tenant', '', true)")
+                    sqlx::query("SELECT set_config('app.current_tenant', '', false)")
                         .execute(&mut *tx)
                         .await
                         .map_err(|e| e.to_string())?;
@@ -107,11 +107,10 @@ impl TaskRepository {
                 )
                 .bind(organization_id)
                 .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+                .await;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
-                res
+                res.map_err(|e| e.to_string())?
             }
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query_as::<_, Task>(
@@ -138,13 +137,13 @@ impl TaskRepository {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
                 if !organization_id.is_empty() {
-                    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+                    sqlx::query("SELECT set_config('app.current_tenant', $1, false)")
                         .bind(organization_id)
                         .execute(&mut *tx)
                         .await
                         .map_err(|e| e.to_string())?;
                 } else {
-                    sqlx::query("SELECT set_config('app.current_tenant', '', true)")
+                    sqlx::query("SELECT set_config('app.current_tenant', '', false)")
                         .execute(&mut *tx)
                         .await
                         .map_err(|e| e.to_string())?;

@@ -61,7 +61,12 @@ pub struct TenantKey {
     pub key: String,
 }
 
-pub use crate::oidc::OIDCConfig;
+#[derive(Debug, Clone)]
+pub struct OIDCConfig {
+    pub issuer_url: String,
+    pub client_id: String,
+    pub enabled: bool,
+}
 
 #[async_trait]
 #[allow(dead_code)]
@@ -270,23 +275,6 @@ impl Store {
         Some(u.clone())
     }
 
-    pub fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
-        let by_oidc = self.by_oidc.read().unwrap();
-        let users = self.users.read().unwrap();
-
-        let oidc_key = TenantKey { org_id: org_id.to_string(), key: sub.to_string() };
-        let mut user_id_opt = by_oidc.get(&oidc_key).cloned();
-
-        if user_id_opt.is_none() && !org_id.is_empty() {
-             user_id_opt = by_oidc.get(&TenantKey { org_id: "".to_string(), key: sub.to_string() }).cloned();
-        }
-
-        let user_id = user_id_opt.ok_or_else(|| "user not found by oidc subject".to_string())?;
-        let user = users.get(&user_id).ok_or_else(|| "user not found by oidc subject".to_string())?;
-
-        Ok(user.clone())
-    }
-
     pub fn list_users(&self, org_id: &str) -> Vec<User> {
         let users = self.users.read().unwrap();
         users.values()
@@ -380,14 +368,14 @@ impl Store {
     }
 
     pub fn issue_token(&self, _user: &User) -> Result<String, String> {
-        #[cfg(all(not(test), not(feature = "thin-client")))]
+        #[cfg(not(test))]
         {
             // ZERO SECRETS ENFORCEMENT:
             // JWT generation via static symmetric secrets is disabled.
             // Authentication relies exclusively on SPIFFE/SPIRE for identity validation.
             return Err("Zero Secrets constraint: Static JWT issuance is permanently disabled. Use SPIFFE/SPIRE context.".to_string());
         }
-        #[cfg(any(test, feature = "thin-client"))]
+        #[cfg(test)]
         {
             let now = chrono::Utc::now();
             let claims = Claims {
@@ -411,24 +399,15 @@ impl Store {
     }
 
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
-        #[cfg(all(not(test), not(feature = "thin-client")))]
+        #[cfg(not(test))]
         {
             // ZERO SECRETS ENFORCEMENT:
             // Static JWT validation is disabled.
             // OHC strictly requires SPIFFE/SPIRE mTLS identities.
             return Err("Zero Secrets constraint: Static JWT validation is disabled.".to_string());
         }
-        #[cfg(any(test, feature = "thin-client"))]
+        #[cfg(test)]
         {
-            let oidc_cfg = self.oidc_cfg.read().unwrap().clone();
-            if oidc_cfg.enabled {
-                if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
-                    if !self.is_revoked(&claims.jti) {
-                        return Ok(claims);
-                    }
-                }
-            }
-
             let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
             let token_data = jsonwebtoken::decode::<Claims>(
                 _token,
@@ -482,22 +461,6 @@ impl AuthService for AuthServiceServerImpl {
         
         if crate::config::get().multitenant && req.organization_id.is_empty() {
             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
-        }
-
-        // Add support for Remote Thin Client Login via OIDC handshake
-        let oidc_cfg = self.store.oidc_cfg.read().unwrap().clone();
-        if oidc_cfg.enabled {
-            if let Ok(oidc_claims) = crate::oidc::validate_oidc_token(&req.password, &oidc_cfg).await {
-                if let Ok(user) = self.store.get_by_oidc_subject(&oidc_claims.sub, &req.organization_id) {
-                    if let Ok(token) = self.store.issue_token(&user) {
-                        let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
-                        return Ok(Response::new(LoginResponse {
-                            token,
-                            expires_at,
-                        }));
-                    }
-                }
-            }
         }
 
         match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
