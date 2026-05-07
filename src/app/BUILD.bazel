@@ -18,7 +18,7 @@ cargo_build_script(
 cargo_build_script(
     name = "build_script_wasm",
     srcs = ["build_wasm.rs"],
-    data = glob(["*.slint"]),
+    data = glob(["*.slint"]) + ["tooltips.json"],
     edition = "2024",
     deps = [
         "@crates//:slint-build",
@@ -222,7 +222,7 @@ rust_shared_library(
     name = "app_web",
     srcs = ["main.rs"],
     crate_root = "main.rs",
-    data = glob(["*.slint"]),
+    data = glob(["*.slint"]) + ["tooltips.json"],
     edition = "2024",
     target_compatible_with = ["@platforms//cpu:wasm32"],
     deps = [
