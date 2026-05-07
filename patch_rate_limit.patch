@@ -1,0 +1,11 @@
+--- src/server/pricing/rate_limit.rs
++++ src/server/pricing/rate_limit.rs
+@@ -155,7 +155,7 @@
+         }
+
+         if let Some(limit) = tier.agent_action_limit() {
+-            if agent_used > limit {
++            if agent_used >= limit {
+                 return Ok(RateLimitStatus {
+                     is_allowed: true, // Soft limit
+                     soft_limit_reached: true,
