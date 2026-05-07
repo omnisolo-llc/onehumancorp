@@ -1532,7 +1532,7 @@ mod get_conflicts_tests {
         repo.upsert(&record1).await.unwrap();
         repo.upsert(&record2).await.unwrap();
 
-        let resolved_count = repo.auto_resolve_conflicts().await.unwrap();
+        let _resolved_count = repo.auto_resolve_conflicts().await.unwrap();
         // Just assert that we attempted to execute logic without crashing.
         // It's possible vec_distance_cosine is missing in sqlite::memory so it does 0 records.
         // Which is expected.
