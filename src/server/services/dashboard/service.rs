@@ -162,8 +162,8 @@ impl DashboardService for MyDashboardService {
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
-        let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
-        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
+        let products = if req.mobile_optimized { Vec::new() } else { products_res.map_err(|e| Status::internal(e.to_string()))? };
+        let orders = if req.mobile_optimized { Vec::new() } else { orders_res.map_err(|e| Status::internal(e.to_string()))? };
         let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut out_meetings: Vec<crate::ohc::app::MeetingRoom> = Vec::new();
@@ -207,7 +207,7 @@ impl DashboardService for MyDashboardService {
 
         Ok(Response::new(DashboardSnapshot {
             organization: org,
-            agents: vec![],
+            agents: if req.mobile_optimized { vec![] } else { _filtered_agents.into_iter().map(|a| crate::ohc::agent::Agent { id: a.id, organization_id: a.organization_id, name: a.name, status: crate::ohc::common::AgentStatus::Idle as i32, role: crate::ohc::common::Role::Unspecified as i32 }).collect() },
             meetings: out_meetings,
             cost_summary: Some(cost_summary),
             statuses,
