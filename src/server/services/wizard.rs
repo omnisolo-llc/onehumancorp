@@ -184,6 +184,21 @@ impl WizardService for MyWizardService {
             });
         }
 
+        let hybrid_mode_ready = std::env::var("DATABASE_URL").is_ok();
+        if hybrid_mode_ready {
+            health_checks.push(DiagnosticCheckProto {
+                check: "HYBRID_MODE_READY".to_string(),
+                status: "ok".to_string(),
+                message: "Hybrid mode switching is ready".to_string(),
+            });
+        } else {
+            health_checks.push(DiagnosticCheckProto {
+                check: "HYBRID_MODE_READY".to_string(),
+                status: "degraded".to_string(),
+                message: "Hybrid mode switching is degraded".to_string(),
+            });
+        }
+
         Ok(Response::new(OnboardingVerifyResponse {
             status: resp_status.to_string(),
             mode: mode.to_string(),

@@ -759,10 +759,14 @@ pub async fn insert_autodream_memory(
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
+                let affected = sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
                     .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
-                    .await?.rows_affected()
+                    .await?.rows_affected();
+                sqlx::query("DELETE FROM agent_missions WHERE status = 'STAGNANT'")
+                    .execute(sqlite_pool)
+                    .await?;
+                affected
             },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
@@ -771,6 +775,9 @@ pub async fn insert_autodream_memory(
                     .bind(threshold)
                     .execute(&mut *tx)
                     .await?.rows_affected();
+                sqlx::query("DELETE FROM agent_missions WHERE status = 'STAGNANT'")
+                    .execute(&mut *tx)
+                    .await?;
                 tx.commit().await?;
                 affected
             }
