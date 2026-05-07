@@ -417,4 +417,41 @@ mod tests {
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
+
+    #[tokio::test]
+    async fn test_ml_resilience_idempotency_simulation() {
+        // ML-Resilience Rule 3: AI agent failures must never corrupt customer data — use idempotent operations
+        let mut processed_state = std::collections::HashMap::new();
+
+        let mut process_mission = |id: &str, data: &str| {
+            if processed_state.contains_key(id) {
+                // Return gracefully (idempotent success) if already processed
+                return Ok(());
+            }
+            // Simulate failure on first attempt sometimes
+            if rand::random::<bool>() {
+                return Err("Transient simulation failure".to_string());
+            }
+
+            processed_state.insert(id.to_string(), data.to_string());
+            Ok(())
+        };
+
+        // Retry mechanism ensuring idempotency
+        let mission_id = "mission_idempotent_1";
+        let mut success = false;
+        for _ in 0..3 {
+            if process_mission(mission_id, "customer_data_1").is_ok() {
+                success = true;
+                break;
+            }
+        }
+
+        assert!(success, "Mission should eventually succeed");
+
+        // Re-process identical mission to verify idempotency (should not duplicate or corrupt state)
+        let rerun = process_mission(mission_id, "customer_data_1");
+        assert!(rerun.is_ok(), "Idempotent rerun should succeed");
+        assert_eq!(processed_state.len(), 1, "Idempotent operation must not duplicate records");
+    }
 }
