@@ -8,6 +8,6 @@ go_binary(
         "//srcs/server/memory:memory",
         "//srcs/server/onboarding:onboarding",
         "//srcs/server/orchestration:orchestration",
-        "@com_github_mattn_go_sqlite3//:go_sqlite3",
+        "//srcs/server/growth:growth",
     ],
 )
