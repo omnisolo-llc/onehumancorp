@@ -19,15 +19,18 @@ impl TaskQueue for SQLiteTaskQueue {
         if jobs.is_empty() { return Ok(()); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         for job in jobs {
-            sqlx::query("INSERT INTO local_queue_jobs (id, tenant_id, task_id, role, payload) VALUES (?, ?, ?, ?, ?)")
-                .bind(job.id.clone())
-                .bind(job.tenant_id.clone())
-                .bind(job.parent_task_id.clone())
-                .bind(job.agent_role.clone())
-                .bind(job.payload.as_bytes())
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+            sqlx::query(
+                "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after)
+                 VALUES (?, ?, ?, ?, 'QUEUED', ?)"
+            )
+            .bind(&job.id)
+            .bind(&job.parent_task_id)
+            .bind(&job.agent_role)
+            .bind(&job.payload)
+            .bind(job.run_after)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
         }
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
