@@ -26,7 +26,7 @@ export component Wizard inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Fix this issue"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: "Help Me Fix This"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
         }
 
         HorizontalBox {
@@ -73,7 +73,7 @@ export component Wizard inherits Window {
         // Step 0: Understand the problem
         if (step == 0) : VerticalBox {
             spacing: 16px;
-            Text { text: "What happened?"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
+            Text { text: "Something went wrong"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
 
             GlassCard {
                 background: rgba(239, 68, 68, 0.1); // subtle red tint
@@ -92,7 +92,7 @@ export component Wizard inherits Window {
         // Step 1: Review proposed fix
         if (step == 1) : VerticalBox {
             spacing: 16px;
-            Text { text: "Proposed Solution"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
+            Text { text: "Don't worry!"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
 
             GlassCard {
                 background: rgba(245, 158, 11, 0.1); // subtle amber tint
@@ -109,7 +109,7 @@ export component Wizard inherits Window {
         // Step 2: Resolve & Apply
         if (step == 2) : VerticalBox {
             spacing: 16px;
-            Text { text: "Apply Fix"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
+            Text { text: "Fix applied successfully"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
 
             GlassCard {
                 background: rgba(16, 185, 129, 0.1); // subtle green tint
@@ -136,11 +136,18 @@ export component Wizard inherits Window {
 
             Rectangle {} // Center spacer
 
-            if (step < 2) : GlassCard {
-                width: 120px;
+            if (step == 0) : GlassCard {
+                width: 180px;
                 height: 44px;
                 background: rgba(168, 85, 247, 0.8);
-                VerticalBox { alignment: center; Text { text: "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: "View Suggested Fix"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { next_step(); } }
+            }
+            if (step == 1) : GlassCard {
+                width: 180px;
+                height: 44px;
+                background: rgba(16, 185, 129, 0.8);
+                VerticalBox { alignment: center; Text { text: "Refresh & Reconnect"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => { next_step(); } }
             }
             if (step == 2) : GlassCard {
