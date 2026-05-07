@@ -1,4 +1,5 @@
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export struct UiTask {
     title: string,
@@ -10,50 +11,141 @@ export struct UiTask {
 }
 
 export component TaskList inherits Window {
-    width: 500px;
-    height: 600px;
+    width: 375px;
+    height: 812px;
     title: "Shared Task List";
 
     in property <[UiTask]> tasks;
+    in property <[string]> activity_feed;
     callback refresh();
+    callback claim_task(int);
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Shared Task List"; font-size: 20px; font-weight: 700; color: #1e293b; }
-            Rectangle {}
+            alignment: space-between;
+            Text {
+                text: "Swarm Orchestrator";
+                font-size: 24px;
+                font-weight: 700;
+                color: white;
+                font-family: "Outfit";
+            }
             Button { 
                 text: "Refresh"; 
                 clicked => { refresh(); }
             }
         }
 
-        VerticalBox {
-            spacing: 16px;
-            for t in tasks : Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    
-                    HorizontalBox {
-                        Text { text: t.title; font-weight: 700; color: #1e293b; }
-                        Rectangle {}
-                        Text { text: t.status; color: #a855f7; }
+        GlassCard {
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                Text {
+                    text: "Swarm Activity Panel";
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: white;
+                    font-family: "Outfit";
+                }
+                ScrollView {
+                    height: 120px;
+                    VerticalBox {
+                        spacing: 8px;
+                        for activity in activity_feed : Text {
+                            text: activity;
+                            color: #94a3b8;
+                            font-family: "Inter";
+                            font-size: 14px;
+                            wrap: word-wrap;
+                        }
+                        if (activity_feed.length == 0) : Text {
+                            text: "No recent activities. Agents are idle.";
+                            color: #64748b;
+                            font-family: "Inter";
+                            font-size: 14px;
+                            wrap: word-wrap;
+                        }
                     }
-                    
-                    if (t.agent_id != "") : Text { text: "Helper: " + t.agent_id; color: #64748b; }
-                    if (t.dependencies != "") : Text { text: "Dependencies: " + t.dependencies; color: #64748b; font-size: 12px; }
-                    if (t.parent_task_id != "") : Text { text: "Parent Task: " + t.parent_task_id; color: #64748b; font-size: 12px; }
-                    if (t.workflow_state != "") : Text { text: "Workflow State: " + t.workflow_state; color: #64748b; font-size: 12px; }
+                }
+            }
+        }
+
+        Text {
+            text: "Global Task Queue";
+            font-size: 20px;
+            font-weight: 600;
+            color: white;
+            font-family: "Outfit";
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 16px;
+                for t[idx] in tasks : GlassCard {
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+
+                        HorizontalBox {
+                            alignment: space-between;
+                            Text {
+                                text: t.title;
+                                font-weight: 700;
+                                color: white;
+                                font-family: "Inter";
+                                font-size: 16px;
+                                wrap: word-wrap;
+                            }
+                            Rectangle {
+                                background: t.status == "PENDING" ? #f59e0b : (t.status == "ASSIGNED" ? #3b82f6 : #10b981);
+                                border-radius: 4px;
+                                HorizontalBox {
+                                    padding-left: 8px;
+                                    padding-right: 8px;
+                                    padding-top: 4px;
+                                    padding-bottom: 4px;
+                                    Text {
+                                        text: t.status;
+                                        color: white;
+                                        font-family: "Inter";
+                                        font-size: 12px;
+                                        font-weight: 700;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (t.agent_id != "") : Text {
+                            text: "Helper: " + t.agent_id;
+                            color: #cbd5e1;
+                            font-family: "Inter";
+                            font-size: 14px;
+                        }
+                        if (t.dependencies != "") : Text {
+                            text: "Dependencies: " + t.dependencies;
+                            color: #64748b;
+                            font-family: "Inter";
+                            font-size: 12px;
+                        }
+
+                        if (t.status == "PENDING") : Button {
+                            text: "Claim Task";
+                            clicked => { claim_task(idx); }
+                        }
+                    }
+                }
+
+                if (tasks.length == 0) : Text {
+                    text: "No tasks in the queue.";
+                    color: #64748b;
+                    font-family: "Inter";
+                    font-size: 14px;
+                    horizontal-alignment: center;
                 }
             }
         }
