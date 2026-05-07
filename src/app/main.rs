@@ -380,6 +380,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if ui.get_is_sign_up() {
                     ui.set_show_verification(true);
                     ui.set_verification_message("Please check your email to verify your account.".into());
+                    ui.invoke_start_setup_wizard();
                 } else {
 
                     ui.set_loading(true);
@@ -607,6 +608,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if ui.get_is_sign_up() {
                     ui.set_show_verification(true);
                     ui.set_verification_message("Please check your email to verify your account.".into());
+                    ui.invoke_start_setup_wizard();
                 } else {
 
                     ui.hide().unwrap();
