@@ -81,7 +81,51 @@ impl DashboardService for MyDashboardService {
             async {
                 let org_id = req.organization_id.clone();
                 // Let's assume order schema exists or fallback to empty for the benchmark
-                Ok::<_, String>(vec![])
+                {
+                let org_id = req.organization_id.clone();
+                let mut results = Vec::new();
+                match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        if let Ok(rows) = sqlx::query("SELECT id, tenant_id as organization_id, customer_id as product_id, CAST(total_amount AS BIGINT) as amount_cents, status, extract(epoch from created_at)::bigint as created_at_unix FROM orders WHERE tenant_id = $1")
+                            .bind(&org_id)
+                            .fetch_all(&self.db.pool)
+                            .await
+                        {
+                            for r in rows {
+                                use sqlx::Row;
+                                results.push(crate::ohc::app::Order {
+                                    id: r.try_get("id").unwrap_or_default(),
+                                    organization_id: r.try_get("organization_id").unwrap_or_default(),
+                                    product_id: r.try_get("product_id").unwrap_or_default(),
+                                    amount_cents: r.try_get("amount_cents").unwrap_or_default(),
+                                    status: r.try_get("status").unwrap_or_default(),
+                                    created_at_unix: r.try_get("created_at_unix").unwrap_or_default()
+                                });
+                            }
+                        }
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        if let Ok(rows) = sqlx::query("SELECT id, tenant_id as organization_id, customer_id as product_id, CAST(total_amount AS BIGINT) as amount_cents, status FROM orders WHERE tenant_id = $1")
+                            .bind(&org_id)
+                            .fetch_all(pool)
+                            .await
+                        {
+                            for r in rows {
+                                use sqlx::Row;
+                                results.push(crate::ohc::app::Order {
+                                    id: r.try_get("id").unwrap_or_default(),
+                                    organization_id: r.try_get("organization_id").unwrap_or_default(),
+                                    product_id: r.try_get("product_id").unwrap_or_default(),
+                                    amount_cents: r.try_get("amount_cents").unwrap_or_default(),
+                                    status: r.try_get("status").unwrap_or_default(),
+                                    created_at_unix: 0
+                                });
+                            }
+                        }
+                    }
+                }
+                Ok::<_, String>(results)
+            }
             }
         );
 

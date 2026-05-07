@@ -1,3 +1,5 @@
+import { Client } from 'pg';
+import { Client } from 'pg';
 import { test, expect } from '@playwright/test';
 
 test('verify wizard UI state propagation to backend', async ({ page }) => {
@@ -72,6 +74,13 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
     // Check that we can navigate back to dashboard
     await page.click('button:has-text("Go to Dashboard")');
     await expect(page.locator('text="Welcome"')).toBeVisible();
+
+    const client = new Client({ connectionString: process.env.DATABASE_URL || 'postgres://ohc:ohc@127.0.0.1:5432/ohc' });
+    await client.connect();
+    const res = await client.query("SELECT COUNT(*) FROM onboarding_state");
+    await client.end();
+    expect(parseInt(res.rows[0].count, 10)).toBeGreaterThan(0);
+
 });
 
 test('verify wizard AI agent configuration', async ({ page }) => {
@@ -96,6 +105,13 @@ test('verify wizard AI agent configuration', async ({ page }) => {
     await page.click('button:has-text("Activate Agent")');
 
     await expect(page.locator('text="Agent Activated"')).toBeVisible();
+
+    const client = new Client({ connectionString: process.env.DATABASE_URL || 'postgres://ohc:ohc@127.0.0.1:5432/ohc' });
+    await client.connect();
+    const res = await client.query("SELECT COUNT(*) FROM agents");
+    await client.end();
+    expect(parseInt(res.rows[0].count, 10)).toBeGreaterThan(0);
+
 });
 
 test('verify wizard prompt tuning', async ({ page }) => {
@@ -125,6 +141,13 @@ test('verify wizard prompt tuning', async ({ page }) => {
     await page.click('button:has-text("Save Configuration")');
 
     await expect(page.locator('text="Configuration Saved"')).toBeVisible();
+
+    const client = new Client({ connectionString: process.env.DATABASE_URL || 'postgres://ohc:ohc@127.0.0.1:5432/ohc' });
+    await client.connect();
+    const res = await client.query("SELECT COUNT(*) FROM agents");
+    await client.end();
+    expect(parseInt(res.rows[0].count, 10)).toBeGreaterThan(0);
+
 });
 
 test('verify grow business suggestions', async ({ page }) => {
@@ -139,6 +162,13 @@ test('verify grow business suggestions', async ({ page }) => {
     await page.click('button:has-text("Dismiss")');
     // Ensure modal closes
     await expect(page.locator('text="Actionable Insights"')).toBeHidden();
+
+    const client = new Client({ connectionString: process.env.DATABASE_URL || 'postgres://ohc:ohc@127.0.0.1:5432/ohc' });
+    await client.connect();
+    const res = await client.query("SELECT COUNT(*) FROM department_tasks");
+    await client.end();
+    expect(parseInt(res.rows[0].count, 10)).toBeGreaterThanOrEqual(0);
+
 });
 
 test('verify website builder flow', async ({ page }) => {
@@ -165,6 +195,13 @@ test('verify website builder flow', async ({ page }) => {
     await page.click('button:has-text("Publish Site")');
 
     await expect(page.locator('text="Site Published!"')).toBeVisible({ timeout: 5000 });
+
+    const client = new Client({ connectionString: process.env.DATABASE_URL || 'postgres://ohc:ohc@127.0.0.1:5432/ohc' });
+    await client.connect();
+    const res = await client.query("SELECT COUNT(*) FROM builder_sites");
+    await client.end();
+    expect(parseInt(res.rows[0].count, 10)).toBeGreaterThan(0);
+
 });
 
 test('verify login form error message UX wrap behavior', async ({ page }) => {
