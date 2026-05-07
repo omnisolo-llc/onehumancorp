@@ -386,7 +386,7 @@ mod security_tests {
         // Cloud multitenant mode should NOT allow bypassing.
         let is_multitenant = true;
         let org_id = "system";
-        let should_bypass = !is_multitenant && (org_id.is_empty() );
+        let should_bypass = !is_multitenant && (org_id.is_empty() || org_id == "system");
 
         // Ensure the condition strictly evaluates to false when multitenant is true.
         assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
