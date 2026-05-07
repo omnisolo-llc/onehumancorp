@@ -515,18 +515,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let api_docs_ui = app::ApiDocs::new().unwrap();
                                         let models = vec![
-                                            app::ApiEndpoint {
+                                            app::ConnectionLink {
                                                 method: "GET".into(),
                                                 path: "/v1/products".into(),
                                                 description: "Returns a list of all products in your store.".into(),
                                             },
-                                            app::ApiEndpoint {
+                                            app::ConnectionLink {
                                                 method: "POST".into(),
                                                 path: "/v1/orders".into(),
                                                 description: "Creates a new order in your store.".into(),
                                             },
                                         ];
-                                        api_docs_ui.set_endpoints(slint::ModelRc::new(slint::VecModel::from(models)));
+                                        api_docs_ui.set_connection_links(slint::ModelRc::new(slint::VecModel::from(models)));
                                         let api_docs_handle = api_docs_ui.as_weak();
 
                                         api_docs_ui.on_test_endpoint({
@@ -2163,18 +2163,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let api_docs_ui = app::ApiDocs::new().unwrap();
                 let models = vec![
-                    app::ApiEndpoint {
+                    app::ConnectionLink {
                         method: "GET".into(),
                         path: "/v1/products".into(),
                         description: "Returns a list of all products in your store.".into(),
                     },
-                    app::ApiEndpoint {
+                    app::ConnectionLink {
                         method: "POST".into(),
                         path: "/v1/orders".into(),
                         description: "Creates a new order in your store.".into(),
                     },
                 ];
-                api_docs_ui.set_endpoints(slint::ModelRc::new(slint::VecModel::from(models)));
+                api_docs_ui.set_connection_links(slint::ModelRc::new(slint::VecModel::from(models)));
                 let api_docs_handle = api_docs_ui.as_weak();
 
                 api_docs_ui.on_test_endpoint({

@@ -2,7 +2,7 @@ import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView, CheckBox } from "std-widgets.slint";
 import { TooltipElement } from "tooltip_element.slint";
 
-export struct ApiEndpoint {
+export struct ConnectionLink {
     method: string,
     path: string,
     description: string,
@@ -18,7 +18,7 @@ export component ApiDocs inherits Window {
     in-out property <string> api_key: "sk_live_...";
     in-out property <string> endpoint_url: "https://api.ohc.io";
     in-out property <bool> is_advanced: false;
-    in property <[ApiEndpoint]> endpoints: [];
+    in property <[ConnectionLink]> connection_links: [];
     in-out property <string> api_response: "";
     in-out property <string> active_endpoint: "";
     callback test_endpoint(string);
@@ -56,7 +56,7 @@ export component ApiDocs inherits Window {
                 VerticalBox {
                     spacing: 24px;
 
-                    for ep in endpoints: VerticalBox {
+                    for ep in connection_links: VerticalBox {
                         spacing: 8px;
                         GlassCard { // dark theme for code
                             VerticalBox {

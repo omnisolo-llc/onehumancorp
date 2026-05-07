@@ -22,7 +22,7 @@ fn test_scribe_help_center_content() {
             "Getting Started" => found_getting_started = true,
             "My Store" => found_my_store = true,
             "Payments" => found_payments = true,
-            "AI Agents" => found_ai_helpers = true,
+            "AI Helpers" => found_ai_helpers = true,
             "Marketing" => found_marketing = true,
             "Account & Billing" => found_account = true,
             "Troubleshooting" => found_troubleshooting = true,
@@ -33,7 +33,7 @@ fn test_scribe_help_center_content() {
     assert!(found_getting_started, "Missing Getting Started");
     assert!(found_my_store, "Missing My Store");
     assert!(found_payments, "Missing Payments");
-    assert!(found_ai_helpers, "Missing AI Agents");
+    assert!(found_ai_helpers, "Missing AI Helpers");
     assert!(found_marketing, "Missing Marketing");
     assert!(found_account, "Missing Account & Billing");
     assert!(found_troubleshooting, "Missing Troubleshooting");
