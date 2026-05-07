@@ -70,12 +70,19 @@ impl DashboardService for MyDashboardService {
                 let cache_key = format!("hub:products:{}", org_id);
 
                 if let Some(client) = &hub_prod.redis_client {
-                    if let Ok(mut conn) = client.get_connection() {
-                        use redis::Commands;
-                        if let Ok(Some(data)) = conn.get::<&str, Option<String>>(&cache_key) {
-                            if let Ok(products) = serde_json::from_str(&data) {
-                                return Ok::<_, String>(products);
-                            }
+                    let client_clone = client.clone();
+                    let cache_key_clone = cache_key.clone();
+                    let redis_res = tokio::runtime::Handle::current().block_on(async {
+                        tokio::task::spawn_blocking(move || {
+                            if let Ok(mut conn) = client_clone.get_connection() {
+                                use redis::Commands;
+                                conn.get::<&str, Option<String>>(&cache_key_clone).unwrap_or(None)
+                            } else { None }
+                        }).await.unwrap_or(None)
+                    });
+                    if let Some(data) = redis_res {
+                        if let Ok(products) = serde_json::from_str(&data) {
+                            return Ok::<_, String>(products);
                         }
                     }
                 }
@@ -130,11 +137,17 @@ impl DashboardService for MyDashboardService {
 
 
                 if let Some(client) = &hub_prod.redis_client {
-                    if let Ok(mut conn) = client.get_connection() {
-                        use redis::Commands;
-                        if let Ok(data) = serde_json::to_string(&results) {
-                            let _ = conn.set_ex::<_, _, ()>(&cache_key, data, 3600);
-                        }
+                    let client_clone = client.clone();
+                    let cache_key_clone = cache_key.clone();
+                    if let Ok(data) = serde_json::to_string(&results) {
+                        let _ = tokio::runtime::Handle::current().block_on(async {
+                            tokio::task::spawn_blocking(move || {
+                                if let Ok(mut conn) = client_clone.get_connection() {
+                                    use redis::Commands;
+                                    let _ = conn.set_ex::<_, _, ()>(&cache_key_clone, data, 3600);
+                                }
+                            }).await
+                        });
                     }
                 }
 
@@ -150,12 +163,19 @@ impl DashboardService for MyDashboardService {
                 let cache_key = format!("hub:orders:{}", org_id);
 
                 if let Some(client) = &hub_orders.redis_client {
-                    if let Ok(mut conn) = client.get_connection() {
-                        use redis::Commands;
-                        if let Ok(Some(data)) = conn.get::<&str, Option<String>>(&cache_key) {
-                            if let Ok(orders) = serde_json::from_str(&data) {
-                                return Ok::<_, String>(orders);
-                            }
+                    let client_clone = client.clone();
+                    let cache_key_clone = cache_key.clone();
+                    let redis_res = tokio::runtime::Handle::current().block_on(async {
+                        tokio::task::spawn_blocking(move || {
+                            if let Ok(mut conn) = client_clone.get_connection() {
+                                use redis::Commands;
+                                conn.get::<&str, Option<String>>(&cache_key_clone).unwrap_or(None)
+                            } else { None }
+                        }).await.unwrap_or(None)
+                    });
+                    if let Some(data) = redis_res {
+                        if let Ok(orders) = serde_json::from_str(&data) {
+                            return Ok::<_, String>(orders);
                         }
                     }
                 }
@@ -206,11 +226,17 @@ impl DashboardService for MyDashboardService {
 
 
                 if let Some(client) = &hub_orders.redis_client {
-                    if let Ok(mut conn) = client.get_connection() {
-                        use redis::Commands;
-                        if let Ok(data) = serde_json::to_string(&results) {
-                            let _ = conn.set_ex::<_, _, ()>(&cache_key, data, 5);
-                        }
+                    let client_clone = client.clone();
+                    let cache_key_clone = cache_key.clone();
+                    if let Ok(data) = serde_json::to_string(&results) {
+                        let _ = tokio::runtime::Handle::current().block_on(async {
+                            tokio::task::spawn_blocking(move || {
+                                if let Ok(mut conn) = client_clone.get_connection() {
+                                    use redis::Commands;
+                                    let _ = conn.set_ex::<_, _, ()>(&cache_key_clone, data, 5);
+                                }
+                            }).await
+                        });
                     }
                 }
 
