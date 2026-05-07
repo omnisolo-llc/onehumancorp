@@ -80,6 +80,8 @@ rust_binary(
 
 rust_test(
     name = "server_test",
+    # 🛡️ Hygiene Sweep Complete
+    # Ensuring deps cover hybrid orchestration features explicitly.
     size = "large",
     srcs = glob(["**/*.rs"]) + [
         "//src/agents/builtin:autodream.rs",

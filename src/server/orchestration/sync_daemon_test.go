@@ -31,7 +31,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 		id TEXT PRIMARY KEY,
 		status TEXT NOT NULL,
 		payload BLOB,
-		synced_to_cloud BOOLEAN DEFAULT FALSE
+		synced_to_cloud BOOLEAN DEFAULT FALSE,
+			sync_error TEXT,
+			last_synced_at TIMESTAMP
 	);
 	`
 	_, err = db.Exec(createTableQuery)
@@ -98,5 +100,58 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		if synced != expected {
 			t.Errorf("Mission %s: expected synced_to_cloud=%v, got %v", id, expected, synced)
 		}
+	}
+}
+// We rely on the internal syncToCloud mock rather than an HTTP mock because
+// syncToCloud returns nil by default. We can mock it here if needed, but since it returns nil,
+// it automatically succeeds.
+
+
+func TestHybridMCPRAGDaemon_SyncPendingMissions_Cooldown(t *testing.T) {
+	ClearSemaphore()
+	defer ClearSemaphore()
+
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Insert test data with recent errors
+	insertDataQuery := `
+	INSERT INTO agent_missions (id, status, payload, synced_to_cloud, sync_error, last_synced_at) VALUES
+	('mission-error-1', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE, 'API Timeout', datetime('now', '-1 minutes')),
+	('mission-error-2', 'CLOUD_ESCALATION', '{"key": "value2"}', FALSE, 'HTTP 500', datetime('now', '-6 minutes'));
+	`
+	_, err := db.Exec(insertDataQuery)
+	if err != nil {
+		t.Fatalf("Failed to insert test data: %v", err)
+	}
+
+	daemon := NewHybridMCPRAGDaemon(db, "http://remote-api.test")
+
+	err = daemon.SyncPendingMissions(context.Background())
+	if err != nil {
+		t.Fatalf("SyncPendingMissions failed: %v", err)
+	}
+
+	rows, err := db.Query("SELECT id, synced_to_cloud FROM agent_missions")
+	if err != nil {
+		t.Fatalf("Failed to query database after sync: %v", err)
+	}
+	defer rows.Close()
+
+	syncedMap := make(map[string]bool)
+	for rows.Next() {
+		var id string
+		var synced bool
+		if err := rows.Scan(&id, &synced); err != nil {
+			t.Fatalf("Failed to scan row: %v", err)
+		}
+		syncedMap[id] = synced
+	}
+
+	if syncedMap["mission-error-1"] != false {
+		t.Errorf("Expected mission-error-1 to NOT be synced due to cooldown")
+	}
+	if syncedMap["mission-error-2"] != true {
+		t.Errorf("Expected mission-error-2 to be synced after cooldown expired")
 	}
 }
