@@ -49,6 +49,8 @@ pub struct AgentRunConfig {
     pub enable_llm_judge: bool,
     pub enable_computational_guides: bool,
     pub computational_guide_command: String,
+    pub enable_visual_verification: bool,
+    pub visual_verification_command: String,
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
     pub state_scratchpad_path: Option<String>,
@@ -90,6 +92,8 @@ impl Default for AgentRunConfig {
             enable_llm_judge: false,
             enable_computational_guides: false,
             computational_guide_command: String::new(),
+            enable_visual_verification: false,
+            visual_verification_command: String::new(),
             guardrails: None,
             enable_state_checkpointing: false,
             state_scratchpad_path: None,
@@ -1173,6 +1177,40 @@ impl Agent {
                         }
                         Err(e) => {
                             let err_msg = format!("Failed to execute computational guide command '{}': {}", cfg.computational_guide_command, e);
+                            messages.push(Message::user(err_msg));
+                            continue;
+                        }
+                    }
+                }
+
+                // Visual Verification (screenshots via Playwright or Slint)
+                if cfg.enable_visual_verification && !cfg.visual_verification_command.is_empty() {
+                    let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+                    let mut cmd = std::process::Command::new("bash");
+                    cmd.arg("-c").arg(&cfg.visual_verification_command).current_dir(wd);
+
+                    match cmd.output() {
+                        Ok(output) => {
+                            if !output.status.success() {
+                                let stdout = String::from_utf8_lossy(&output.stdout);
+                                let stderr = String::from_utf8_lossy(&output.stderr);
+                                let err_msg = format!(
+                                    "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
+                                    cfg.visual_verification_command, stdout, stderr
+                                );
+                                messages.push(Message::user(err_msg));
+                                continue;
+                            } else {
+                                let stdout = String::from_utf8_lossy(&output.stdout);
+                                if stdout.contains("REJECT") {
+                                    let err_msg = format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim());
+                                    messages.push(Message::user(err_msg));
+                                    continue;
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            let err_msg = format!("Failed to execute visual verification command '{}': {}", cfg.visual_verification_command, e);
                             messages.push(Message::user(err_msg));
                             continue;
                         }
