@@ -1958,6 +1958,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         open_url(&wa_url);
                     }
                 });
+
+                dashboard.on_action_manage_ai_team(move || {
+                    if let Ok(agents_ui) = app::Agents::new() {
+                        let _ = agents_ui.show();
+                        Box::leak(Box::new(agents_ui));
+                    }
+                });
+
                 let bs_handle_clone = business_share_handle.clone();
                 let ref_handle_clone_for_open = referrals_handle.clone();
                 dashboard.on_action_open_referrals(move || {
@@ -5005,6 +5013,12 @@ mod docs_tests {
             *grow_business_opened_clone.borrow_mut() = true;
         });
 
+        let agents_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let agents_opened_clone = agents_opened.clone();
+        dashboard_ui.on_action_manage_ai_team(move || {
+            *agents_opened_clone.borrow_mut() = true;
+        });
+
         dashboard_ui.invoke_action_grow_business();
         assert!(*grow_business_opened.borrow(), "Grow Business should be opened from Dashboard");
 
@@ -7256,6 +7270,23 @@ mod e2e_login_to_dashboard_tests {
 
         dashboard_ui.invoke_action_see_analytics();
         assert!(*stats_opened.borrow(), "Stats should be opened from Dashboard Add action");
+    }
+
+    #[test]
+    fn test_e2e_dashboard_navigation_manage_ai_team() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let manage_ai_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let manage_ai_opened_clone = manage_ai_opened.clone();
+
+        dashboard_ui.on_action_manage_ai_team(move || {
+            *manage_ai_opened_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_manage_ai_team();
+        assert!(*manage_ai_opened.borrow(), "Manage my AI team should be opened from Dashboard action");
     }
 
     #[test]

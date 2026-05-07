@@ -69,6 +69,7 @@ export component Dashboard inherits Window {
     callback action_grow_business();
     callback action_mark_order_ready();
     callback action_open_kairos_orchestration();
+    callback action_manage_ai_team();
 
     in-out property <bool> show_upgrade_prompt: false;
     in-out property <string> upgrade_prompt_message: "";
@@ -311,7 +312,13 @@ export component Dashboard inherits Window {
 
 
         // My Team
-        Text { text: "My Team"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+        HorizontalBox {
+            alignment: start;
+            spacing: 8px;
+            Text { text: "My Team"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Rectangle {}
+            Button { text: "Manage my AI team"; height: 44px; clicked => { action_manage_ai_team(); } }
+        }
         
         VerticalBox {
             spacing: 10px;

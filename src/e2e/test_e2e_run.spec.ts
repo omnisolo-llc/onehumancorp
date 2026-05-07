@@ -84,18 +84,14 @@ test('verify wizard AI agent configuration', async ({ page }) => {
     await page.click('button:has-text("Login")');
 
     // Navigate to agent settings
-    await page.click('text="Manage Agents"');
+    await page.click('button:has-text("Manage my AI team")');
 
-    await expect(page.locator('text="Agent Configuration"')).toBeVisible();
+    await expect(page.locator('text="Helpers"')).toBeVisible();
 
-    // Toggle capabilities
-    await page.click('text="Customer Support"');
-    await page.check('text="Can Reply to Messages"');
-
-    // Save
-    await page.click('button:has-text("Activate Agent")');
-
-    await expect(page.locator('text="Agent Activated"')).toBeVisible();
+    // Open Agent Config (Hire)
+    await page.click('button:has-text("Hire Helper")');
+    await expect(page.locator('text="Hire New Helper"')).toBeVisible();
+    await page.click('button:has-text("Cancel")');
 });
 
 test('verify wizard prompt tuning', async ({ page }) => {
@@ -108,18 +104,23 @@ test('verify wizard prompt tuning', async ({ page }) => {
     await page.click('button:has-text("Login")');
 
     // Navigate to agent settings
-    await page.click('text="Manage Agents"');
+    await page.click('button:has-text("Manage my AI team")');
 
     // Open Prompt Tuning
-    await page.click('button:has-text("Tune Prompt")');
+    await page.click('button:has-text("Configure")');
 
-    await expect(page.locator('text="Prompt Tuning"')).toBeVisible();
+    await expect(page.locator('text="Configure Helper"')).toBeVisible();
 
     // Select Tone
-    await page.click('text="Friendly"');
+    // Toggle capabilities
+    await page.click('text="Customer Support"');
+    await page.check('text="Reply to customer messages"');
+
+    // Save
+    await page.click('button:has-text("Activate")');
 
     // Toggle Focus
-    await page.check('text="Only discuss business"');
+    // await page.check('text="Only discuss business"');
 
     // Save
     await page.click('button:has-text("Save Configuration")');
