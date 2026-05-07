@@ -177,7 +177,14 @@ export component WebsiteBuilder inherits Window {
             Text { text: "You can add more later"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
             Text { text: "Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-            LineEdit { placeholder-text: "e.g. Custom Birthday Cake"; text <=> product_name; height: 44px; }
+            LineEdit {
+                placeholder-text: "e.g. Custom Birthday Cake";
+                text <=> product_name;
+                height: 44px;
+                accepted => {
+                    generate_description();
+                }
+            }
 
             Text { text: "Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
             LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
