@@ -638,8 +638,8 @@ export component SetupWizard inherits Window {
             // Step 11: Instant Build
             if (step == 11) : VerticalBox {
                 spacing: 16px;
-                Text { text: "Tell us about your business"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
-                Text { text: "Write a short paragraph. AI will figure out the rest."; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                Text { text: "Describe your business in a sentence"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+                Text { text: ""; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
                 LineEdit {
                     placeholder-text: "e.g. I run a local bakery called Maya's Cakes...";
@@ -651,7 +651,7 @@ export component SetupWizard inherits Window {
                 if (is_generating_instant_preview) : GlassCard {
                     height: 54px;
                     background: rgba(168, 85, 247, 0.5);
-                    VerticalBox { alignment: center; Text { text: "AI is brainstorming... 🧠"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                    VerticalBox { alignment: center; Text { text: "Designing your storefront..."; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 }
 
                 if (!is_generating_instant_preview) : GlassCard {
@@ -786,7 +786,7 @@ export component SetupWizard inherits Window {
                 opacity: pulse_scale;
                 animate opacity { duration: 500ms; easing: ease-in-out; }
 
-                VerticalBox { alignment: center; Text { text: "Launch My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: "Publish my business"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
                     launching = true; copy_link(shareable_link);
                     launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password, price_type);
