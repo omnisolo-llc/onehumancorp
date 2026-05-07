@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
-	"regexp"
 	"strings"
 	"time"
 
+	"onehumancorp/srcs/server/harness/validation"
 	"onehumancorp/srcs/server/telemetry"
 )
 
@@ -78,13 +78,15 @@ func (m *BwrapSandboxManager) AnnotateError(err error, stdout string) string {
 }
 
 func (m *BwrapSandboxManager) evaluate(cmd string) bool {
-	// A more robust evaluation using word boundaries
-	for _, disabled := range m.policy.DisabledCommands {
-		re, err := regexp.Compile(`(?:^|[\s;&|])` + regexp.QuoteMeta(disabled) + `(?:[\s;&|]|$)`)
-		if err == nil && re.MatchString(cmd) {
-			return false
-		}
+	// Use ASTValidator for AST-based token validation
+	validator := validation.NewASTValidator(validation.Config{
+		BlockedCommands: m.policy.DisabledCommands,
+	})
+
+	if err := validator.Validate(cmd); err != nil {
+		return false
 	}
+
 	for _, pattern := range m.policy.DisabledPatterns {
 		if strings.Contains(cmd, pattern) {
 			return false
