@@ -2,11 +2,13 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ .Release.Name }}-backend-isolation
+  name: {{ include "ohc.fullname" . }}-backend-isolation
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
-      app: {{ .Release.Name }}-backend
+      app: {{ include "ohc.fullname" . }}-backend
   policyTypes:
     - Ingress
     - Egress
@@ -17,7 +19,7 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app: {{ .Release.Name }}-ohc-core
+              app: {{ include "ohc.fullname" . }}-core
     - from:
         - namespaceSelector:
             matchLabels:
@@ -43,4 +45,189 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+{{- end }}
+---
+{{- if .Values.ohcCore.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ohc.fullname" . }}-core-isolation
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "ohc.fullname" . }}-core
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-backend
+      ports:
+        - protocol: TCP
+          port: {{ .Values.ohcCore.service.port }}
+  egress:
+    - to:
+        - podSelector: {}
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+{{- end }}
+---
+{{- if and .Values.chatwoot.enabled .Values.chatwoot.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ohc.fullname" . }}-chatwoot-isolation
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "ohc.fullname" . }}-chatwoot
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-backend
+      ports:
+        - protocol: TCP
+          port: {{ .Values.chatwoot.service.port }}
+  egress:
+    - to:
+        - podSelector: {}
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+{{- end }}
+---
+{{- if and .Values.powersync.enabled .Values.powersync.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ohc.fullname" . }}-powersync-isolation
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "ohc.fullname" . }}-powersync
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.powersync.service.targetPort }}
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.169.254/32
+{{- end }}
+---
+{{- if .Values.multiTenant.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ohc.fullname" . }}-tenant-isolation
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "ohc.fullname" . }}-backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app: {{ include "ohc.fullname" . }}-frontend
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app: {{ include "ohc.fullname" . }}-ingress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  - to:
+    - podSelector:
+        matchLabels:
+          app: {{ .Values.cnpg.clusterName }}-rw
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: {{ include "ohc.fullname" . }}-redis-master
+    ports:
+    - protocol: TCP
+      port: 6379
+  - to:
+    - namespaceSelector: {}
 {{- end }}

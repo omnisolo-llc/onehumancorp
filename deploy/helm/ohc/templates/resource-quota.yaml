@@ -2,14 +2,28 @@
 apiVersion: v1
 kind: ResourceQuota
 metadata:
-  name: {{ .Release.Name }}-tenant-quota
+{{- if .Values.multiTenant.enabled }}
+  name: {{ include "ohc.fullname" . }}-tenant-quota
+{{- else }}
+  name: {{ include "ohc.fullname" . }}-resource-quota
+{{- end }}
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
 spec:
   hard:
-    requests.cpu: {{ .Values.backend.resourceQuota.requests.cpu | default "4" }}
-    requests.memory: {{ .Values.backend.resourceQuota.requests.memory | default "8Gi" }}
-    requests.ephemeral-storage: {{ .Values.backend.resourceQuota.requests.ephemeralStorage | default "10Gi" }}
-    limits.cpu: {{ .Values.backend.resourceQuota.limits.cpu | default "8" }}
-    limits.memory: {{ .Values.backend.resourceQuota.limits.memory | default "16Gi" }}
-    limits.ephemeral-storage: {{ .Values.backend.resourceQuota.limits.ephemeralStorage | default "20Gi" }}
+    requests.cpu: {{ .Values.backend.resourceQuota.requests.cpu | default "4" | quote }}
+    requests.memory: {{ .Values.backend.resourceQuota.requests.memory | default "8Gi" | quote }}
+{{- if not .Values.multiTenant.enabled }}
+    requests.ephemeral-storage: {{ .Values.backend.resourceQuota.requests.ephemeralStorage | default "50Gi" | quote }}
+{{- end }}
+    limits.cpu: {{ .Values.backend.resourceQuota.limits.cpu | default "8" | quote }}
+    limits.memory: {{ .Values.backend.resourceQuota.limits.memory | default "16Gi" | quote }}
+{{- if not .Values.multiTenant.enabled }}
+    limits.ephemeral-storage: {{ .Values.backend.resourceQuota.limits.ephemeralStorage | default "100Gi" | quote }}
+{{- end }}
+{{- if .Values.multiTenant.enabled }}
+    pods: {{ .Values.backend.resourceQuota.limits.pods | default "20" | quote }}
+{{- else }}
     pods: {{ .Values.backend.resourceQuota.limits.pods | default "50" | quote }}
+{{- end }}
 {{- end }}
