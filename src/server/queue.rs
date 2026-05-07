@@ -954,8 +954,22 @@ impl TaskQueue for RedisTaskQueue {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let mut pipe = redis::pipe();
         for job in jobs {
-            let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
-            pipe.cmd("RPUSH").arg(&self.queue_name).arg(payload_json);
+            let queue_job = crate::interop::protocol::proto::QueueJob {
+                id: job.id,
+                tenant_id: job.tenant_id,
+                parent_task_id: job.parent_task_id,
+                agent_role: job.agent_role,
+                payload: job.payload,
+                status: job.status,
+                attempts: job.attempts,
+                max_attempts: job.max_attempts,
+                run_after_ms: job.run_after.timestamp_millis(),
+                locked_until_ms: job.locked_until.map(|dt| dt.timestamp_millis()).unwrap_or(0),
+                created_at_ms: job.created_at.timestamp_millis(),
+                updated_at_ms: job.updated_at.timestamp_millis(),
+            };
+            let buf = prost::Message::encode_to_vec(&queue_job);
+            pipe.cmd("RPUSH").arg(&self.queue_name).arg(buf);
         }
         let _: () = pipe.query_async(&mut conn).await.map_err(|e| e.to_string())?;
         Ok(())
@@ -963,12 +977,25 @@ impl TaskQueue for RedisTaskQueue {
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
-        let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
-        
+        let queue_job = crate::interop::protocol::proto::QueueJob {
+            id: job.id,
+            tenant_id: job.tenant_id,
+            parent_task_id: job.parent_task_id,
+            agent_role: job.agent_role,
+            payload: job.payload,
+            status: job.status,
+            attempts: job.attempts,
+            max_attempts: job.max_attempts,
+            run_after_ms: job.run_after.timestamp_millis(),
+            locked_until_ms: job.locked_until.map(|dt| dt.timestamp_millis()).unwrap_or(0),
+            created_at_ms: job.created_at.timestamp_millis(),
+            updated_at_ms: job.updated_at.timestamp_millis(),
+        };
+        let buf = prost::Message::encode_to_vec(&queue_job);
         // We use an RPUSH to the redis list
         let _: () = redis::cmd("RPUSH")
             .arg(&self.queue_name)
-            .arg(payload_json)
+            .arg(buf)
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
@@ -980,17 +1007,31 @@ impl TaskQueue for RedisTaskQueue {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         
         // Use BLPOP with 1 second timeout to avoid busy loop
-        let result: Option<(String, String)> = redis::cmd("BLPOP")
+        let result: Option<(String, Vec<u8>)> = redis::cmd("BLPOP")
             .arg(&self.queue_name)
             .arg(1)
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
             
-        if let Some((_, payload_json)) = result {
-            if let Ok(job) = serde_json::from_str::<Job>(&payload_json) {
+        if let Some((_, payload_bytes)) = result {
+            if let Ok(queue_job) = <crate::interop::protocol::proto::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
+                let job = Job {
+                    id: queue_job.id.clone(),
+                    tenant_id: queue_job.tenant_id,
+                    parent_task_id: queue_job.parent_task_id,
+                    agent_role: queue_job.agent_role.clone(),
+                    payload: queue_job.payload,
+                    status: queue_job.status,
+                    attempts: queue_job.attempts,
+                    max_attempts: queue_job.max_attempts,
+                    run_after: chrono::DateTime::from_timestamp_millis(queue_job.run_after_ms).unwrap_or_else(chrono::Utc::now),
+                    locked_until: if queue_job.locked_until_ms > 0 { Some(chrono::DateTime::from_timestamp_millis(queue_job.locked_until_ms).unwrap_or_else(chrono::Utc::now)) } else { None },
+                    created_at: chrono::DateTime::from_timestamp_millis(queue_job.created_at_ms).unwrap_or_else(chrono::Utc::now),
+                    updated_at: chrono::DateTime::from_timestamp_millis(queue_job.updated_at_ms).unwrap_or_else(chrono::Utc::now),
+                };
                 if roles.contains(&job.agent_role) {
-                    let _: () = redis::cmd("HSET").arg(format!("{}_processing", self.queue_name)).arg(&job.id).arg(&payload_json).query_async(&mut conn).await.map_err(|e| e.to_string())?;
+                    let _: () = redis::cmd("HSET").arg(format!("{}_processing", self.queue_name)).arg(&job.id).arg(&payload_bytes).query_async(&mut conn).await.map_err(|e| e.to_string())?;
                     return Ok(Some(job));
                 } else {
                     // Not intended for this worker role, push it back.
@@ -1004,10 +1045,10 @@ impl TaskQueue for RedisTaskQueue {
     async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let processing_key = format!("{}_processing", self.queue_name);
-        let result: Option<String> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
-        if let Some(payload_json) = result {
-            if let Ok(job) = serde_json::from_str::<Job>(&payload_json) {
-                if job.tenant_id != tenant_id {
+        let result: Option<Vec<u8>> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
+        if let Some(payload_bytes) = result {
+            if let Ok(queue_job) = <crate::interop::protocol::proto::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
+                if queue_job.tenant_id != tenant_id {
                     return Err("tenant mismatch".to_string());
                 }
                 let _: () = redis::cmd("HDEL").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
@@ -1020,10 +1061,10 @@ impl TaskQueue for RedisTaskQueue {
     async fn fail(&self, job_id: &str, tenant_id: &str, _reason: &str) -> Result<(), String> {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let processing_key = format!("{}_processing", self.queue_name);
-        let result: Option<String> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
-        if let Some(payload_json) = result {
-            if let Ok(job) = serde_json::from_str::<Job>(&payload_json) {
-                if job.tenant_id != tenant_id {
+        let result: Option<Vec<u8>> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
+        if let Some(payload_bytes) = result {
+            if let Ok(queue_job) = <crate::interop::protocol::proto::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
+                if queue_job.tenant_id != tenant_id {
                     return Err("tenant mismatch".to_string());
                 }
                 let _: () = redis::cmd("HDEL").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
@@ -1034,11 +1075,25 @@ impl TaskQueue for RedisTaskQueue {
     }
 
     async fn requeue(&self, job: Job) -> Result<(), String> {
-        let payload_json = serde_json::to_string(&job).unwrap_or_default();
+        let queue_job = crate::interop::protocol::proto::QueueJob {
+            id: job.id,
+            tenant_id: job.tenant_id,
+            parent_task_id: job.parent_task_id,
+            agent_role: job.agent_role,
+            payload: job.payload,
+            status: job.status,
+            attempts: job.attempts,
+            max_attempts: job.max_attempts,
+            run_after_ms: job.run_after.timestamp_millis(),
+            locked_until_ms: job.locked_until.map(|dt| dt.timestamp_millis()).unwrap_or(0),
+            created_at_ms: job.created_at.timestamp_millis(),
+            updated_at_ms: job.updated_at.timestamp_millis(),
+        };
+        let payload_bytes = prost::Message::encode_to_vec(&queue_job);
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let _: () = redis::cmd("RPUSH")
             .arg(&self.queue_name)
-            .arg(&payload_json)
+            .arg(&payload_bytes)
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
