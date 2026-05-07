@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
@@ -139,4 +140,63 @@ func TestAutoDreamWorker_ReadFileError(t *testing.T) {
 
 	err = worker.ScanAndProcessMemories(context.Background(), memDir)
 	assert.NoError(t, err) // ignores unreadable files
+}
+
+func TestAutoDreamWorker_StartDaemon(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	worker := NewAutoDreamWorker(db)
+	memDir := t.TempDir()
+
+	testFile := filepath.Join(memDir, "memory1.yml")
+	content := `organization_id: "org1"
+task_id: "11111111-1111-1111-1111-111111111111"
+content: "sample memory"`
+	err = os.WriteFile(testFile, []byte(content), 0644)
+	assert.NoError(t, err)
+
+	mock.ExpectExec("INSERT INTO autodream_memories").
+		WithArgs("org1", "11111111-1111-1111-1111-111111111111", "sample memory", sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Run daemon for a short period in a separate goroutine
+	go worker.StartDaemon(ctx, memDir, 10*time.Millisecond)
+
+	// Give it enough time to process the file and run
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+
+	err = mock.ExpectationsWereMet()
+	assert.NoError(t, err)
+
+	_, err = os.Stat(testFile)
+	assert.ErrorIs(t, err, os.ErrNotExist)
+}
+
+func TestAutoDreamWorker_StartDaemon_Error(t *testing.T) {
+	db, _, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	worker := NewAutoDreamWorker(db)
+
+	// Create a file instead of a directory to force an error on ScanAndProcessMemories
+	f, err := os.CreateTemp("", "notadir")
+	assert.NoError(t, err)
+	f.Close()
+	defer os.Remove(f.Name())
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// This will log an error due to f.Name() not being a directory
+	go worker.StartDaemon(ctx, f.Name(), 10*time.Millisecond)
+
+	time.Sleep(50 * time.Millisecond)
+	cancel()
 }
