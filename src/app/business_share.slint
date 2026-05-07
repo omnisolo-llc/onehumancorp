@@ -4,7 +4,7 @@ import { GlassCard } from "glass_card.slint";
 export component BusinessShare inherits Window {
     width: 375px;
     height: 700px;
-    title: "Share Store";
+    title: "Share my business";
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -23,7 +23,7 @@ export component BusinessShare inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Share Your Store"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Text { text: "Share my business"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
             Rectangle {}
             Button { text: "Close"; height: 44px; clicked => { close(); } }
         }
