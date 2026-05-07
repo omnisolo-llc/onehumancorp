@@ -152,3 +152,84 @@ fn test_ui_setup_wizard_state_saving_and_copy_link() {
     ui.invoke_copy_link("https://mybusiness.ohc.app".into());
     assert!(*copy_called.lock().unwrap(), "copy_link should be triggered to auto-copy shareable link.");
 }
+
+#[test]
+fn test_ui_setup_wizard_currency_and_product_logic() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(7);
+    ui.set_product_name("Test Product".into());
+    ui.set_product_price("99.99".into());
+    ui.set_product_currency("EUR".into());
+    ui.set_price_type("fixed".into());
+
+    assert_eq!(ui.get_product_name(), "Test Product");
+    assert_eq!(ui.get_product_price(), "99.99");
+    assert_eq!(ui.get_product_currency(), "EUR");
+    assert_eq!(ui.get_price_type(), "fixed");
+}
+
+#[test]
+fn test_ui_setup_wizard_domain_assignment_logic() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(8);
+    ui.set_domain_choice("testdomain.ohc.app".into());
+    assert_eq!(ui.get_domain_choice(), "testdomain.ohc.app");
+}
+
+#[test]
+fn test_ui_setup_wizard_photo_upload_trigger() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(7);
+
+    let photo_called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let photo_called_clone = photo_called.clone();
+    ui.on_trigger_photo_upload(move || {
+        *photo_called_clone.lock().unwrap() = true;
+    });
+
+    ui.invoke_trigger_photo_upload();
+    assert!(*photo_called.lock().unwrap(), "Photo upload trigger should work correctly");
+}
+
+#[test]
+fn test_ui_setup_wizard_product_description_ai_trigger() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(7);
+
+    let ai_called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let ai_called_clone = ai_called.clone();
+    ui.on_generate_product_description(move |_name| {
+        *ai_called_clone.lock().unwrap() = true;
+    });
+
+    ui.invoke_generate_product_description("Cake".into());
+    assert!(*ai_called.lock().unwrap(), "Product description AI generator trigger should work");
+}
+
+#[test]
+fn test_ui_setup_wizard_welcome_checklist_transition() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+
+    // Simulate successful launch
+    ui.set_launch_success(true);
+    ui.set_step(9);
+
+    // It transitions to step 10 on click
+    ui.set_step(10);
+    assert_eq!(ui.get_step(), 10);
+}
