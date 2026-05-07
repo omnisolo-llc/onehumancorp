@@ -104,16 +104,16 @@ pub async fn bench_dashboard_snapshot() {
         let hub3 = hub.clone();
 
         let (agents_res, meetings_res, cost_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings()),
-            tokio::task::spawn_blocking(move || {
+            tokio::task::spawn(async move { hub1.get_agents() }),
+            tokio::task::spawn(async move { hub2.get_meetings() }),
+            tokio::task::spawn(async move {
                 let cost_auditor = hub3.get_cost_auditor();
                 (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
             })
         );
-        let _ = agents_res.unwrap_or_default();
-        let _ = meetings_res.unwrap_or_default();
-        let _ = cost_res.unwrap_or_default();
+        let _ = agents_res.map_err(|e| e.to_string()).unwrap_or_default();
+        let _ = meetings_res.map_err(|e| e.to_string()).unwrap_or_default();
+        let _ = cost_res.map_err(|e| e.to_string()).unwrap_or_default();
 
         fetch_times.push(start.elapsed().as_micros());
     }
