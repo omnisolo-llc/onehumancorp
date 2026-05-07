@@ -55,8 +55,8 @@ func (t *AuditSyncTool) SyncAuditLogsToCloud(ctx context.Context, payloadStr str
 
 	if t.Telemetry != nil {
 		t.Telemetry.IncrementCounter("ohc.audit_sync.count", 1, map[string]string{
-			"tenant_id": payload.TenantID,
-			"agent_id":  payload.AgentID,
+			"tenant_id": "[REDACTED]",
+			"agent_id":  "[REDACTED]",
 			"action":    payload.Action,
 			"status":    payload.Status,
 		})

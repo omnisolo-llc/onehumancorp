@@ -287,7 +287,10 @@ mod tests {
                     for (i, line) in content.lines().enumerate() {
                         let lower_line = line.to_lowercase();
                         if lower_line.contains("tracing::info!") ||
-                           lower_line.contains("etracing::info!") ||
+                           lower_line.contains("tracing::warn!") ||
+                           lower_line.contains("tracing::error!") ||
+                           lower_line.contains("tracing::debug!") ||
+                           lower_line.contains("tracing::trace!") ||
                            lower_line.contains("info!") ||
                            lower_line.contains("error!") ||
                            lower_line.contains("warn!") ||
