@@ -42,7 +42,7 @@ echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 (while true; do find "${OHC_MEMORY_DIR}" -type f -mmin +60 -delete > /dev/null 2>&1; sleep 3600; done) &
 PRUNE_PID=$!
 # Launch the API Server (local persistence)
-npx @bazel/bazelisk run //src/server:server &
+npx @bazel/bazelisk run //src/server:server > "${OHC_RUNTIME_DIR}/server.log" 2>&1 &
 SERVER_PID=$!
 echo -e "  ${GREEN}✓ Server started with PID $SERVER_PID${RESET}"
 
@@ -52,7 +52,7 @@ until curl -s http://localhost:8080/health > /dev/null 2>&1; do
   sleep 1
 done
 
-npx @bazel/bazelisk run //src/app:app > /dev/null 2>&1 &
+npx @bazel/bazelisk run //src/app:app > "${OHC_RUNTIME_DIR}/app.log" 2>&1 &
 APP_PID=$!
 echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 

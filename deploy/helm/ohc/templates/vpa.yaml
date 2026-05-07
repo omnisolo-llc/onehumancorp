@@ -11,7 +11,17 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-backend
   updatePolicy:
-    updateMode: "Off"
+    updateMode: {{ if .Values.multiTenant.enabled }}"Initial"{{ else }}"Off"{{ end }}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: backend
+        controlledResources: ["cpu", "memory"]
+        minAllowed:
+          cpu: {{ if .Values.multiTenant.enabled }}"500m"{{ else }}{{ .Values.backend.resources.requests.cpu | quote }}{{ end }}
+          memory: {{ if .Values.multiTenant.enabled }}"1Gi"{{ else }}{{ .Values.backend.resources.requests.memory | quote }}{{ end }}
+        maxAllowed:
+          cpu: {{ if .Values.multiTenant.enabled }}"4000m"{{ else }}{{ .Values.backend.resources.limits.cpu | quote }}{{ end }}
+          memory: {{ if .Values.multiTenant.enabled }}"8Gi"{{ else }}{{ .Values.backend.resources.limits.memory | quote }}{{ end }}
 {{- end }}
 ---
 {{- if .Values.ohcCore.vpa.enabled }}

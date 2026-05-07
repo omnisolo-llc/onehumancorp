@@ -17,6 +17,16 @@ spec:
     - namespaceSelector:
         matchLabels:
           kubernetes.io/metadata.name: {{ .Release.Namespace }}
+{{- if .Values.multiTenant.enabled }}
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: frontend
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: ingress
+{{- end }}
   egress:
   - to:
     - namespaceSelector:
@@ -34,4 +44,20 @@ spec:
       port: 53
     - protocol: TCP
       port: 53
+{{- if .Values.multiTenant.enabled }}
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: {{ .Values.cnpg.clusterName }}-rw
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: redis-master
+    ports:
+    - protocol: TCP
+      port: 6379
+{{- end }}
 {{- end }}

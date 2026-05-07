@@ -18,13 +18,13 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.backend.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ if .Values.multiTenant.enabled }}60{{ else }}{{ .Values.backend.autoscaling.targetCPUUtilizationPercentage }}{{ end }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}
+          averageUtilization: {{ if .Values.multiTenant.enabled }}75{{ else }}{{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}{{ end }}
 {{- end }}
 ---
 {{- if .Values.ohcCore.autoscaling.enabled }}
