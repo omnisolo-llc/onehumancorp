@@ -11,26 +11,9 @@ impl Tracker {
         // Redact PII from props before logging to ensure compliance in multi-tenant environments
         let mut sanitized_props = props;
         for (k, v) in sanitized_props.iter_mut() {
-            let key_lower = k.to_lowercase();
-            if key_lower.contains("password") ||
-                key_lower.contains("secret") ||
-                key_lower.contains("key") ||
-                key_lower.contains("token") ||
-                key_lower.contains("auth") ||
-                key_lower.contains("cookie") ||
-                key_lower.contains("credential") ||
-                key_lower.contains("email") ||
-                key_lower.contains("phone") ||
-                key_lower.contains("ssn") ||
-                key_lower.contains("address") ||
-                key_lower.contains("name") ||
-                key_lower.contains("pii") ||
-                key_lower.contains("tenant_id") ||
-                key_lower.contains("organization_id") ||
-                key_lower.contains("session_id") ||
-                key_lower.contains("payload") {
+            if crate::telemetry::is_sensitive_key(k) {
                 *v = "[REDACTED]".to_string();
-            } else if v.contains('@') && v.contains('.') {
+            } else if crate::telemetry::is_email(v) {
                 *v = "[EMAIL_REDACTED]".to_string();
             }
         }
