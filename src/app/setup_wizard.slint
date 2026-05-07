@@ -712,6 +712,17 @@ export component SetupWizard inherits Window {
             if (step == 100) : VerticalBox {
                 spacing: 16px;
 
+
+                // Animated Confetti
+                Rectangle {
+                    height: 80px;
+                    width: 100%;
+                    Text { text: "🎉 🎊 🎉 🎊 🎉"; font-size: 32px; horizontal-alignment: center;
+                           y: root.step == 100 ? 0px : -50px;
+                           animate y { duration: 1000ms; easing: ease-out-bounce; }
+                    }
+                }
+
                 Text { text: "Your live storefront!"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
                 Text { text: "Here is a preview of what customers see."; font-size: 14px; font-family: "Inter"; color: #cbd5e1; horizontal-alignment: center; }
 
