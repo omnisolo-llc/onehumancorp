@@ -28,6 +28,7 @@ func NewBwrapSandboxManager() *BwrapSandboxManager {
 // WrapCommand implements SandboxAdapter.WrapCommand
 func (m *BwrapSandboxManager) WrapCommand(cmd string) (string, error) {
 	if !m.evaluate(cmd) {
+		telemetry.RecordBubblewrapViolation(context.Background(), "policy_denied")
 		telemetry.RecordHarnessViolation(context.Background(), "policy_denied")
 		return "", fmt.Errorf("Command execution denied by sandbox policy")
 	}
@@ -98,6 +99,7 @@ func (m *BwrapSandboxManager) Execute(cmd string) (string, error) {
 	defer func() {
 		durationSecs := time.Since(start).Seconds()
 		telemetry.RecordHarnessExecutionDuration(context.Background(), durationSecs)
+		telemetry.RecordBubblewrapExecutionLatency(context.Background(), durationSecs)
 	}()
 
 	wrapped, err := m.WrapCommand(cmd)
@@ -110,6 +112,7 @@ func (m *BwrapSandboxManager) Execute(cmd string) (string, error) {
 	var stderr bytes.Buffer
 	c.Stdout = &out
 	c.Stderr = &stderr
+	telemetry.RecordBubblewrapSpawn(context.Background())
 	err = c.Run()
 	if err != nil {
 		return stderr.String(), err
