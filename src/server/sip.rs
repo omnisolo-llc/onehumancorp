@@ -26,11 +26,11 @@ impl SipDB {
         sqlx::query(
             "UPDATE agent_missions
              SET status = 'blocked',
-                 mission_log = COALESCE(mission_log, '') || $1,
+                 mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id = $2 AND organization_id = $3"
         )
-        .bind(&extract_blockers_message(blockers))
+        .bind(blockers)
         .bind(mission_id)
         .bind(&self.org_id)
         .execute(&mut *tx)
@@ -406,7 +406,3 @@ mod tests {
     }
 }
 
-// Additional refactoring: extracted inline functions for clarity.
-pub fn extract_blockers_message(blockers: &str) -> String {
-    format!("\n{}", blockers)
-}
