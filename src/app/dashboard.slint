@@ -200,21 +200,67 @@ export component Dashboard inherits Window {
         }
 
         // AI Assistant Health (Telemetry Visualization)
-        if (show_telemetry_visualization && is_advanced) : VerticalBox {
-            spacing: 12px;
-            Text { text: "System Status"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+        if (show_telemetry_visualization && is_advanced) : Rectangle {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.1);
+            border-width: 1px;
+            border-radius: 12px;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: rgba(0, 0, 0, 0.5);
 
-            HorizontalBox {
-                spacing: 16px;
-                StatCard { label: "Saved Time"; value: root.telemetry_cache_hits; value_color: #10b981; }
-                StatCard { label: "Response Speed"; value: root.telemetry_rag_latency; value_color: #06b6d4; }
-            }
+            VerticalBox {
+                padding: 24px;
+                spacing: 24px;
 
-            GlassCard {
-                border-color: rgba(255, 255, 255, 0.1);
-                border-width: 1px;
-                height: 200px;
-                HorizontalBox { alignment: center; Text { text: "[ Assistant Performance Chart ]"; color: white; font-size: 14px; vertical-alignment: center; horizontal-alignment: center; } }
+                Text {
+                    text: "AutoDream Memory Pipeline";
+                    font-size: 20px;
+                    font-family: "Outfit";
+                    font-weight: 700;
+                    color: white;
+                }
+
+                HorizontalBox {
+                    spacing: 16px;
+
+                    Rectangle {
+                        background: rgba(0, 0, 0, 0.2);
+                        border-radius: 8px;
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 8px;
+                            Text { text: "LLM Cache Hits"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
+                            Text { text: root.telemetry_cache_hits; font-size: 32px; font-weight: 700; font-family: "Inter"; color: white; }
+                        }
+                    }
+
+                    Rectangle {
+                        background: rgba(0, 0, 0, 0.2);
+                        border-radius: 8px;
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 8px;
+                            Text { text: "RAG Latency"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
+                            Text { text: root.telemetry_rag_latency; font-size: 32px; font-weight: 700; font-family: "Inter"; color: white; }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    background: rgba(0, 0, 0, 0.1);
+                    border-radius: 8px;
+                    height: 200px;
+                    HorizontalBox {
+                        alignment: center;
+                        Text {
+                            text: root.telemetry_chart_placeholder;
+                            color: white;
+                            font-size: 14px;
+                            vertical-alignment: center;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
             }
         }
 
