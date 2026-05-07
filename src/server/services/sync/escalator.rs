@@ -58,12 +58,15 @@ impl SyncEscalator {
             match req.send().await {
                 Ok(resp) => {
                     if resp.status() == reqwest::StatusCode::OK {
+                        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+                        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| e.to_string())?;
                         sqlx::query("UPDATE local_mcp_rag_tasks SET escalation_status = 'cloud' WHERE id = $1 AND tenant_id = $2")
                             .bind(&id)
                             .bind(&tenant_id)
-                            .execute(&self.pool)
+                            .execute(&mut *tx)
                             .await
                             .map_err(|e| e.to_string())?;
+                        tx.commit().await.map_err(|e| e.to_string())?;
                     } else {
                         tracing::error!("escalation failed with status: {}", resp.status());
                     }

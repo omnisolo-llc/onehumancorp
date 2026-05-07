@@ -23,6 +23,9 @@ impl InviteRepository {
     }
 
     pub async fn create_invite(&self, invite: &TeamInvite) -> Result<(), String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &invite.team_id).await.map_err(|e| e.to_string())?;
+
         sqlx::query(
             "INSERT INTO team_invites (id, team_id, inviter_id, invitee_id, status, created_at, updated_at) \
              VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
@@ -32,9 +35,11 @@ impl InviteRepository {
         .bind(&invite.inviter_id)
         .bind(&invite.invitee_id)
         .bind(&invite.status)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }

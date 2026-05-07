@@ -167,7 +167,10 @@ impl RalphLoop {
                 use std::os::unix::fs::PermissionsExt;
                 if let Ok(mut perms) = fs::metadata(&init_script_path).await.map(|m| m.permissions()) {
                     perms.set_mode(0o755);
-                    let _ = fs::set_permissions(&init_script_path, perms).await;
+                    if let Err(e) = fs::set_permissions(&init_script_path, perms).await {
+                        tracing::error!("Failed to securely update script permissions: {}", e);
+                        return Err(e.into());
+                    }
                 }
             }
         }

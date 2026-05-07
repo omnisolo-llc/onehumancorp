@@ -147,12 +147,15 @@ impl TelemetrySyncDaemon {
         match res {
             Ok(response) => {
                 if response.status().is_success() {
+                    let mut tx = self.pool.begin().await?;
+                    crate::utils::auth_utils::set_org_context(&mut *tx, "system").await?;
                     for id in ids {
                         query("DELETE FROM telemetry_buffer WHERE id = $1")
                             .bind(id)
-                            .execute(&self.pool)
+                            .execute(&mut *tx)
                             .await?;
                     }
+                    tx.commit().await?;
                 } else {
                     error!("Cloud API returned error: {}", response.status());
                 }

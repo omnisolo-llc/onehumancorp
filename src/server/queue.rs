@@ -141,14 +141,17 @@ impl TaskQueue for PostgresTaskQueue {
         payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
         let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
 
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &job.tenant_id).await.map_err(|e| e.to_string())?;
         sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', payload = $3, scheduled_at = $4 WHERE id = $1 AND organization_id = $2")
             .bind(&job.id)
             .bind(&job.tenant_id)
             .bind(new_payload)
             .bind(job.run_after)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -168,17 +171,19 @@ impl TaskQueue for PostgresTaskQueue {
             job.tenant_id.clone()
         };
         
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| e.to_string())?;
         sqlx::query("INSERT INTO sub_agent_queue (id, organization_id, parent_task_id, payload, status, scheduled_at) VALUES ($1, $2, $3, $4, $5, $6)")
             .bind(job.id)
-            .bind(org_id)
+            .bind(&org_id)
             .bind(job.parent_task_id)
             .bind(new_payload)
             .bind("PENDING")
             .bind(run_after)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
-            
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -236,27 +241,31 @@ impl TaskQueue for PostgresTaskQueue {
     }
 
     async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
         sqlx::query("UPDATE sub_agent_queue SET status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2")
             .bind(job_id)
             .bind(tenant_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
-            
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String> {
         let error_payload = serde_json::to_string(&serde_json::json!({"error": reason}))
             .unwrap_or_else(|_| "{}".to_string());
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
         sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', payload = COALESCE(payload::jsonb, '{}'::jsonb) || $2::jsonb WHERE id = $1 AND organization_id = $3")
             .bind(job_id)
             .bind(error_payload)
             .bind(tenant_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
-            
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 }
@@ -449,17 +458,19 @@ impl QueueManager {
     pub async fn enqueue(&self, job: SubAgentJob) -> Result<(), sqlx::Error> {
         let payload_str = serde_json::to_string(&job.payload).unwrap_or_default();
         
+        let mut tx = self.pool.begin().await?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &job.organization_id).await?;
         sqlx::query("INSERT INTO sub_agent_queue (id, organization_id, parent_task_id, payload, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind(job.id)
-            .bind(job.organization_id)
+            .bind(&job.organization_id)
             .bind(job.parent_task_id)
             .bind(payload_str)
             .bind("QUEUED")
             .bind(job.created_at)
             .bind(job.updated_at)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
-            
+        tx.commit().await?;
         Ok(())
     }
 
@@ -492,12 +503,14 @@ impl QueueManager {
     }
 
     pub async fn mark_completed(&self, job_id: &str, organization_id: &str) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, organization_id).await?;
         sqlx::query("UPDATE sub_agent_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2")
             .bind(job_id)
             .bind(organization_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
-            
+        tx.commit().await?;
         Ok(())
     }
 
@@ -512,22 +525,27 @@ impl QueueManager {
         // To implement a true backoff, we need to add `AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP)`.
 
         // Update the row.
+        let mut tx = self.pool.begin().await?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, organization_id).await?;
         sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', payload = $3, updated_at = CURRENT_TIMESTAMP, scheduled_at = CURRENT_TIMESTAMP + INTERVAL '5 seconds' WHERE id = $1 AND organization_id = $2")
             .bind(job_id)
             .bind(organization_id)
             .bind(payload_str)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
+        tx.commit().await?;
         Ok(())
     }
 
     pub async fn mark_failed(&self, job_id: &str, _reason: &str, organization_id: &str) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, organization_id).await?;
         sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2")
             .bind(job_id)
             .bind(organization_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
-            
+        tx.commit().await?;
         Ok(())
     }
 
@@ -619,6 +637,8 @@ impl TaskQueueService {
         let payload_str = serde_json::to_string(&task.payload).unwrap_or_default();
         let deps_str = serde_json::to_string(&task.dependencies).unwrap_or_else(|_| "[]".to_string());
         
+        let mut tx = self.pool.begin().await?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &task.organization_id).await?;
         sqlx::query("INSERT INTO shared_tasks (id, parent_id, epic_id, title, status, assigned_agent, payload, organization_id, dependencies) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)")
             .bind(task.id)
             .bind(task.parent_id)
@@ -627,11 +647,11 @@ impl TaskQueueService {
             .bind("PENDING")
             .bind(task.assigned_agent)
             .bind(payload_str)
-            .bind(task.organization_id)
+            .bind(&task.organization_id)
             .bind(deps_str)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
-            
+        tx.commit().await?;
         Ok(())
     }
 
@@ -669,11 +689,13 @@ impl TaskQueueService {
     }
 
     pub async fn complete_task(&self, task_id: &str) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, "system").await?;
         sqlx::query("UPDATE shared_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(task_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
-            
+        tx.commit().await?;
         Ok(())
     }
 
@@ -682,12 +704,14 @@ impl TaskQueueService {
     pub async fn fail_task(&self, task_id: &str, reason: &str) -> Result<(), sqlx::Error> {
         let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
         // We could merge this better using jsonb operators or just save status
+        let mut tx = self.pool.begin().await?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, "system").await?;
         sqlx::query("UPDATE shared_tasks SET status = 'FAILED', payload = COALESCE(payload, '{}'::jsonb) || $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(task_id)
             .bind(payload_update)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
-
+        tx.commit().await?;
         Ok(())
     }
 

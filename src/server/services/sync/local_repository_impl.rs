@@ -53,6 +53,9 @@ impl LocalRepository for PgLocalRepository {
     }
 
     async fn mark_synced(&self, organization_id: &str, local_id: &str, cloud_id: &str) -> Result<(), String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
+
         sqlx::query(
             "UPDATE agent_missions
              SET synced_to_cloud = TRUE, cloud_mission_id = $1, sync_error = NULL, last_synced_at = NOW()
@@ -61,14 +64,19 @@ impl LocalRepository for PgLocalRepository {
         .bind(cloud_id)
         .bind(local_id)
         .bind(organization_id)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
 
     async fn mark_sync_error(&self, organization_id: &str, local_id: &str, sync_error: &str) -> Result<(), String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
+
         sqlx::query(
             "UPDATE agent_missions
              SET sync_error = $1, last_synced_at = NOW()
@@ -77,9 +85,11 @@ impl LocalRepository for PgLocalRepository {
         .bind(sync_error)
         .bind(local_id)
         .bind(organization_id)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
@@ -122,6 +132,9 @@ impl LocalRepository for PgLocalRepository {
     }
 
     async fn update_local_status(&self, organization_id: &str, local_id: &str, new_status: &str) -> Result<(), String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
+
         sqlx::query(
             "UPDATE agent_missions
              SET status = $1, updated_at = NOW()
@@ -130,9 +143,11 @@ impl LocalRepository for PgLocalRepository {
         .bind(new_status)
         .bind(local_id)
         .bind(organization_id)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }

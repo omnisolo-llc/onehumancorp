@@ -584,7 +584,12 @@ impl DB {
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => { sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ?").bind(threshold).execute(sqlite_pool).await?; },
-            DbStore::Postgres => { sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1").bind(threshold).execute(&self.pool).await?; }
+            DbStore::Postgres => {
+                let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+                sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1").bind(threshold).execute(&mut *tx).await?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
         };
 
         Ok(result)
@@ -593,12 +598,17 @@ impl DB {
     pub async fn inject_truth(&self, memory_id: &str, context: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES (?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding").bind(memory_id).bind(context).bind(embedding).execute(sqlite_pool).await?; },
-            DbStore::Postgres => { sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
+            DbStore::Postgres => {
+                let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+                sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
                 .bind(memory_id)
                 .bind(context)
                 .bind(embedding)
-                .execute(&self.pool)
-                .await?; }
+                .execute(&mut *tx)
+                .await?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
         };
 
         Ok(())
@@ -650,14 +660,19 @@ impl DB {
     pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?; },
-            DbStore::Postgres => { sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
+            DbStore::Postgres => {
+                let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
+                sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
                 .bind(id)
                 .bind(org_id)
                 .bind(task_id)
                 .bind(content)
                 .bind(embedding)
-                .execute(&self.pool)
-                .await?; }
+                .execute(&mut *tx)
+                .await?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
         };
 
         Ok(())
@@ -687,6 +702,8 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
                 sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(id)
                     .bind(org_id)
@@ -695,8 +712,9 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
         }
         Ok(())
@@ -726,6 +744,8 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
                 sqlx::query("INSERT INTO knowledge_embeddings (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
                     .bind(org_id)
@@ -734,8 +754,9 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
         }
         Ok(())
@@ -752,10 +773,14 @@ pub async fn insert_autodream_memory(
                     .await?.rows_affected()
             },
             DbStore::Postgres => {
-                sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
+                let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+                let affected = sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
                     .bind(threshold)
-                    .execute(&self.pool)
-                    .await?.rows_affected()
+                    .execute(&mut *tx)
+                    .await?.rows_affected();
+                tx.commit().await.map_err(|e| e.to_string())?;
+                affected
             }
         };
         if affected > 0 {
@@ -781,7 +806,10 @@ pub async fn insert_autodream_memory(
                 } else {
                     "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
                 };
-                sqlx::query(query).bind(task_id).execute(&self.pool).await?;
+                let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+                sqlx::query(query).bind(task_id).execute(&mut *tx).await?;
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
         };
 
@@ -938,7 +966,9 @@ mod security_tests_final {
             let mut perms = metadata.permissions();
             if perms.mode() & 0o777 != 0o600 {
                 perms.set_mode(0o600);
-                file.set_permissions(perms).unwrap();
+                if let Err(e) = file.set_permissions(perms) {
+                    panic!("Failed to securely update existing standalone database file permissions: {:?}", e);
+                }
             }
         }
         #[cfg(not(unix))]
