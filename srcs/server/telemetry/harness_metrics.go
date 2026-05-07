@@ -45,6 +45,9 @@ func init() {
 
 // RecordHarnessExecutionDuration records the duration of a harness execution.
 func RecordHarnessExecutionDuration(ctx context.Context, durationSecs float64) error {
+	if InterceptMetric("harness_execution_duration_seconds", durationSecs, nil) {
+		return nil
+	}
 	if executionDurationHistogram != nil {
 		executionDurationHistogram.Record(ctx, durationSecs)
 	}
@@ -53,6 +56,9 @@ func RecordHarnessExecutionDuration(ctx context.Context, durationSecs float64) e
 
 // RecordHarnessToolInvocation increments the counter for a specific tool invocation.
 func RecordHarnessToolInvocation(ctx context.Context, toolName string) error {
+	if InterceptMetric("harness_tool_invocations_total", 1, map[string]string{"tool": toolName}) {
+		return nil
+	}
 	if toolInvocationsCounter != nil {
 		opts := metric.WithAttributes(
 			attribute.String("tool", toolName),
@@ -64,6 +70,9 @@ func RecordHarnessToolInvocation(ctx context.Context, toolName string) error {
 
 // RecordHarnessViolation increments the counter for a harness violation (e.g. timeout, memory limit).
 func RecordHarnessViolation(ctx context.Context, violationType string) error {
+	if InterceptMetric("harness_violations_total", 1, map[string]string{"violation_type": violationType}) {
+		return nil
+	}
 	if violationsCounter != nil {
 		opts := metric.WithAttributes(
 			attribute.String("violation_type", violationType),

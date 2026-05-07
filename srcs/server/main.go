@@ -7,10 +7,12 @@ import (
 	"time"
 
 	"net/http"
+	"os"
 
 	"onehumancorp/srcs/server/memory"
 	"onehumancorp/srcs/server/onboarding"
 	"onehumancorp/srcs/server/orchestration"
+	"onehumancorp/srcs/server/telemetry"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -32,6 +34,19 @@ func main() {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 	defer db.Close()
+
+	// Initialize Telemetry
+	telemetry.InitTelemetry(db)
+	defer telemetry.ShutdownTelemetry()
+
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		cloudURL := os.Getenv("OHC_SIP_CLOUD_URL")
+		if cloudURL == "" {
+			cloudURL = "https://api.onehumancorp.com/telemetry/sync"
+		}
+		syncWorker := telemetry.NewSyncWorker(db, cloudURL, 1*time.Minute)
+		go syncWorker.Start(context.Background())
+	}
 
 	// Create memory_embeddings table
 	_, err = db.Exec(`

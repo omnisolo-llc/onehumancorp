@@ -2,17 +2,30 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "telemetry",
-    srcs = ["harness_metrics.go"],
+    srcs = [
+        "harness_metrics.go",
+        "telemetry.go",
+        "sync_worker.go",
+    ],
     importpath = "onehumancorp/srcs/server/telemetry",
     visibility = ["//visibility:public"],
     deps = [
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//:metric",
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
+        "@com_github_google_uuid//:uuid",
     ],
 )
 
 go_test(
     name = "telemetry_test",
-    srcs = ["harness_metrics_test.go"],
+    srcs = [
+        "harness_metrics_test.go",
+        "telemetry_test.go",
+        "sync_worker_test.go",
+    ],
     embed = [":telemetry"],
+    deps = [
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
+    ],
 )
