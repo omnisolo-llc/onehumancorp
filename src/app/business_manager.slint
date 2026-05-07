@@ -1,11 +1,25 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
+export struct UiProduct {
+    id: string,
+    name: string,
+    type_label: string,
+    price: string,
+    inventory_count: int,
+    is_out_of_stock: bool,
+}
+
 export component BusinessManager inherits Window {
     preferred-width: 500px;
     min-width: 375px;
     height: 600px;
-    title: "Add Offering";
+    title: "Business Manager";
+
+    // "list" | "add"
+    in-out property <string> current_view: "list";
+
+    in property <[UiProduct]> products;
 
     in-out property <int> step: 0;
     in-out property <string> selected_type: "";
@@ -24,10 +38,14 @@ export component BusinessManager inherits Window {
     callback select_type(string);
     callback submit(string, string, string, string, string, string); // type, name, desc, price, duration, schedule
     callback close();
+    callback action_add_new();
+    callback action_edit(string);
+    callback action_archive(string);
 
     next_step => { step = step + 1; }
     prev_step => { step = step - 1; }
     select_type(t) => { selected_type = t; }
+    action_add_new => { current_view = "add"; step = 0; selected_type = ""; product_name = ""; product_description = ""; product_price = ""; }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -36,13 +54,74 @@ export component BusinessManager inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Add Offering"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: current_view == "list" ? "My Offerings" : "Add Offering"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
-            Button { text: "Close"; clicked => { close(); } }
+            if (current_view == "add") : Button { text: "Back to List"; clicked => { current_view = "list"; } }
+            if (current_view == "list") : Button { text: "Close"; clicked => { close(); } }
+        }
+
+        if (current_view == "list") : VerticalBox {
+            spacing: 16px;
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 12px;
+                    for prod in products : GlassCard {
+                        border-color: prod.is_out_of_stock ? rgba(239, 68, 68, 0.5) : rgba(255, 255, 255, 0.1);
+                        border-width: 1px;
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 12px;
+
+                            HorizontalBox {
+                                Text { text: prod.name; font-size: 18px; font-weight: 700; color: white; font-family: "Outfit"; }
+                                Rectangle {}
+                                Text { text: prod.price; font-size: 16px; font-weight: 700; color: #10b981; font-family: "Inter"; }
+                            }
+
+                            HorizontalBox {
+                                spacing: 8px;
+                                Rectangle {
+                                    background: rgba(255, 255, 255, 0.1);
+                                    border-radius: 4px;
+                                    padding: 4px;
+                                    Text { text: prod.type_label; font-size: 12px; color: #cbd5e1; font-family: "Inter"; }
+                                }
+                                if (!prod.is_out_of_stock) : Rectangle {
+                                    background: rgba(16, 185, 129, 0.1);
+                                    border-radius: 4px;
+                                    padding: 4px;
+                                    Text { text: prod.inventory_count + " in stock"; font-size: 12px; color: #10b981; font-family: "Inter"; }
+                                }
+                                if (prod.is_out_of_stock) : Rectangle {
+                                    background: rgba(239, 68, 68, 0.2);
+                                    border-radius: 4px;
+                                    padding: 4px;
+                                    Text { text: "⚠️ Out of Stock"; font-size: 12px; color: #ef4444; font-weight: 700; font-family: "Inter"; }
+                                }
+                            }
+
+                            HorizontalBox {
+                                alignment: end;
+                                spacing: 8px;
+                                Button { text: "Edit"; height: 36px; clicked => { action_edit(prod.id); } }
+                                Button { text: "Archive"; height: 36px; clicked => { action_archive(prod.id); } }
+                            }
+                        }
+                    }
+                }
+            }
+
+            GlassCard {
+                height: 52px;
+                background: rgba(168, 85, 247, 0.8);
+                VerticalBox { alignment: center; Text { text: "+ Add New Offering"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { action_add_new(); } }
+            }
         }
 
         // Step 0: Select Type
-        if (step == 0) : VerticalBox {
+        if (current_view == "add" && step == 0) : VerticalBox {
             spacing: 16px;
             Text { text: "What are you offering?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
 
@@ -84,7 +163,7 @@ export component BusinessManager inherits Window {
         }
 
         // Step 1: Details
-        if (step == 1) : VerticalBox {
+        if (current_view == "add" && step == 1) : VerticalBox {
             spacing: 16px;
             Text { text: "Details"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
 
@@ -124,7 +203,7 @@ export component BusinessManager inherits Window {
         Rectangle {} // Spacer
 
         // Navigation
-        HorizontalBox {
+        if (current_view == "add") : HorizontalBox {
             if (step > 0) : GlassCard {
                 width: 100px;
                 height: 44px;
