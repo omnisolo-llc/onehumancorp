@@ -251,6 +251,7 @@ func (s *DefaultSubAgentSpawner) broadcastLifecycleEvent(ctx context.Context, ta
 	bytes, _ := json.Marshal(payload)
 	// The problem description mentioned "mesh:tasks" channels
 	_ = s.mesh.Publish(ctx, "mesh:tasks", bytes)
+	_ = s.mesh.Publish(ctx, "mesh:coordination", bytes)
 }
 
 func (s *DefaultSubAgentSpawner) Monitor(ctx context.Context) error {
