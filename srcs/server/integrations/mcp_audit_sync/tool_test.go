@@ -2,13 +2,20 @@ package mcp_audit_sync
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
-	"time"
 )
 
-// MockDB is a simple mock database for testing.
 type MockDB struct {
 	ExecFunc func(ctx context.Context, sql string, arguments ...interface{}) (interface{}, error)
+}
+
+func (m *MockDB) Query(ctx context.Context, sql string, arguments ...interface{}) (interface{}, error) {
+	return nil, nil
+}
+
+func (m *MockDB) QueryRow(ctx context.Context, sql string, arguments ...interface{}) interface{} {
+	return nil
 }
 
 func (m *MockDB) Exec(ctx context.Context, sql string, arguments ...interface{}) (interface{}, error) {
@@ -18,26 +25,14 @@ func (m *MockDB) Exec(ctx context.Context, sql string, arguments ...interface{})
 	return nil, nil
 }
 
-func (m *MockDB) Query(ctx context.Context, sql string, args ...interface{}) (interface{}, error) {
-	return nil, nil
-}
-
-func (m *MockDB) QueryRow(ctx context.Context, sql string, args ...interface{}) interface{} {
-	return nil
-}
-
-func (m *MockDB) Begin(ctx context.Context) (interface{}, error) {
-	return nil, nil
-}
-
 func (m *MockDB) Close() {}
 
 // MockTelemetry is a simple mock telemetry for testing.
 type MockTelemetry struct {
-	IncrementCounterFunc func(name string, value int64, tags map[string]string)
+	IncrementCounterFunc func(name string, value float64, tags map[string]string)
 }
 
-func (m *MockTelemetry) IncrementCounter(name string, value int64, tags map[string]string) {
+func (m *MockTelemetry) IncrementCounter(name string, value float64, tags map[string]string) {
 	if m.IncrementCounterFunc != nil {
 		m.IncrementCounterFunc(name, value, tags)
 	}
@@ -54,43 +49,44 @@ func TestSyncAuditLogsToCloud_Success(t *testing.T) {
 
 	telemetryCalled := false
 	mockTele := &MockTelemetry{
-		IncrementCounterFunc: func(name string, value int64, tags map[string]string) {
+		IncrementCounterFunc: func(name string, value float64, tags map[string]string) {
 			telemetryCalled = true
 		},
 	}
 
 	tool := NewAuditSyncTool(mockDB, mockTele)
 
-	payload := `{"tenant_id": "t1", "agent_id": "a1", "action": "test", "resource": "res", "status": "ok", "metadata": "{}", "timestamp": 1234567890}`
-	err := tool.SyncAuditLogsToCloud(context.Background(), payload)
+	payload := AuditSyncPayload{
+		TenantID:  "tenant-1",
+		AgentID:   "agent-1",
+		Action:    "LOGIN",
+		Resource:  "system",
+		Status:    "SUCCESS",
+		Metadata:  "{}",
+		Timestamp: 1672531200,
+	}
+	payloadBytes, _ := json.Marshal(payload)
 
+	err := tool.SyncAuditLogsToCloud(context.Background(), string(payloadBytes))
 	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 
 	if !telemetryCalled {
-		t.Errorf("Expected telemetry to be called")
+		t.Fatalf("expected telemetry to be called")
 	}
 }
 
-func TestSyncAuditLogsToCloud_InvalidJSON(t *testing.T) {
-	tool := NewAuditSyncTool(&MockDB{}, nil)
+func TestSyncAuditLogsToCloud_InvalidPayload(t *testing.T) {
+	tool := NewAuditSyncTool(&MockDB{}, &MockTelemetry{})
 
-	payload := `{invalid_json}`
-	err := tool.SyncAuditLogsToCloud(context.Background(), payload)
-
+	err := tool.SyncAuditLogsToCloud(context.Background(), "invalid json")
 	if err == nil {
-		t.Fatalf("Expected error for invalid JSON")
+		t.Fatalf("expected error for invalid json, got nil")
 	}
-}
 
-func TestSyncAuditLogsToCloud_MissingFields(t *testing.T) {
-	tool := NewAuditSyncTool(&MockDB{}, nil)
-
-	payload := `{"tenant_id": "t1"}` // Missing other required fields
-	err := tool.SyncAuditLogsToCloud(context.Background(), payload)
-
+	err = tool.SyncAuditLogsToCloud(context.Background(), "{}")
 	if err == nil {
-		t.Fatalf("Expected error for missing required fields")
+		t.Fatalf("expected error for missing fields, got nil")
 	}
 }

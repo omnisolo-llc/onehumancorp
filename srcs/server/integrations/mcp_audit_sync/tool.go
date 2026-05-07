@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	"ohc/server/db"
-	"ohc/server/telemetry"
 	"time"
 )
 
@@ -20,12 +18,20 @@ type AuditSyncPayload struct {
 	Timestamp int64  `json:"timestamp"`
 }
 
-type AuditSyncTool struct {
-	DB        db.Database
-	Telemetry telemetry.Telemetry
+type Database interface {
+	Exec(ctx context.Context, sql string, arguments ...interface{}) (interface{}, error)
 }
 
-func NewAuditSyncTool(db db.Database, tele telemetry.Telemetry) *AuditSyncTool {
+type Telemetry interface {
+	IncrementCounter(name string, value float64, tags map[string]string)
+}
+
+type AuditSyncTool struct {
+	DB        Database
+	Telemetry Telemetry
+}
+
+func NewAuditSyncTool(db Database, tele Telemetry) *AuditSyncTool {
 	return &AuditSyncTool{
 		DB:        db,
 		Telemetry: tele,
