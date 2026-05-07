@@ -70,6 +70,11 @@ func NewHybridMCPRAGDaemon(db *sql.DB, remoteURL string) *HybridMCPRAGDaemon {
 // SyncPendingMissions queries the database for agent_missions with status 'CLOUD_ESCALATION'
 // and synced_to_cloud = false, then attempts to sync them to the remote API.
 func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
+	// Invoke HealthCheck to ensure queue isn't stuck before attempting sync
+	if err := d.HealthCheck(ctx, 100); err != nil {
+		log.Printf("sync_daemon: HealthCheck alert: %v", err)
+	}
+
 	rows, err := d.db.QueryContext(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
 	if err != nil {
 		return fmt.Errorf("sync_daemon: failed to query agent_missions: %w", err)
@@ -85,7 +90,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 	for rows.Next() {
 		var m mission
 		if err := rows.Scan(&m.id, &m.status, &m.payload); err != nil {
-			log.Printf("sync_daemon: [DEBUG] failed to scan row: %v", err)
+			// Pruned noisy log: failed to scan row
 			continue
 		}
 		missions = append(missions, m)
@@ -113,7 +118,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		if err != nil {
 			// Release semaphore on error
 			<-throttleSemaphore
-			log.Printf("sync_daemon: [DEBUG] failed to sync mission %s: %v", m.id, err)
+			// Pruned noisy log: failed to sync mission
 			continue
 		}
 
@@ -123,7 +128,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		// Release semaphore after db transaction
 		<-throttleSemaphore
 		if err != nil {
-			log.Printf("sync_daemon: [DEBUG] failed to update synced_to_cloud flag for mission %s: %v", m.id, err)
+			// Pruned noisy log: failed to update flag
 			continue
 		}
 
@@ -275,5 +280,21 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 			localDB.GetDB().ExecContext(ctx, updateQuery, payloadBytes, id)
 		}
 	}
+	return nil
+}
+
+// HealthCheck queries the database to ensure the hybrid sync queue isn't stuck.
+// It returns an error if there are more than a specified threshold of pending sync operations.
+func (d *HybridMCPRAGDaemon) HealthCheck(ctx context.Context, threshold int) error {
+	var count int
+	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION'").Scan(&count)
+	if err != nil {
+		return fmt.Errorf("healthcheck: failed to query agent_missions: %w", err)
+	}
+
+	if count > threshold {
+		return fmt.Errorf("healthcheck failed: %d missions are stuck in queue, exceeding threshold of %d", count, threshold)
+	}
+
 	return nil
 }

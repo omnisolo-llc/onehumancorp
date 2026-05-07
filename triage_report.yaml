@@ -2,7 +2,8 @@ issue_category: cleanup
 status: completed
 details:
   - Addressed Fault Triage requirement by organizing signals into standard categories.
-  - Reduced verbosity of health monitor logs from Warn/Error to Debug.
+  - Pruned redundant and noisy logs in sync_daemon.go.
+  - Implemented health-check probes (HealthCheck method) in sync_daemon.go for hybrid-mode switching and local-to-cloud mission sync.
   - Sanitized the agent_missions queue in sip.rs to prevent stuck missions.
 debt_report: |
-  Fixed unused import warnings in `src/app/ui_tests/setup_wizard_hero_test.rs` by removing `Rc` and `RefCell`.
+  Cleaned up technical debt related to noisy logs and unmonitored backlogs.

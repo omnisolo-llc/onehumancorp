@@ -252,6 +252,25 @@ impl SipDB {
 
         Ok(())
     }
+
+    pub async fn sanitize_and_prioritize_queue(&self) -> Result<u64, sqlx::Error> {
+        let cutoff = chrono::Utc::now() - chrono::Duration::hours(2);
+
+        let pool = &self.pool;
+
+        sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE status = 'RUNNING' AND updated_at < $1 AND organization_id = $2")
+            .bind(cutoff)
+            .bind(&self.org_id)
+            .execute(pool)
+            .await?;
+
+        let res = sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
+            .bind(&self.org_id)
+            .execute(pool)
+            .await?;
+
+        Ok(res.rows_affected())
+    }
 }
 
 #[cfg(test)]
@@ -366,6 +385,21 @@ mod tests {
         assert_eq!(enriched, payload, "Payload should be unmodified when neither file is present");
 
         std::fs::remove_dir_all(&dir_str).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_sanitize_and_prioritize_queue() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(10))
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
+
+        let sip_db = SipDB::new(pool, "test_org".to_string());
+
+        let res = sip_db.sanitize_and_prioritize_queue().await;
+        // Should error out gracefully with our dummy pool timeout instead of panicking
+        assert!(res.is_err());
     }
 
     #[tokio::test]

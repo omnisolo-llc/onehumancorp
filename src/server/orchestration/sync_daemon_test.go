@@ -100,3 +100,36 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		}
 	}
 }
+
+func TestHybridMCPRAGDaemon_HealthCheck(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Insert some test data for HealthCheck
+	insertDataQuery := `
+	INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES
+	('hc-1', 'CLOUD_ESCALATION', '{"key": "value"}', FALSE),
+	('hc-2', 'BURSTING', '{"key": "value"}', FALSE),
+	('hc-3', 'COMPLETED', '{"key": "value"}', FALSE),
+	('hc-4', 'CLOUD_ESCALATION', '{"key": "value"}', TRUE);
+	`
+	_, err := db.Exec(insertDataQuery)
+	if err != nil {
+		t.Fatalf("Failed to insert healthcheck test data: %v", err)
+	}
+
+	daemon := NewHybridMCPRAGDaemon(db, "http://remote-api.test")
+
+	// There should be 2 stuck missions (hc-1, hc-2).
+	// Threshold = 1 -> Should fail
+	err = daemon.HealthCheck(context.Background(), 1)
+	if err == nil {
+		t.Errorf("Expected HealthCheck to fail with threshold 1, but it passed")
+	}
+
+	// Threshold = 3 -> Should pass
+	err = daemon.HealthCheck(context.Background(), 3)
+	if err != nil {
+		t.Errorf("Expected HealthCheck to pass with threshold 3, got error: %v", err)
+	}
+}
