@@ -37,7 +37,7 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Guided Setup');
     await expect(page.locator('text=Online Store')).toBeVisible();
     await expect(page.locator('text=Service Business')).toBeVisible();
-    await expect(page.locator('text=Food & Drink')).toBeVisible();
+    await expect(page.locator('text=Restaurant / Food')).toBeVisible();
   });
 
   test('should select online store option', async ({ page }) => {
@@ -53,7 +53,7 @@ test.describe('Business Setup Wizard', () => {
 
   test('should select restaurant option', async ({ page }) => {
     await page.click('text=Guided Setup');
-    await page.locator('text=Food & Drink').click();
+    await page.locator('text=Restaurant / Food').click();
   });
 
   test('should select creative portfolio option', async ({ page }) => {
@@ -525,7 +525,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await expect(page.locator('text=What kind of business are you building?')).toBeVisible();
 
     // Choose business type
-    await page.locator('text=Food & Drink').click();
+    await page.locator('text=Restaurant / Food').click();
     await page.click('text=Next →');
 
     // Name
@@ -674,7 +674,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
 
   test('Persona: Fatima - The Food Cart (Pre-orders)', async ({ page }) => {
     await page.click('text=Guided Setup');
-    await page.locator('text=Food & Drink').click();
+    await page.locator('text=Restaurant / Food').click();
     await page.click('text=Next →');
 
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', "Fatima Cart");
