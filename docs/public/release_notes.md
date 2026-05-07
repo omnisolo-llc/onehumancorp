@@ -1,5 +1,12 @@
 # release_notes.md
 
+## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
+### Cloud Scaling Improvements
+- 🔗 Link: Share Teammate Mesh and enable in-process builtin agent with Redis distributed locking and Pub/Sub (#11313)
+
+### Privacy/Offline Improvements
+- 🔗 Link: Share Teammate Mesh and enable in-process builtin agent with SQLite distributed locking and IPC/Memory bus (#11313)
+
 ## v0.4.28 (Cloud) / v0.4.28+1 (Standalone)
 ### Cloud Scaling Improvements
 - ✍️ Scribe: Scaled the Help Center & Tooltip Documentation System for multi-tenant cloud environments (#11267)
