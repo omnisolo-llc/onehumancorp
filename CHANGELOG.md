@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
+### Cloud Scaling Improvements
+- 🔗 Link: update api routing to use axum 0.8 style path variables (#11553)
+
+### Privacy/Offline Improvements
+- No specific privacy/offline changes in this release.
+
+
 ## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🔨 Forge: Refactor GrowthReferralWidget to use GlassCard for premium aesthetic (#11347)
