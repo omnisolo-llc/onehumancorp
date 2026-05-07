@@ -833,6 +833,16 @@ mod tests {
         assert!(s.validate_token(&empty_jti_token).await.is_err());
     }
 
+    #[test]
+    fn test_local_sqlite_encryption_hardening() {
+        // Verify Store::new safely derives JWT secret deterministically
+        // when OHC_SQLITE_KEY is present without altering environment variables dynamically
+        // Note: setting environment variables in unit tests is unsafe in Rust
+        // For regression testing we just check that the Store initialized with some secret
+        let s = Store::new();
+        assert!(!s.secret.is_empty(), "Store secret should be initialized (either randomly or from env/file)");
+    }
+
     #[tokio::test]
     async fn test_jwt_revoked_token() {
         let s = Store::new();

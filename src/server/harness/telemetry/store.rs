@@ -54,7 +54,7 @@ impl ViolationStore {
 
             // Since PgPool is specifically a PostgreSQL pool, it can never be SQLite.
             // We can safely apply the SET LOCAL for PostgreSQL.
-            sqlx::query("SET LOCAL app.current_tenant = $1")
+            sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
                 .bind(tenant_id)
                 .execute(&mut *tx)
                 .await?;
@@ -159,4 +159,5 @@ mod tests {
         // Clean up
         let _ = sqlx::query("DELETE FROM agent_violations WHERE session_id = 'test-session'").execute(&pool).await;
     }
+
 }
