@@ -132,10 +132,11 @@ impl MeshTransport for MemoryTransport {
 pub struct PgTransport {
     pool: sqlx::PgPool,
     subs: DashMap<String, broadcast::Sender<Message>>,
+    instance_id: String,
 }
 
 impl PgTransport {
-    pub async fn new(db_url: &str) -> Result<Self, String> {
+    pub async fn new(db_url: &str, instance_id: String) -> Result<Self, String> {
         use sqlx::postgres::PgPoolOptions;
         let pool = PgPoolOptions::new().connect(db_url).await.map_err(|e| e.to_string())?;
 
@@ -186,7 +187,7 @@ impl PgTransport {
 
         let subs = DashMap::new();
 
-        Ok(PgTransport { pool, subs })
+        Ok(PgTransport { pool, subs, instance_id })
     }
 
     pub async fn start_worker(&self) {
@@ -195,7 +196,7 @@ impl PgTransport {
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
-        let subscriber_id = "builtin_agent_node".to_string();
+        let subscriber_id = self.instance_id.clone();
         let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = $1")
             .bind(&subscriber_id)
             .fetch_optional(&pool)
@@ -266,11 +267,6 @@ impl MeshTransport for PgTransport {
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
-
-        // Deliver to local subscribers without polling delay
-        if let Some(tx) = self.subs.get(topic) {
-            let _ = tx.send(message);
-        }
 
         Ok(())
     }
@@ -364,10 +360,11 @@ impl MeshTransport for PgTransport {
 pub struct SqliteTransport {
     pub pool: sqlx::SqlitePool,
     subs: DashMap<String, broadcast::Sender<Message>>,
+    instance_id: String,
 }
 
 impl SqliteTransport {
-    pub async fn new(pool: sqlx::SqlitePool) -> Result<Self, String> {
+    pub async fn new(pool: sqlx::SqlitePool, instance_id: String) -> Result<Self, String> {
         // Initialize schema
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_messages (
@@ -415,7 +412,7 @@ impl SqliteTransport {
 
         let subs = DashMap::new();
 
-        Ok(SqliteTransport { pool, subs })
+        Ok(SqliteTransport { pool, subs, instance_id })
     }
 
     pub async fn start_worker(&self) {
@@ -423,7 +420,7 @@ impl SqliteTransport {
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
-        let subscriber_id = "builtin_agent_node".to_string();
+        let subscriber_id = self.instance_id.clone();
         let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
             .bind(&subscriber_id)
             .fetch_optional(&pool)
@@ -490,11 +487,6 @@ impl MeshTransport for SqliteTransport {
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
-
-        // Deliver to local subscribers without polling delay
-        if let Some(tx) = self.subs.get(topic) {
-            let _ = tx.send(message);
-        }
 
         Ok(())
     }

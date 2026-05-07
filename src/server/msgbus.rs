@@ -189,11 +189,12 @@ impl Bus for RedisBus {
 pub struct IpcBus {
     pool: sqlx::SqlitePool,
     subs: std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, tokio::sync::broadcast::Sender<Message>>>>,
+    instance_id: String,
 }
 
 #[allow(dead_code)]
 impl IpcBus {
-    pub async fn new(db_url: &str) -> Result<Self, String> {
+    pub async fn new(db_url: &str, instance_id: String) -> Result<Self, String> {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
         let options = options.create_if_missing(true);
@@ -236,6 +237,7 @@ impl IpcBus {
         let bus = IpcBus {
             pool: pool.clone(),
             subs: subs.clone(),
+            instance_id,
         };
 
         bus.start_worker().await;
@@ -256,9 +258,10 @@ impl IpcBus {
     pub async fn start_worker(&self) {
         let pool = self.pool.clone();
         let subs = self.subs.clone();
+        let instance_id = self.instance_id.clone();
 
         tokio::spawn(async move {
-            let subscriber_id = "standalone_node".to_string();
+            let subscriber_id = instance_id;
             let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM bus_checkpoints WHERE subscriber_id = ?")
                 .bind(&subscriber_id)
                 .fetch_optional(&pool)

@@ -291,6 +291,10 @@ mod tests {
 
 
 pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn TeammateMesh>, String> {
+    let instance_id = std::env::var("SERVER_INSTANCE_ID")
+        .or_else(|_| std::env::var("AGENT_INSTANCE_ID"))
+        .unwrap_or_else(|_| format!("msg-{}", chrono::Utc::now().timestamp_millis()));
+
     if let Ok(nats_url) = std::env::var("NATS_URL") {
         if let Ok(transport) = ohc_builtin_agent::mesh::transport::NatsTransport::new(&nats_url).await {
             return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
@@ -307,7 +311,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
         crate::db::DbStore::Sqlite(pool) => {
             if let Ok(pg_url) = std::env::var("DATABASE_URL") {
                 if pg_url.starts_with("postgres://") || pg_url.starts_with("postgresql://") {
-                    match ohc_builtin_agent::mesh::transport::PgTransport::new(&pg_url).await {
+                    match ohc_builtin_agent::mesh::transport::PgTransport::new(&pg_url, instance_id.clone()).await {
                         Ok(transport) => {
                             let t_clone = transport.clone();
                             tokio::spawn(async move { t_clone.start_worker().await; });
@@ -321,7 +325,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                 }
             }
 
-            match ohc_builtin_agent::mesh::transport::SqliteTransport::new(pool.clone()).await {
+            match ohc_builtin_agent::mesh::transport::SqliteTransport::new(pool.clone(), instance_id.clone()).await {
                 Ok(transport) => {
                     let t_clone = transport.clone();
                     tokio::spawn(async move { t_clone.start_worker().await; });
