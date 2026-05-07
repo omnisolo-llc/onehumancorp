@@ -900,7 +900,7 @@ mod chaos_tests {
         let p50 = latencies[latencies.len() / 2];
         let p95 = latencies[(latencies.len() as f64 * 0.95) as usize];
         let p99 = latencies[(latencies.len() as f64 * 0.99) as usize];
-        println!("Cloud load test latencies: p50={}us, p95={}us, p99={}us", p50, p95, p99);
+        tracing::info!("Cloud load test latencies: p50={}us, p95={}us, p99={}us", p50, p95, p99);
 
         // In cloud chaos, we tolerate network drop failures
         assert!(success + failed == 100);
@@ -969,7 +969,7 @@ mod chaos_tests {
         let p50 = latencies[latencies.len() / 2];
         let p95 = latencies[(latencies.len() as f64 * 0.95) as usize];
         let p99 = latencies[(latencies.len() as f64 * 0.99) as usize];
-        println!("Standalone load test latencies: p50={}us, p95={}us, p99={}us", p50, p95, p99);
+        tracing::info!("Standalone load test latencies: p50={}us, p95={}us, p99={}us", p50, p95, p99);
 
         assert!(success + failed == 10);
         tracing::info!("Standalone chaos results: {} success, {} failed", success, failed);

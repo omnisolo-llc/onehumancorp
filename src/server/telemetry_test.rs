@@ -294,6 +294,8 @@ mod tests {
                            lower_line.contains("debug!") ||
                            lower_line.contains("tracing::") ||
                            lower_line.contains("println!") ||
+                           lower_line.contains("log.print") ||
+                           lower_line.contains("fmt.print") ||
                            lower_line.contains("eprintln!")
                         {
                             if lower_line.contains("tenant_id") ||
