@@ -612,7 +612,7 @@ func TestPostgresTaskStore_ClaimTask_CommitError(t *testing.T) {
 		"{}", nil, "[]", time.Now(), time.Now(),
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at\\n\\t\\tFROM shared_tasks t1").WithArgs("org-1").WillReturnRows(rows)
 	mock.ExpectExec("UPDATE shared_tasks SET status").WithArgs("agent-1", "task-1").WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit().WillReturnError(sql.ErrConnDone)
 
@@ -695,8 +695,8 @@ func TestSqliteTaskStore_ClaimTask_CommitError(t *testing.T) {
 		"{}", nil, "[]", time.Now().Format(time.RFC3339), time.Now().Format(time.RFC3339),
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
-	mock.ExpectExec("UPDATE shared_tasks").WithArgs("agent-1", "task-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at\\n\\t\\tFROM shared_tasks t1").WithArgs("org-1").WillReturnRows(rows)
+
 	mock.ExpectCommit().WillReturnError(sql.ErrConnDone)
 
 	_, err = store.ClaimTask(context.Background(), "org-1", "agent-1")
@@ -825,7 +825,7 @@ func TestPostgresTaskStore_ClaimTask_UpdateError(t *testing.T) {
 		"{}", nil, "[]", time.Now(), time.Now(),
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at\\n\\t\\tFROM shared_tasks t1").WithArgs("org-1").WillReturnRows(rows)
 	mock.ExpectExec("UPDATE shared_tasks SET status").WithArgs("agent-1", "task-1").WillReturnError(sql.ErrConnDone)
 
 	_, err = store.ClaimTask(context.Background(), "org-1", "agent-1")
@@ -849,8 +849,8 @@ func TestSqliteTaskStore_ClaimTask_UpdateError(t *testing.T) {
 		"{}", nil, "[]", time.Now().Format(time.RFC3339), time.Now().Format(time.RFC3339),
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
-	mock.ExpectExec("UPDATE shared_tasks").WithArgs("agent-1", "task-1").WillReturnError(sql.ErrConnDone)
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at\\n\\t\\tFROM shared_tasks t1").WithArgs("org-1").WillReturnRows(rows)
+
 
 	_, err = store.ClaimTask(context.Background(), "org-1", "agent-1")
 	assert.Error(t, err)
@@ -899,7 +899,7 @@ func TestSqliteTaskStore_ClaimTask_ScanError(t *testing.T) {
 		"task-1", "org-1", // Too few columns
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at\\n\\t\\tFROM shared_tasks t1").WithArgs("org-1").WillReturnRows(rows)
 
 	_, err = store.ClaimTask(context.Background(), "org-1", "agent-1")
 	assert.Error(t, err)

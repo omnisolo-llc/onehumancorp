@@ -55,8 +55,13 @@ func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string
 
 	query := `
 		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
-		FROM shared_tasks
+		FROM shared_tasks t1
 		WHERE status = 'PENDING' AND organization_id = $1
+		  AND NOT EXISTS (
+			  SELECT 1 FROM jsonb_array_elements_text(COALESCE(t1.dependencies, '[]'::jsonb)) AS dep
+			  LEFT JOIN shared_tasks t2 ON t2.id::text = dep
+			  WHERE t2.status != 'COMPLETED' OR t2.status IS NULL
+		  )
 		FOR UPDATE SKIP LOCKED
 		LIMIT 1
 	`
@@ -271,18 +276,28 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 	}
 	defer tx.Rollback()
 
-	// Find a pending task
+	// Update and fetch a pending task atomically using UPDATE ... RETURNING
 	query := `
-		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
-		FROM shared_tasks
-		WHERE status = 'PENDING' AND organization_id = ?
-		LIMIT 1
+		UPDATE shared_tasks
+		SET status = 'ASSIGNED', agent_id = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE id = (
+			SELECT t1.id
+			FROM shared_tasks t1
+			WHERE t1.status = 'PENDING' AND t1.organization_id = ?
+			  AND NOT EXISTS (
+				  SELECT 1 FROM json_each(t1.dependencies) AS dep
+				  LEFT JOIN shared_tasks t2 ON t2.id = dep.value
+				  WHERE t2.status != 'COMPLETED' OR t2.status IS NULL
+			  )
+			LIMIT 1
+		)
+		RETURNING id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
 	`
-	row := tx.QueryRowContext(ctx, query, organizationID)
+	row := tx.QueryRowContext(ctx, query, agentID, organizationID)
 
 	task := &SharedTask{}
 	var payloadBytes, depsBytes []byte
-    var createdAtStr, updatedAtStr string
+	var createdAtStr, updatedAtStr string
 	err = row.Scan(
 		&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status,
 		&task.AgentID, &task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
@@ -295,13 +310,13 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 		return nil, err
 	}
 
-    // Simplistic time parsing for SQLite timestamp strings
-    if t, err := time.Parse(time.RFC3339, createdAtStr); err == nil {
-        task.CreatedAt = t
-    }
-    if t, err := time.Parse(time.RFC3339, updatedAtStr); err == nil {
-        task.UpdatedAt = t
-    }
+	// Simplistic time parsing for SQLite timestamp strings
+	if t, err := time.Parse(time.RFC3339, createdAtStr); err == nil {
+		task.CreatedAt = t
+	}
+	if t, err := time.Parse(time.RFC3339, updatedAtStr); err == nil {
+		task.UpdatedAt = t
+	}
 
 	if len(payloadBytes) > 0 {
 		raw := json.RawMessage(payloadBytes)
@@ -311,29 +326,9 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 		task.Dependencies = json.RawMessage(depsBytes)
 	}
 
-	// Update status to ASSIGNED and set agent_id
-	updateQuery := `
-		UPDATE shared_tasks
-		SET status = 'ASSIGNED', agent_id = ?, updated_at = CURRENT_TIMESTAMP
-		WHERE id = ? AND status = 'PENDING'
-	`
-	res, err := tx.ExecContext(ctx, updateQuery, agentID, task.ID)
-	if err != nil {
-		return nil, err
-	}
-
-    affected, err := res.RowsAffected()
-    if err != nil || affected == 0 {
-        // Lost the race or something went wrong
-        return nil, errors.New("failed to claim task")
-    }
-
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-
-	task.Status = "ASSIGNED"
-	task.AgentID = &agentID
 
 	return task, nil
 }
