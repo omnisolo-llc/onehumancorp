@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🧹 Maintainer: Coordinate promotions across Cloud staging and trigger hybrid deployment flows.
+
+### Privacy/Offline Improvements
+- 🧹 Maintainer: Coordinate promotions for Local desktop beta builds.
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 ### Cloud Scaling Improvements

@@ -1,3 +1,9 @@
+## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
+
+- Scaling (Cloud): Coordinate promotions across Cloud staging and trigger hybrid deployment flows.
+
+- Privacy/Offline (Standalone): Coordinate promotions for Local desktop beta builds.
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 - Scaling (Cloud): update api routing to use axum 0.8 style path variables (#11553).
