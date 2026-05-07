@@ -471,8 +471,14 @@ impl Agent {
                         Err(crate::types::ToolError::UserFixable(msg)) => {
                             return Err(format!("USER_FIXABLE:{}", msg));
                         }
-                        Err(e) => {
-                            return Err(e.to_string());
+                        Err(crate::types::ToolError::Fatal(msg)) => {
+                            return Err(format!("Fatal tool error: {}", msg));
+                        }
+                        Err(crate::types::ToolError::Unexpected(msg)) => {
+                            return Err(format!("Unexpected tool error: {}", msg));
+                        }
+                        Err(crate::types::ToolError::HandoffRequested(target)) => {
+                            return Err(format!("Handoff requested to {}", target));
                         }
                     }
                 }
@@ -538,8 +544,14 @@ impl Agent {
                             Err(crate::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE:{}", msg));
                             }
-                            Err(e) => {
-                                return Err(e.to_string());
+                            Err(crate::types::ToolError::Fatal(msg)) => {
+                                return Err(format!("Fatal tool error: {}", msg));
+                            }
+                            Err(crate::types::ToolError::Unexpected(msg)) => {
+                                return Err(format!("Unexpected tool error: {}", msg));
+                            }
+                            Err(crate::types::ToolError::HandoffRequested(target)) => {
+                                return Err(format!("Handoff requested to {}", target));
                             }
                         }
                     } else {
@@ -749,9 +761,41 @@ impl Agent {
                  return Err(Box::new(e));
             }
 
-            let result = match self.execute_tool(&dummy_tc, session_tools, &[]).await {
-                Ok(res) => res,
-                Err(e) => format!("Error executing planned step: {:?}", e),
+            let mut retry_count = 0;
+            let max_retries = cfg.max_retries;
+            let result = loop {
+                match self.execute_tool(&dummy_tc, session_tools, &[]).await {
+                    Ok(res) => break res,
+                    Err(crate::types::ToolError::Transient(msg)) => {
+                        if retry_count < max_retries {
+                            retry_count += 1;
+                            let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                            tokio::time::sleep(backoff).await;
+                            continue;
+                        } else {
+                            break format!("Error executing planned step: Transient error after retries: {}", msg);
+                        }
+                    }
+                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                        // Since plan-and-execute can't immediately feed back to the LLM within the same loop easily,
+                        // we add it to the execution summary so the replier sees the error and can try to fix it or report it.
+                        break format!("Error executing planned step (LlmRecoverable): {}", msg);
+                    }
+                    Err(crate::types::ToolError::UserFixable(msg)) => {
+                        let err = format!("USER_FIXABLE: {}", msg);
+                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                        return Err(err.into());
+                    }
+                    Err(crate::types::ToolError::Fatal(msg)) => {
+                        return Err(format!("Fatal tool error: {}", msg).into());
+                    }
+                    Err(crate::types::ToolError::Unexpected(msg)) => {
+                        return Err(format!("Unexpected tool error: {}", msg).into());
+                    }
+                    Err(e) => {
+                        return Err(format!("Fatal tool error: {:?}", e).into());
+                    }
+                }
             };
 
             on_event(AgentEvent::ToolCall {
@@ -1804,6 +1848,21 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn test_4_type_error_handling() {
+        let e_transient = crate::types::ToolError::Transient("timeout".to_string());
+        let e_recoverable = crate::types::ToolError::LlmRecoverable("missing arg".to_string());
+        let e_user = crate::types::ToolError::UserFixable("need input".to_string());
+        let e_fatal = crate::types::ToolError::Fatal("crash".to_string());
+        let e_unexpected = crate::types::ToolError::Unexpected("unknown".to_string());
+
+        assert_eq!(e_transient.to_string(), "Transient error: timeout");
+        assert_eq!(e_recoverable.to_string(), "Recoverable error: missing arg");
+        assert_eq!(e_user.to_string(), "User intervention required: need input");
+        assert_eq!(e_fatal.to_string(), "Fatal error: crash");
+        assert_eq!(e_unexpected.to_string(), "Unexpected error: unknown");
+    }
+
 
 
     #[tokio::test]
