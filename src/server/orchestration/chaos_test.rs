@@ -241,7 +241,7 @@ mod chaos_tests {
     async fn test_cloud_degradation_fallback() {
         // We use an empty db pool but with CloudStateManager to see fail-safes on lock acquisition timeout
         let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).max_connections(1)
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .connect_lazy("postgres://localhost/dummy")
             .unwrap();
 
         let db = Arc::new(DB {
@@ -262,6 +262,34 @@ mod chaos_tests {
         assert!(elapsed > std::time::Duration::from_millis(1900));
 
         // It must fallback safely returning an empty vector
+        assert_eq!(tasks.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_standalone_degradation_fallback() {
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).max_connections(1)
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: dummy_pg_pool,
+            store: DbStore::Sqlite(dummy_sqlite_pool),
+        });
+
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db.clone(), mesh);
+
+        let start = std::time::Instant::now();
+        let tasks = state_manager.pull_available_tasks(10).await.unwrap_or(vec![]);
+        let elapsed = start.elapsed();
+
+        assert!(elapsed > std::time::Duration::from_millis(1900));
         assert_eq!(tasks.len(), 0);
     }
 }
