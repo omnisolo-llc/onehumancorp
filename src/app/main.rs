@@ -193,6 +193,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     tokio::spawn(async move {
         match connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             Ok(mut client) => {
@@ -305,6 +306,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             if let Some(wizard) = wizard_handle.upgrade() {
                 let weak_wizard = wizard.as_weak();
+                #[cfg(not(target_arch = "wasm32"))]
                 tokio::spawn(async move {
                     if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                         let req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
@@ -361,6 +363,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Login process started...");
                     ui.set_loading(true);
                     let ui_weak = login_handle.clone();
+                    #[cfg(not(target_arch = "wasm32"))]
                     tokio::spawn(async move {
                         let mut needs_wizard = false;
                         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -598,6 +601,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let init_ui_handle = setup_wizard_handle.clone();
+    #[cfg(not(target_arch = "wasm32"))]
     tokio::spawn(async move {
         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
@@ -686,6 +690,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }));
     let init_helper_config_handle = helper_config_handle.clone();
+    #[cfg(not(target_arch = "wasm32"))]
     tokio::spawn(async move {
         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
@@ -719,6 +724,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = helper_config_handle.clone();
         move |helper, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
             let ui_handle_err = ui_handle.clone();
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
                 let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
                 match connect_with_interceptor(url).await {
@@ -775,6 +781,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }));
     let init_prompt_tuning_handle = prompt_tuning_handle.clone();
+    #[cfg(not(target_arch = "wasm32"))]
     tokio::spawn(async move {
         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
@@ -820,6 +827,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("prompt_focus_spanish".to_string(), focus_reply_spanish.to_string()),
             ]);
             let ui_handle_err = ui_handle.clone();
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
                 let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
                 match connect_with_interceptor(url).await {
@@ -883,6 +891,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }));
     let init_website_builder_handle = website_builder_handle.clone();
+    #[cfg(not(target_arch = "wasm32"))]
     tokio::spawn(async move {
         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
@@ -928,6 +937,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let ui_handle = ui_weak.clone();
             if let Some(ui) = ui_handle.upgrade() {
                 let name = ui.get_product_name().to_string();
+                #[cfg(not(target_arch = "wasm32"))]
                 tokio::spawn(async move {
                     if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                         let prompt = format!("Write a short, engaging one-sentence product description for {}.", name);
@@ -993,6 +1003,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }));
     let init_settings_handle = settings_handle.clone();
+    #[cfg(not(target_arch = "wasm32"))]
     tokio::spawn(async move {
         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
@@ -1052,6 +1063,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let init_grow_business_handle = grow_business_handle.clone();
+    #[cfg(not(target_arch = "wasm32"))]
     tokio::spawn(async move {
         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
@@ -1194,6 +1206,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = referrals_handle.clone();
         move || {
             let handle = ui_handle.clone();
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
                 match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
@@ -1312,6 +1325,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = referrals_handle.clone();
         move || {
             let handle = ui_handle.clone();
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
                 match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
@@ -1400,6 +1414,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cost_dashboard_handle_fetch = cost_dashboard_ui.as_weak();
     let my_plan_handle_fetch = my_plan_handle.clone();
+    #[cfg(not(target_arch = "wasm32"))]
     tokio::spawn(async move {
         let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
         if let Ok(mut client) = ohc::billing::billing_service_client::BillingServiceClient::connect(hub_url).await {
@@ -1442,6 +1457,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cost_dashboard_handle_refresh = cost_dashboard_handle.clone();
     cost_dashboard_ui.on_refresh_data(move || {
         let cost_dashboard_handle_fetch = cost_dashboard_handle_refresh.clone();
+        #[cfg(not(target_arch = "wasm32"))]
         tokio::spawn(async move {
             let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
             if let Ok(mut client) = ohc::billing::billing_service_client::BillingServiceClient::connect(hub_url).await {
@@ -2173,6 +2189,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let ui_handle = ui_weak.clone();
             if let Some(ui) = ui_handle.upgrade() {
                 let bio = ui.get_instant_bio().to_string();
+                #[cfg(not(target_arch = "wasm32"))]
                 tokio::spawn(async move {
                     let mut company_name = "AI Generated Store".to_string();
                     let mut business_type = "Online Store".to_string();
@@ -2234,6 +2251,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let ui_handle = ui_weak.clone();
             let name = name.to_string();
             let biz_type = biz_type.to_string();
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
                 let mut description = format!("{} is a premium {} business.", name, biz_type);
                 if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -2262,6 +2280,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move |prod_name| {
             let ui_handle = ui_weak.clone();
             let prod_name = prod_name.to_string();
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
                 let mut description = format!("A premium {}.", prod_name);
                 if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -2349,6 +2368,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_first_product_price = product_price.to_string();
             let req_domain_choice = domain_choice.to_string();
 
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
                 match connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
