@@ -258,6 +258,7 @@ export component SetupWizard inherits Window {
                     placeholder-text: "e.g. Maya's Cakes";
                     text <=> company_name;
                     height: 44px;
+                    edited => { save_state(); }
                     accepted => {
                         is_generating_company_description = true;
                         generate_company_description(company_name, business_type);
@@ -268,6 +269,7 @@ export component SetupWizard inherits Window {
                 LineEdit {
                     text <=> company_description;
                     height: 100px;
+                    edited => { save_state(); }
                     enabled: !is_generating_company_description;
                 }
                 Button {
@@ -329,7 +331,7 @@ export component SetupWizard inherits Window {
                     background: payment_pref == "online" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🌐 Online only"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Get paid on your website (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "Get paid on your website (instant setup) (Est. 5 mins)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("online"); save_state(); } }
                 }
@@ -338,7 +340,7 @@ export component SetupWizard inherits Window {
                     background: payment_pref == "inperson" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🤝 In-person (Take payments on your phone)"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Use your phone as a card reader (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "Use your phone as a card reader (instant setup) (Est. 1-2 days for hardware)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("inperson"); save_state(); } }
                 }
@@ -347,7 +349,7 @@ export component SetupWizard inherits Window {
                     background: payment_pref == "both" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🌍 Both Online & In-person"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Sell everywhere, synced in one place"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "Sell everywhere, synced in one place (Est. 1-2 days for hardware)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("both"); save_state(); } }
                 }
@@ -356,7 +358,7 @@ export component SetupWizard inherits Window {
                     background: payment_pref == "skip" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "⏭️ Skip for now"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "You can set up payments later from your dashboard"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "You can set up payments later from your dashboard (No setup needed)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("skip"); save_state(); } }
                 }
@@ -368,13 +370,13 @@ export component SetupWizard inherits Window {
                 Text { text: "Create your account"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
 
                 Text { text: "Full Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit { placeholder-text: "e.g. Maya Smith"; text <=> admin_name; height: 44px; }
+                LineEdit { placeholder-text: "e.g. Maya Smith"; text <=> admin_name; height: 44px; edited => { save_state(); } }
 
                 Text { text: "Email Address"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit { placeholder-text: "you@email.com"; text <=> admin_email; height: 44px; }
+                LineEdit { placeholder-text: "you@email.com"; text <=> admin_email; height: 44px; edited => { save_state(); } }
 
                 Text { text: "Password"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                PasswordInput { text <=> admin_password; }
+                PasswordInput { text <=> admin_password; edited => { save_state(); } }
                 Text { text: admin_password != "" ? "Strength: Strong" : "Strength: Weak"; font-size: 12px; color: admin_password != "" ? #10b981 : #ef4444; }
 
 
@@ -464,6 +466,7 @@ export component SetupWizard inherits Window {
                     placeholder-text: "e.g. Custom Birthday Cake";
                     text <=> product_name;
                     height: 44px;
+                    edited => { save_state(); }
                     accepted => {
                         is_generating_product_description = true;
                         generate_product_description(product_name);
@@ -474,6 +477,7 @@ export component SetupWizard inherits Window {
                 LineEdit {
                     text <=> product_description;
                     height: 44px;
+                    edited => { save_state(); }
                     enabled: !is_generating_product_description;
                 }
                 Button {
@@ -494,21 +498,21 @@ export component SetupWizard inherits Window {
                         background: price_type == "fixed" ? rgba(168, 85, 247, 0.4) : transparent;
                         border-width: 1px; border-color: #334155;
                         VerticalBox { alignment: center; Text { text: "Fixed"; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { price_type = "fixed"; } }
+                        TouchArea { clicked => { price_type = "fixed"; save_state(); } }
                     }
                     GlassCard {
                         height: 44px;
                         background: price_type == "starting_at" ? rgba(168, 85, 247, 0.4) : transparent;
                         border-width: 1px; border-color: #334155;
                         VerticalBox { alignment: center; Text { text: "Starting At"; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { price_type = "starting_at"; } }
+                        TouchArea { clicked => { price_type = "starting_at"; save_state(); } }
                     }
                     GlassCard {
                         height: 44px;
                         background: price_type == "request_quote" ? rgba(168, 85, 247, 0.4) : transparent;
                         border-width: 1px; border-color: #334155;
                         VerticalBox { alignment: center; Text { text: "Quote"; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { price_type = "request_quote"; } }
+                        TouchArea { clicked => { price_type = "request_quote"; save_state(); } }
                     }
                 }
 
@@ -523,16 +527,16 @@ export component SetupWizard inherits Window {
                             background: rgba(255, 255, 255, 0.05);
                             VerticalBox { alignment: center; Text { text: product_currency; color: white; horizontal-alignment: center; } }
                         }
-                        LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
+                        LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; edited => { save_state(); } }
                     }
                 }
 
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
                     Text { text: "Product SKU (Optional)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "e.g. CAKE-001"; text <=> product_sku; height: 44px; }
+                    LineEdit { placeholder-text: "e.g. CAKE-001"; text <=> product_sku; height: 44px; edited => { save_state(); } }
                     Text { text: "Inventory Count"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "∞"; text <=> product_inventory; height: 44px; input-type: number; }
+                    LineEdit { placeholder-text: "∞"; text <=> product_inventory; height: 44px; input-type: number; edited => { save_state(); } }
                 }
 
                 GlassCard {
@@ -559,7 +563,7 @@ export component SetupWizard inherits Window {
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
                     Text { text: "Custom DNS Target (A/CNAME)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "target.ohc.app"; text <=> custom_dns_target; height: 44px; }
+                    LineEdit { placeholder-text: "target.ohc.app"; text <=> custom_dns_target; height: 44px; edited => { save_state(); } }
                 }
 
                 GlassCard {
@@ -645,6 +649,7 @@ export component SetupWizard inherits Window {
                     placeholder-text: "e.g. I run a local bakery called Maya's Cakes...";
                     text <=> instant_bio;
                     height: 120px;
+                    edited => { save_state(); }
                     enabled: !is_generating_instant_preview;
                 }
 
