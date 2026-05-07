@@ -10,3 +10,7 @@ pub mod state;
 pub mod mesh;
 pub mod health;
 pub mod hub;
+pub mod queue;
+pub mod subagent_worker;
+#[cfg(test)]
+mod subagent_worker_test;
