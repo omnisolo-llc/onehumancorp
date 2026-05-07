@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 use std::sync::RwLock;
 use std::collections::HashMap;
 
-static PRODUCTS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::organization::Product>>>> = OnceLock::new();
+static PRODUCTS_CACHE: OnceLock<RwLock<HashMap<String, (Vec<crate::ohc::organization::Product>, std::time::Instant)>>> = OnceLock::new();
 
 
 pub struct MyDashboardService {
@@ -54,11 +54,24 @@ impl DashboardService for MyDashboardService {
                 // Caching layer logic (Phase 4)
 
 
-                let _cache_key = format!("hub:products:{}", org_id);
+                let cache_key = format!("hub:products:{}", org_id);
+
+                if let Some(client) = db1.store.redis_client() {
+                    if let Ok(mut conn) = client.get_connection() {
+                        if let Ok(Some(data)) = redis::Commands::get::<_, Option<String>>(&mut conn, &cache_key) {
+                            if let Ok(products) = serde_json::from_str::<Vec<crate::ohc::organization::Product>>(&data) {
+                                return Ok::<_, String>(products);
+                            }
+                        }
+                    }
+                }
+
                 let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
                 if let Ok(guard) = cache.read() {
-                    if let Some(products) = guard.get(&org_id) {
-                        return Ok::<_, String>(products.clone());
+                    if let Some((products, expires_at)) = guard.get(&org_id) {
+                        if std::time::Instant::now() < *expires_at {
+                            return Ok::<_, String>(products.clone());
+                        }
                     }
                 }
 
@@ -104,9 +117,18 @@ impl DashboardService for MyDashboardService {
                 }
 
 
+                let cache_key = format!("hub:products:{}", org_id);
+                if let Some(client) = db1.store.redis_client() {
+                    if let Ok(mut conn) = client.get_connection() {
+                        if let Ok(json) = serde_json::to_string(&results) {
+                            let _: Result<(), _> = redis::Commands::set_ex(&mut conn, &cache_key, json, 3600);
+                        }
+                    }
+                }
+
                 let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
                 if let Ok(mut guard) = cache.write() {
-                    guard.insert(org_id, results.clone());
+                    guard.insert(org_id, (results.clone(), std::time::Instant::now() + std::time::Duration::from_secs(3600)));
                 }
                 Ok::<_, String>(results)
             }),
@@ -157,6 +179,18 @@ impl DashboardService for MyDashboardService {
 
             tokio::task::spawn(async move {
                 let org_id = org_id3;
+
+                let cache_key = format!("hub:org:{}", org_id);
+                if let Some(client) = db3.store.redis_client() {
+                    if let Ok(mut conn) = client.get_connection() {
+                        if let Ok(Some(data)) = redis::Commands::get::<_, Option<String>>(&mut conn, &cache_key) {
+                            if let Ok(org) = serde_json::from_str::<crate::ohc::organization::Organization>(&data) {
+                                return Ok::<_, String>(Some(org));
+                            }
+                        }
+                    }
+                }
+
                 let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
                 use sqlx::Row;
                 let mut org = None;
@@ -190,6 +224,17 @@ impl DashboardService for MyDashboardService {
                         }
                     },
                 }
+
+                if let Some(org_ref) = &org {
+                    if let Some(client) = db3.store.redis_client() {
+                        if let Ok(mut conn) = client.get_connection() {
+                            if let Ok(json) = serde_json::to_string(org_ref) {
+                                let _: Result<(), _> = redis::Commands::set_ex(&mut conn, &cache_key, json, 3600);
+                            }
+                        }
+                    }
+                }
+
                 Ok::<_, String>(org)
             })
         );
@@ -206,6 +251,7 @@ impl DashboardService for MyDashboardService {
                 description: String::new(),
                 metadata_json: String::new(),
                 fulfillment_strategy: String::new(),
+                currency: String::new(),
                 ..p
             }).collect()
         } else {
@@ -228,9 +274,13 @@ impl DashboardService for MyDashboardService {
                     });
                 }
             }
+            let mut parts = m.participants.clone();
+            if req.mobile_optimized {
+                parts.clear();
+            }
             out_meetings.push(crate::ohc::app::MeetingRoom {
                 id: m.id.clone(),
-                participants: m.participants.clone(),
+                participants: parts,
                 transcript,
             });
         }
@@ -258,20 +308,7 @@ impl DashboardService for MyDashboardService {
             if orig_len > 0 {
                 original_prompts_len += orig_len;
 
-                let stop_words: std::collections::HashSet<&str> = [
-                    "a", "an", "the", "is", "are",
-                    "and", "or", "but", "in", "on",
-                    "at", "to", "for", "with", "by",
-                    "about", "as", "of",
-                ].iter().cloned().collect();
-
-                let compressed = prompt.split_whitespace()
-                    .filter(|word| {
-                        let clean_word = word.to_lowercase();
-                        !stop_words.contains(clean_word.as_str())
-                    })
-                    .collect::<Vec<&str>>()
-                    .join(" ");
+                let compressed = crate::pricing::compression::reduce_tokens(prompt);
 
                 compressed_prompts_len += compressed.len();
             }
@@ -285,7 +322,7 @@ impl DashboardService for MyDashboardService {
 
 
         let cost_summary = crate::ohc::billing::CostSummary {
-            organization_id: req.organization_id.clone(),
+            organization_id: if req.mobile_optimized { String::new() } else { req.organization_id.clone() },
             total_cost_usd: total_cost,
             total_tokens: optimized_total_tokens,
             projected_monthly_usd: 0.0,

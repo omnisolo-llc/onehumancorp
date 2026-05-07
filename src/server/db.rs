@@ -13,6 +13,17 @@ pub enum DbStore {
     Sqlite(SqlitePool),
 }
 
+impl DbStore {
+    pub fn redis_client(&self) -> Option<redis::Client> {
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+        if std::env::var("OHC_STANDALONE").unwrap_or_else(|_| "true".to_string()) != "true" {
+            redis::Client::open(redis_url).ok()
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct DB {
     pub pool: PgPool,
