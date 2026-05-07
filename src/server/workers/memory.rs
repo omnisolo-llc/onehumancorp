@@ -115,7 +115,7 @@ mod tests {
             agent_id: "agent1".to_string(),
             content: "old data".to_string(),
             embedding: vec![1.0],
-            source_type: "SESSION_DATA".to_string(),
+            source_type: "TASK_SUMMARY".to_string(),
             created_at: Utc::now() - chrono::Duration::days(200),
             last_referenced_at: Utc::now() - chrono::Duration::days(200),
             reference_count: 1,
