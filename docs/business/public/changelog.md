@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS Changelog
 
+## v0.4.31 (Cloud) / v0.4.31+1 (Standalone)
+### Cloud Scaling Improvements
+- 🔗 Link: Ensure Perfect Swarm Synchronization across Cloud & Standalone Modes (#11416)
+
+### Privacy/Offline Improvements
+- 🔗 Link: Ensure Perfect Swarm Synchronization across Cloud & Standalone Modes (#11416)
+
 ## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🔨 Forge: Refactor GrowthReferralWidget to use GlassCard for premium aesthetic (#11347)
