@@ -155,6 +155,14 @@ impl Hub {
         agents.len()
     }
 
+    pub fn update_agent_status_global(&self, id: &str, status: &str) {
+        let mut agents = self.agents.write().unwrap();
+        if let Some(agent) = agents.get_mut(id) {
+            agent.status = status.to_string();
+        }
+        self.invalidate_agent_cache();
+    }
+
     pub fn fire_agent(&self, id: &str) {
         let mut agents = self.agents.write().unwrap();
         let mut inbox = self.inbox.write().unwrap();

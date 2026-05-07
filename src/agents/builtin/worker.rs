@@ -126,9 +126,11 @@ impl TaskWorker {
                     let issue_id = issue.id.clone();
                     let agent_id = a.id.clone();
                     
+                    let hub_clone_for_dispatch = hub.clone();
                     tokio::spawn(async move {
                         if let Err(e) = Self::dispatch_to_builtin_agent(&payload_str, &format!("plane issue {}", issue_id), &role).await {
                             debug!("builtin agent dispatch error: {}, agent_id: {}", e, agent_id);
+                            hub_clone_for_dispatch.update_agent_status_global(&agent_id, "PAUSED");
                         }
                     });
                 }
@@ -156,7 +158,38 @@ impl TaskWorker {
             ..Default::default()
         };
         
-        let response = client.run_task(req).await.map_err(|e| e.to_string())?;
+        let mut attempts = 0;
+        let max_attempts = 3;
+        let mut final_response = None;
+
+        while attempts < max_attempts {
+            let req_clone = req.clone();
+            let run_future = client.run_task(req_clone);
+            match tokio::time::timeout(std::time::Duration::from_secs(60), run_future).await {
+                Ok(Ok(res)) => {
+                    final_response = Some(res);
+                    break;
+                }
+                Ok(Err(e)) => {
+                    attempts += 1;
+                    if attempts >= max_attempts {
+                        // Return error which causes fallback
+                        return Err(e.to_string());
+                    }
+                    tokio::time::sleep(std::time::Duration::from_millis(500 * attempts as u64)).await;
+                }
+                Err(_) => {
+                    attempts += 1;
+                    if attempts >= max_attempts {
+                        // Return error which causes fallback
+                        return Err("Agent job timed out after 60 seconds".to_string());
+                    }
+                    tokio::time::sleep(std::time::Duration::from_millis(500 * attempts as u64)).await;
+                }
+            }
+        }
+
+        let response = final_response.unwrap();
         let mut stream = response.into_inner();
         
         let mut last_content = String::new();

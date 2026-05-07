@@ -364,7 +364,7 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
-                        let max_retries = 2;
+                        let max_retries = 3;
                         let mut final_res = Err(crate::types::ToolError::Unexpected("Not executed".to_string()));
 
                         loop {
@@ -994,7 +994,7 @@ impl Agent {
                         return (tc_clone, Err(e));
                     }
                     let mut retry_count = 0;
-                    let max_retries = 2;
+                    let max_retries = 3;
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
                             Ok(r) => {
@@ -1139,7 +1139,7 @@ impl Agent {
                 }
 
                 let mut retry_count = 0;
-                let max_retries = 2;
+                let max_retries = 3;
                 let mut content = String::new();
                 let mut error = String::new();
 
