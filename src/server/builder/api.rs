@@ -16,14 +16,14 @@ use super::jobs;
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S> {
     Router::new()
         .route("/sites", get(list_sites).post(create_site))
-        .route("/sites/:site_id/pages", get(list_pages).post(create_page))
+        .route("/sites/{site_id}/pages", get(list_pages).post(create_page))
         .route(
-            "/pages/:page_id/blocks",
+            "/pages/{page_id}/blocks",
             get(list_blocks).post(create_block),
         )
-        .route("/blocks/:block_id", put(update_block))
-        .route("/pages/:page_id/blocks/reorder", post(reorder_blocks))
-        .route("/sites/:site_id/publish", post(publish_site))
+        .route("/blocks/{block_id}", put(update_block))
+        .route("/pages/{page_id}/blocks/reorder", post(reorder_blocks))
+        .route("/sites/{site_id}/publish", post(publish_site))
         .with_state(pool)
 }
 
