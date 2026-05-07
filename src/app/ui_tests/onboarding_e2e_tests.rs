@@ -151,13 +151,32 @@ fn test_e2e_onboarding_sso_signup() {
     let oauth_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let oauth_called_clone = oauth_called.clone();
 
+    let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let setup_wizard_launched_clone = setup_wizard_launched.clone();
+
+    login_ui.on_start_setup_wizard(move || {
+        *setup_wizard_launched_clone.borrow_mut() = true;
+    });
+
+    login_ui.set_is_sign_up(true);
+
+    use slint::ComponentHandle;
+    let login_ui_weak = login_ui.as_weak();
     login_ui.on_oauth_login(move |provider| {
         assert_eq!(provider, "Google");
+        if let Some(ui) = login_ui_weak.upgrade() {
+            if ui.get_is_sign_up() {
+                ui.set_show_verification(true);
+                ui.set_verification_message("Please check your email to verify your account.".into());
+                ui.invoke_start_setup_wizard();
+            }
+        }
         *oauth_called_clone.borrow_mut() = true;
     });
 
     login_ui.invoke_oauth_login("Google".into());
     assert!(*oauth_called.borrow(), "OAuth login should trigger SSO signup flow");
+    assert!(*setup_wizard_launched.borrow(), "Setup Wizard should be launched");
 }
 
 #[test]
