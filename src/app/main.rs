@@ -1319,6 +1319,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
 
+    let business_share_ui = app::BusinessShare::new()?;
+    let business_share_handle = business_share_ui.as_weak();
+
+    let dashboard_ref_for_bs = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
+
+    let bs_handle_clone_for_dash = business_share_handle.clone();
+    dashboard_ref_for_bs.upgrade().unwrap().on_action_share_store(move || {
+        if let Some(ui) = bs_handle_clone_for_dash.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
+    let bs_close_handle = business_share_handle.clone();
+    business_share_ui.on_close(move || {
+        if let Some(ui) = bs_close_handle.upgrade() {
+            let _ = ui.hide();
+        }
+    });
+
+    let gb_handle_for_dash = grow_business_handle.clone();
+    dashboard_ref_for_bs.upgrade().unwrap().on_action_grow_business(move || {
+        if let Some(ui) = gb_handle_for_dash.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
+    let em_handle_for_dash = email_marketing_handle.clone();
+    dashboard_ref_for_bs.upgrade().unwrap().on_action_open_email_marketing(move || {
+        if let Some(ui) = em_handle_for_dash.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
+    let bs_copy_handle = business_share_handle.clone();
+    business_share_ui.on_copy_link(move || {
+        if let Some(ui) = bs_copy_handle.upgrade() {
+            let link = ui.get_share_link();
+            CLIPBOARD.with(|cb| {
+                if let Some(ctx) = cb.borrow_mut().as_mut() {
+                    let _ = ctx.set_contents(link.to_string());
+                }
+            });
+        }
+    });
+
     let referrals_ui = app::Referrals::new()?;
     GLOBAL_REFERRALS.with(|g| *g.borrow_mut() = Some(referrals_ui.as_weak()));
     let referrals_handle = referrals_ui.as_weak();
