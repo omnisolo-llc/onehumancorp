@@ -1,3 +1,11 @@
+## v0.4.35 (Cloud) / v0.4.35+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🎥 Lens Audit: Fix Pricing UI regressions (#12013)
+
+### Privacy/Offline Improvements
+- 🎥 Lens Audit: Fix Pricing UI regressions (#12013)
+
 ## v0.4.34 (Cloud) / v0.4.34+2 (Standalone)
 
 - Scaling (Cloud): Fix compiler warnings in UI tests and app main to improve reliability and multi-tenant scaling (#11933).
