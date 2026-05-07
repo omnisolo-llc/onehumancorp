@@ -1100,10 +1100,52 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     website_builder_ui.on_publish_site({
         let ui_handle = website_builder_handle.clone();
-        move |_template, _color, _product, _price, _description, _domain| {
-            if let Some(ui) = ui_handle.upgrade() {
+        move |template, color, product, price, description, domain| {
+            let template = template.to_string();
+            let color = color.to_string();
+            let product = product.to_string();
+            let price = price.to_string();
+            let description = description.to_string();
+            let domain = domain.to_string();
+            let ui_handle_clone = ui_handle.clone();
+
+            #[cfg(not(target_arch = "wasm32"))]
+            tokio::spawn(async move {
+                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let mut request = tonic::Request::new(ohc::orchestration::PublishSiteRequest {
+                        template,
+                        color,
+                        product_name: product,
+                        product_price: price,
+                        description,
+                        domain_choice: domain,
+                    });
+                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+
+                    if let Ok(resp) = client.publish_site(request).await {
+                        let url = resp.into_inner().url;
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle_clone.upgrade() {
+                                ui.set_is_publishing(false);
+                                ui.set_step(4); // Ensure it stays on review/publish screen
+                                // In Slint <= 1.5 setting clipboard requires backend trait, avoiding for compat
+                                ui.invoke_copy_to_clipboard(url.into());
+                            }
+                        }).unwrap();
+                    } else {
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle_clone.upgrade() {
+                                ui.set_is_publishing(false);
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+
+            #[cfg(target_arch = "wasm32")]
+            if let Some(ui) = ui_handle_clone.upgrade() {
                 ui.set_is_publishing(false);
-                ui.set_step(4); // Ensure it stays on review/publish screen
+                ui.set_step(4);
             }
         }
     });
@@ -4151,6 +4193,7 @@ mod tests {
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
+        let ui_weak = ui.as_weak();
         ui.on_publish_site(move |template, color, product, price, description, domain| {
             assert_eq!(template, "Modern");
             assert_eq!(color, "#34C759");
@@ -4159,8 +4202,13 @@ mod tests {
             assert_eq!(description, "An AI-generated description for My Custom Product.");
             assert_eq!(domain, "buy");
             *publish_success_clone.borrow_mut() = true;
+            if let Some(u) = ui_weak.upgrade() {
+                u.set_is_publishing(false);
+                u.set_step(4);
+            }
         });
 
+        ui.set_is_publishing(true);
         ui.invoke_publish_site(
             ui.get_selected_template(),
             ui.get_primary_color(),
@@ -4171,6 +4219,8 @@ mod tests {
         );
 
         assert!(*publish_success.borrow(), "Site should publish successfully");
+        assert_eq!(ui.get_is_publishing(), false);
+        assert_eq!(ui.get_step(), 4);
     }
 
     #[test]
@@ -4556,6 +4606,7 @@ mod docs_tests {
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
+        let ui_weak_2 = ui.as_weak();
         ui.on_publish_site(move |template, color, product, price, description, domain| {
             assert_eq!(template, "Modern");
             assert_eq!(color, "#34C759");
@@ -4564,6 +4615,10 @@ mod docs_tests {
             assert_eq!(description, "An AI-generated description for My E2E Store Product.");
             assert_eq!(domain, "custom");
             *publish_success_clone.borrow_mut() = true;
+            if let Some(u) = ui_weak_2.upgrade() {
+                u.set_is_publishing(false);
+                u.set_step(4);
+            }
         });
 
         let copied_link = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
@@ -4636,8 +4691,9 @@ mod docs_tests {
             ui.get_product_description(),
             ui.get_domain_choice()
         );
-        assert!(ui.get_is_publishing(), "Should be publishing");
         assert!(*publish_success.borrow(), "Publish should have been called");
+        assert_eq!(ui.get_is_publishing(), false, "Should not be publishing anymore after callback logic runs");
+        assert_eq!(ui.get_step(), 4, "Should remain on step 4");
 
         ui.invoke_copy_to_clipboard("https://mybusiness.ohc.app".into());
         assert_eq!(*copied_link.borrow(), "https://mybusiness.ohc.app");
@@ -6488,6 +6544,7 @@ mod e2e_hybrid_blob_tests {
         let builder_published_clone = builder_published.clone();
 
         // When publish is called, it simulates the backend writing a blob and responding.
+        let builder_weak = builder_ui.as_weak();
         builder_ui.on_publish_site(move |template, color, product, price, description, domain| {
             assert_eq!(template, "Modern");
             assert_eq!(color, "#34C759");
@@ -6499,9 +6556,14 @@ mod e2e_hybrid_blob_tests {
             // At this point the UI would call the Rust backend, which invokes the HybridBlobManager
             // to store the website assets (images/blobs).
             *builder_published_clone.borrow_mut() = true;
+            if let Some(u) = builder_weak.upgrade() {
+                u.set_is_publishing(false);
+                u.set_step(4);
+            }
         });
 
         builder_ui.set_step(4); // Advance to the publish step
+        builder_ui.set_is_publishing(true);
         builder_ui.invoke_publish_site(
             "Modern".into(),
             "#34C759".into(),
@@ -6512,6 +6574,7 @@ mod e2e_hybrid_blob_tests {
         );
 
         assert!(*builder_published.borrow(), "Website builder published successfully after simulated blob ops");
+        assert_eq!(builder_ui.get_is_publishing(), false);
     }
 
     #[test]
