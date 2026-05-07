@@ -27,11 +27,23 @@ pub fn get_queue_length_gauge() -> &'static UpDownCounter<i64> {
 }
 
 pub async fn record_autodream_sync(pool: &PgPool, count: f32) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, "autodream_records_synced_total", "counter", count, serde_json::json!({})).await
+    buffer_metric(pool, "ohc_autodream_records_synced_total", "counter", count, serde_json::json!({})).await
 }
 
 pub async fn record_autodream_sync_error(pool: &PgPool, count: f32, error_type: &str) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, "autodream_sync_errors_total", "counter", count, serde_json::json!({ "error": error_type })).await
+    buffer_metric(pool, "ohc_autodream_sync_errors_total", "counter", count, serde_json::json!({ "error": error_type })).await
+}
+
+pub async fn record_autodream_ingestion_error(pool: &PgPool, count: f32, error_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_autodream_ingestion_error_total", "counter", count, serde_json::json!({ "error": error_type })).await
+}
+
+pub async fn record_autodream_compression_error(pool: &PgPool, count: f32, error_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_autodream_compression_error_total", "counter", count, serde_json::json!({ "error": error_type })).await
+}
+
+pub async fn record_autodream_consolidation(pool: &PgPool, count: f32) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_autodream_consolidation_total", "counter", count, serde_json::json!({})).await
 }
 
 pub async fn record_sync_escalation(pool: &PgPool, count: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
