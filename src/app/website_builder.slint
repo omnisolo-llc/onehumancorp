@@ -154,7 +154,7 @@ export component WebsiteBuilder inherits Window {
                 height: 60px;
                 background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                 VerticalBox { alignment: center; padding: 12px;
-                    Text { text: "✨ Generate Logo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
+                    Text { text: "✨ Generate a logo for me"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
                     Text { text: "AI will create 3 options"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
                 }
                 TouchArea { clicked => { generate_logo(); } }
@@ -222,7 +222,7 @@ export component WebsiteBuilder inherits Window {
                 height: 80px;
                 background: domain_choice == "subdomain" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                 VerticalBox { alignment: center; padding: 12px;
-                    Text { text: "🌐 Free OHC Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                    Text { text: "🌐 Use a free OHC subdomain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                     Text { text: "mybusiness.ohc.app"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                 }
                 TouchArea { clicked => { domain_choice = "subdomain"; } }
@@ -231,7 +231,7 @@ export component WebsiteBuilder inherits Window {
                 height: 80px;
                 background: domain_choice == "custom" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                 VerticalBox { alignment: center; padding: 12px;
-                    Text { text: "🌍 Connect Custom Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                    Text { text: "🌍 Use my own domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                     Text { text: "e.g. www.mybusiness.com"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                 }
                 TouchArea { clicked => { domain_choice = "custom"; } }
@@ -240,7 +240,7 @@ export component WebsiteBuilder inherits Window {
                 height: 80px;
                 background: domain_choice == "buy" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                 VerticalBox { alignment: center; padding: 12px;
-                    Text { text: "🛒 Buy a Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                    Text { text: "🛒 Buy a domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                     Text { text: "Search and buy a new domain"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                 }
                 TouchArea { clicked => { domain_choice = "buy"; } }
