@@ -1,16 +1,17 @@
 package orchestration
 
 import (
-	"github.com/DATA-DOG/go-sqlmock"
-	"time"
 	"context"
 	"database/sql"
 	"encoding/json"
+	"github.com/DATA-DOG/go-sqlmock"
+	"os"
 	"testing"
+	"time"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
@@ -123,7 +124,6 @@ func TestSqliteTaskStore_UpdateTaskStatus(t *testing.T) {
 // Mocks for Postgres are complex due to sql.DB, but we can hit some lines with mock errors if needed,
 // however, sqlite testing is preferred for covering the logic since the SQL semantics are similar.
 // For full >90% coverage as requested, we will use a sqlmock library or we can increase sqlite coverage first.
-
 
 func TestPostgresTaskStore_CreateTask(t *testing.T) {
 	db, mock, err := sqlmock.New()
@@ -310,14 +310,14 @@ func TestPostgresTaskStore_CreateTask_WithPayloads(t *testing.T) {
 	store := NewPostgresTaskStore(db)
 	ctx := context.Background()
 
-    rawPayload := json.RawMessage(`{"key":"value"}`)
+	rawPayload := json.RawMessage(`{"key":"value"}`)
 	task := &SharedTask{
 		OrganizationID: "org-1",
 		Title:          "Test Task",
 		Status:         "PENDING",
 		Priority:       "P1",
-        Payload:        &rawPayload,
-        Dependencies:   json.RawMessage(`["dep-1"]`),
+		Payload:        &rawPayload,
+		Dependencies:   json.RawMessage(`["dep-1"]`),
 	}
 
 	mock.ExpectBegin()
@@ -336,8 +336,8 @@ func TestSqliteTaskStore_ClaimTask_Errors(t *testing.T) {
 	store := NewSqliteTaskStore(db)
 	ctx := context.Background()
 
-    // Close DB to force an error on BeginTx
-    db.Close()
+	// Close DB to force an error on BeginTx
+	db.Close()
 	_, err := store.ClaimTask(ctx, "org-1", "agent-x")
 	require.Error(t, err)
 }
@@ -351,10 +351,10 @@ func TestSqliteTaskStore_GetTask_ErrorParsing(t *testing.T) {
 	_, err := db.Exec(`INSERT INTO shared_tasks (id, organization_id, title, created_at) VALUES ('bad-date', 'org-1', 'title', 'not-a-date')`)
 	require.NoError(t, err)
 
-    // We expect it to still return the task, but parsing of time might silently fail or fallback
-    task, err := store.GetTask(ctx, "bad-date")
-    require.NoError(t, err)
-    require.NotNil(t, task)
+	// We expect it to still return the task, but parsing of time might silently fail or fallback
+	task, err := store.GetTask(ctx, "bad-date")
+	require.NoError(t, err)
+	require.NotNil(t, task)
 }
 
 func TestPostgresTaskStore_GetTask_Errors(t *testing.T) {
@@ -401,21 +401,21 @@ func TestSqliteTaskStore_CreateTask_WithPayloads(t *testing.T) {
 	store := NewSqliteTaskStore(db)
 	ctx := context.Background()
 
-    rawPayload := json.RawMessage(`{"key":"value"}`)
+	rawPayload := json.RawMessage(`{"key":"value"}`)
 	task := &SharedTask{
 		OrganizationID: "org-1",
 		Title:          "Test Task",
 		Status:         "PENDING",
 		Priority:       "P1",
-        Payload:        &rawPayload,
+		Payload:        &rawPayload,
 	}
 
 	err := store.CreateTask(ctx, task)
 	require.NoError(t, err)
 
-    savedTask, err := store.GetTask(ctx, task.ID)
-    require.NoError(t, err)
-    assert.Equal(t, task.Payload, savedTask.Payload)
+	savedTask, err := store.GetTask(ctx, task.ID)
+	require.NoError(t, err)
+	assert.Equal(t, task.Payload, savedTask.Payload)
 }
 
 func TestPostgresTaskStore_GetTasksByOrganization(t *testing.T) {
@@ -679,7 +679,7 @@ func TestPostgresTaskStore_UpdateTaskStatus_CommitError(t *testing.T) {
 }
 
 func TestSqliteTaskStore_ClaimTask_CommitError(t *testing.T) {
-    db, mock, err := sqlmock.New()
+	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -930,4 +930,71 @@ func TestSqliteTaskStore_GetTasksByOrganization_ParseDateError(t *testing.T) {
 	// fallback parsing should leave it empty/default or ignore
 	assert.True(t, tasks[0].CreatedAt.IsZero())
 	assert.True(t, tasks[0].UpdatedAt.IsZero())
+}
+
+func TestTasksDB_ClaimTask_Postgres(t *testing.T) {
+	dbMock, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer dbMock.Close()
+
+	// Simulate Postgres by overriding IsSQLite manually or bypassing it if needed.
+	// For the sake of simplicity, we just simulate the Postgres path here by temporarily setting OHC_STANDALONE to false.
+	os.Setenv("OHC_STANDALONE", "false")
+	store := NewTasksDB(dbMock)
+
+	ctx := context.Background()
+	mock.ExpectBegin()
+	mock.ExpectExec("SET LOCAL app.current_tenant = \\$1").WithArgs("org-1").WillReturnResult(sqlmock.NewResult(1, 1))
+
+	rows := sqlmock.NewRows([]string{
+		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
+	}).AddRow(
+		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
+		"{}", nil, "[]", time.Now(), time.Now(),
+	)
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+
+	mock.ExpectExec("UPDATE shared_tasks SET status = 'ASSIGNED'").WithArgs("agent-x", "task-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	task, err := store.ClaimTask(ctx, "org-1", "agent-x")
+	require.NoError(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "task-1", task.ID)
+	assert.Equal(t, "ASSIGNED", task.Status)
+	assert.Equal(t, "agent-x", *task.AgentID)
+}
+
+func TestTasksDB_ClaimTask_Sqlite(t *testing.T) {
+	dbMock, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer dbMock.Close()
+
+	os.Setenv("OHC_STANDALONE", "true")
+	store := NewTasksDB(dbMock)
+
+	ctx := context.Background()
+	mock.ExpectBegin()
+
+	rows := sqlmock.NewRows([]string{
+		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
+	}).AddRow(
+		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
+		"{}", nil, "[]", time.Now().Format(time.RFC3339), time.Now().Format(time.RFC3339),
+	)
+
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+
+	mock.ExpectExec("UPDATE shared_tasks").WithArgs("agent-x", "task-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	task, err := store.ClaimTask(ctx, "org-1", "agent-x")
+	require.NoError(t, err)
+	assert.NotNil(t, task)
+	assert.Equal(t, "task-1", task.ID)
+	assert.Equal(t, "ASSIGNED", task.Status)
+	assert.Equal(t, "agent-x", *task.AgentID)
 }
