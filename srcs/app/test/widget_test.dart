@@ -4,37 +4,140 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:app/main.dart';
 
 void main() {
-  testWidgets('Onboarding journey E2E test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const OHCApp());
+  group('E2E Full Feature CUJ', () {
+    testWidgets('Journey 1: Onboarding with valid input -> Dashboard -> Empty state validation', (WidgetTester tester) async {
+      await tester.pumpWidget(const OHCApp());
 
-    // Verify that we start at the intake screen
-    expect(find.text('What do you want to build today?'), findsOneWidget);
+      // Start at intake screen
+      expect(find.text('What do you want to build today?'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'I sell vegan cakes');
+      await tester.tap(find.text('Continue'));
+      await tester.pump();
 
-    // Enter a business intent
-    await tester.enterText(find.byType(TextField), 'I sell vegan cakes');
+      // Loading screen
+      expect(find.text('Designing storefront...'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
 
-    // Tap Continue
-    await tester.tap(find.text('Continue'));
-    await tester.pump();
+      // Review screen
+      expect(find.text('Review Your Business'), findsOneWidget);
+      await tester.tap(find.text('Launch Business'));
+      await tester.pump();
 
-    // Verify we moved to the loading screen
-    expect(find.text('Designing storefront...'), findsOneWidget);
+      // Dashboard
+      expect(find.text("Dashboard"), findsOneWidget);
+      expect(find.text("Draft Quote for John Doe"), findsOneWidget);
+      expect(find.text("New DM from Sarah"), findsOneWidget);
+    });
 
-    // Wait for the simulated AI loading (3 seconds)
-    await tester.pump(const Duration(seconds: 3));
+    testWidgets('Journey 2: Onboarding with empty input validation', (WidgetTester tester) async {
+      await tester.pumpWidget(const OHCApp());
 
-    // Verify we reached the review screen
-    expect(find.text('Review Your Business'), findsOneWidget);
-    expect(find.text('Storefront Preview'), findsOneWidget);
-    expect(find.text('Launch Business'), findsOneWidget);
+      expect(find.text('What do you want to build today?'), findsOneWidget);
 
-    // Tap Launch Business
-    await tester.tap(find.text('Launch Business'));
-    await tester.pump();
+      // Tap continue without entering text
+      await tester.tap(find.text('Continue'));
+      await tester.pump();
 
-    // Verify we reached the dashboard
-    expect(find.text("Dashboard"), findsOneWidget);
-    expect(find.text("Pending Agent Approvals"), findsOneWidget);
+      // Should remain on the intake screen
+      expect(find.text('What do you want to build today?'), findsOneWidget);
+      expect(find.text('Designing storefront...'), findsNothing);
+    });
+
+    testWidgets('Journey 3: Dashboard task approval optimistic UI', (WidgetTester tester) async {
+      await tester.pumpWidget(const OHCApp());
+
+      // Start at intake screen
+      expect(find.text('What do you want to build today?'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'I sell vegan cakes');
+      await tester.tap(find.text('Continue'));
+      await tester.pump();
+
+      // Loading screen
+      expect(find.text('Designing storefront...'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+
+      // Review screen
+      expect(find.text('Review Your Business'), findsOneWidget);
+      await tester.tap(find.text('Launch Business'));
+      await tester.pump();
+
+      // Wait for rendering
+      await tester.pumpAndSettle();
+
+      expect(find.text("Draft Quote for John Doe"), findsOneWidget);
+      expect(find.text("New DM from Sarah"), findsOneWidget);
+
+      // Approve first task
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Approve').first);
+      await tester.pumpAndSettle();
+
+      // The approved task should be gone, the other should remain
+      expect(find.text("Draft Quote for John Doe"), findsNothing);
+      expect(find.text("New DM from Sarah"), findsOneWidget);
+    });
+
+    testWidgets('Journey 4: Dashboard task rejection optimistic UI', (WidgetTester tester) async {
+      await tester.pumpWidget(const OHCApp());
+
+      // Start at intake screen
+      expect(find.text('What do you want to build today?'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'I sell vegan cakes');
+      await tester.tap(find.text('Continue'));
+      await tester.pump();
+
+      // Loading screen
+      expect(find.text('Designing storefront...'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+
+      // Review screen
+      expect(find.text('Review Your Business'), findsOneWidget);
+      await tester.tap(find.text('Launch Business'));
+      await tester.pump();
+
+      await tester.pumpAndSettle();
+
+      expect(find.text("Draft Quote for John Doe"), findsOneWidget);
+      expect(find.text("New DM from Sarah"), findsOneWidget);
+
+      // Reject first task
+      await tester.tap(find.widgetWithText(TextButton, 'Reject').first);
+      await tester.pumpAndSettle();
+
+      // The rejected task should be gone
+      expect(find.text("Draft Quote for John Doe"), findsNothing);
+      expect(find.text("New DM from Sarah"), findsOneWidget);
+    });
+
+    testWidgets('Journey 5: Dashboard all tasks completed empty state', (WidgetTester tester) async {
+      await tester.pumpWidget(const OHCApp());
+
+      // Start at intake screen
+      expect(find.text('What do you want to build today?'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'I sell vegan cakes');
+      await tester.tap(find.text('Continue'));
+      await tester.pump();
+
+      // Loading screen
+      expect(find.text('Designing storefront...'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+
+      // Review screen
+      expect(find.text('Review Your Business'), findsOneWidget);
+      await tester.tap(find.text('Launch Business'));
+      await tester.pump();
+
+      await tester.pumpAndSettle();
+
+      // Approve all
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Approve').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Approve').first);
+      await tester.pumpAndSettle();
+
+      // Empty state should appear
+      expect(find.text('No pending approvals.'), findsOneWidget);
+      expect(find.text("Draft Quote for John Doe"), findsNothing);
+      expect(find.text("New DM from Sarah"), findsNothing);
+    });
   });
 }

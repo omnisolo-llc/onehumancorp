@@ -269,76 +269,165 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-class DashboardScreen extends StatelessWidget {
+class _Task {
+  final String id;
+  final String title;
+  final String description;
+
+  _Task({required this.id, required this.title, required this.description});
+}
+
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final List<_Task> _tasks = [
+    _Task(
+      id: '1',
+      title: 'Draft Quote for John Doe',
+      description: 'Customer requested a quote for a custom cake. AI Sales Agent drafted a quote for \$150. Approve to send.',
+    ),
+    _Task(
+      id: '2',
+      title: 'New DM from Sarah',
+      description: 'Sarah asked about vegan options. AI Customer Success Agent drafted a reply. Approve to send.',
+    ),
+  ];
+
+  void _approveTask(String id) {
+    setState(() {
+      _tasks.removeWhere((task) => task.id == id);
+    });
+  }
+
+  void _rejectTask(String id) {
+    setState(() {
+      _tasks.removeWhere((task) => task.id == id);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 20),
-        const Text(
-          "Dashboard",
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 20),
+          const Text(
+            "Dashboard",
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-        GlassContainer(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Revenue',
-                style: TextStyle(fontSize: 14, color: Colors.white70),
+          const SizedBox(height: 20),
+          GlassContainer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Revenue',
+                  style: TextStyle(fontSize: 14, color: Colors.white70),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  '\$0.00',
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          GlassContainer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Pending Agent Approvals',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 10),
+                if (_tasks.isEmpty)
+                  const Text(
+                    'No pending approvals.',
+                    style: TextStyle(color: Colors.white70),
+                  )
+                else
+                  ..._tasks.map((task) => _buildTaskItem(task)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          GlassContainer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Recent Orders',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'No orders yet.',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskItem(_Task task) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withAlpha(30)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            task.title,
+            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            task.description,
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => _rejectTask(task.id),
+                child: const Text('Reject', style: TextStyle(color: Colors.redAccent)),
               ),
-              SizedBox(height: 5),
-              Text(
-                '\$0.00',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+              const SizedBox(width: 10),
+              ElevatedButton(
+                onPressed: () => _approveTask(task.id),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF22C55E),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Approve', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 20),
-        GlassContainer(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Pending Agent Approvals',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'No pending approvals.',
-                style: TextStyle(color: Colors.white70),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        GlassContainer(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Recent Orders',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'No orders yet.',
-                style: TextStyle(color: Colors.white70),
-              ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
