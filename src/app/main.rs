@@ -3560,8 +3560,6 @@ mod tests {
 
 
     #[test]
-
-    #[test]
     fn test_e2e_setup_wizard_flow_comprehensive() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         crate::ui_tests::init();
@@ -3622,9 +3620,6 @@ mod tests {
 
         assert!(*launch_called.borrow(), "Launch should have been called");
     }
-
-    #[test]
-
 
     #[test]
     fn test_e2e_prompt_tuning_flow() {
