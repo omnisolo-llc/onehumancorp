@@ -382,6 +382,7 @@ impl Agent {
                 let last_msg = state.get("last_message").unwrap();
                 let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
 
+                let mut error_counts = state.get("error_counts").unwrap().as_object().unwrap().clone();
                 let mut read_only_calls = Vec::new();
                 let mut mutating_calls = Vec::new();
 
@@ -448,6 +449,8 @@ impl Agent {
                     let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
                     match final_res {
                         Ok(res) => {
+                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
+                            error_counts.insert(tool_name, serde_json::json!(0));
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
                                 "content": res,
@@ -455,6 +458,12 @@ impl Agent {
                             });
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
+                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                            error_counts.insert(tool_name.clone(), serde_json::json!(count));
+                            if count >= 3 {
+                                return Err(format!("Fatal tool error: Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
+                            }
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
                                 "content": "",
@@ -462,11 +471,7 @@ impl Agent {
                             });
                         }
                         Err(crate::types::ToolError::Transient(msg)) => {
-                            tool_results_json[idx] = serde_json::json!({
-                                "tool_call_id": id,
-                                "content": "",
-                                "error": format!("Transient error after retries: {}", msg)
-                            });
+                            return Err(format!("Unexpected tool error: Transient error after retries: {}", msg));
                         }
                         Err(crate::types::ToolError::UserFixable(msg)) => {
                             return Err(format!("USER_FIXABLE:{}", msg));
@@ -521,6 +526,7 @@ impl Agent {
 
                         match final_res {
                             Ok(res) => {
+                                error_counts.insert(name.to_string(), serde_json::json!(0));
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
                                     "content": res,
@@ -528,6 +534,11 @@ impl Agent {
                                 });
                             }
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                                error_counts.insert(name.to_string(), serde_json::json!(count));
+                                if count >= 3 {
+                                    return Err(format!("Fatal tool error: Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
+                                }
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
                                     "content": "",
@@ -535,11 +546,7 @@ impl Agent {
                                 });
                             }
                             Err(crate::types::ToolError::Transient(msg)) => {
-                                tool_results_json[idx] = serde_json::json!({
-                                    "tool_call_id": id,
-                                    "content": "",
-                                    "error": format!("Transient error after retries: {}", msg)
-                                });
+                                return Err(format!("Unexpected tool error: Transient error after retries: {}", msg));
                             }
                             Err(crate::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE:{}", msg));
@@ -565,6 +572,7 @@ impl Agent {
 
                 Ok(serde_json::json!({
                     "has_tool_calls": false, // Clear flag
+                    "error_counts": error_counts,
                     "messages": [{
                         "role": "tool",
                         "content": "",
@@ -613,7 +621,8 @@ impl Agent {
         let initial_state = serde_json::json!({
             "messages": msgs_json,
             "has_tool_calls": false,
-            "total_tokens": 0
+            "total_tokens": 0,
+            "error_counts": {}
         });
 
         match graph.run(initial_state).await {
@@ -4041,11 +4050,9 @@ mod tests {
         let agent3 = Agent::new(client3, vec![tool_transient.clone()]);
         let mut events3 = vec![];
         let res3 = agent3.run(&cfg, "Start", &mut |e| events3.push(e)).await;
-        // Should succeed because transient error returns a string to LLM, allowing it to continue
-        assert!(res3.is_ok());
-
-        // Since it's a transient error that always fails, the retry loop will retry 2 times, then return the error string to the LLM.
-        // The fact that res3 is ok proves the loop handled the error gracefully instead of crashing.
+        // Should return Err because transient error exhausted max retries
+        assert!(res3.is_err());
+        assert!(res3.unwrap_err().to_string().contains("Transient error after retries"));
 
         let agent2 = Agent::new(client2, vec![tool_fatal]);
         let mut events2 = vec![];
