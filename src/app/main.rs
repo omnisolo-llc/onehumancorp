@@ -440,7 +440,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                 let _ = ui.show();
                                             }
                                         });
-                                        Box::leak(Box::new(billing_ui));
+                                        let my_plan_handle_clone_dashboard = my_plan_ui.as_weak();
+                        dashboard.on_open_my_plan(move || {
+                            if let Some(ui) = my_plan_handle_clone_dashboard.upgrade() {
+                                let _ = ui.show();
+                            }
+                        });
+                        Box::leak(Box::new(billing_ui));
                                         let my_plan_handle_clone2 = my_plan_ui.as_weak();
                                         dashboard.on_action_failed(move |msg| {
                                             if msg.contains("Tier limit reached") {
@@ -630,6 +636,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let billing_handle_clone = billing_ui.as_weak();
                         dashboard.on_open_billing(move || {
                             if let Some(ui) = billing_handle_clone.upgrade() {
+                                let _ = ui.show();
+                            }
+                        });
+                        let my_plan_handle_clone_dashboard = my_plan_ui.as_weak();
+                        dashboard.on_open_my_plan(move || {
+                            if let Some(ui) = my_plan_handle_clone_dashboard.upgrade() {
                                 let _ = ui.show();
                             }
                         });
@@ -2318,6 +2330,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let billing_handle_clone_dashboard = billing_ui_inner.as_weak();
                 dashboard.on_open_billing(move || {
                     if let Some(ui) = billing_handle_clone_dashboard.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+                let my_plan_handle_clone_dashboard2 = my_plan_ui.as_weak();
+                dashboard.on_open_my_plan(move || {
+                    if let Some(ui) = my_plan_handle_clone_dashboard2.upgrade() {
                         let _ = ui.show();
                     }
                 });
