@@ -7598,7 +7598,7 @@ fn test_scribe_feature_dashboard_functionality() {
 
 #[cfg(test)]
 mod e2e_issue_9422_tests {
-    use slint::ComponentHandle;
+
     use crate::app;
 
     #[test]
