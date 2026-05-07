@@ -211,10 +211,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
                 match client.register_agent(request).await {
                     Ok(_response) => {}
-                    Err(e) => {}
+                    Err(_e) => {}
                 }
             }
-            Err(e) => {
+            Err(_e) => {
 
             }
         }
@@ -587,7 +587,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     login_ui.on_oauth_login({
         let login_handle = login_ui_handle.clone();
-        move |provider| {
+        move |_provider| {
             if let Some(ui) = login_handle.upgrade() {
                 if ui.get_is_sign_up() {
                     ui.set_show_verification(true);
@@ -1380,7 +1380,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }).unwrap();
                         }
                     }
-                    Err(e) => {}
+                    Err(_e) => {}
                 }
             });
         }
@@ -1464,7 +1464,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }).unwrap();
                         }
                     }
-                    Err(e) => {}
+                    Err(_e) => {}
                 }
             });
         }
@@ -2690,11 +2690,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
                             state,
                         });
-                        if let Err(e) = client.save_wizard_state(request).await {
+                        if let Err(_e) = client.save_wizard_state(request).await {
 
                         }
                     }
-                    Err(e) => {
+                    Err(_e) => {
 
                     }
                 }
