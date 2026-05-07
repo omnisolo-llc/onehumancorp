@@ -57,7 +57,7 @@ impl SipDB {
             let res = async {
                 let mut tx = self.pool.begin().await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'RUNNING') AND updated_at < $1 AND organization_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -68,14 +68,14 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING' OR status = 'RUNNING') AND created_at < $1 AND organization_id = $2")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
+                sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING' OR status = 'RUNNING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -381,6 +381,32 @@ mod tests {
 
         let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
         // Should error out gracefully with our dummy pool timeout instead of panicking
+        assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_handoff_mission_graceful_timeout() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(10))
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
+
+        let sip_db = SipDB::new(pool, "test_org".to_string());
+        let res = sip_db.handoff_mission("mission_123", "blocked by bug").await;
+        assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_upsert_mission_graceful_timeout() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(10))
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
+
+        let sip_db = SipDB::new(pool, "test_org".to_string());
+        let res = sip_db.upsert_mission("mission_123", "PENDING", "payload", true).await;
         assert!(res.is_err());
     }
 }
