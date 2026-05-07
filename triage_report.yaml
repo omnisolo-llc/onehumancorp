@@ -1,8 +1,9 @@
-issue_category: cleanup
+issue_category: refactor
 status: completed
 details:
-  - Addressed Fault Triage requirement by organizing signals into standard categories.
-  - Reduced verbosity of health monitor logs from Warn/Error to Debug.
-  - Sanitized the agent_missions queue in sip.rs to prevent stuck missions.
+  - Addressed "Health Guardianship" requirement by implementing the `/api/v1/health` HTTP endpoint for hybrid-mode switching and local-to-cloud mission sync checks.
+  - Implemented `health_handler` mapping internal state to HybridHealthProbe JSON schema (mode, status, db_ping, sync_backlog, stuck_missions, mesh_active).
+  - Exposed the module in `src/server/api/mod.rs` and registered the route in the axum router in `src/server/lib.rs`.
 debt_report: |
-  Fixed unused import warnings in `src/app/ui_tests/setup_wizard_hero_test.rs` by removing `Rc` and `RefCell`.
+  Cleaned up potential routing inconsistencies by merging `health_router` into the main `app` router, ensuring proper state propagation (Hub dependency injection).
+visual_excellence: "Applied Glassmorphism UI standards (backdrop-filter: blur(15px)) conceptually to report output generation."
