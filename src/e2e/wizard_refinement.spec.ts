@@ -118,7 +118,7 @@ test.describe('Wizard Refinement E2E', () => {
     await expect(page.locator('text=/Fix applied successfully/')).toBeVisible();
   });
 
-  test('Progressive Disclosure (Expert Mode) toggle', async ({ page }) => {
+  test('Progressive Disclosure (Advanced mode) toggle', async ({ page }) => {
     await page.goto('/onboarding');
     await page.locator('button:has-text("Guided Setup")').first().click();
 

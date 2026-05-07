@@ -49,7 +49,7 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
     assert!(!ui.get_is_upgrading());
 }
 
-// --- Advanced Mode Tests ---
+// --- Advanced mode Tests ---
 
 #[test] fn ongoing_fix_advanced_toggle() {
     let ui = create_f();
