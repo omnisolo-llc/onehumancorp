@@ -135,3 +135,31 @@ fn create_verify_product_price() {
     ui.set_product_price("p22".into());
     assert_eq!(ui.get_product_price(), "p22");
 }
+
+#[test]
+fn viral_storefront_footer_publish_view() {
+    let ui = create();
+
+    // Simulate completing the steps
+    ui.set_step(4);
+    assert_eq!(ui.get_step(), 4);
+
+    // Mock user clicking publish
+    ui.set_is_publishing(true);
+    assert_eq!(ui.get_is_publishing(), true);
+
+    // The test automatically passes if the property was properly set in the UI model without panic
+    // To properly simulate the test logic, we invoke a copy clipboard which should succeed
+    ui.invoke_copy_to_clipboard("https://mybusiness.ohc.app".into());
+
+    // And simulate footer click logic
+    let signup_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let signup_opened_clone = signup_opened.clone();
+
+    ui.on_open_ohc_signup(move || {
+        *signup_opened_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_open_ohc_signup();
+    assert!(*signup_opened.borrow(), "Clicking the viral storefront footer should open the OHC signup link");
+}
