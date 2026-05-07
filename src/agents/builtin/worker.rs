@@ -147,11 +147,12 @@ impl TaskWorker {
         let address = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
         
         let mut attempt = 0;
-        let max_attempts = 3;
+        let max_attempts = std::env::var("OHC_AGENT_MAX_ATTEMPTS").ok().and_then(|v| v.parse().ok()).unwrap_or(3);
         
         loop {
             attempt += 1;
-            let result = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+            let timeout_secs = std::env::var("OHC_AGENT_TIMEOUT_SECS").ok().and_then(|v| v.parse().ok()).unwrap_or(60);
+            let result = tokio::time::timeout(std::time::Duration::from_secs(timeout_secs), async {
                 let mut client = crate::ohc::agent::service::agent_service_client::AgentServiceClient::connect(format!("http://{}", address))
                     .await
                     .map_err(|e| format!("connect to builtin agent at {}: {}", address, e))?;

@@ -76,7 +76,7 @@ impl GeminiClient {
             api_key: api_key.into(),
             base_url: "https://generativelanguage.googleapis.com/v1beta".to_string(),
             client: Client::builder()
-                .timeout(std::time::Duration::from_secs(60))
+                .timeout(std::time::Duration::from_secs(std::env::var("OHC_LLM_TIMEOUT_SECS").ok().and_then(|v| v.parse().ok()).unwrap_or(60)))
                 .build()
                 .unwrap(),
         }

@@ -77,7 +77,7 @@ impl OpenAIClient {
             api_key: api_key.into(),
             base_url: "https://api.openai.com/v1".to_string(),
             client: Client::builder()
-                .timeout(std::time::Duration::from_secs(60))
+                .timeout(std::time::Duration::from_secs(std::env::var("OHC_LLM_TIMEOUT_SECS").ok().and_then(|v| v.parse().ok()).unwrap_or(60)))
                 .build()
                 .unwrap(),
         }
@@ -88,7 +88,7 @@ impl OpenAIClient {
             api_key: api_key.into(),
             base_url: base_url.into(),
             client: Client::builder()
-                .timeout(std::time::Duration::from_secs(60))
+                .timeout(std::time::Duration::from_secs(std::env::var("OHC_LLM_TIMEOUT_SECS").ok().and_then(|v| v.parse().ok()).unwrap_or(60)))
                 .build()
                 .unwrap(),
         }
