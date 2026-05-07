@@ -4153,7 +4153,6 @@ mod tests {
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
-                    response_id: Some("1".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("Task done."),
