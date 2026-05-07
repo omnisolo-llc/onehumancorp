@@ -254,6 +254,7 @@ impl HubService for MyHubService {
 
         let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
 
         let amount = match req.plan_id.as_str() {
             "Starter" => 9.0,
@@ -268,7 +269,12 @@ impl HubService for MyHubService {
             tracing::info!("Optimized payment method to {:?} to save ${:.2} on transaction fees", optimal_pm, savings);
         }
 
-        let url = client.create_checkout_session(&req.plan_id, &tenant_id, Some(optimal_pm)).await
+        let is_latam = req.plan_id.ends_with("_latam");
+        let url = if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
+            mp_client.create_checkout_preference(&req.plan_id, &tenant_id).await
+        } else {
+            client.create_checkout_session(&req.plan_id, &tenant_id, Some(optimal_pm)).await
+        }
             .map_err(|e| tonic::Status::internal(e))?;
 
         Ok(tonic::Response::new(crate::ohc::orchestration::SelectPlanResponse {
@@ -284,6 +290,7 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
 
         client.cancel_subscription(&req.plan_id).await
             .map_err(|e| tonic::Status::internal(e))?;
@@ -1362,6 +1369,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/stripe", axum::routing::post(api::billing_webhook::stripe_webhook_handler))
+        .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()

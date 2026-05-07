@@ -153,3 +153,38 @@ pub async fn stripe_webhook_handler(
         }
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct MercadoPagoEvent {
+    pub id: i64,
+    pub live_mode: bool,
+    pub r#type: String,
+    pub date_created: String,
+    pub application_id: i64,
+    pub user_id: i64,
+    pub version: i32,
+    pub api_version: String,
+    pub action: String,
+    pub data: MercadoPagoEventData,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MercadoPagoEventData {
+    pub id: String,
+}
+
+pub async fn mercadopago_webhook_handler(
+    State(state): State<WebhookState>,
+    Json(payload): Json<MercadoPagoEvent>,
+) -> impl IntoResponse {
+    match payload.action.as_str() {
+        "payment.created" | "payment.updated" => {
+            // In a real implementation, you would fetch the payment details from MP API using data.id
+            // and extract the tenant_id and tier from the metadata.
+            // For mock purposes, assume we process it similarly to Stripe.
+            // We just return OK.
+            StatusCode::OK.into_response()
+        },
+        _ => StatusCode::OK.into_response()
+    }
+}
