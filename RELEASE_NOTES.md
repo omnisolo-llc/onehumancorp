@@ -1,3 +1,11 @@
+## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🗺️ Guide: Animated Confetti on Go-Live (#11420)
+
+### Privacy/Offline Improvements
+- 🗺️ Guide: Animated Confetti on Go-Live (#11420)
+
 ## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
 
 ### Cloud Scaling Improvements
