@@ -52,3 +52,11 @@ fn create_verify_progress() {
     ui.set_progress(50);
     assert_eq!(ui.get_progress(), 50);
 }
+
+#[test]
+fn test_welcome_checklist_advanced_mode() {
+    let ui = create();
+    assert_eq!(ui.get_is_advanced(), false);
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+}

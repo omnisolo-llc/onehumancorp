@@ -1,7 +1,10 @@
+import { AdvancedToggle } from "advanced_toggle.slint";
 import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component WelcomeChecklist inherits Window {
+    in-out property <bool> is_advanced: false;
+    callback save_state();
     min-width: 375px;
     preferred-width: 600px;
     height: 400px;
@@ -32,13 +35,21 @@ export component WelcomeChecklist inherits Window {
                 spacing: 16px;
                 padding: 24px;
 
-                Text {
-                    text: "You're set up! Here's what to do next:";
-                    font-size: 24px;
-                    font-weight: 700;
-                    color: white;
-                    wrap: word-wrap;
-                    font-family: "Outfit";
+
+                HorizontalBox {
+                    Text {
+                        text: "You're set up! Here's what to do next:";
+                        font-size: 24px;
+                        font-weight: 700;
+                        color: white;
+                        wrap: word-wrap;
+                        font-family: "Outfit";
+                    }
+                    Rectangle {}
+                    AdvancedToggle {
+                        is_advanced <=> root.is_advanced;
+                        toggled => { root.save_state(); }
+                    }
                 }
 
                 Text {
@@ -96,6 +107,23 @@ export component WelcomeChecklist inherits Window {
                     }
                 }
 
+
+                if (is_advanced) : VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Raw Task IDs:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                    Rectangle {
+                        background: rgba(0,0,0,0.5);
+                        border-radius: 4px;
+                        HorizontalBox {
+                            padding: 8px;
+
+                            Text {
+                                text: "task_1_status: " + (task1_done ? "true" : "false") + "\n" + "task_2_status: " + (task2_done ? "true" : "false") + "\n" + "task_3_status: " + (task3_done ? "true" : "false") + "\n" + "task_4_status: " + (task4_done ? "true" : "false");
+                                color: #a855f7; font-family: "Inter"; font-size: 12px;
+                            }
+                        }
+                    }
+                }
                 if is_completed : Text {
                     text: "Congratulations! You have completed all setup tasks. Awesome job!";
                     color: #10b981;

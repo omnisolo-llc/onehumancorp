@@ -1315,6 +1315,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let business_manager_ui = app::BusinessManager::new().unwrap();
+    business_manager_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let bm_handle_sync = business_manager_ui.as_weak();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = bm_handle_sync.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+    business_manager_ui.on_save_state({
+        let ui_handle = business_manager_ui.as_weak();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+            }
+        }
+    });
 
     let dummy_products = vec![
         app::UiProduct {
@@ -1402,10 +1417,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     let business_share_ui = app::BusinessShare::new()?;
-    let business_share_handle = business_share_ui.as_weak();
+    business_share_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let bs_handle_sync = business_share_ui.as_weak();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = bs_handle_sync.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+    business_share_ui.on_save_state({
+        let ui_handle = business_share_ui.as_weak();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+            }
+        }
+    });
 
     let dashboard_ref_for_bs = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
 
+    let business_share_handle = business_share_ui.as_weak();
     let bs_handle_clone_for_dash = business_share_handle.clone();
     dashboard_ref_for_bs.upgrade().unwrap().on_action_share_store(move || {
         if let Some(ui) = bs_handle_clone_for_dash.upgrade() {
@@ -1679,10 +1709,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     let welcome_checklist_ui = app::WelcomeChecklist::new()?;
-    let welcome_checklist_handle = welcome_checklist_ui.as_weak();
+    welcome_checklist_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let wc_handle_sync = welcome_checklist_ui.as_weak();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = wc_handle_sync.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+    welcome_checklist_ui.on_save_state({
+        let ui_handle = welcome_checklist_ui.as_weak();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+            }
+        }
+    });
     setup_welcome_checklist_routing(&welcome_checklist_ui);
 
     setup_wizard_ui.on_show_welcome_checklist({
+        let welcome_checklist_handle = welcome_checklist_ui.as_weak();
         let wc_handle = welcome_checklist_handle.clone();
         let ui_handle = setup_wizard_handle.clone();
         move || {
@@ -2526,6 +2571,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let agents_ui = app::Agents::new()?;
     let agent_hire_ui = app::AgentHire::new()?;
+    agent_hire_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let ah_handle_sync = agent_hire_ui.as_weak();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = ah_handle_sync.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+    agent_hire_ui.on_save_state({
+        let ui_handle = agent_hire_ui.as_weak();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+            }
+        }
+    });
+
+
+    let wizard_ui = app::Wizard::new()?;
+    wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let wizard_handle_sync = wizard_ui.as_weak();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = wizard_handle_sync.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+    wizard_ui.on_save_state({
+        let ui_handle = wizard_ui.as_weak();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+            }
+        }
+    });
+
     let fix_agent_ui = app::FixAgent::new()?;
     let upgrade_ui = app::Upgrade::new()?;
     let billing_ui = app::Billing::new()?;

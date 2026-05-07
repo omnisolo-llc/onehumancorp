@@ -1,7 +1,10 @@
+import { AdvancedToggle } from "advanced_toggle.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component Wizard inherits Window {
+    in-out property <bool> is_advanced: false;
+    callback save_state();
     min-width: 375px;
     preferred-width: 500px;
     height: 600px;
@@ -27,6 +30,12 @@ export component Wizard inherits Window {
 
         HorizontalBox {
             Text { text: "Help Me Fix This"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { root.save_state(); }
+            }
         }
 
         HorizontalBox {
@@ -123,6 +132,19 @@ export component Wizard inherits Window {
             }
         }
 
+
+        if (is_advanced && step == 0) : VerticalBox {
+            spacing: 8px;
+            Text { text: "Raw Error Trace:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+            Rectangle {
+                background: rgba(0,0,0,0.5);
+                border-radius: 4px;
+                HorizontalBox {
+                    padding: 8px;
+                    Text { text: "Error: ConnectionTimeout (code: 504)\n  at fetch_email_provider()\n  at retry_sync()"; color: #ef4444; font-family: "Inter"; font-size: 12px; }
+                }
+            }
+        }
         Rectangle {} // Spacer
 
         HorizontalBox {

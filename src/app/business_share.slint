@@ -1,7 +1,10 @@
+import { AdvancedToggle } from "advanced_toggle.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component BusinessShare inherits Window {
+    in-out property <bool> is_advanced: false;
+    callback save_state();
     width: 375px;
     height: 700px;
     title: "Share my business";
@@ -25,6 +28,10 @@ export component BusinessShare inherits Window {
         HorizontalBox {
             Text { text: "Share my business"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
             Rectangle {}
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { root.save_state(); }
+            }
             Button { text: "Close"; height: 44px; clicked => { close(); } }
         }
 
@@ -90,6 +97,19 @@ export component BusinessShare inherits Window {
             }
         }
 
+
+        if (is_advanced) : VerticalBox {
+            spacing: 8px;
+            Text { text: "Raw intent link URI:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+            Rectangle {
+                background: rgba(0,0,0,0.5);
+                border-radius: 4px;
+                HorizontalBox {
+                    padding: 8px;
+                    Text { text: share_link; color: #a855f7; font-family: "Inter"; font-size: 12px; }
+                }
+            }
+        }
         VerticalBox {
             spacing: 12px;
 

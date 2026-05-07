@@ -1,3 +1,4 @@
+import { AdvancedToggle } from "advanced_toggle.slint";
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
 
 export struct UiAgentProvider {
@@ -7,6 +8,8 @@ export struct UiAgentProvider {
 }
 
 export component AgentHire inherits Window {
+    in-out property <bool> is_advanced: false;
+    callback save_state();
     width: 600px;
     height: 700px;
     title: "Hire New Helper";
@@ -31,7 +34,15 @@ export component AgentHire inherits Window {
         spacing: 20px;
         padding: 24px;
 
-        Text { text: "Hire New Helper"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        HorizontalBox {
+            Text { text: "Hire New Helper"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { root.save_state(); }
+            }
+        }
 
         // Step 0: Role
         if (step == 0) : VerticalBox {
@@ -118,6 +129,25 @@ export component AgentHire inherits Window {
             }
         }
 
+
+
+
+
+        if (is_advanced && step == 6) : VerticalBox {
+            spacing: 8px;
+            Text { text: "Raw JSON Request Preview:"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+            Rectangle {
+                background: rgba(0,0,0,0.5);
+                border-radius: 4px;
+                HorizontalBox {
+                    padding: 8px;
+                    Text {
+                        text: "{\n  \"role\": \"" + selected_role + "\",\n  \"provider\": \"" + selected_provider + "\",\n  \"name\": \"" + agent_name + "\" \n}";
+                        color: #a855f7; font-family: "Inter"; font-size: 12px;
+                    }
+                }
+            }
+        }
         Rectangle {} // Spacer
 
         // Navigation
@@ -127,6 +157,7 @@ export component AgentHire inherits Window {
                 clicked => { step = step - 1; }
             }
             Rectangle {} // Spacer
+
             Button {
                 text: step == 6 ? "Deploy Helper" : "Next";
                 enabled: next_enabled;

@@ -1,3 +1,4 @@
+import { AdvancedToggle } from "advanced_toggle.slint";
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
@@ -11,6 +12,8 @@ export struct UiProduct {
 }
 
 export component BusinessManager inherits Window {
+    in-out property <bool> is_advanced: false;
+    callback save_state();
     preferred-width: 500px;
     min-width: 375px;
     height: 600px;
@@ -56,6 +59,10 @@ export component BusinessManager inherits Window {
         HorizontalBox {
             Text { text: current_view == "list" ? "My Offerings" : "Add Offering"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { root.save_state(); }
+            }
             if (current_view == "add") : Button { text: "Back to List"; clicked => { current_view = "list"; } }
             if (current_view == "list") : Button { text: "Close"; clicked => { close(); } }
         }
@@ -74,6 +81,7 @@ export component BusinessManager inherits Window {
                             spacing: 12px;
 
                             HorizontalBox {
+                                if (is_advanced) : Text { text: "[" + prod.id + "] "; font-size: 12px; color: #a855f7; font-family: "Inter"; vertical-alignment: center; }
                                 Text { text: prod.name; font-size: 18px; font-weight: 700; color: white; font-family: "Outfit"; }
                                 Rectangle {}
                                 Text { text: prod.price; font-size: 16px; font-weight: 700; color: #10b981; font-family: "Inter"; }

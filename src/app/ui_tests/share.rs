@@ -111,3 +111,11 @@ fn share_verify_preview_content() {
     assert_eq!(ui.get_business_tagline(), "Yummy cakes");
     assert_eq!(ui.get_share_link(), "ohc://join?ref=cake");
 }
+
+#[test]
+fn test_business_share_advanced_mode() {
+    let ui = create();
+    assert_eq!(ui.get_is_advanced(), false);
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+}

@@ -46,3 +46,10 @@ fn test_submit_callback() {
     ui.invoke_submit("SERVICE".into(), "Consultation".into(), "".into(), "".into(), "".into(), "".into());
     assert!(*invoked.borrow());
 }
+#[test]
+fn test_business_manager_advanced_mode() {
+    let ui = create();
+    assert_eq!(ui.get_is_advanced(), false);
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+}

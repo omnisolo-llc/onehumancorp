@@ -94,3 +94,11 @@ fn create_verify_step() {
     ui.set_step(53);
     assert_eq!(ui.get_step(), 53);
 }
+
+#[test]
+fn test_agent_hire_advanced_mode() {
+    let ui = create();
+    assert_eq!(ui.get_is_advanced(), false);
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+}
