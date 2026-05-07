@@ -1646,14 +1646,35 @@ impl Agent {
             }
 
             // 2. Local File Scratchpad (Claude Code)
-            if cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
-                if let Ok(json_state) = serde_json::to_string_pretty(&messages) {
-                    if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
-                        on_event(AgentEvent::CheckpointSaved {
-                            iteration,
-                            path: scratchpad_path.clone(),
-                        });
+            if cfg.enable_state_checkpointing {
+                let mut saved = false;
+                if let Some(checkpointer) = &self_with_memory.checkpointer {
+                    let cp = crate::checkpointer::Checkpoint {
+                        thread_id: cfg.thread_id.clone().unwrap_or_else(|| "default".to_string()),
+                        checkpoint_id: format!("iter_{}", iteration),
+                        parent_id: if iteration > 0 { Some(format!("iter_{}", iteration - 1)) } else { None },
+                        data: serde_json::to_value(&messages).unwrap_or(serde_json::Value::Null),
+                        metadata: serde_json::json!({"iteration": iteration}),
+                        created_at: chrono::Utc::now(),
+                    };
+
+                    if let Err(e) = checkpointer.put_checkpoint(cp).await {
+                        tracing::warn!("Failed to save checkpoint: {}", e);
+                    } else {
+                        saved = true;
                     }
+                } else if !mutating_calls.is_empty() {
+                    if let Ok(json_state) = serde_json::to_string_pretty(&messages) {
+                        if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
+                            saved = true;
+                        }
+                    }
+                }
+                if saved {
+                    on_event(AgentEvent::CheckpointSaved {
+                        iteration,
+                        path: scratchpad_path.clone(),
+                    });
                 }
             }
 
