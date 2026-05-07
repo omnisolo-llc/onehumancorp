@@ -7969,3 +7969,56 @@ mod e2e_issue_9422_tests {
         assert!(*tool_invoked.borrow(), "Failed to trigger MCP tool invocation");
     }
 }
+
+#[test]
+fn test_e2e_grow_business_flow_advanced() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = app::GrowBusiness::new().unwrap();
+    let execute_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let execute_success_clone = execute_success.clone();
+    ui.on_save_state(|| {});
+    ui.on_execute(move |strategy, kpi| {
+        assert_eq!(strategy, "Add 5 more products");
+        assert_eq!(kpi, "20%");
+        *execute_success_clone.borrow_mut() = true;
+    });
+    assert_eq!(ui.get_step(), 0);
+    assert_eq!(ui.get_is_advanced(), false);
+    ui.invoke_toggle_advanced();
+    assert_eq!(ui.get_is_advanced(), true);
+    ui.invoke_select_strategy("Add 5 more products".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 1);
+    ui.set_kpi_target("20%".into());
+    ui.invoke_execute("Add 5 more products".into(), "20%".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 2);
+    assert!(*execute_success.borrow());
+}
+
+#[test]
+fn test_e2e_wizard_flow_step_6_product_details_pricing_type_2() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(6);
+    ui.set_product_name("Bread".into());
+    ui.set_product_price("5.00".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 7);
+}
+
+#[test]
+fn test_e2e_grow_business_flow_advanced_2() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = app::GrowBusiness::new().unwrap();
+    let returned = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let returned_clone = returned.clone();
+    ui.on_return_to_dashboard(move || {
+        *returned_clone.borrow_mut() = true;
+    });
+    ui.invoke_return_to_dashboard();
+    assert!(*returned.borrow());
+}
