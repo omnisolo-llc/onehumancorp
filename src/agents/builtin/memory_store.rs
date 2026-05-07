@@ -314,24 +314,25 @@ impl VectorRepository {
         Ok(results)
     }
 
-    pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
+    pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<usize, String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND (source_type LIKE 'TASK%' OR source_type = 'SESSION_SUMMARY' OR source_type = 'AUTO_DREAM' OR source_type = 'SESSION_DATA')")
+                let result = sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND (source_type LIKE 'TASK%' OR source_type = 'SESSION_SUMMARY' OR source_type = 'AUTO_DREAM' OR source_type = 'SESSION_DATA')")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
+                return Ok(result.rows_affected() as usize);
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND (source_type LIKE 'TASK%' OR source_type = 'SESSION_SUMMARY' OR source_type = 'AUTO_DREAM' OR source_type = 'SESSION_DATA')")
+                let result = sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND (source_type LIKE 'TASK%' OR source_type = 'SESSION_SUMMARY' OR source_type = 'AUTO_DREAM' OR source_type = 'SESSION_DATA')")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
+                return Ok(result.rows_affected() as usize);
             }
         }
-        Ok(())
     }
 
     #[allow(dead_code)]    pub async fn delete(&self, id: &str) -> Result<(), String> {
