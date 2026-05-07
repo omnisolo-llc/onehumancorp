@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	"ohc/server/db"
-	"ohc/server/telemetry"
+
+
 	"time"
 )
 
@@ -21,11 +21,11 @@ type AuditSyncPayload struct {
 }
 
 type AuditSyncTool struct {
-	DB        db.Database
-	Telemetry telemetry.Telemetry
+	DB        interface{ Exec(context.Context, string, ...interface{}) (interface{}, error) }
+	Telemetry interface{ IncrementCounter(string, int64, map[string]string) }
 }
 
-func NewAuditSyncTool(db db.Database, tele telemetry.Telemetry) *AuditSyncTool {
+func NewAuditSyncTool(db interface{ Exec(context.Context, string, ...interface{}) (interface{}, error) }, tele interface{ IncrementCounter(string, int64, map[string]string) }) *AuditSyncTool {
 	return &AuditSyncTool{
 		DB:        db,
 		Telemetry: tele,
