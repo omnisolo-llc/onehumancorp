@@ -101,3 +101,27 @@ func TestRecordHarnessDbIOLatency(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 }
+
+func TestRecordBubblewrapSpawn(t *testing.T) {
+	ctx := context.Background()
+	err := RecordBubblewrapSpawn(ctx)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+}
+
+func TestRecordBubblewrapExecutionLatency(t *testing.T) {
+	ctx := context.Background()
+	err := RecordBubblewrapExecutionLatency(ctx, 1.5)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+}
+
+func TestRecordBubblewrapViolation(t *testing.T) {
+	ctx := context.Background()
+	err := RecordBubblewrapViolation(ctx, "policy_denied")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+}

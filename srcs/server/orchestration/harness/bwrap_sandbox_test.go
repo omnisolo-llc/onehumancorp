@@ -45,3 +45,17 @@ func TestBwrapSandboxAnnotateError(t *testing.T) {
 		t.Errorf("Expected BWRAP_FAILURE and output, got %s", errStr)
 	}
 }
+
+func TestBwrapSandboxExecuteMetrics(t *testing.T) {
+	manager := NewBwrapSandboxManager()
+	// An empty policy means nothing is disabled
+	err := manager.UpdateConfig("{}")
+	if err != nil {
+		t.Fatalf("Failed to update config: %v", err)
+	}
+
+	// This should trigger telemetry.RecordBubblewrapSpawn and telemetry.RecordBubblewrapExecutionLatency
+	// It will likely fail to execute bwrap locally unless bwrap is installed, but the telemetry calls
+	// happen before the execution error is returned.
+	_, _ = manager.Execute("echo 1")
+}

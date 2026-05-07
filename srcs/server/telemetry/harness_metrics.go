@@ -36,6 +36,9 @@ var (
 	mcpToolCallsCounter        metric.Int64Counter
 	harnessInitLatencyHistogram metric.Float64Histogram
 	harnessDbIoLatencyHistogram metric.Float64Histogram
+	bubblewrapSpawnTotalCounter metric.Int64Counter
+	bubblewrapExecutionLatencyHistogram metric.Float64Histogram
+	bubblewrapViolationTotalCounter metric.Int64Counter
 )
 
 func init() {
@@ -86,6 +89,30 @@ func init() {
 	)
 	if err != nil {
 		log.Printf("Failed to create harnessDbIoLatencyHistogram: %v", err)
+	}
+
+	bubblewrapSpawnTotalCounter, err = meter.Int64Counter(
+		"bubblewrap_spawn_total",
+		metric.WithDescription("Total number of bubblewrap spawns"),
+	)
+	if err != nil {
+		log.Printf("Failed to create bubblewrapSpawnTotalCounter: %v", err)
+	}
+
+	bubblewrapExecutionLatencyHistogram, err = meter.Float64Histogram(
+		"bubblewrap_execution_latency_seconds",
+		metric.WithDescription("Latency of bubblewrap execution in seconds"),
+	)
+	if err != nil {
+		log.Printf("Failed to create bubblewrapExecutionLatencyHistogram: %v", err)
+	}
+
+	bubblewrapViolationTotalCounter, err = meter.Int64Counter(
+		"bubblewrap_violation_total",
+		metric.WithDescription("Total number of bubblewrap sandbox violations"),
+	)
+	if err != nil {
+		log.Printf("Failed to create bubblewrapViolationTotalCounter: %v", err)
 	}
 }
 
@@ -164,6 +191,45 @@ func RecordHarnessDbIOLatency(ctx context.Context, durationSecs float64, operati
 			getDeploymentModeAttribute(),
 		)
 		harnessDbIoLatencyHistogram.Record(ctx, durationSecs, opts)
+	}
+	return nil
+}
+
+// RecordBubblewrapSpawn increments the counter for a bubblewrap spawn.
+func RecordBubblewrapSpawn(ctx context.Context) error {
+	if !isTelemetryEnabled() {
+		return nil
+	}
+	if bubblewrapSpawnTotalCounter != nil {
+		opts := metric.WithAttributes(getDeploymentModeAttribute())
+		bubblewrapSpawnTotalCounter.Add(ctx, 1, opts)
+	}
+	return nil
+}
+
+// RecordBubblewrapExecutionLatency records the latency of a bubblewrap execution.
+func RecordBubblewrapExecutionLatency(ctx context.Context, durationSecs float64) error {
+	if !isTelemetryEnabled() {
+		return nil
+	}
+	if bubblewrapExecutionLatencyHistogram != nil {
+		opts := metric.WithAttributes(getDeploymentModeAttribute())
+		bubblewrapExecutionLatencyHistogram.Record(ctx, durationSecs, opts)
+	}
+	return nil
+}
+
+// RecordBubblewrapViolation increments the counter for a bubblewrap sandbox violation.
+func RecordBubblewrapViolation(ctx context.Context, violationType string) error {
+	if !isTelemetryEnabled() {
+		return nil
+	}
+	if bubblewrapViolationTotalCounter != nil {
+		opts := metric.WithAttributes(
+			attribute.String("violation_type", violationType),
+			getDeploymentModeAttribute(),
+		)
+		bubblewrapViolationTotalCounter.Add(ctx, 1, opts)
 	}
 	return nil
 }
