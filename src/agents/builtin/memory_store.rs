@@ -36,6 +36,11 @@ impl VectorRepository {
         VectorRepository { store: VectorMemoryStore::Sqlite(pool) }
     }
 
+
+    pub fn get_store(&self) -> &VectorMemoryStore {
+        &self.store
+    }
+
     pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
         let emb_str = serde_json::to_string(&record.embedding).map_err(|e| e.to_string())?;
 
