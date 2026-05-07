@@ -58,7 +58,7 @@ class WizardNotifier extends Notifier<WizardState> {
   }
 
   void nextStep() {
-    if (state.currentStep < 6) {
+    if (state.currentStep < 7) {
       state = state.copyWith(currentStep: state.currentStep + 1);
     }
   }

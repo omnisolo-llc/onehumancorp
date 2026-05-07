@@ -3,8 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wizard_provider.dart';
 import '../main.dart'; // For GlassContainer
 
+enum EnvironmentMode { cloud, standaloneDesktop }
+
 class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
-  const BusinessSetupWizardScreen({super.key});
+  final EnvironmentMode environmentMode;
+
+  const BusinessSetupWizardScreen({
+    super.key,
+    this.environmentMode = EnvironmentMode.cloud,
+  });
 
   @override
   ConsumerState<BusinessSetupWizardScreen> createState() => _BusinessSetupWizardScreenState();
@@ -67,7 +74,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(wizardProvider);
 
-    if (state.currentStep == 6) {
+    if (state.currentStep == 7) {
       return const DashboardScreen();
     }
 
@@ -94,10 +101,12 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       case 2:
         return _buildGoalSelectionScreen(state);
       case 3:
-        return _buildDeploymentPreferenceScreen(state);
+        return _buildExternalIntegrationsScreen();
       case 4:
-        return _buildAdministratorAccountScreen();
+        return _buildDeploymentPreferenceScreen(state);
       case 5:
+        return _buildAdministratorAccountScreen();
+      case 6:
         return _buildReviewAndLaunchScreen(state);
       default:
         return const SizedBox.shrink();
@@ -284,6 +293,97 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
             },
           ),
         ),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
+  Widget _buildExternalIntegrationsScreen() {
+    if (widget.environmentMode == EnvironmentMode.standaloneDesktop) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Local Environment Optimization',
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: SingleChildScrollView(
+              child: GlassContainer(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.speed, size: 60, color: Color(0xFF22C55E)),
+                    SizedBox(height: 20),
+                    Text(
+                      'Bypassing Cloud Dependencies',
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Running in Standalone Desktop mode. Heavy cloud-specific dependencies like Redis and multi-tenant external databases are safely bypassed for local host-machine efficiency.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildNavigationButtons(),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'External Integrations',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 20),
+        GlassContainer(
+          child: const TextField(
+            key: Key('redisUrlField'),
+            style: TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Redis URL',
+              labelStyle: TextStyle(color: Colors.white70),
+              border: InputBorder.none,
+            ),
+          ),
+        ),
+        const SizedBox(height: 15),
+        GlassContainer(
+          child: const TextField(
+            key: Key('dbUrlField'),
+            style: TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Multi-tenant DB URL',
+              labelStyle: TextStyle(color: Colors.white70),
+              border: InputBorder.none,
+            ),
+          ),
+        ),
+        const Spacer(),
         _buildNavigationButtons(),
       ],
     );
