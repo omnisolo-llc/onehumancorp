@@ -74,6 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(0.0),
+        previous_response_id: None,
         max_iterations: get_env_int("OHC_MAX_ITERATIONS", 100),
         max_context_messages: get_env_int("OHC_MAX_CONTEXT_MESSAGES", 80),
     };

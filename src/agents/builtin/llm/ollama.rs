@@ -63,7 +63,11 @@ impl LlmClient for OllamaClient {
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-        let req = super::minify_chat_request(req);
+        let mut req = super::minify_chat_request(req);
+        if let Some(id) = &req.previous_response_id {
+            let msg = format!(" [System: Continuing from response id: {}]", id);
+            req.system.push_str(&msg);
+        }
         let mut messages = Vec::new();
 
         if !req.system.is_empty() {

@@ -184,7 +184,11 @@ impl LlmClient for AnthropicClient {
             return Err("Circuit breaker is open: Too many consecutive LLM failures".into());
         }
 
-        let req = super::minify_chat_request(req);
+        let mut req = super::minify_chat_request(req);
+        if let Some(id) = &req.previous_response_id {
+            let msg = format!(" [System: Continuing from response id: {}]", id);
+            req.system.push_str(&msg);
+        }
         let mut messages: Vec<AnthropicMessage> = Vec::new();
 
         for m in &req.messages {

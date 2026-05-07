@@ -103,6 +103,7 @@ mod tests {
             tools: vec![],
             max_tokens: 100,
             temperature: 0.0,
+            previous_response_id: None,
         };
 
         let minified = minify_chat_request(req);

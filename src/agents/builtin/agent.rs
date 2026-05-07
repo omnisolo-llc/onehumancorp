@@ -257,6 +257,7 @@ impl Agent {
             let llm_tools_c = llm_tools.clone();
             Box::pin(async move {
                 let msgs_val = state.get("messages").unwrap().as_array().unwrap();
+
                 let mut msgs = vec![];
                 for m in msgs_val {
                     let role_str = m["role"].as_str().unwrap();
@@ -304,6 +305,7 @@ impl Agent {
                     tools: llm_tools_c.to_vec(),
                     max_tokens: llm_cfg_c.max_tokens,
                     temperature: llm_cfg_c.temperature,
+                    previous_response_id: state.get("last_response_id").and_then(|v| v.as_str()).map(|s| s.to_string()),
                 };
 
                 match llm_client_c.chat(req).await {
@@ -319,6 +321,7 @@ impl Agent {
                         let has_tool_calls = !resp.message.tool_calls.is_empty();
                         let mut update = serde_json::json!({
                             "has_tool_calls": has_tool_calls,
+                            "last_response_id": resp.response_id,
                             "total_tokens": current_total,
                             "last_message": {
                                 "role": "assistant",
@@ -539,12 +542,15 @@ impl Agent {
             messages: vec![Message::user(initial_message)],
             tools: vec![], // No tools, we force it to output JSON
             max_tokens: cfg.max_tokens,
-            temperature: 0.0, // Planning should be deterministic
+            temperature: 0.0,
+                            previous_response_id: None, // Planning should be deterministic
         };
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
+        let mut last_response_id: Option<String> = None;
         let plan_resp = self.llm.chat(plan_req).await?;
-        let plan_json_text = plan_resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+        last_response_id = plan_resp.response_id.clone();
+                let plan_json_text = plan_resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
 
         on_event(AgentEvent::RunStarted { iteration: 1 });
 
@@ -601,6 +607,7 @@ impl Agent {
             tools: vec![],
             max_tokens: cfg.max_tokens,
             temperature: cfg.temperature,
+                previous_response_id: last_response_id.clone(),
         };
 
         on_event(AgentEvent::RunStarted { iteration: 2 });
@@ -619,6 +626,7 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let mut last_response_id: Option<String> = None;
 
         let session_tools = self.tools.clone();
         if cfg.enable_llmcompiler_plan_and_execute {
@@ -803,6 +811,7 @@ impl Agent {
                 tools: req_tools,
                 max_tokens: cfg.max_tokens,
                 temperature: cfg.temperature,
+                previous_response_id: last_response_id.clone(),
             };
 
             let resp = match self.llm.chat(req).await {
@@ -814,6 +823,7 @@ impl Agent {
                 }
             };
 
+            last_response_id = resp.response_id.clone();
             let turn_input_tokens = resp.usage.input_tokens;
             let output_tokens = resp.usage.output_tokens;
             let total_tokens = (turn_input_tokens + output_tokens) as i64;
@@ -916,6 +926,7 @@ impl Agent {
                         tools: vec![],
                         max_tokens: 500,
                         temperature: 0.0,
+                            previous_response_id: None,
                     };
 
                     match self.llm.chat(judge_req).await {
@@ -1348,6 +1359,7 @@ impl Agent {
                             tools: vec![],
                             max_tokens: 2000,
                             temperature: 0.0,
+                            previous_response_id: None,
                         };
 
                         match self.llm.chat(summary_req).await {
