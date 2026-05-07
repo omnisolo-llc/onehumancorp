@@ -148,7 +148,15 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
     cfg.standalone = true;
     cfg.redis_url = None;
     cfg.multitenant = false;
-    cfg.telemetry_enabled = std::env::var("OHC_TELEMETRY_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
+
+    // Strict opt-in constraint for local sovereignty in standalone
+    let explicit_opt_in = std::env::var("OHC_TELEMETRY_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
+    if explicit_opt_in {
+        tracing::info!("standalone: Telemetry explicitly opted-in by user.");
+        cfg.telemetry_enabled = true;
+    } else {
+        cfg.telemetry_enabled = false;
+    }
     cfg
 }
 
