@@ -37,6 +37,10 @@ echo -e "${DIM}[1/2] Provisioning local standalone state boundaries...${RESET}"
 mkdir -p "${OHC_MEMORY_DIR}/auto/" "${OHC_MEMORY_DIR}/team/" "${OHC_STATUS_DIR}"
 
 echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
+
+# Prune stale memory files (older than 60 mins) periodically to prevent unbounded growth
+(while true; do find "${OHC_MEMORY_DIR}" -type f -mmin +60 -delete > /dev/null 2>&1; sleep 3600; done) &
+PRUNE_PID=$!
 # Launch the API Server (local persistence)
 npx @bazel/bazelisk run //src/server:server &
 SERVER_PID=$!
@@ -69,6 +73,7 @@ function cleanup {
   echo -e "\n${DIM}[Shutting down Standalone Desktop...]${RESET}"
   kill $APP_PID 2>/dev/null || true
   kill $SERVER_PID 2>/dev/null || true
+  kill $PRUNE_PID 2>/dev/null || true
   docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
   docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
   wait $APP_PID 2>/dev/null || true
