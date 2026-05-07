@@ -422,3 +422,17 @@ fi"#;
         "Local Sovereignty violation: ohc-standalone.sh does not properly strictly enforce OHC_TELEMETRY_ENABLED opt-in boundary."
     );
 }
+
+#[test]
+fn test_redact_interface_pii_malicious() {
+    use serde_json::json;
+    let malicious = json!({
+        "data": {
+            "PII": "malicious payload",
+            "Credit_Card": "1234-5678-9012-3456"
+        }
+    });
+    let redacted = crate::telemetry::redact_interface_pii(malicious);
+    assert_eq!(redacted["data"]["PII"], "[REDACTED]");
+    assert_eq!(redacted["data"]["Credit_Card"], "[REDACTED]");
+}
