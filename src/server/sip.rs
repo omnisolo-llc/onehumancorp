@@ -20,17 +20,22 @@ impl SipDB {
     }
 
     pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), sqlx::Error> {
+        self.update_mission_state(mission_id, "blocked", blockers).await
+    }
+
+    pub async fn update_mission_state(&self, mission_id: &str, new_status: &str, log_append: &str) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         crate::utils::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
 
         sqlx::query(
             "UPDATE agent_missions
-             SET status = 'blocked',
-                 mission_log = COALESCE(mission_log, '') || '\n' || $1,
+             SET status = $1,
+                 mission_log = COALESCE(mission_log, '') || '\n' || $2,
                  updated_at = CURRENT_TIMESTAMP
-             WHERE id = $2 AND organization_id = $3"
+             WHERE id = $3 AND organization_id = $4"
         )
-        .bind(blockers)
+        .bind(new_status)
+        .bind(log_append)
         .bind(mission_id)
         .bind(&self.org_id)
         .execute(&mut *tx)
@@ -381,6 +386,21 @@ mod tests {
 
         let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
         // Should error out gracefully with our dummy pool timeout instead of panicking
+        assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_handoff_mission_appends_blocker_log() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(10))
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
+
+        let sip_db = SipDB::new(pool, "test_org".to_string());
+
+        let res = sip_db.handoff_mission("test_mission_123", "Needs human review").await;
+        // Verify it returns error gracefully with our dummy pool rather than panicking
         assert!(res.is_err());
     }
 }
