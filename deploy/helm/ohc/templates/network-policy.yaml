@@ -30,10 +30,12 @@ spec:
           port: {{ .Values.backend.service.port }}
   egress:
     - to:
-        - podSelector: {}
-          namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              app: {{ .Release.Name }}-chatwoot
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-powersync
     - to:
         - namespaceSelector:
             matchLabels:

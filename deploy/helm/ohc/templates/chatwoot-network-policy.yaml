@@ -20,9 +20,9 @@ spec:
           port: {{ .Values.chatwoot.service.port }}
   egress:
     - to:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              app: {{ .Release.Name }}-backend
     - to:
         - namespaceSelector:
             matchLabels:

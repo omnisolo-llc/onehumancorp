@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
+	"net/url"
+	"os"
 	"time"
 
 	"net/http"
@@ -12,7 +15,7 @@ import (
 	"onehumancorp/srcs/server/onboarding"
 	"onehumancorp/srcs/server/orchestration"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mutecomm/go-sqlcipher/v4"
 )
 
 // MockLLMClient implements memory.LLMClient for demonstration purposes
@@ -27,9 +30,15 @@ func main() {
 	log.Println("Starting OHC Server...")
 
 	// Initialize SQLite database (or Postgres in a real environment)
-	db, err := sql.Open("sqlite3", ":memory:")
+	key := os.Getenv("OHC_SQLITE_KEY")
+	if key == "" {
+		log.Fatalf("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+	}
+
+	dsn := fmt.Sprintf("file::memory:?_pragma_key=%s&_pragma_cipher=sqlcipher", url.QueryEscape(key))
+	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
-		log.Fatalf("Failed to open database: %v", err)
+		log.Fatalf("Failed to open encrypted database: %v", err)
 	}
 	defer db.Close()
 

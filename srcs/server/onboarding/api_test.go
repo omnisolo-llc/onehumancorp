@@ -11,7 +11,7 @@ import (
 
 	"onehumancorp/srcs/server/orchestration"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mutecomm/go-sqlcipher/v4"
 	"github.com/stretchr/testify/assert"
 )
 
