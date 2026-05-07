@@ -4,55 +4,7 @@ use tokio::time::{sleep, timeout, Duration};
 
 /// Simulated generated protobuf types (in a real scenario, this would use prost-build)
 /// For now, we mock the encoded structs to satisfy the protobuf requirement.
-pub mod proto {
-    #[derive(Clone, prost::Message)]
-    pub struct StateHandoff {
-        #[prost(string, tag = "1")]
-        pub mission_id: String,
-        #[prost(string, tag = "2")]
-        pub tenant_id: String,
-        #[prost(int64, tag = "5")]
-        pub timestamp_ms: i64,
-        #[prost(bytes, tag = "6")]
-        pub state_snapshot_json: Vec<u8>,
-    }
-
-    #[derive(Clone, prost::Message)]
-    pub struct HealthPing {
-        #[prost(string, tag = "1")]
-        pub source_node_id: String,
-    }
-
-    #[derive(Clone, prost::Message)]
-    pub struct HealthAck {
-        #[prost(string, tag = "1")]
-        pub target_node_id: String,
-    }
-
-    #[derive(Clone, prost::Message)]
-    pub struct JobDispatch {
-        #[prost(string, tag = "1")]
-        pub job_id: String,
-        #[prost(string, tag = "2")]
-        pub tenant_id: String,
-        #[prost(string, tag = "3")]
-        pub action_name: String,
-        #[prost(bytes, tag = "4")]
-        pub payload_json: Vec<u8>,
-        #[prost(int64, tag = "5")]
-        pub timestamp_ms: i64,
-    }
-
-    #[derive(Clone, prost::Message)]
-    pub struct JobAck {
-        #[prost(string, tag = "1")]
-        pub job_id: String,
-        #[prost(string, tag = "2")]
-        pub node_id: String,
-        #[prost(int64, tag = "3")]
-        pub timestamp_ms: i64,
-    }
-}
+pub use crate::ohc::interop as proto;
 
 /// Interop Layer protocol for mode-switch behaviour and sync
 pub struct InteropProtocol {
@@ -91,6 +43,8 @@ impl InteropProtocol {
             tenant_id: tenant_id.to_string(),
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             state_snapshot_json: state_payload,
+            source_mode: 0,
+            target_mode: 0,
         };
 
         let mut buf = Vec::new();
@@ -119,6 +73,8 @@ impl InteropProtocol {
                 if let Ok(decoded) = proto::HealthPing::decode(&msg.payload[..]) {
                     let ack = proto::HealthAck {
                         target_node_id: decoded.source_node_id.clone(),
+                        source_node_id: node_id.clone(),
+                        timestamp_ms: chrono::Utc::now().timestamp_millis(),
                     };
                     let mut buf = Vec::new();
                     if ack.encode(&mut buf).is_ok() {
@@ -157,6 +113,8 @@ impl InteropProtocol {
 
         let ping = proto::HealthPing {
             source_node_id: self.node_id.clone(),
+            current_mode: 0,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 
         let mut buf = Vec::new();

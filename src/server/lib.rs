@@ -143,6 +143,9 @@ pub mod ohc {
     pub mod app {
         pub use app_proto::ohc::api::v1::*;
     }
+    pub mod interop {
+        pub use interop_proto::ohc::interop::*;
+    }
 }
 
 use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};

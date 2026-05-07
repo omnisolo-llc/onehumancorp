@@ -575,6 +575,8 @@ impl HealthMonitor {
 
         let ping = crate::interop::protocol::proto::HealthPing {
             source_node_id: node_id,
+            current_mode: 0,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
         let mut buf = Vec::new();
         prost::Message::encode(&ping, &mut buf).map_err(|e| e.to_string())?;
