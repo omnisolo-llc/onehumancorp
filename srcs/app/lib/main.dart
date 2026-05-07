@@ -78,8 +78,24 @@ class DashboardScreen extends StatelessWidget {
                     color: Colors.white,
                   ),
                 ),
+
                 const SizedBox(height: 20),
                 GlassContainer(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        "🎉 Milestone Reached!",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.orangeAccent),
+                      ),
+                      SizedBox(height: 10),
+                      Text("You just got your 10th order! Keep it up! 🚀", style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                GlassContainer(
+
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
@@ -111,7 +127,62 @@ class DashboardScreen extends StatelessWidget {
                       SizedBox(height: 5),
                       Text("⬜ Connect Instagram", style: TextStyle(color: Colors.white)),
                       SizedBox(height: 5),
+
                       Text("⬜ Share your link with a friend", style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                GlassContainer(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Growth Features",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: () {},
+                        child: const Text("Referral Program (Invite a friend)"),
+                      ),
+                      const SizedBox(height: 5),
+                      ElevatedButton(
+                        onPressed: () {},
+                        child: const Text("Share my business (Embed card)"),
+                      ),
+                      const SizedBox(height: 5),
+                      ElevatedButton(
+                        onPressed: () {},
+                        child: const Text("Social Media Auto-Posting (AI Agent)"),
+                      ),
+                      const SizedBox(height: 5),
+                      ElevatedButton(
+                        onPressed: () {},
+                        child: const Text("Email Marketing"),
+                      ),
+                    ],
+                  ),
+                ),
+
+
+                const SizedBox(height: 20),
+                GlassContainer(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Plan: Free Tier",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text("10 products limit, 1 AI Agent", style: TextStyle(color: Colors.white)),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
+                        child: const Text("Upgrade to Starter/Pro (Scale Up!)", style: TextStyle(color: Colors.white)),
+                      ),
                     ],
                   ),
                 ),

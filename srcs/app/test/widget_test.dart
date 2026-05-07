@@ -81,6 +81,7 @@ void main() {
     expect(find.text("⬜ Add 3 more products"), findsOneWidget);
     expect(find.text("⬜ Connect Instagram"), findsOneWidget);
     expect(find.text("⬜ Share your link with a friend"), findsOneWidget);
+    await tester.dragUntilVisible(find.text("Pending Agent Approvals"), find.byType(ListView), const Offset(0, -100));
     expect(find.text("Pending Agent Approvals"), findsOneWidget);
   });
 }
