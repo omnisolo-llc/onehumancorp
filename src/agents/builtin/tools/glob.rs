@@ -32,7 +32,7 @@ impl ToolExecutor for GlobExecutor {
             full_pattern = format!("{}/{}", wd.display(), full_pattern);
         }
 
-        let matches: Vec<String> = glob::glob(&full_pattern)
+        let mut matches: Vec<String> = glob::glob(&full_pattern)
             .map_err(|e| ToolError::LlmRecoverable(format!("glob: invalid pattern: {}", e)))?
             .filter_map(|r| r.ok())
             .map(|p| {
@@ -45,12 +45,17 @@ impl ToolExecutor for GlobExecutor {
                 p_str
             })
             .collect();
-
         if matches.is_empty() {
             return Ok("No files found.".to_string());
         }
 
+        if matches.len() > 500 {
+            matches.truncate(500);
+            matches.push("... (truncated)".to_string());
+        }
+
         Ok(matches.join("\n"))
+
     }
 }
 
@@ -74,5 +79,31 @@ pub fn glob_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             "required": ["pattern"]
         }),
         execute: Arc::new(GlobExecutor { working_dir }),
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+    use tokio::fs;
+
+    #[tokio::test]
+    async fn test_glob_truncation() {
+        let dir = tempdir().unwrap();
+        let executor = GlobExecutor { working_dir: Some(dir.path().to_path_buf()) };
+
+        for i in 1..=600 {
+            let file_path = dir.path().join(format!("test_file_{}.txt", i));
+            fs::write(&file_path, "test").await.unwrap();
+        }
+
+        let args = json!({ "pattern": "*.txt" });
+        let result = executor.execute(args).await.unwrap();
+
+        let lines: Vec<&str> = result.split('\n').collect();
+        assert_eq!(lines.len(), 501);
+        assert_eq!(lines.last().unwrap(), &"... (truncated)");
     }
 }

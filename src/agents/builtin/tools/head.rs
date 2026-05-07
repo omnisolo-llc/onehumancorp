@@ -30,7 +30,7 @@ impl ToolExecutor for HeadExecutor {
             .await
             .map_err(|e| format!("head: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
-        let lines_to_read = args["lines"].as_u64().unwrap_or(10) as usize;
+        let lines_to_read = std::cmp::min(args["lines"].as_u64().unwrap_or(10) as usize, 1000);
 
         let mut reader = BufReader::new(file);
         let mut lines = Vec::new();
@@ -120,5 +120,22 @@ mod tests {
         } else {
             panic!("Expected LlmRecoverable error");
         }
+    }
+
+    #[tokio::test]
+    async fn test_head_max_lines_limit() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test_large_limit.txt");
+        let content = (1..=1500).map(|i| format!("line{}", i)).collect::<Vec<_>>().join("\n");
+        fs::write(&file_path, content).await.unwrap();
+
+        let executor = HeadExecutor { working_dir: Some(dir.path().to_path_buf()) };
+
+        let args = json!({ "path": "test_large_limit.txt", "lines": 1500 });
+        let result = executor.execute(args).await.unwrap();
+        let result_lines: Vec<&str> = result.split('\n').collect();
+        assert_eq!(result_lines.len(), 1000); // Should be truncated to 1000 lines
+        assert_eq!(result_lines[0], "line1");
+        assert_eq!(result_lines[999], "line1000");
     }
 }
