@@ -1,0 +1,22 @@
+--- src/server/orchestration/sync_daemon_test.go
++++ src/server/orchestration/sync_daemon_test.go
+@@ -104,6 +104,18 @@
+	}
+ }
+
++// Mock test struct to replace the remote endpoint
++type mockDaemon struct {
++	HybridMCPRAGDaemon
++	shouldFail bool
++}
++
++func (m *mockDaemon) syncToCloud(ctx context.Context, id string, payload []byte) error {
++	if m.shouldFail {
++		return fmt.Errorf("mock error")
++	}
++	return nil
++}
++
+ func TestHybridMCPRAGDaemon_SyncPendingMissions_Cooldown(t *testing.T) {
+	ClearSemaphore()
+	defer ClearSemaphore()
