@@ -32,7 +32,7 @@ export component SecureAgentConfig inherits Window {
             text <=> token;
         }
         
-        if (error_text != "") : Text { text: error_text; color: #ef4444; }
+        if (error_text != "") : Text { text: "We couldn't connect securely. Please try again."; color: #ef4444; }
 
         Button {
             text: "Save Configuration";
