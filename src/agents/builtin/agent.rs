@@ -38,7 +38,8 @@ pub struct AgentRunConfig {
     pub max_iterations: i32,
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
-    pub enable_llmcompiler_plan_and_execute: bool,
+        pub enable_harness_thickness_optimization: bool,
+pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_acon_context_strategy: bool,
     pub enable_observation_masking: bool,
     pub observation_masking_threshold: usize,
@@ -81,7 +82,8 @@ impl Default for AgentRunConfig {
             max_iterations: 100,
             max_task_tokens: 100_000,
             confidence_threshold: 0.0,
-            enable_llmcompiler_plan_and_execute: false,
+                        enable_harness_thickness_optimization: false,
+enable_llmcompiler_plan_and_execute: false,
             enable_acon_context_strategy: false,
             enable_observation_masking: true,
             observation_masking_threshold: 3,
@@ -877,19 +879,30 @@ impl Agent {
         }
 
         let session_tools = self_with_memory.tools.clone();
-        if cfg.enable_llmcompiler_plan_and_execute {
-            return self.run_plan_and_execute(cfg, initial_message, &session_tools, on_event).await;
+
+        let mut final_cfg = cfg.clone();
+        if final_cfg.enable_harness_thickness_optimization {
+            let model_lower = final_cfg.model.to_lowercase();
+            // Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
+            if model_lower.contains("gpt-4o") || model_lower.contains("claude-3-5-sonnet") || model_lower.contains("o1") {
+                final_cfg.enable_llmcompiler_plan_and_execute = false;
+                final_cfg.server_system_message = final_cfg.server_system_message.replace("You must think step by step and make a detailed plan.", "");
+                final_cfg.server_system_message = final_cfg.server_system_message.replace("Make a plan before executing.", "");
+            }
+        }
+        if final_cfg.enable_llmcompiler_plan_and_execute {
+            return self.run_plan_and_execute(&final_cfg, initial_message, &session_tools, on_event).await;
         }
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
 
-        if cfg.enable_lazy_tool_loading {
+        if final_cfg.enable_lazy_tool_loading {
             let active_tools_clone = active_tools.clone();
             session_tools.push(crate::tools::lazy_load::lazy_load_tool(active_tools_clone));
         }
 
         // OpenAI Mechanic: Input Guardrails
-        if let Some(guard_cfg) = &cfg.guardrails {
+        if let Some(guard_cfg) = &final_cfg.guardrails {
             if let Err(e) = crate::guardrails::check_input(initial_message, guard_cfg) {
                 on_event(AgentEvent::TaskError { error: e.clone() });
                 return Err(e.into());
@@ -906,15 +919,15 @@ impl Agent {
         let mut malformed_retries = 0;
         let max_malformed_retries = 3;
 
-        let mut messages: Vec<Message> = cfg.injected_context.clone().unwrap_or_default();
+        let mut messages: Vec<Message> = final_cfg.injected_context.clone().unwrap_or_default();
         let mut last_checkpoint_id: Option<String> = None;
 
-        if cfg.enable_langgraph_mechanic {
-            return self_with_memory.run_langgraph(cfg, initial_message, session_tools, &mut messages, on_event).await;
+        if final_cfg.enable_langgraph_mechanic {
+            return self_with_memory.run_langgraph(&final_cfg, initial_message, session_tools, &mut messages, on_event).await;
         }
 
-        if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
-            if let Some(resume_id) = &cfg.resume_from_checkpoint_id {
+        if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
+            if let Some(resume_id) = &final_cfg.resume_from_checkpoint_id {
                 let cp = checkpointer.get_checkpoint(thread_id, resume_id).await
                     .map_err(|e| format!("Failed to fetch requested checkpoint {}: {}", resume_id, e))?
                     .ok_or_else(|| format!("Requested checkpoint {} not found", resume_id))?;
@@ -936,9 +949,9 @@ impl Agent {
         }
 
         let generated_uuid_path = format!(".agent_checkpoint_{}.json", uuid::Uuid::new_v4());
-        let scratchpad_path = cfg.state_scratchpad_path.clone().unwrap_or(generated_uuid_path);
+        let scratchpad_path = final_cfg.state_scratchpad_path.clone().unwrap_or(generated_uuid_path);
 
-        if messages.is_empty() && cfg.enable_state_checkpointing {
+        if messages.is_empty() && final_cfg.enable_state_checkpointing {
             if let Ok(contents) = tokio::fs::read_to_string(&scratchpad_path).await {
                 if let Ok(saved_msgs) = serde_json::from_str::<Vec<Message>>(&contents) {
                     messages = saved_msgs;
@@ -956,9 +969,9 @@ impl Agent {
         let mut last_response_id: Option<String> = None;
         let mut last_assistant_content = String::new();
 
-        let max_iterations = if cfg.max_iterations <= 0 { 100 } else { cfg.max_iterations };
+        let max_iterations = if final_cfg.max_iterations <= 0 { 100 } else { final_cfg.max_iterations };
 
-        let mut combined_system = build_hierarchical_system_prompt(cfg, &session_tools);
+        let mut combined_system = build_hierarchical_system_prompt(&final_cfg, &session_tools);
 
         // Long-Term Memory Retrieval
         if let Some(store) = &self_with_memory.memory_store {
@@ -995,7 +1008,7 @@ impl Agent {
             let mut final_messages = messages.clone();
 
             // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
-            if cfg.enable_acon_context_strategy {
+            if final_cfg.enable_acon_context_strategy {
                 let msg_count = final_messages.len();
                 if msg_count > 3 {
                     // We preserve the last 2 messages (usually assistant + tool results)
@@ -1015,35 +1028,35 @@ impl Agent {
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
             // High-signal context at the very beginning and very end.
-            if cfg.enable_lost_in_the_middle_prevention {
+            if final_cfg.enable_lost_in_the_middle_prevention {
                 let mut reminder_text = String::new();
-                if !cfg.developer_instructions.is_empty() {
-                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", cfg.developer_instructions));
+                if !final_cfg.developer_instructions.is_empty() {
+                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", final_cfg.developer_instructions));
                 }
-                if !cfg.user_instructions.is_empty() && final_messages.len() > 3 {
+                if !final_cfg.user_instructions.is_empty() && final_messages.len() > 3 {
                     // Truncate user instructions if it's too long, just to remind the core objective
                     let mut end_idx = 1000;
-                    if cfg.user_instructions.len() > 1000 {
-                        while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
+                    if final_cfg.user_instructions.len() > 1000 {
+                        while end_idx > 0 && !final_cfg.user_instructions.is_char_boundary(end_idx) {
                             end_idx -= 1;
                         }
                     } else {
-                        end_idx = cfg.user_instructions.len();
+                        end_idx = final_cfg.user_instructions.len();
                     }
-                    let summary = &cfg.user_instructions[..end_idx];
+                    let summary = &final_cfg.user_instructions[..end_idx];
                     reminder_text.push_str(&format!("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}...]", summary));
                 }
 
                 if !reminder_text.is_empty() {
                     final_messages.push(Message::user(reminder_text.trim()));
                 }
-            } else if !cfg.developer_instructions.is_empty() {
-                final_messages.push(Message::user(format!("[System Reminder: {}]", cfg.developer_instructions)));
+            } else if !final_cfg.developer_instructions.is_empty() {
+                final_messages.push(Message::user(format!("[System Reminder: {}]", final_cfg.developer_instructions)));
             }
 
             let mut req_tools = Vec::new();
             for t in &session_tools {
-                if !cfg.enable_lazy_tool_loading
+                if !final_cfg.enable_lazy_tool_loading
                     || t.name == "ToolSearch"
                     || t.name == "LazyLoadTools"
                     || active_tools.read().await.contains(&t.name)
@@ -1057,12 +1070,12 @@ impl Agent {
             }
 
             let req = ChatRequest {
-                model: cfg.model.clone(),
+                model: final_cfg.model.clone(),
                 system: combined_system.clone(),
                 messages: final_messages,
                 tools: req_tools,
-                max_tokens: cfg.max_tokens,
-                temperature: cfg.temperature,
+                max_tokens: final_cfg.max_tokens,
+                temperature: final_cfg.temperature,
             };
 
             let resp = match self.llm.chat(req).await {
@@ -1102,14 +1115,14 @@ impl Agent {
             global_turn_tokens += output_tokens;
 
             // Telemetry: Record token usage
-            let model_label = KeyValue::new("model", cfg.model.clone());
-            let agent_label = KeyValue::new("agent_id", cfg.agent_id.clone());
+            let model_label = KeyValue::new("model", final_cfg.model.clone());
+            let agent_label = KeyValue::new("agent_id", final_cfg.agent_id.clone());
             token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "input")]);
             token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
 
             // Enforce Server-side token budget strictly every turn
-            if global_turn_tokens >= cfg.max_task_tokens {
-                let err_msg = format!("Terminal condition reached: Server-side token budget exhausted ({} / {}). Agent transitioning to PAUSED state.", global_turn_tokens, cfg.max_task_tokens);
+            if global_turn_tokens >= final_cfg.max_task_tokens {
+                let err_msg = format!("Terminal condition reached: Server-side token budget exhausted ({} / {}). Agent transitioning to PAUSED state.", global_turn_tokens, final_cfg.max_task_tokens);
                 on_event(AgentEvent::TaskError { error: err_msg.clone() });
                 return Err(err_msg.into());
             }
@@ -1117,7 +1130,7 @@ impl Agent {
             // Unified Cost Calculation Mechanic
             // Note: We use the local pricing calculator logic to avoid a direct
             // dependency on server_lib which would cause a circular dependency.
-            let input_cost_per_m = match cfg.model.to_lowercase().as_str() {
+            let input_cost_per_m = match final_cfg.model.to_lowercase().as_str() {
                 m if m.contains("gpt-4o") && !m.contains("mini") => 5.0,
                 m if m.contains("gpt-4-turbo") => 10.0,
                 m if m.contains("gpt-3.5") || m.contains("gpt-4o-mini") => 0.15,
@@ -1127,7 +1140,7 @@ impl Agent {
                 m if m.contains("claude-3-haiku") => 0.25,
                 _ => 3.0,
             };
-            let output_cost_per_m = match cfg.model.to_lowercase().as_str() {
+            let output_cost_per_m = match final_cfg.model.to_lowercase().as_str() {
                 m if m.contains("gpt-4o") && !m.contains("mini") => 15.0,
                 m if m.contains("gpt-4-turbo") => 30.0,
                 m if m.contains("gpt-3.5") || m.contains("gpt-4o-mini") => 0.60,
@@ -1166,12 +1179,12 @@ impl Agent {
             if stop_reason == "max_tokens" || stop_reason == "length" {
                 let decision = check_token_budget(
                     &mut budget_tracker,
-                    cfg.max_task_tokens,
+                    final_cfg.max_task_tokens,
                     global_turn_tokens,
                 );
 
                 if decision.action == BudgetAction::Stop {
-                    let err_msg = format!("Terminal condition reached: token budget exhausted ({} / {}).", global_turn_tokens, cfg.max_task_tokens);
+                    let err_msg = format!("Terminal condition reached: token budget exhausted ({} / {}).", global_turn_tokens, final_cfg.max_task_tokens);
                     on_event(AgentEvent::TaskError { error: err_msg.clone() });
                     return Err(ToolError::Fatal(err_msg).into());
                 }
@@ -1194,7 +1207,7 @@ impl Agent {
             let tool_call_counter = meter.u64_counter("ohc_agent_tool_execution_total").build();
             for tc in &tool_calls {
                 tool_call_counter.add(1, &[
-                    KeyValue::new("agent_id", cfg.agent_id.clone()),
+                    KeyValue::new("agent_id", final_cfg.agent_id.clone()),
                     KeyValue::new("tool_name", tc.name.clone())
                 ]);
             }
@@ -1202,10 +1215,10 @@ impl Agent {
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
                 // Computational/Guides (feedforward verification)
-                if cfg.enable_computational_guides && !cfg.computational_guide_command.is_empty() {
-                    let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+                if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
+                    let wd = final_cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
                     let mut cmd = std::process::Command::new("bash");
-                    cmd.arg("-c").arg(&cfg.computational_guide_command).current_dir(wd);
+                    cmd.arg("-c").arg(&final_cfg.computational_guide_command).current_dir(wd);
 
                     match cmd.output() {
                         Ok(output) => {
@@ -1214,14 +1227,14 @@ impl Agent {
                                 let stderr = String::from_utf8_lossy(&output.stderr);
                                 let err_msg = format!(
                                     "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
-                                    cfg.computational_guide_command, stdout, stderr
+                                    final_cfg.computational_guide_command, stdout, stderr
                                 );
                                 messages.push(Message::user(err_msg));
                                 continue;
                             }
                         }
                         Err(e) => {
-                            let err_msg = format!("Failed to execute computational guide command '{}': {}", cfg.computational_guide_command, e);
+                            let err_msg = format!("Failed to execute computational guide command '{}': {}", final_cfg.computational_guide_command, e);
                             messages.push(Message::user(err_msg));
                             continue;
                         }
@@ -1229,10 +1242,10 @@ impl Agent {
                 }
 
                 // Visual Verification (screenshots via Playwright or Slint)
-                if cfg.enable_visual_verification && !cfg.visual_verification_command.is_empty() {
-                    let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+                if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
+                    let wd = final_cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
                     let mut cmd = std::process::Command::new("bash");
-                    cmd.arg("-c").arg(&cfg.visual_verification_command).current_dir(wd);
+                    cmd.arg("-c").arg(&final_cfg.visual_verification_command).current_dir(wd);
 
                     match cmd.output() {
                         Ok(output) => {
@@ -1241,7 +1254,7 @@ impl Agent {
                                 let stderr = String::from_utf8_lossy(&output.stderr);
                                 let err_msg = format!(
                                     "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
-                                    cfg.visual_verification_command, stdout, stderr
+                                    final_cfg.visual_verification_command, stdout, stderr
                                 );
                                 messages.push(Message::user(err_msg));
                                 continue;
@@ -1255,7 +1268,7 @@ impl Agent {
                             }
                         }
                         Err(e) => {
-                            let err_msg = format!("Failed to execute visual verification command '{}': {}", cfg.visual_verification_command, e);
+                            let err_msg = format!("Failed to execute visual verification command '{}': {}", final_cfg.visual_verification_command, e);
                             messages.push(Message::user(err_msg));
                             continue;
                         }
@@ -1263,9 +1276,9 @@ impl Agent {
                 }
 
                 // Inferential/Sensors (LLM-as-judge subagent)
-                if cfg.enable_llm_judge {
+                if final_cfg.enable_llm_judge {
                     let judge_req = ChatRequest {
-                        model: cfg.model.clone(),
+                        model: final_cfg.model.clone(),
                         system: "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Output ONLY 'APPROVE' or 'REJECT: <reason>'.".to_string(),
                         messages: vec![Message::user(format!("Evaluate this output:
 {}", last_assistant_content))],
@@ -1297,7 +1310,7 @@ impl Agent {
                 // For now, we'll assume the model is confident if it didn't use more tools.
 
                 // OpenAI Mechanic: Output Guardrails
-                if let Some(guard_cfg) = &cfg.guardrails {
+                if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_output(&last_assistant_content, guard_cfg) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
                         return Err(e.into());
@@ -1335,17 +1348,17 @@ impl Agent {
             let mut read_only_futures = Vec::new();
             for tc in &read_only_calls {
                 // OpenAI Mechanic: Tool Guardrails
-                if let Some(guard_cfg) = &cfg.guardrails {
+                if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_tool(tc, guard_cfg) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
-                let gating_res = Self::check_tool_gating(tc, true, cfg);
+                let gating_res = Self::check_tool_gating(tc, true, &final_cfg);
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
-                let cfg_max_retries = cfg.max_retries;
+                let cfg_max_retries = final_cfg.max_retries;
                 read_only_futures.push(async move {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
@@ -1458,7 +1471,7 @@ impl Agent {
             // Execute mutating calls sequentially to prevent race conditions
             for tc in &mutating_calls {
                 // OpenAI Mechanic: Tool Guardrails
-                if let Some(guard_cfg) = &cfg.guardrails {
+                if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_tool(&tc, guard_cfg) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
                         return Err(e.into()); // Tripwire: halt the loop immediately
@@ -1466,7 +1479,7 @@ impl Agent {
                 }
 
                 // Anthropic Mechanic: 3-Stage Tool Gating
-                if let Err(e) = Self::check_tool_gating(&tc, false, cfg) {
+                if let Err(e) = Self::check_tool_gating(&tc, false, &final_cfg) {
                     match e {
                         ToolError::UserFixable(msg) => {
                             let err = format!("USER_FIXABLE: {}", msg);
@@ -1496,7 +1509,7 @@ impl Agent {
                 }
 
                 let mut retry_count = 0;
-                let max_retries = cfg.max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                let max_retries = final_cfg.max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                 let mut content = String::new();
                 let mut error = String::new();
 
@@ -1583,7 +1596,7 @@ impl Agent {
                 };
             }
 
-            if cfg.enable_observation_masking {
+            if final_cfg.enable_observation_masking {
                 // JetBrains Observation Masking: Hide the raw output of old tools from the prompt,
                 // but keep the `tool_calls` themselves visible so the model remembers what it did.
                 // Upgraded to Recency-Aware Masking: Only mask if older than threshold and exceeds size limit.
@@ -1591,11 +1604,11 @@ impl Agent {
                 for i in 0..msg_count {
                     if messages[i].role == Role::Tool {
                         let age = msg_count - i;
-                        if age > cfg.observation_masking_threshold {
+                        if age > final_cfg.observation_masking_threshold {
                             for tr in &mut messages[i].tool_results {
                                 if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked") {
                                     let bytes = tr.content.len();
-                                    if bytes > cfg.observation_masking_size_limit {
+                                    if bytes > final_cfg.observation_masking_size_limit {
                                         tr.content = format!(
                                             "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
                                             bytes, tr.tool_call_id
@@ -1620,7 +1633,7 @@ impl Agent {
 
             // State Management Checkpointing Mechanic
             // 1. Configured Checkpointer (Database or Git)
-            if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
+            if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
                 let checkpoint_id = uuid::Uuid::new_v4().to_string();
                 let cp = crate::checkpointer::Checkpoint {
                     thread_id: thread_id.clone(),
@@ -1646,7 +1659,7 @@ impl Agent {
             }
 
             // 2. Local File Scratchpad (Claude Code)
-            if cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
+            if final_cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
                 if let Ok(json_state) = serde_json::to_string_pretty(&messages) {
                     if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
                         on_event(AgentEvent::CheckpointSaved {
@@ -1679,7 +1692,7 @@ impl Agent {
 
             // Context Compaction Mechanic
             // Use the input_tokens from the last request to determine the current context window size.
-            if cfg.enable_context_compaction && turn_input_tokens > cfg.compaction_threshold_tokens {
+            if final_cfg.enable_context_compaction && turn_input_tokens > final_cfg.compaction_threshold_tokens {
                 // We want to compact if we have enough messages to make it worthwhile
                 if messages.len() > 5 {
                     let mut compact_messages = Vec::new();
@@ -1719,7 +1732,7 @@ impl Agent {
                         }
 
                         let summary_req = ChatRequest {
-                            model: cfg.model.clone(),
+                            model: final_cfg.model.clone(),
                             system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve all architectural decisions, unresolved bugs, and the exact state of progress. Discard redundant or raw tool outputs. Be concise.".to_string(),
                             messages: vec![Message::user(format!("Compact this conversation:\n{}", middle_text))],
                             tools: vec![],
@@ -1848,6 +1861,64 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_harness_thickness_optimization() {
+        struct MockThicknessClient {
+            requests: tokio::sync::Mutex<Vec<ChatRequest>>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockThicknessClient {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                self.requests.lock().await.push(req);
+                Ok(ChatResponse {
+                    message: Message::assistant("Final response"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id1".to_string()),
+                })
+            }
+        }
+
+        let client = std::sync::Arc::new(MockThicknessClient {
+            requests: tokio::sync::Mutex::new(vec![]),
+        });
+
+        let agent = Agent::new(client.clone(), vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_harness_thickness_optimization = true;
+        cfg.enable_llmcompiler_plan_and_execute = true;
+        cfg.model = "gpt-3.5-turbo".to_string();
+        cfg.server_system_message = "You must think step by step and make a detailed plan.".to_string();
+
+        let mut events = vec![];
+        let _ = agent.run(&cfg, "Hello", &mut |e| events.push(e)).await;
+
+        let reqs = client.requests.lock().await;
+        assert!(reqs.len() > 0);
+        assert!(reqs[0].system.contains("You are an expert planner")); // LLMCompiler runs
+        drop(reqs);
+
+        let client_strong = std::sync::Arc::new(MockThicknessClient {
+            requests: tokio::sync::Mutex::new(vec![]),
+        });
+        let agent_strong = Agent::new(client_strong.clone(), vec![]);
+
+        let mut cfg_strong = AgentRunConfig::default();
+        cfg_strong.enable_harness_thickness_optimization = true;
+        cfg_strong.enable_llmcompiler_plan_and_execute = true;
+        cfg_strong.model = "gpt-4o".to_string();
+        cfg_strong.server_system_message = "You must think step by step and make a detailed plan. Make a plan before executing.".to_string();
+
+        let mut events2 = vec![];
+        let _ = agent_strong.run(&cfg_strong, "Hello", &mut |e| events2.push(e)).await;
+
+        let reqs2 = client_strong.requests.lock().await;
+        assert!(!reqs2[0].system.contains("You are an expert planner")); // LLMCompiler bypassed
+        assert!(!reqs2[0].system.contains("You must think step by step"));
+    }
     #[tokio::test]
     async fn test_4_type_error_handling() {
         let e_transient = crate::types::ToolError::Transient("timeout".to_string());
