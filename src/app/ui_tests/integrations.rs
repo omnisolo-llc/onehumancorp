@@ -79,13 +79,13 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
     assert_eq!(*called.borrow(), "ManyChat");
 }
 
-#[test] fn integr_flow_configure_calcom() {
+#[test] fn integr_flow_configure_calendly() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
     ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
-    ui.invoke_configure_integration("Cal.com".into());
-    assert_eq!(*called.borrow(), "Cal.com");
+    ui.invoke_configure_integration("Calendly".into());
+    assert_eq!(*called.borrow(), "Calendly");
 }
 
 #[test] fn integr_flow_configure_twilio() {
@@ -97,13 +97,13 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
     assert_eq!(*called.borrow(), "Twilio");
 }
 
-#[test] fn integr_flow_configure_resend() {
+#[test] fn integr_flow_configure_mailchimp() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
     ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
-    ui.invoke_configure_integration("Resend".into());
-    assert_eq!(*called.borrow(), "Resend");
+    ui.invoke_configure_integration("Mailchimp".into());
+    assert_eq!(*called.borrow(), "Mailchimp");
 }
 
 #[test] fn integr_flow_configure_shippo() {
