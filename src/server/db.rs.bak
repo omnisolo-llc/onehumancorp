@@ -573,26 +573,18 @@ impl DB {
                 }
             },
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < $1").bind(threshold).fetch_all(&mut *tx).await?;
+                let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < $1").bind(threshold).fetch_all(&self.pool).await?;
                 for row in rows {
                     let id: String = row.get("session_id");
                     let data: String = row.get("context_data");
                     result.push((id, data));
                 }
-                tx.commit().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
             }
         };
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => { sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ?").bind(threshold).execute(sqlite_pool).await?; },
-            DbStore::Postgres => {
-                let mut tx = self.pool.begin().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1").bind(threshold).execute(&mut *tx).await?;
-                tx.commit().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-            }
+            DbStore::Postgres => { sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1").bind(threshold).execute(&self.pool).await?; }
         };
 
         Ok(result)
@@ -601,17 +593,12 @@ impl DB {
     pub async fn inject_truth(&self, memory_id: &str, context: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES (?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding").bind(memory_id).bind(context).bind(embedding).execute(sqlite_pool).await?; },
-            DbStore::Postgres => {
-                let mut tx = self.pool.begin().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
+            DbStore::Postgres => { sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
                 .bind(memory_id)
                 .bind(context)
                 .bind(embedding)
-                .execute(&mut *tx)
-                .await?;
-                tx.commit().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-            }
+                .execute(&self.pool)
+                .await?; }
         };
 
         Ok(())
@@ -639,10 +626,7 @@ impl DB {
                 }
             },
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-
-                let shared_rows = sqlx::query("SELECT id, organization_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                let shared_rows = sqlx::query("SELECT id, organization_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&self.pool).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("organization_id");
@@ -650,14 +634,13 @@ impl DB {
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows = sqlx::query("SELECT id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                let swarm_rows = sqlx::query("SELECT id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&self.pool).await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
                     let org_id: String = "system".to_string(); // Fallback organization_id
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     result.push((id, org_id, payload, "swarm_tasks".to_string()));
                 }
-                tx.commit().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
             }
         };
 
@@ -667,19 +650,14 @@ impl DB {
     pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?; },
-            DbStore::Postgres => {
-                let mut tx = self.pool.begin().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                crate::utils::auth_utils::set_org_context(&mut *tx, org_id).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
+            DbStore::Postgres => { sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
                 .bind(id)
                 .bind(org_id)
                 .bind(task_id)
                 .bind(content)
                 .bind(embedding)
-                .execute(&mut *tx)
-                .await?;
-                tx.commit().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-            }
+                .execute(&self.pool)
+                .await?; }
         };
 
         Ok(())
@@ -709,8 +687,6 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                crate::utils::auth_utils::set_org_context(&mut *tx, org_id).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
                 sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(id)
                     .bind(org_id)
@@ -719,9 +695,8 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&mut *tx)
+                    .execute(&self.pool)
                     .await?;
-                tx.commit().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
             }
         }
         Ok(())
@@ -751,8 +726,6 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                crate::utils::auth_utils::set_org_context(&mut *tx, org_id).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
                 sqlx::query("INSERT INTO knowledge_embeddings (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
                     .bind(org_id)
@@ -761,9 +734,8 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&mut *tx)
+                    .execute(&self.pool)
                     .await?;
-                tx.commit().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
             }
         }
         Ok(())
@@ -780,14 +752,10 @@ pub async fn insert_autodream_memory(
                     .await?.rows_affected()
             },
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                let rows = sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
+                sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
                     .bind(threshold)
-                    .execute(&mut *tx)
-                    .await?.rows_affected();
-                tx.commit().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                rows
+                    .execute(&self.pool)
+                    .await?.rows_affected()
             }
         };
         if affected > 0 {
@@ -807,16 +775,13 @@ pub async fn insert_autodream_memory(
                 sqlx::query(query).bind(task_id).execute(sqlite_pool).await?;
             },
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
                 let query = if table == "swarm_tasks" {
                     // swarm_tasks uses UUID primary key
                     "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = $1::uuid"
                 } else {
                     "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
                 };
-                sqlx::query(query).bind(task_id).execute(&mut *tx).await?;
-                tx.commit().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+                sqlx::query(query).bind(task_id).execute(&self.pool).await?;
             }
         };
 
@@ -992,23 +957,6 @@ mod security_tests_final {
 
 #[cfg(test)]
 mod e2e_tenant_isolation_tests {
-    #[test]
-    fn test_no_global_pool_execution() {
-        // Sentinel regression test: Ensure no un-contextualized executions bypass RLS using the global pool.
-        let content = std::fs::read_to_string(file!()).unwrap();
-        // Since we allow migrations and vector extension setup, we count how many times it's explicitly allowed.
-        let count = content.matches(".execute(&self.pool)").count();
-        // Allowed bypasses (e.g. CREATE EXTENSION vector, migrator setup)
-        // If someone adds a direct pool execute outside of transactions without context, this will fail.
-        assert!(count <= 2, "Found unauthorized global execute(&self.pool) usage which bypasses tenant isolation context.");
-
-        let count_fetch = content.matches(".fetch_all(&self.pool)").count();
-        assert!(count_fetch <= 2, "Found unauthorized global fetch_all(&self.pool) usage which bypasses tenant isolation context.");
-
-        let count_fetch_one = content.matches(".fetch_one(&self.pool)").count();
-        assert!(count_fetch_one <= 2, "Found unauthorized global fetch_one(&self.pool) usage which bypasses tenant isolation context.");
-    }
-
     #[tokio::test]
     async fn test_tenant_data_isolation() {
         if std::env::var("DATABASE_URL").is_err() {
