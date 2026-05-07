@@ -254,8 +254,8 @@ impl HubService for MyHubService {
             _ => 0.0
         };
 
-        let optimal_pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount);
-        let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount);
+        let optimal_pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount, None);
+        let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount, None);
         if savings > 0.0 {
             tracing::info!("Optimized payment method to {:?} to save ${:.2} on transaction fees", optimal_pm, savings);
         }

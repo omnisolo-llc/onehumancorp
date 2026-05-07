@@ -9,46 +9,69 @@ pub enum PlanTier {
     Business,
 }
 
+#[derive(Debug, Clone)]
+pub struct PlanTierLimits {
+    pub monthly_actions: Option<u32>,
+    pub agent_actions: Option<u32>,
+    pub storage_mb: Option<u32>,
+    pub max_agents: Option<usize>,
+    pub max_products: Option<usize>,
+}
+
+impl PlanTierLimits {
+    pub fn default_for(tier: &PlanTier) -> Self {
+        match tier {
+            PlanTier::Free => Self {
+                monthly_actions: Some(100),
+                agent_actions: Some(20),
+                storage_mb: Some(500),
+                max_agents: Some(1),
+                max_products: Some(10),
+            },
+            PlanTier::Starter => Self {
+                monthly_actions: Some(1000),
+                agent_actions: Some(200),
+                storage_mb: Some(5000),
+                max_agents: Some(5),
+                max_products: Some(50),
+            },
+            PlanTier::Pro => Self {
+                monthly_actions: None,
+                agent_actions: None,
+                storage_mb: Some(50000),
+                max_agents: None,
+                max_products: None,
+            },
+            PlanTier::Business => Self {
+                monthly_actions: None,
+                agent_actions: None,
+                storage_mb: None,
+                max_agents: None,
+                max_products: None,
+            },
+        }
+    }
+}
+
 impl PlanTier {
     pub fn monthly_action_limit(&self) -> Option<u32> {
-        match self {
-            PlanTier::Free => Some(100),
-            PlanTier::Starter => Some(1000),
-            PlanTier::Pro | PlanTier::Business => None, // Unlimited
-        }
+        PlanTierLimits::default_for(self).monthly_actions
     }
 
     pub fn agent_action_limit(&self) -> Option<u32> {
-        match self {
-            PlanTier::Free => Some(20),
-            PlanTier::Starter => Some(200),
-            PlanTier::Pro | PlanTier::Business => None,
-        }
+        PlanTierLimits::default_for(self).agent_actions
     }
 
     pub fn storage_limit_mb(&self) -> Option<u32> {
-        match self {
-            PlanTier::Free => Some(500),
-            PlanTier::Starter => Some(5000), // 5GB
-            PlanTier::Pro => Some(50000),    // 50GB
-            PlanTier::Business => None,      // Custom/Unlimited
-        }
+        PlanTierLimits::default_for(self).storage_mb
     }
 
     pub fn max_agents(&self) -> Option<usize> {
-        match self {
-            PlanTier::Free => Some(1),
-            PlanTier::Starter => Some(5),
-            PlanTier::Pro | PlanTier::Business => None,
-        }
+        PlanTierLimits::default_for(self).max_agents
     }
 
     pub fn max_products(&self) -> Option<usize> {
-        match self {
-            PlanTier::Free => Some(10),
-            PlanTier::Starter => Some(50),
-            PlanTier::Pro | PlanTier::Business => None,
-        }
+        PlanTierLimits::default_for(self).max_products
     }
 }
 
