@@ -190,6 +190,8 @@ pub fn setup_welcome_checklist_routing(
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let agents_ui = app::Agents::new()?;
+    let agents_ui_for_dashboard = agents_ui.clone_strong();
 
 
     // Start bundled server if in standalone mode
@@ -779,6 +781,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }));
     let init_agent_config_handle = agent_config_handle.clone();
+    let init_agent_config_handle_for_hire = agent_config_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
@@ -2365,11 +2368,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let kairos_orchestration_walkthrough_handle = kairos_orchestration_walkthrough_ui.as_weak();
 
                 let kairos_handle_for_open = kairos_orchestration_walkthrough_handle.clone();
+                let agents_ui_clone = agents_ui_for_dashboard.clone_strong();
+                dashboard.on_action_manage_my_ai_team(move || {
+                    let _ = agents_ui_clone.show();
+                });
                 dashboard.on_action_open_kairos_orchestration(move || {
                     if let Some(ui) = kairos_handle_for_open.upgrade() {
                         let _ = ui.show();
                     }
                 });
+
+
 
 
 
@@ -2556,7 +2565,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
                 }
 
-                let _ = dashboard.show();
+
+
+        let _ = dashboard.show();
                 Box::leak(Box::new(dashboard));
 
                 Box::leak(Box::new(my_plan_ui));
@@ -2567,8 +2578,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let agents_ui = app::Agents::new()?;
-    let agent_hire_ui = app::AgentHire::new()?;
+
+    let agent_hire_ui = app::AgentConfig::new()?;
     let fix_agent_ui = app::FixAgent::new()?;
     let upgrade_ui = app::Upgrade::new()?;
     let billing_ui = app::Billing::new()?;
@@ -2664,7 +2675,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     agents_ui.on_hire_agent(move || {
         let agents_ui_handle_inner = agents_ui_handle.clone();
-        let agent_hire_handle_inner = agent_hire_handle.clone();
+        let agent_config_handle_inner = init_agent_config_handle_for_hire.clone();
 
         #[cfg(not(target_arch = "wasm32"))]
         tokio::spawn(async move {
@@ -2679,8 +2690,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
                                 ui.set_show_upgrade_prompt(true);
                             } else {
-                                if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
-                                    let _ = hire_ui.show();
+                                if let Some(config_ui) = agent_config_handle_inner.upgrade() {
+                                    let _ = config_ui.show();
                                 }
                             }
                         }
@@ -2691,8 +2702,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Fallback if network fails
             slint::invoke_from_event_loop(move || {
-                if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
-                    let _ = hire_ui.show();
+                if let Some(config_ui) = agent_config_handle_inner.upgrade() {
+                    let _ = config_ui.show();
                 }
             }).unwrap();
         });
@@ -2701,8 +2712,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         wasm_bindgen_futures::spawn_local(async move {
             slint::invoke_from_event_loop(move || {
                 if let Some(_ui) = agents_ui_handle_inner.upgrade() {
-                    if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
-                        let _ = hire_ui.show();
+                    if let Some(config_ui) = agent_config_handle_inner.upgrade() {
+                        let _ = config_ui.show();
                     }
                 }
             }).unwrap();
@@ -4019,10 +4030,10 @@ mod tests {
         crate::ui_tests::init();
 
 
-        let ui = app::AgentHire::new().unwrap();
+        let ui = app::AgentConfig::new().unwrap();
         assert_eq!(ui.get_step(), 0);
-        assert_eq!(ui.get_selected_role(), "");
-        assert_eq!(ui.get_next_enabled(), false);
+        assert_eq!(ui.get_selected_agent(), "");
+
     }
 
     #[test]
@@ -4030,10 +4041,9 @@ mod tests {
         crate::ui_tests::init();
 
 
-        let ui = app::AgentHire::new().unwrap();
+        let ui = app::AgentConfig::new().unwrap();
         assert_eq!(ui.get_step(), 0);
-        ui.set_selected_role("SOFTWARE_ENGINEER".into());
-        assert_eq!(ui.get_next_enabled(), true);
+        ui.set_selected_agent("SOFTWARE_ENGINEER".into());
     }
 
     #[test]
@@ -5499,20 +5509,19 @@ mod docs_tests {
 
         // Here we simulate the dashboard launching the Agents view
         let agents_ui = app::Agents::new().unwrap();
-        let agent_hire_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let agent_hire_opened_clone = agent_hire_opened.clone();
+        let agent_config_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let agent_config_opened_clone = agent_config_opened.clone();
 
         agents_ui.on_hire_agent(move || {
-            *agent_hire_opened_clone.borrow_mut() = true;
+            *agent_config_opened_clone.borrow_mut() = true;
         });
 
         agents_ui.invoke_hire_agent();
-        assert!(*agent_hire_opened.borrow(), "Agent Hire should be opened from Agents screen");
+        assert!(*agent_config_opened.borrow(), "Agent Config should be opened from Agents screen");
 
-        let ui = app::AgentHire::new().unwrap();
+        let ui = app::AgentConfig::new().unwrap();
         assert_eq!(ui.get_step(), 0);
-        ui.set_selected_role("SOFTWARE_ENGINEER".into());
-        assert_eq!(ui.get_next_enabled(), true);
+        ui.set_selected_agent("SOFTWARE_ENGINEER".into());
     }
 
     #[test]
