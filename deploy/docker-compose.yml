@@ -319,7 +319,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
+          cpus: "0.1"
           memory: 128M
 
   telemetry-mcp-bridge:
@@ -339,7 +339,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
+          cpus: "0.1"
           memory: 64M
 
 volumes:
