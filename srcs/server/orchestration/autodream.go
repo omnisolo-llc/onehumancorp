@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -105,4 +107,25 @@ func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir 
 	}
 
 	return nil
+}
+
+func (w *AutoDreamWorker) StartDaemon(ctx context.Context, memoryDir string, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	// Run once immediately
+	if err := w.ScanAndProcessMemories(ctx, memoryDir); err != nil {
+		log.Printf("autodream daemon error: %v", err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := w.ScanAndProcessMemories(ctx, memoryDir); err != nil {
+				log.Printf("autodream daemon error: %v", err)
+			}
+		}
+	}
 }
