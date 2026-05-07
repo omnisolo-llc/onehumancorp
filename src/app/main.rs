@@ -1964,6 +1964,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+                let unified_inbox_handle_draft = unified_inbox_ui.as_weak();
+                unified_inbox_ui.on_request_ai_draft(move || {
+                    let ui_handle = unified_inbox_handle_draft.clone();
+                    if let Some(ui) = ui_handle.upgrade() {
+                        let active_id = ui.get_active_conversation_id().to_string();
+                        // Get conversation context for the prompt
+                        let mut context_msg = String::new();
+                        let current_msgs: Vec<app::UiInboxMessage> = ui.get_current_messages().iter().collect();
+                        if let Some(last) = current_msgs.last() {
+                            context_msg = last.body.to_string();
+                        }
+
+                        tokio::spawn(async move {
+                            let mut draft = format!("Hi, I am looking into this right now.");
+                            if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                                let prompt = format!("Draft a professional reply to the customer message: \"{}\"", context_msg);
+                                let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                                    prompt,
+                                    from_agent_id: "CustomerSuccessAgent".into(),
+                                });
+                                let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
+                                if let Ok(resp) = response {
+                                    let inner: ohc::orchestration::ReasonResponse = resp.into_inner();
+                                    draft = inner.content.trim().to_string();
+                                }
+                            }
+
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_handle.upgrade() {
+                                    ui.set_new_message(draft.into());
+                                }
+                            }).unwrap();
+                        });
+                    }
+                });
+
                 let unified_inbox_handle_reply = unified_inbox_ui.as_weak();
                 unified_inbox_ui.on_use_quick_reply(move |reply_text| {
                     if let Some(ui) = unified_inbox_handle_reply.upgrade() {
@@ -6866,6 +6902,13 @@ mod e2e_hybrid_blob_tests {
             }
         });
 
+        let unified_inbox_handle_draft = unified_inbox_ui.as_weak();
+        unified_inbox_ui.on_request_ai_draft(move || {
+            if let Some(ui) = unified_inbox_handle_draft.upgrade() {
+                ui.set_new_message("Sure, we have plenty of vegan options!".into());
+            }
+        });
+
         let unified_inbox_handle_reply = unified_inbox_ui.as_weak();
         unified_inbox_ui.on_use_quick_reply(move |reply_text| {
             if let Some(ui) = unified_inbox_handle_reply.upgrade() {
@@ -6904,6 +6947,12 @@ mod e2e_hybrid_blob_tests {
         let last_msg = unified_inbox_ui.get_current_messages().row_data(1).unwrap();
         assert_eq!(last_msg.body, ai_reply_text, "Last message should be the AI reply");
         assert!(last_msg.is_me, "The AI reply should be marked as sent by 'me'");
+
+        // 5. Use AI Draft
+        unified_inbox_ui.invoke_request_ai_draft();
+
+        // 6. Assert outcome
+        assert_eq!(unified_inbox_ui.get_new_message(), "Sure, we have plenty of vegan options!");
     }
 
 #[test]
