@@ -32,13 +32,17 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 4. Deployment Preference Screen
+  // 4. External Integrations Screen
+  await tester.tap(find.text('Next'));
+  await tester.pump(const Duration(milliseconds: 500));
+
+  // 5. Deployment Preference Screen
   await tester.tap(find.text('Cloud'));
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 5. Administrator Account Screen
+  // 6. Administrator Account Screen
   await tester.enterText(find.byKey(const Key('adminNameField')), 'John Doe');
   await tester.enterText(find.byKey(const Key('adminEmailField')), 'john@acme.com');
   await tester.enterText(find.byKey(const Key('adminPasswordField')), 'securePassword123');
