@@ -32,15 +32,15 @@ func (d *AutoDreamDaemon) SearchSimilarMemories(ctx context.Context, query strin
 	var args []interface{}
 
 	if db.GlobalProvider.IsSQLite() {
-		// Fallback to text-based recency logic in SQLite Standalone mode
+		// Use vector extension in SQLite Standalone mode
 		queryStr = `
 			SELECT id, organization_id, task_id, content
 			FROM autodream_memories
-			WHERE organization_id = ? AND content LIKE ?
-			ORDER BY created_at DESC
+			WHERE organization_id = ?
+			ORDER BY vec_distance_cosine(embedding, ?)
 			LIMIT ?
 		`
-		args = []interface{}{orgID, "%" + query + "%", topK}
+		args = []interface{}{orgID, string(embeddingBytes), topK}
 	} else {
 		// Exact Nearest Neighbor search in Postgres Cloud mode
 		queryStr = `
@@ -77,4 +77,25 @@ func (d *AutoDreamDaemon) SearchSimilarMemories(ctx context.Context, query strin
 	}
 
 	return memories, nil
+}
+
+// AutoResolveConflicts resolves conflicting memory records based on recency.
+func (d *AutoDreamDaemon) AutoResolveConflicts(ctx context.Context) error {
+    // Resolve conflicts by keeping the most recent entry when contents match exactly.
+    // In Go, since we don't have reliability_score, we just use recency.
+    query := `
+        DELETE FROM autodream_memories
+        WHERE id IN (
+            SELECT a.id
+            FROM autodream_memories a
+            JOIN autodream_memories b ON a.organization_id = b.organization_id
+                AND a.content = b.content
+                AND a.created_at < b.created_at
+        )
+    `
+    _, err := d.db.ExecContext(ctx, query)
+    if err != nil {
+        return fmt.Errorf("failed to resolve memory conflicts: %w", err)
+    }
+    return nil
 }

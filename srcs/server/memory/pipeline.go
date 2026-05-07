@@ -73,3 +73,21 @@ func (d *AutoDreamDaemon) SweepCompletedTasks(ctx context.Context) error {
 
 	return nil
 }
+
+func (d *AutoDreamDaemon) PruneStaleContext(ctx context.Context, olderThan time.Time) error {
+	// Prune context older than the specified time, but ONLY if we are certain it's safe to do so.
+    // E.g., we do NOT delete if source_type implies an explicit, reliable piece of memory.
+    // We only prune ephemeral or non-critical generated context.
+
+    // AutoDreamMemories doesn't have reference_count or last_referenced_at, so we fall back
+    // to conservative heuristics: only prune generic 'autodream' source types.
+	query := `
+		DELETE FROM autodream_memories
+		WHERE created_at < $1 AND source_type = 'autodream'
+	`
+	_, err := d.db.ExecContext(ctx, query, olderThan)
+	if err != nil {
+		return fmt.Errorf("failed to prune stale context: %w", err)
+	}
+	return nil
+}

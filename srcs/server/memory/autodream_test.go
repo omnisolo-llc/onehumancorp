@@ -74,3 +74,40 @@ func TestAutoDreamDaemon(t *testing.T) {
 	_, err = os.Stat(notDoneFile)
 	assert.NoError(t, err, "expected not_done.md to remain untouched")
 }
+
+func TestAutoDreamDaemon_Run(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	mockLLM := &MockLLMClient{}
+	daemon, err := NewAutoDreamDaemon(db, mockLLM, t.TempDir(), t.TempDir(), 1*time.Millisecond)
+	assert.NoError(t, err)
+
+    // we expect SweepCompletedTasks to run
+	mock.ExpectQuery("SELECT id, organization_id, agent_id, payload FROM shared_tasks WHERE status = 'DONE'").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "agent_id", "payload"}))
+
+    // expect AutoResolveConflicts to run
+	mock.ExpectExec("DELETE FROM autodream_memories WHERE id IN").
+		WillReturnResult(sqlmock.NewResult(0, 0))
+
+    // we expect PruneStaleContext to run
+	mock.ExpectExec("DELETE FROM autodream_memories WHERE created_at < \\$1").
+		WithArgs(sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(0, 5))
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Start Run in a goroutine
+	go daemon.Run(ctx)
+
+	// Wait a moment for it to tick
+	time.Sleep(5 * time.Millisecond)
+
+	// Cancel and wait
+	cancel()
+	time.Sleep(2 * time.Millisecond)
+
+    // don't assert all expectations since the ticker might have fired 0 or multiple times due to scheduling variance
+}

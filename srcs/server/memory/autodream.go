@@ -66,6 +66,14 @@ func (d *AutoDreamDaemon) Run(ctx context.Context) {
 		case <-ticker.C:
 			d.processDirectories(ctx)
 			d.SweepCompletedTasks(ctx)
+
+            // Task 2: Conflict Resolution
+            if err := d.AutoResolveConflicts(ctx); err != nil {
+                log.Printf("Failed to resolve memory conflicts: %v", err)
+            }
+
+            // Task 3: Stale Context Pruning (conservative: older than 180 days)
+            d.PruneStaleContext(ctx, time.Now().Add(-180 * 24 * time.Hour))
 		}
 	}
 }
