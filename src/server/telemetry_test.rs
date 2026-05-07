@@ -265,7 +265,7 @@ mod tests {
         } else if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
             let p = PathBuf::from(runfiles_dir.clone());
             search_dirs.push(p);
-            let mut p2 = PathBuf::from(runfiles_dir);
+            let mut p2 = PathBuf::from(runfiles_dir.clone()); p2.push("ohc"); search_dirs.push(p2.clone());
             p2.push("srcs");
             search_dirs.push(p2);
         }
@@ -295,7 +295,7 @@ mod tests {
                            lower_line.contains("tracing::") ||
                            lower_line.contains("println!") ||
                            lower_line.contains("log.print") ||
-                           lower_line.contains("fmt.print") ||
+                           lower_line.contains("fmt.errorf") || lower_line.contains("fmt.error") || lower_line.contains("log.printf") || lower_line.contains("fmt.print") ||
                            lower_line.contains("eprintln!")
                         {
                             if lower_line.contains("tenant_id") ||
