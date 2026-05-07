@@ -366,6 +366,7 @@ impl Agent {
             Box::pin(async move {
                 let last_msg = state.get("last_message").unwrap();
                 let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
+                let mut tool_error_counts = state.get("tool_error_counts").unwrap().clone();
 
                 let mut read_only_calls = Vec::new();
                 let mut mutating_calls = Vec::new();
@@ -430,9 +431,12 @@ impl Agent {
                 let ro_results = futures::future::join_all(read_only_futures).await;
 
                 for (id, final_res) in ro_results {
-                    let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
+                    let tc = tool_calls.iter().find(|t| t["id"].as_str().unwrap() == id).unwrap();
+                    let name = tc["name"].as_str().unwrap().to_string();
+                    let idx = tool_calls.iter().position(|t| t["id"].as_str().unwrap() == id).unwrap();
                     match final_res {
                         Ok(res) => {
+                            tool_error_counts.as_object_mut().unwrap().remove(&name);
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
                                 "content": res,
@@ -440,6 +444,12 @@ impl Agent {
                             });
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                            let obj = tool_error_counts.as_object_mut().unwrap();
+                            let count = obj.get(&name).and_then(|v| v.as_i64()).unwrap_or(0) + 1;
+                            obj.insert(name.clone(), serde_json::json!(count));
+                            if count > 2 {
+                                return Err(format!("Fatal tool error: Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
+                            }
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
                                 "content": "",
@@ -500,6 +510,7 @@ impl Agent {
 
                         match final_res {
                             Ok(res) => {
+                                tool_error_counts.as_object_mut().unwrap().remove(name);
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
                                     "content": res,
@@ -507,6 +518,12 @@ impl Agent {
                                 });
                             }
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                let obj = tool_error_counts.as_object_mut().unwrap();
+                                let count = obj.get(name).and_then(|v| v.as_i64()).unwrap_or(0) + 1;
+                                obj.insert(name.to_string(), serde_json::json!(count));
+                                if count > 2 {
+                                    return Err(format!("Fatal tool error: Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
+                                }
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
                                     "content": "",
@@ -538,6 +555,7 @@ impl Agent {
 
                 Ok(serde_json::json!({
                     "has_tool_calls": false, // Clear flag
+                    "tool_error_counts": tool_error_counts,
                     "messages": [{
                         "role": "tool",
                         "content": "",
@@ -586,7 +604,8 @@ impl Agent {
         let initial_state = serde_json::json!({
             "messages": msgs_json,
             "has_tool_calls": false,
-            "total_tokens": 0
+            "total_tokens": 0,
+            "tool_error_counts": {}
         });
 
         match graph.run(initial_state).await {
