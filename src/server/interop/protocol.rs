@@ -26,6 +26,22 @@ impl InteropProtocol {
         }
     }
 
+    fn get_current_mode() -> i32 {
+        if std::env::var("OHC_STANDALONE").is_ok() {
+            proto::DeploymentMode::ModeStandalone as i32
+        } else {
+            proto::DeploymentMode::ModeCloud as i32
+        }
+    }
+
+    fn get_target_mode() -> i32 {
+        if std::env::var("OHC_STANDALONE").is_ok() {
+            proto::DeploymentMode::ModeCloud as i32
+        } else {
+            proto::DeploymentMode::ModeStandalone as i32
+        }
+    }
+
     /// Triggers a state handoff when switching modes using protobuf on the wire
     pub async fn handoff(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
@@ -59,8 +75,8 @@ impl InteropProtocol {
         }
 
         let handoff_msg = proto::StateHandoff {
-            source_mode: 0,
-            target_mode: 0,
+            source_mode: Self::get_current_mode(),
+            target_mode: Self::get_target_mode(),
             mission_id: mission_id.to_string(),
             tenant_id: tenant_id.to_string(),
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -137,7 +153,7 @@ impl InteropProtocol {
         let cancel = self.bus.subscribe(format!("system:health_ack:{}", self.node_id), handler).await?;
 
         let ping = proto::HealthPing {
-            current_mode: 0,
+            current_mode: InteropProtocol::get_current_mode(),
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             source_node_id: self.node_id.clone(),
         };
@@ -409,7 +425,7 @@ mod tests {
         // Publish a ping
         use prost::Message as ProstMessage;
         let ping = proto::HealthPing {
-            current_mode: 0,
+            current_mode: InteropProtocol::get_current_mode(),
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             source_node_id: "sender_node".to_string(),
         };
@@ -491,5 +507,13 @@ mod tests {
 
         // Release
         let _ = lock.release_lock("handoff:mission_locked", "node_other").await;
+    }
+    #[tokio::test]
+    async fn test_mode_detection() {
+        let current = InteropProtocol::get_current_mode();
+        let target = InteropProtocol::get_target_mode();
+        assert!(current == proto::DeploymentMode::ModeCloud as i32 || current == proto::DeploymentMode::ModeStandalone as i32);
+        assert!(target == proto::DeploymentMode::ModeCloud as i32 || target == proto::DeploymentMode::ModeStandalone as i32);
+        assert_ne!(current, target);
     }
 }
