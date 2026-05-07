@@ -697,23 +697,16 @@ impl Hub {
             }
         });
 
-        let pool2 = self.pool.clone();
-        let backlog_future = tokio::task::spawn(async move {
-            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')").fetch_one(&pool2).await
-        });
-
         let pool3 = self.pool.clone();
         let sync_queue_future = tokio::task::spawn(async move {
             sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE _sync_status = 'pending'").fetch_one(&pool3).await
         });
 
-        let (db_ping_res, backlog_res_res, sync_queue_res_res) = tokio::join!(ping_future, backlog_future, sync_queue_future);
+        let (db_ping_res, sync_queue_res_res) = tokio::join!(ping_future, sync_queue_future);
 
         let db_ping = db_ping_res.unwrap_or(0);
-        let backlog_res = backlog_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
         let sync_queue_res = sync_queue_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
 
-        let mission_sync_backlog = backlog_res.unwrap_or(0);
         let local_to_cloud_sync_queue = sync_queue_res.unwrap_or(0);
 
         let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
@@ -738,7 +731,6 @@ impl Hub {
             "db_ping_ms": db_ping,
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
-            "mission_sync_backlog": mission_sync_backlog,
             "hybrid_mode_ready": hybrid_mode_ready,
             "local_to_cloud_sync_queue": local_to_cloud_sync_queue,
         }))
@@ -960,7 +952,6 @@ mod tests {
         // We just ensure the response contains the fields we expect.
         assert!(health.get("status").is_some());
         assert!(health.get("db_ping_ms").is_some());
-        assert!(health.get("mission_sync_backlog").is_some());
         assert!(health.get("hybrid_mode_ready").is_some());
         assert!(health.get("local_to_cloud_sync_queue").is_some());
     }
