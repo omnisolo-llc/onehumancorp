@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod mesh_handler;
 pub mod autodream;
 pub mod mission_sync;

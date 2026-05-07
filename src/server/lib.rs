@@ -1316,9 +1316,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         db: db.clone(),
     };
 
+    let store = std::sync::Arc::new(auth::Store::new());
+
     let webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/stripe", axum::routing::post(api::billing_webhook::stripe_webhook_handler))
         .with_state(webhook_state);
+
+    let auth_router = axum::Router::new()
+        .route("/api/auth/handshake", axum::routing::post(api::auth::auth_handshake))
+        .with_state(store.clone());
 
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
@@ -1330,7 +1336,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             crate::utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .merge(webhook_router);
+        .merge(webhook_router)
+        .merge(auth_router);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
@@ -1352,7 +1359,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
-    let store = std::sync::Arc::new(auth::Store::new());
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if crate::config::get().telemetry_enabled {

@@ -61,13 +61,6 @@ pub struct TenantKey {
     pub key: String,
 }
 
-#[derive(Debug, Clone)]
-pub struct OIDCConfig {
-    pub issuer_url: String,
-    pub client_id: String,
-    pub enabled: bool,
-}
-
 #[async_trait]
 #[allow(dead_code)]
 pub trait UserRepository: Send + Sync {
@@ -93,7 +86,7 @@ pub struct Store {
     #[allow(dead_code)]
     secret: Vec<u8>,
     #[allow(dead_code)]
-    oidc_cfg: RwLock<OIDCConfig>,
+    oidc_cfg: RwLock<crate::oidc::OIDCConfig>,
 }
 
 impl Store {
@@ -181,7 +174,7 @@ impl Store {
             by_oidc: RwLock::new(HashMap::new()),
             revoked: RwLock::new(HashMap::new()),
             secret,
-            oidc_cfg: RwLock::new(OIDCConfig {
+            oidc_cfg: RwLock::new(crate::oidc::OIDCConfig {
                 issuer_url,
                 client_id,
                 enabled,
@@ -404,6 +397,55 @@ impl Store {
              }
         }
         false
+    }
+
+    pub fn get_oidc_cfg(&self) -> crate::oidc::OIDCConfig {
+        self.oidc_cfg.read().unwrap().clone()
+    }
+
+    pub fn issue_oauth_token(&self, _user: &User) -> Result<String, String> {
+        let now = chrono::Utc::now();
+        let claims = Claims {
+            sub: _user.id.clone(),
+            username: _user.username.clone(),
+            email: _user.email.clone(),
+            roles: _user.roles.clone(),
+            organization_id: _user.organization_id.clone(),
+            session_id: None,
+            iat: now.timestamp(),
+            exp: (now + chrono::Duration::hours(24)).timestamp(),
+            jti: hex::encode(random_bytes(8)),
+        };
+
+        let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
+        let token = jsonwebtoken::encode(&header, &claims, &jsonwebtoken::EncodingKey::from_secret(&self.secret))
+            .map_err(|e| e.to_string())?;
+
+        Ok(token)
+    }
+
+    pub async fn validate_oauth_token(&self, _token: &str) -> Result<Claims, String> {
+        let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
+        let token_data = jsonwebtoken::decode::<Claims>(
+            _token,
+            &jsonwebtoken::DecodingKey::from_secret(&self.secret),
+            &validation
+        );
+
+        match token_data {
+            Ok(data) => {
+                if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
+                    return Err("Invalid token: empty claims".to_string());
+                }
+                if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
+                    return Err("token revoked".to_string());
+                }
+                Ok(data.claims)
+            }
+            Err(_) => {
+                Err("Invalid token".to_string())
+            }
+        }
     }
 
     pub fn issue_token(&self, _user: &User) -> Result<String, String> {
