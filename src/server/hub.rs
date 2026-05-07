@@ -42,7 +42,7 @@ pub struct Hub {
     auto_cor_track: RwLock<std::collections::HashSet<String>>,
     event_log_tx: mpsc::Sender<serde_json::Value>,
     pub(crate) pool: sqlx::PgPool,
-    redis_client: Option<redis::Client>,
+    pub redis_client: Option<redis::Client>,
     agent_cache: RwLock<Option<Arc<Vec<Agent>>>>,
     meetings_cache: RwLock<Option<Arc<Vec<MeetingRoom>>>>,
 }
