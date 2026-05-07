@@ -31,6 +31,10 @@ func (m *mockLocalDB) GetTask(ctx context.Context, id string) (*orchestration.Sh
 	return m.getByIDRes, m.getByIDErr
 }
 
+func (m *mockLocalDB) DeleteStuckTasks(ctx context.Context) error {
+	return nil
+}
+
 func (m *mockLocalDB) UpdateTaskStatus(ctx context.Context, id string, status string) error {
 	return m.updateErr
 }

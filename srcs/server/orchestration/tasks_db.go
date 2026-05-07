@@ -29,6 +29,7 @@ type TaskStore interface {
 	CreateTask(ctx context.Context, task *SharedTask) error
 	GetTask(ctx context.Context, id string) (*SharedTask, error)
 	UpdateTaskStatus(ctx context.Context, id string, status string) error
+	DeleteStuckTasks(ctx context.Context) error
 	GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error)
 }
 
@@ -183,6 +184,12 @@ func (s *PostgresTaskStore) GetTask(ctx context.Context, id string) (*SharedTask
 		return nil, err
 	}
     return task, nil
+}
+
+func (s *PostgresTaskStore) DeleteStuckTasks(ctx context.Context) error {
+	query := `DELETE FROM shared_tasks WHERE status = 'STUCK'`
+	_, err := s.db.ExecContext(ctx, query)
+	return err
 }
 
 func (s *PostgresTaskStore) UpdateTaskStatus(ctx context.Context, id string, status string) error {
@@ -422,6 +429,12 @@ func (s *SqliteTaskStore) GetTask(ctx context.Context, id string) (*SharedTask, 
     }
 
     return task, nil
+}
+
+func (s *SqliteTaskStore) DeleteStuckTasks(ctx context.Context) error {
+	query := `DELETE FROM shared_tasks WHERE status = 'STUCK'`
+	_, err := s.db.ExecContext(ctx, query)
+	return err
 }
 
 func (s *SqliteTaskStore) UpdateTaskStatus(ctx context.Context, id string, status string) error {

@@ -931,3 +931,29 @@ func TestSqliteTaskStore_GetTasksByOrganization_ParseDateError(t *testing.T) {
 	assert.True(t, tasks[0].CreatedAt.IsZero())
 	assert.True(t, tasks[0].UpdatedAt.IsZero())
 }
+
+func TestSqliteTaskStore_DeleteStuckTasks(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+
+	mock.ExpectExec("DELETE FROM shared_tasks WHERE status = 'STUCK'").WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = store.DeleteStuckTasks(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestPostgresTaskStore_DeleteStuckTasks(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	mock.ExpectExec("DELETE FROM shared_tasks WHERE status = 'STUCK'").WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = store.DeleteStuckTasks(context.Background())
+	assert.NoError(t, err)
+}

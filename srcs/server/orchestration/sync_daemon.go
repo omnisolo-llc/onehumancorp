@@ -152,6 +152,8 @@ func StartSyncDaemon(ctx context.Context, localDB SQLiteProvider, cloudDB Postgr
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			localDB.DeleteStuckTasks(ctx)
+			cloudDB.DeleteStuckTasks(ctx)
 			syncPendingEscalations(ctx, localDB, cloudDB)
 			syncCompletedEscalations(ctx, localDB, cloudDB)
 		}
