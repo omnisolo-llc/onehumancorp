@@ -70,7 +70,7 @@ impl SipDB {
                     .await?;
 
                 // Prioritize backlog by bumping updated_at for oldest pending missions
-                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at ASC LIMIT 10)")
+                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at ASC LIMIT 10) RETURNING id")
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -81,7 +81,7 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
+                sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) RETURNING id")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -211,49 +211,31 @@ impl SipDB {
             final_status = "BURSTING".to_string();
         }
 
-        let row = sqlx::query("SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE")
-            .bind(mission_id)
-            .bind(&self.org_id)
-            .fetch_optional(&mut **tx)
-            .await?;
+        let mut updated = false;
 
-        if let Some(r) = row {
-            let existing_id: String = r.get("id");
-            if !existing_id.is_empty() && force_local {
-                sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4")
-                    .bind(&final_status)
-                    .bind(payload)
-                    .bind(mission_id)
-                    .bind(&self.org_id)
-                    .execute(&mut **tx)
-                    .await?;
-            }
-        } else {
-            let row_check = sqlx::query("SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2")
+        if force_local {
+            let row = sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4 RETURNING id")
+                .bind(&final_status)
+                .bind(payload)
                 .bind(mission_id)
                 .bind(&self.org_id)
                 .fetch_optional(&mut **tx)
                 .await?;
 
-            if let Some(_) = row_check {
-                 if force_local {
-                     sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4")
-                         .bind(&final_status)
-                         .bind(payload)
-                         .bind(mission_id)
-                         .bind(&self.org_id)
-                         .execute(&mut **tx)
-                         .await?;
-                 }
-            } else {
-                 sqlx::query("INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4) ON CONFLICT(id) DO NOTHING")
-                     .bind(mission_id)
-                     .bind(&final_status)
-                     .bind(payload)
-                     .bind(&self.org_id)
-                     .execute(&mut **tx)
-                     .await?;
-            }
+            updated = row.is_some();
+        }
+
+        if !updated {
+            // Either force_local was false, or the update found no row.
+            // If it exists, ON CONFLICT will do nothing.
+            // If force_local was false but row exists, it skips update but ON CONFLICT will skip insert.
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4) ON CONFLICT(id) DO NOTHING")
+                .bind(mission_id)
+                .bind(&final_status)
+                .bind(payload)
+                .bind(&self.org_id)
+                .execute(&mut **tx)
+                .await?;
         }
 
         Ok(())
