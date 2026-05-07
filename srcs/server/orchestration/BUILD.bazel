@@ -7,6 +7,7 @@ go_library(
         "mesh.go",
         "tasks_db.go",
         "state_machine.go",
+        "sip.go",
     ],
     importpath = "onehumancorp/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -20,6 +21,7 @@ go_test(
         "tasks_db_test.go",
         "state_machine_test.go",
         "state_machine_coverage_test.go",
+        "sip_test.go",
     ],
     embed = [":orchestration"],
     deps = [
