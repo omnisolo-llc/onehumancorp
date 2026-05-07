@@ -35,6 +35,7 @@ pub struct CostAuditor {
     llm_cost_counter: Counter<f64>,
     storage_savings_counter: Counter<f64>,
     compute_cost_counter: Counter<f64>,
+    caching_savings_counter: Counter<f64>,
 }
 
 impl CostAuditor {
@@ -43,6 +44,7 @@ impl CostAuditor {
         let llm_cost_counter = meter.f64_counter("ohc_llm_cost_total").build();
         let storage_savings_counter = meter.f64_counter("ohc_storage_savings_total").build();
         let compute_cost_counter = meter.f64_counter("ohc_compute_cost_total").build();
+        let caching_savings_counter = meter.f64_counter("ohc_caching_savings_total").build();
 
         CostAuditor {
             config,
@@ -59,6 +61,7 @@ impl CostAuditor {
             llm_cost_counter,
             storage_savings_counter,
             compute_cost_counter,
+            caching_savings_counter,
         }
     }
 
@@ -81,6 +84,14 @@ impl CostAuditor {
         let current_cost = agent_costs.entry(event.agent_id.clone()).or_insert(0.0);
         *current_cost += cost;
         *total_cost += cost;
+
+        let mut caching_savings = self.caching_savings.lock().unwrap();
+        let savings = (event.cached_input_tokens as f64 * self.config.cost_per_input_token / 1_000_000.0)
+                      - (event.cached_input_tokens as f64 * self.config.cost_per_cached_input_token / 1_000_000.0);
+        if savings > 0.0 {
+            *caching_savings += savings;
+            self.caching_savings_counter.add(savings, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+        }
 
         let mut agent_output_tokens = self.agent_output_tokens.lock().unwrap();
         let current_tokens = agent_output_tokens.entry(event.agent_id.clone()).or_insert(0);
