@@ -3,11 +3,21 @@ package telemetry
 import (
 	"context"
 	"log"
+	"os"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
+
+func isTelemetryEnabled() bool {
+	// In standalone mode, do not sync telemetry to cloud unless explicitly enabled
+	isStandalone := os.Getenv("OHC_STANDALONE") == "true" || os.Getenv("STANDALONE_MODE") == "true"
+	if isStandalone {
+		return os.Getenv("OHC_TELEMETRY_ENABLED") == "true"
+	}
+	return true
+}
 
 var (
 	meter                   = otel.Meter("harness")
@@ -54,6 +64,9 @@ func init() {
 
 // RecordHarnessExecutionDuration records the duration of a harness execution.
 func RecordHarnessExecutionDuration(ctx context.Context, durationSecs float64) error {
+	if !isTelemetryEnabled() {
+		return nil
+	}
 	if executionDurationHistogram != nil {
 		executionDurationHistogram.Record(ctx, durationSecs)
 	}
@@ -73,6 +86,9 @@ func RecordMCPToolCall(ctx context.Context, toolName string) error {
 
 // RecordHarnessToolInvocation increments the counter for a specific tool invocation.
 func RecordHarnessToolInvocation(ctx context.Context, toolName string) error {
+	if !isTelemetryEnabled() {
+		return nil
+	}
 	if toolInvocationsCounter != nil {
 		opts := metric.WithAttributes(
 			attribute.String("tool", toolName),
@@ -84,6 +100,9 @@ func RecordHarnessToolInvocation(ctx context.Context, toolName string) error {
 
 // RecordHarnessViolation increments the counter for a harness violation (e.g. timeout, memory limit).
 func RecordHarnessViolation(ctx context.Context, violationType string) error {
+	if !isTelemetryEnabled() {
+		return nil
+	}
 	if violationsCounter != nil {
 		opts := metric.WithAttributes(
 			attribute.String("violation_type", violationType),
