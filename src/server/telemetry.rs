@@ -239,7 +239,10 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("bank") ||
     k.contains("account") ||
     k.contains("stripe") ||
-    k.contains("billing")
+    k.contains("billing") ||
+    k.contains("ip_address") ||
+    k.contains("mac_address") ||
+    k.contains("geolocation")
 }
 
 pub fn is_email(s: &str) -> bool {
