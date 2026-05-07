@@ -52,7 +52,8 @@ npx @bazel/bazelisk run //src/app:app > /dev/null 2>&1 &
 APP_PID=$!
 echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 
-# Launch the Prometheus agent
+if [ "$OHC_TELEMETRY_ENABLED" == "true" ]; then
+  # Launch the Prometheus agent
 docker rm -f ohc-prometheus-agent >/dev/null 2>&1 || true
 docker run -d --name ohc-prometheus-agent \
   --memory="128m" --cpus="0.1" \
@@ -61,6 +62,7 @@ docker run -d --name ohc-prometheus-agent \
   -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml \
   prom/prometheus:latest --config.file=/etc/prometheus/prometheus.yml --enable-feature=agent > /dev/null 2>&1
 echo -e "  ${GREEN}✓ Prometheus agent started in Docker (resource constrained)${RESET}"
+fi
 
 # Trap INT and EXIT signals to gracefully shutdown all local processes
 function cleanup {
