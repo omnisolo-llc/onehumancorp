@@ -27,7 +27,7 @@ pub async fn run_health_monitor(
         if let Ok(health) = monitor_hub.check_health().await {
             if let Some(ready) = health.get("hybrid_mode_ready").and_then(|v| v.as_bool()) {
                 if !ready {
-                    tracing::warn!("HEALTH MONITOR: Hybrid mode is degraded.");
+                    tracing::debug!("HEALTH MONITOR: Hybrid mode is degraded.");
                 }
             }
         }
