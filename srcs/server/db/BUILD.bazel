@@ -8,7 +8,7 @@ filegroup(
 
 go_library(
     name = "db",
-    srcs = ["entities.go"],
+    srcs = ["entities.go", "provider.go"],
     importpath = "onehumancorp/srcs/server/db",
     visibility = ["//visibility:public"],
     deps = [
