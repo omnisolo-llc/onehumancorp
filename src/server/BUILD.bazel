@@ -85,7 +85,7 @@ rust_test(
         "//src/agents/builtin:autodream/store.rs",
     ],
     crate_root = "lib.rs",
-    data = glob(["migrations/*.sql", "**/*.rs"]),
+    data = glob(["migrations/*.sql", "**/*.rs"]) + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
     env = {
         "RUST_TEST_THREADS": "1",
