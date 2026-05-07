@@ -319,3 +319,68 @@ fn test_dashboard_grandmother_ux_test_5() {
     ui.invoke_open_video_tutorials();
     assert!(*invoked_video.borrow(), "Video tutorials action failed");
 }
+
+#[test]
+fn test_grandmother_login_error_message_ux() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Login::new().unwrap();
+    // Simulate setting an internal error message with jargon
+    ui.set_error_message("API error 500: null pointer exception at 0x0041".into());
+    // Assert that the raw property gets set
+    assert_eq!(ui.get_error_message(), "API error 500: null pointer exception at 0x0041");
+    // Verify that callbacks don't panic even when error is active
+    let action_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let action_invoked_clone = action_invoked.clone();
+    ui.on_open_settings(move || { *action_invoked_clone.borrow_mut() = true; });
+    ui.invoke_open_settings();
+    assert!(*action_invoked.borrow(), "Settings action failed when error is present");
+}
+
+#[test]
+fn test_grandmother_wizard_error_title_ux() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Wizard::new().unwrap();
+    // Ensure default property is plain language
+    assert_eq!(ui.get_issue_title(), "Helper Needs Connection");
+}
+
+#[test]
+fn test_grandmother_secure_agent_config_error_ux() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::SecureAgentConfig::new().unwrap();
+    ui.set_error_text("Connection refused by SPIRE sidecar".into());
+    assert_eq!(ui.get_error_text(), "Connection refused by SPIRE sidecar");
+}
+
+#[test]
+fn test_grandmother_wizard_navigation_error_state() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Wizard::new().unwrap();
+    ui.set_step(0);
+    // User sees plain language issue title "Helper Needs Connection" and moves next
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 1);
+}
+
+#[test]
+fn test_grandmother_secure_agent_config_submit_ux() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::SecureAgentConfig::new().unwrap();
+    ui.set_token("secure-token-123".into());
+    ui.set_error_text("Internal Server Error: 500".into());
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_save_config(move |t| {
+        if t == "secure-token-123" {
+            *invoked_clone.borrow_mut() = true;
+        }
+    });
+    // Call the rust side API
+    ui.invoke_save_config("secure-token-123".into());
+    assert!(*invoked.borrow(), "Save config action should successfully execute");
+}
