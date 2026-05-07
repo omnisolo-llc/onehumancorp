@@ -2497,6 +2497,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let _ = ui.show();
         }
     });
+    let pt_ui_weak = prompt_tuning_handle.clone();
+    agents_ui.on_tune_agent(move |_id| {
+        if let Some(pt_ui) = pt_ui_weak.upgrade() {
+            let _ = pt_ui.show();
+        }
+    });
 
 
 
@@ -5322,6 +5328,16 @@ mod docs_tests {
 
         agents_ui.invoke_fix_agent("agent_1".into());
         assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
+        let tune_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let tune_agent_opened_clone = tune_agent_opened.clone();
+
+        agents_ui.on_tune_agent(move |id| {
+            assert_eq!(id, "agent_1");
+            *tune_agent_opened_clone.borrow_mut() = true;
+        });
+
+        agents_ui.invoke_tune_agent("agent_1".into());
+        assert!(*tune_agent_opened.borrow(), "Prompt Tuning should be opened from Agents screen");
     }
 
     #[test]
