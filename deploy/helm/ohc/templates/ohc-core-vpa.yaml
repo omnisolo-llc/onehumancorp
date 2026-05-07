@@ -11,7 +11,7 @@ spec:
     kind:       Deployment
     name:       {{ .Release.Name }}-ohc-core
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Initial"
   resourcePolicy:
     containerPolicies:
       - containerName: ohc-core
