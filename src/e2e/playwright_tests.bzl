@@ -33,7 +33,7 @@ def define_playwright_tests():
                 "e2e",
                 "no-remote-exec",
                 "requires-docker",
-                "manual",
+
             ],
         )
         targets.append(":" + name)
@@ -41,5 +41,5 @@ def define_playwright_tests():
     native.test_suite(
         name = "playwright",
         tests = targets,
-        tags = ["manual"],
+        tags = ["e2e"],
     )
