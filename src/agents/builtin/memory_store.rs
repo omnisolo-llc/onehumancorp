@@ -368,33 +368,36 @@ impl VectorRepository {
         let mut resolved_count = 0;
 
         for (a, b) in conflicts {
-            let (winner, loser) = if a.owner_override != b.owner_override {
-                if a.owner_override {
-                    (&a, &b)
-                } else {
-                    (&b, &a)
-                }
-            } else if a.reliability_score != b.reliability_score {
-                if a.reliability_score > b.reliability_score {
-                    (&a, &b)
-                } else {
-                    (&b, &a)
-                }
-            } else if a.created_at != b.created_at {
-                if a.created_at > b.created_at {
-                    (&a, &b)
-                } else {
-                    (&b, &a)
-                }
-            } else {
-                (&a, &b) // Fallback, just pick 'a'
-            };
-
+            let (winner, loser) = Self::determine_conflict_winner(&a, &b);
             self.resolve_conflict(winner, loser).await?;
             resolved_count += 1;
         }
 
         Ok(resolved_count)
+    }
+
+    pub fn determine_conflict_winner<'a>(a: &'a EmbeddingRecord, b: &'a EmbeddingRecord) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
+        if a.owner_override != b.owner_override {
+            if a.owner_override {
+                (a, b)
+            } else {
+                (b, a)
+            }
+        } else if a.reliability_score != b.reliability_score {
+            if a.reliability_score > b.reliability_score {
+                (a, b)
+            } else {
+                (b, a)
+            }
+        } else if a.created_at != b.created_at {
+            if a.created_at > b.created_at {
+                (a, b)
+            } else {
+                (b, a)
+            }
+        } else {
+            (a, b) // Fallback, just pick 'a'
+        }
     }
 
 
@@ -1676,5 +1679,73 @@ mod anthropic_memory_tests {
         assert_eq!(rows.len(), 1, "The record should remain due to owner_override = true");
         let id: String = rows[0].try_get("id").unwrap();
         assert_eq!(id, "rec_override", "The correct record should remain");
+    }
+}
+
+#[cfg(test)]
+mod determine_conflict_winner_tests {
+    use super::*;
+
+    fn create_test_record(
+        id: &str,
+        owner_override: bool,
+        reliability_score: i32,
+        created_at_days_ago: i64,
+    ) -> EmbeddingRecord {
+        EmbeddingRecord {
+            id: id.to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "test".to_string(),
+            embedding: vec![1.0],
+            source_type: "test".to_string(),
+            created_at: chrono::Utc::now() - chrono::Duration::days(created_at_days_ago),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score,
+            owner_override,
+            metadata: None,
+        }
+    }
+
+    #[test]
+    fn test_winner_owner_override() {
+        let a = create_test_record("a", true, 50, 10);
+        let b = create_test_record("b", false, 90, 5); // b has better score and is newer, but a has override
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "a");
+        assert_eq!(loser.id, "b");
+
+        let (winner2, loser2) = VectorRepository::determine_conflict_winner(&b, &a);
+        assert_eq!(winner2.id, "a");
+        assert_eq!(loser2.id, "b");
+    }
+
+    #[test]
+    fn test_winner_reliability_score() {
+        let a = create_test_record("a", false, 80, 10);
+        let b = create_test_record("b", false, 60, 5); // a has better score, b is newer
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "a");
+        assert_eq!(loser.id, "b");
+    }
+
+    #[test]
+    fn test_winner_recency() {
+        let a = create_test_record("a", false, 50, 2); // a is newer
+        let b = create_test_record("b", false, 50, 10);
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "a");
+        assert_eq!(loser.id, "b");
+    }
+
+    #[test]
+    fn test_winner_fallback() {
+        let a = create_test_record("a", false, 50, 5);
+        let mut b = create_test_record("b", false, 50, 5); // identical stats
+        b.created_at = a.created_at; // Ensure created_at is identical
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "a"); // fallback to a
+        assert_eq!(loser.id, "b");
     }
 }
