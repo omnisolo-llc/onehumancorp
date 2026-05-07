@@ -336,7 +336,7 @@
       },
       "transparent": true,
       "style": {
-        "backdrop-filter": "blur(20px) saturate(200%)"
+        "backdrop-filter": "blur(15px) saturate(200%)"
       }
     },
     {
@@ -364,7 +364,7 @@
       },
       "transparent": true,
       "style": {
-        "backdrop-filter": "blur(20px) saturate(200%)"
+        "backdrop-filter": "blur(15px) saturate(200%)"
       }
     },
     {
@@ -397,7 +397,7 @@
       },
       "transparent": true,
       "style": {
-        "backdrop-filter": "blur(20px) saturate(200%)"
+        "backdrop-filter": "blur(15px) saturate(200%)"
       }
     },
     {

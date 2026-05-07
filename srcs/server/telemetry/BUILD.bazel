@@ -2,7 +2,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "telemetry",
-    srcs = ["harness_metrics.go"],
+    srcs = ["harness_metrics.go", "sync_metrics.go"],
     importpath = "onehumancorp/srcs/server/telemetry",
     visibility = ["//visibility:public"],
     deps = [
@@ -13,6 +13,6 @@ go_library(
 
 go_test(
     name = "telemetry_test",
-    srcs = ["harness_metrics_test.go"],
+    srcs = ["harness_metrics_test.go", "sync_metrics_test.go"],
     embed = [":telemetry"],
 )

@@ -1,6 +1,8 @@
-issue_category: cleanup
+issue_category: feature
 status: completed
 details:
-  - Addressed Fault Triage requirement by organizing signals into standard categories.
-  - Reduced verbosity of health monitor logs from Warn/Error to Debug.
-  - Sanitized the agent_missions queue in sip.rs to prevent stuck missions.
+  - Added mode-specific Prometheus metrics to Hybrid MCP RAG Sync Daemon.
+  - Created telemetry methods RecordSyncDaemonError, RecordSyncLatency, RecordSyncDaemonBatchSize, RecordSyncPayloadSize and RecordSyncEscalation.
+  - Integrated the new telemetry methods inside SyncPendingMissions in sync_daemon.go.
+  - Added sync mode labels to differentiate Standalone vs Cloud.
+  - Updated kairos_hybrid_metrics.json to apply the OHC Premium Glassmorphism styling natively inside Grafana.

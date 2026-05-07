@@ -10,6 +10,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+	"onehumancorp/srcs/server/telemetry"
 )
 
 var throttleSemaphore = make(chan struct{}, 10) // Allow up to 10 concurrent syncs
@@ -70,8 +71,12 @@ func NewHybridMCPRAGDaemon(db *sql.DB, remoteURL string) *HybridMCPRAGDaemon {
 // SyncPendingMissions queries the database for agent_missions with status 'CLOUD_ESCALATION'
 // and synced_to_cloud = false, then attempts to sync them to the remote API.
 func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
+	start := time.Now()
+	mode := "Standalone"
+
 	rows, err := d.db.QueryContext(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
 	if err != nil {
+		telemetry.RecordSyncDaemonError(ctx, mode, "query_error")
 		return fmt.Errorf("sync_daemon: failed to query agent_missions: %w", err)
 	}
 
@@ -81,21 +86,31 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		payload []byte
 	}
 	var missions []mission
+	var totalPayloadSize int
 
 	for rows.Next() {
 		var m mission
 		if err := rows.Scan(&m.id, &m.status, &m.payload); err != nil {
 			log.Printf("sync_daemon: failed to scan row: %v", err)
+			telemetry.RecordSyncDaemonError(ctx, mode, "scan_error")
 			continue
 		}
 		missions = append(missions, m)
+		totalPayloadSize += len(m.payload)
 	}
 
 	if err := rows.Err(); err != nil {
 		rows.Close()
+		telemetry.RecordSyncDaemonError(ctx, mode, "rows_iteration_error")
 		return fmt.Errorf("sync_daemon: rows iteration error: %w", err)
 	}
 	rows.Close()
+
+	batchSize := len(missions)
+	telemetry.RecordSyncDaemonBatchSize(ctx, batchSize, mode)
+	if batchSize > 0 {
+		telemetry.RecordSyncPayloadSize(ctx, totalPayloadSize, mode)
+	}
 
 	var syncedCount int
 
@@ -104,6 +119,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		case throttleSemaphore <- struct{}{}:
 			// Acquired semaphore
 		case <-ctx.Done():
+			telemetry.RecordSyncDaemonError(ctx, mode, "context_cancelled")
 			return ctx.Err()
 		}
 
@@ -114,6 +130,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 			// Release semaphore on error
 			<-throttleSemaphore
 			log.Printf("sync_daemon: failed to sync mission %s: %v", m.id, err)
+			telemetry.RecordSyncDaemonError(ctx, mode, "sync_to_cloud_error")
 			continue
 		}
 
@@ -124,11 +141,16 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		<-throttleSemaphore
 		if err != nil {
 			log.Printf("sync_daemon: failed to update synced_to_cloud flag for mission %s: %v", m.id, err)
+			telemetry.RecordSyncDaemonError(ctx, mode, "db_update_error")
 			continue
 		}
 
 		syncedCount++
+		telemetry.RecordSyncEscalation(ctx, mode)
 	}
+
+	durationMs := float64(time.Since(start).Milliseconds())
+	telemetry.RecordSyncLatency(ctx, durationMs, mode)
 
 	log.Printf("sync_daemon: successfully synced %d agent_missions", syncedCount)
 	return nil

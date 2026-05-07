@@ -16,6 +16,9 @@ type SyncStatus struct {
 	Status       string `json:"status"`
 }
 
+type ContextKey string
+const ContextKeyClaims ContextKey = "claims"
+
 type StateSyncProvider interface {
 	SyncUp(ctx context.Context, orgID string) (int, error)
 	SyncDown(ctx context.Context, orgID string) (int, error)
@@ -62,5 +65,42 @@ func (s *StateSyncMCP) ListTools() []map[string]interface{} {
 				"properties": map[string]interface{}{},
 			},
 		},
+	}
+}
+
+func (s *StateSyncMCP) CallTool(ctx context.Context, name string, args map[string]interface{}) (interface{}, error) {
+	if s.hub == nil || s.hub.StateSync() == nil {
+		return nil, errors.New("state sync provider not configured")
+	}
+
+	claims, ok := ctx.Value(ContextKeyClaims).(*Claims)
+	if !ok || claims == nil || claims.OrganizationID == "" {
+		return nil, errors.New("unauthorized: missing claims or organization ID")
+	}
+
+	switch name {
+	case "sync_local_to_cloud":
+		count, err := s.hub.StateSync().SyncUp(ctx, claims.OrganizationID)
+		if err != nil {
+			return nil, fmt.Errorf("sync_local_to_cloud failed: %w", err)
+		}
+		return map[string]interface{}{"status": "success", "synced_count": count}, nil
+
+	case "sync_cloud_to_local":
+		count, err := s.hub.StateSync().SyncDown(ctx, claims.OrganizationID)
+		if err != nil {
+			return nil, fmt.Errorf("sync_cloud_to_local failed: %w", err)
+		}
+		return map[string]interface{}{"status": "success", "synced_count": count}, nil
+
+	case "get_sync_status":
+		status, err := s.hub.StateSync().GetStatus(ctx, claims.OrganizationID)
+		if err != nil {
+			return nil, fmt.Errorf("get_sync_status failed: %w", err)
+		}
+		return status, nil
+
+	default:
+		return nil, fmt.Errorf("unknown tool: %s", name)
 	}
 }

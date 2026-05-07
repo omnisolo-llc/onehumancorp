@@ -58,7 +58,7 @@ func TestListTools(t *testing.T) {
 }
 
 func TestCallTool_MissingClaims(t *testing.T) {
-	mcp := NewStateSyncMCP(&MockHub{})
+	mcp := NewStateSyncMCP(&MockHub{provider: &MockProvider{}})
 	_, err := mcp.CallTool(context.Background(), "sync_local_to_cloud", nil)
 	if err == nil {
 		t.Fatalf("expected error, got nil")
@@ -71,6 +71,9 @@ func TestCallTool_MissingClaims(t *testing.T) {
 	_, err = mcp.CallTool(ctx, "sync_local_to_cloud", nil)
 	if err == nil {
 		t.Fatalf("expected error, got nil")
+	}
+	if err.Error() != "unauthorized: missing claims or organization ID" {
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 
