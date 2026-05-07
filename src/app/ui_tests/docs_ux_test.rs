@@ -72,7 +72,7 @@ fn test_e2e_release_notes_navigation_flow() {
 
     // Verify the destination component renders correctly
     let ui = crate::app::ReleaseNotes::new().unwrap();
-    assert_eq!(ui.get_current_version(), slint::SharedString::from("v0.3.4"));
+    assert_eq!(ui.get_current_version(), slint::SharedString::from("v0.4.31"));
 }
 
 #[test]
