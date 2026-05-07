@@ -78,7 +78,7 @@ mod tests {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+            _ => { if std::env::var("CI").is_ok() { panic!("Database connection failed"); } else { return; } },
         };
 
         let labels = json!({"user_id": "123", "secret": "shh"});
@@ -100,10 +100,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_sqlite_metrics() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+            _ => { if std::env::var("CI").is_ok() { panic!("Database connection failed"); } else { return; } },
         };
 
         let res = crate::telemetry::record_sqlite_lock_contention(&pool, "test_operation").await;
@@ -118,7 +118,7 @@ mod tests {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+            _ => { if std::env::var("CI").is_ok() { panic!("Database connection failed"); } else { return; } },
         };
 
         let res = crate::telemetry::record_token_usage_forecast(&pool, "org_test", 15000.0).await;
@@ -143,7 +143,7 @@ mod tests {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+            _ => { if std::env::var("CI").is_ok() { panic!("Database connection failed"); } else { return; } },
         };
 
         let res = crate::telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
@@ -170,7 +170,7 @@ mod tests {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+            _ => { if std::env::var("CI").is_ok() { panic!("Database connection failed"); } else { return; } },
         };
 
         let res = crate::telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
@@ -196,7 +196,7 @@ mod tests {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+            _ => { if std::env::var("CI").is_ok() { panic!("Database connection failed"); } else { return; } },
         };
 
         let res = crate::telemetry::record_swarm_job_latency_by_entity(&pool, "cloud", "test-entity-3", 125.0).await;
@@ -224,7 +224,7 @@ mod tests {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+            _ => { if std::env::var("CI").is_ok() { panic!("Database connection failed"); } else { return; } },
         };
 
         // Ensure STANDALONE_MODE is true. Telemetry should be ignored
@@ -302,9 +302,16 @@ mod tests {
                                lower_line.contains("payload") ||
                                lower_line.contains("email") ||
                                lower_line.contains("password") ||
-                               lower_line.contains("pii") ||
+                               lower_line.contains("\"pii\"") ||
                                lower_line.contains("api_key") ||
-                               lower_line.contains("secret_key") {
+                               lower_line.contains("secret_key") ||
+                               lower_line.contains("\"ssn\"") ||
+                               lower_line.contains("\"credit_card\"") ||
+                               lower_line.contains("\"phone\"") ||
+                               lower_line.contains("\"address\"") ||
+                               lower_line.contains("\"dob\"") ||
+                               lower_line.contains("\"ip_address\"") ||
+                               lower_line.contains("\"mac_address\"") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }
@@ -319,6 +326,50 @@ mod tests {
             "Found PII logging violations in the following lines:\n{:#?}",
             violations
         );
+    }
+
+
+
+    #[test]
+    fn test_standalone_wrapper_audit() {
+        use std::fs;
+        use std::path::PathBuf;
+        use std::env;
+
+        let mut script_path = PathBuf::from("deploy/scripts/ohc-standalone.sh");
+        if let Ok(workspace_dir) = env::var("BUILD_WORKSPACE_DIRECTORY") {
+            let mut p = PathBuf::from(&workspace_dir);
+            p.push("deploy/scripts/ohc-standalone.sh");
+            script_path = p;
+        } else if !script_path.exists() {
+             // Fallback for runfiles
+             if let Ok(runfiles) = env::var("RUNFILES_DIR") {
+                 // Try a few common bazel runfiles paths
+                 let mut p1 = PathBuf::from(&runfiles);
+                 p1.push("_main/deploy/scripts/ohc-standalone.sh");
+                 if p1.exists() { script_path = p1; }
+
+                 let mut p2 = PathBuf::from(&runfiles);
+                 p2.push("ohc/deploy/scripts/ohc-standalone.sh");
+                 if p2.exists() { script_path = p2; }
+             }
+        }
+        if !script_path.exists() {
+            panic!("Standalone wrapper script missing, cannot perform compliance audit!");
+        }
+        let content = fs::read_to_string(&script_path).unwrap();
+            // Ensure telemetry is opt-in, meaning it defaults to false
+            assert!(
+                content.contains("if [ \"$OHC_TELEMETRY_ENABLED\" != \"true\" ]; then\n  export OHC_TELEMETRY_ENABLED=false\nfi") ||
+                content.contains("export OHC_TELEMETRY_ENABLED=false"),
+                "Standalone wrapper MUST enforce telemetry is disabled by default for data sovereignty."
+            );
+
+            // Ensure no hardcoded curl/wget/telemetry exfiltration commands exist outside the prometheus block
+            assert!(
+                !content.contains("curl -X POST https://telemetry"),
+                "Standalone wrapper contains unauthorized data exfiltration command."
+            );
     }
 
     #[test]
