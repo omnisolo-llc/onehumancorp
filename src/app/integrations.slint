@@ -122,6 +122,25 @@ export component Integrations inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
+                    Text { text: "📅 Calendly"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Automated Booking"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Calendly"); }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
                     Text { text: "💬 Chatwoot"; font-weight: 700; color: #1e293b; }
                     Text { text: "Unified Social Media DMs"; color: #64748b; wrap: word-wrap; }
                     Button {
@@ -146,11 +165,53 @@ export component Integrations inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
+                    Text { text: "💬 Manychat"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Unified Social Media Inbox"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Manychat"); }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
                     Text { text: "📧 Resend"; font-weight: 700; color: #1e293b; }
                     Text { text: "Native Email Campaign Manager"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
                         clicked => { configure_integration("Resend"); }
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 16px;
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📧 Mailchimp"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Customer Re-engagement"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Mailchimp"); }
                     }
                 }
             }
