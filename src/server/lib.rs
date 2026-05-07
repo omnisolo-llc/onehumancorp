@@ -582,6 +582,25 @@ impl HubService for MyHubService {
         }))
     }
 
+    async fn publish_site(
+        &self,
+        request: tonic::Request<PublishSiteRequest>,
+    ) -> Result<tonic::Response<PublishSiteResponse>, tonic::Status> {
+        let req = request.into_inner();
+
+        // Simulating the actual backend write/deployment operations
+        let url = if req.domain_choice == "custom" {
+            "https://www.mybusiness.com".to_string()
+        } else {
+            "https://mybusiness.ohc.app".to_string()
+        };
+
+        Ok(tonic::Response::new(PublishSiteResponse {
+            status: "published".to_string(),
+            url,
+        }))
+    }
+
     async fn audit_setup(
         &self,
         request: tonic::Request<AuditSetupRequest>,
