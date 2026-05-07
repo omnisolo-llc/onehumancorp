@@ -67,3 +67,68 @@ pub fn minify_json_prompt(data: &str) -> String {
     }
     data.to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compress_decompress_lossless() {
+        let original_data = "This is a prompt that needs to be compressed to save space and tokens in our database.";
+
+        let compressed = compress_lossless(original_data).unwrap();
+        assert!(compressed.starts_with(COMPRESSION_PREFIX));
+        assert_ne!(compressed, original_data);
+
+        let decompressed = decompress_lossless(&compressed).unwrap();
+        assert_eq!(decompressed, original_data);
+    }
+
+    #[test]
+    fn test_decompress_uncompressed() {
+        let original_data = "Plain text data";
+        let decompressed = decompress_lossless(original_data).unwrap();
+        assert_eq!(decompressed, original_data);
+    }
+
+    #[test]
+    fn test_reduce_tokens() {
+        let input = "This is a long sentence with some stop words in it and about some things.";
+        // Stop words: a, an, the, is, are, and, or, but, in, on, at, to, for, with, by, about, as, of
+        // Result should remove "is", "a", "with", "in", "and", "about".
+        // Note: 'it' and 'some' are not stop words here.
+        let reduced = reduce_tokens(input);
+        assert_eq!(reduced, "This long sentence some stop words it some things.");
+    }
+
+    #[test]
+    fn test_truncate_by_word_count() {
+        let input = "One two three four five six seven eight nine ten";
+
+        assert_eq!(truncate_by_word_count(input, 5), "One two three four five");
+        assert_eq!(truncate_by_word_count(input, 15), input); // More words than input
+        assert_eq!(truncate_by_word_count(input, 0), "");
+    }
+
+    #[test]
+    fn test_minify_json_prompt() {
+        let input_json = r#"{
+            "role": "system",
+            "content": "You are a helpful assistant."
+        }"#;
+
+        let minified = minify_json_prompt(input_json);
+        assert_eq!(minified, r#"{"content":"You are a helpful assistant.","role":"system"}"#); // field order might vary depending on serde implementation, but let's assume standard deserialization ordering or we just parse it back.
+        // A better test is to parse both and check equality.
+        let parsed_min: serde_json::Value = serde_json::from_str(&minified).unwrap();
+        let parsed_orig: serde_json::Value = serde_json::from_str(input_json).unwrap();
+        assert_eq!(parsed_min, parsed_orig);
+
+        // Ensure no whitespace outside strings
+        assert!(!minified.contains("\n"));
+
+        // Invalid json should return as-is
+        let invalid = "{ invalid json ]";
+        assert_eq!(minify_json_prompt(invalid), invalid);
+    }
+}
