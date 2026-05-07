@@ -22,8 +22,11 @@ export component Pricing inherits Window {
 
     in property <bool> is_annual: false;
 
+
     // Billing & Credits Wizard State
     in-out property <int> step: 0;
+    in-out property <bool> is_advanced: false;
+
     in property <string> current_usage: "450 / 1000 AI Actions";
     in property <string> projected_cost: "$9.00 / month";
 
@@ -70,16 +73,44 @@ export component Pricing inherits Window {
         },
     ];
 
+
     callback select_plan(string);
     callback toggle_billing_cycle();
     callback add_credits();
+    callback toggle_advanced();
+    callback save_state();
+
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
         width: 100%;
 
-        Text { text: "Pricing & Billing"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+
+        HorizontalBox {
+            Text { text: "Pricing & Billing"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            HorizontalBox {
+                spacing: 8px;
+                alignment: end;
+                Text { text: "Advanced"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                TouchArea {
+                    width: 20px;
+                    height: 20px;
+                    clicked => { toggle_advanced(); }
+                    Rectangle {
+                        width: 100%;
+                        height: 100%;
+                        border-radius: 4px;
+                        border-color: #a855f7;
+                        border-width: 1px;
+                        background: is_advanced ? #a855f7 : transparent;
+                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
+                    }
+                }
+            }
+        }
+
 
         HorizontalBox {
             spacing: 10px;
@@ -110,8 +141,15 @@ export component Pricing inherits Window {
             Text { text: "Plans"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: step == 1 ? white : #94a3b8; }
         }
 
+
         // Step 0: "What does this cost?" Flow
         if (step == 0) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Advanced: View Raw Billing JSON"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "{ \"status\": \"active\", \"usage\": 450, \"limit\": 1000 }"; height: 44px; }
+            }
+
             spacing: 16px;
             Text { text: "Your Current Usage"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
 
@@ -165,8 +203,15 @@ export component Pricing inherits Window {
             }
         }
 
+
         // Step 1: Plans
         if (step == 1) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Advanced: Enter Custom Coupon Code"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "PROMO_CODE_123"; height: 44px; }
+            }
+
             spacing: 16px;
             Text { text: "Upgrade Plan"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
 
