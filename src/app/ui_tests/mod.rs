@@ -1,3 +1,4 @@
+pub mod social_posting;
 pub mod onboarding_e2e_tests;
 pub mod login;
 pub mod wizard;
