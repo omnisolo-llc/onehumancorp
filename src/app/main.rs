@@ -1280,6 +1280,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let em_handle_for_gb = email_marketing_handle.clone();
     let dashboard_handle_for_gb = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
     let business_manager_handle_for_gb = business_manager_handle.clone();
+    let sp_handle_for_gb = social_posting_handle.clone();
     grow_business_ui.on_execute({
         move |strategy, _kpi| {
             if strategy == "Run your first email campaign" {
@@ -1287,6 +1288,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let _ = ui.show();
                 }
             } else if strategy == "Connect Instagram" {
+                if let Some(ui) = sp_handle_for_gb.upgrade() {
+                    let _ = ui.show();
+                }
                 if let Some(dash) = dashboard_handle_for_gb.upgrade() {
                     let mut current_tasks = Vec::new();
                     let current = dash.get_pending_approvals();
@@ -2017,6 +2021,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let em_handle_for_open = email_marketing_handle.clone();
                 dashboard.on_action_open_email_marketing(move || {
                     if let Some(ui) = em_handle_for_open.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+                let sp_handle_for_open = social_posting_handle.clone();
+                dashboard.on_action_open_social_posting(move || {
+                    if let Some(ui) = sp_handle_for_open.upgrade() {
                         let _ = ui.show();
                     }
                 });
