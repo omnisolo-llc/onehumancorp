@@ -12,6 +12,8 @@ export struct UiUser {
 }
 
 export component GrowthReferralWidget inherits Rectangle {
+    out property <brush> test_bg: self.background;
+    out property <length> test_blur: self.drop-shadow-blur;
     callback invite_user();
 
     background: ta.has-hover ? rgba(255, 255, 255, 0.05) : rgba(255, 255, 255, 0.03);
@@ -24,6 +26,12 @@ export component GrowthReferralWidget inherits Rectangle {
     animate background { duration: 200ms; easing: ease-in-out; }
     animate drop-shadow-blur { duration: 200ms; easing: ease-in-out; }
 
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+    }
     ta := TouchArea {}
 
     VerticalBox {
