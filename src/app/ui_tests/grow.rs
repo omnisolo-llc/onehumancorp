@@ -203,3 +203,10 @@ fn grow_business_test_strategy_execution_flow() {
     ui.invoke_execute("Connect Instagram".into(), "25%".into());
     assert!(*execute_called.borrow());
 }
+
+#[test]
+fn grow_business_test_social_media_generate_discount_code() {
+    let ui = create();
+    ui.set_selected_strategy("Generate Discount Code".into());
+    assert_eq!(ui.get_selected_strategy(), "Generate Discount Code");
+}
