@@ -1,7 +1,7 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component Landing inherits Window {
-    width: 800px;
+    min-width: 375px;
     height: 600px;
     title: "OneHumanCorp";
     out property <string> test_title: root.title;
@@ -31,8 +31,8 @@ export component Landing inherits Window {
 
         Text {
             text: is_variant_b ? 
-                "Grow your business with seamless cloud convenience. Collaborate instantly with your team from anywhere in the world." :
-                "Grow your business while keeping your ideas safe. Experience the gold standard for privacy with our local desktop app.";
+                "Grow your business with seamless Cloud Convenience. Collaborate instantly with your team from anywhere in the world." :
+                "Grow your business with Local Sovereignty while keeping your ideas safe. Experience the gold standard for privacy with our local desktop app.";
             color: #64748b;
             horizontal-alignment: center;
             wrap: word-wrap;

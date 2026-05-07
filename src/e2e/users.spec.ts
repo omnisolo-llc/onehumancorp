@@ -28,9 +28,27 @@ test.describe('User Management', () => {
     const inviteBtn = page.locator('button:has-text("Invite User")').first();
     if (await inviteBtn.isVisible()) {
       await expect(page.locator('text=Referral Program')).toBeVisible();
-      await expect(page.locator('text=Share OHC with a friend')).toBeVisible();
+      await expect(page.locator('text=Share OHC with a friend via our seamless Cloud-bridge referral loop')).toBeVisible();
       await inviteBtn.click();
     }
+  });
+
+  test.describe('User Management - Viewports', () => {
+    test('should load correctly at 375px', async ({ page }) => {
+      await page.setViewportSize({ width: 375, height: 800 });
+      await page.goto('/users');
+      await expect(page.locator('text=User Management')).first().toBeVisible();
+    });
+    test('should load correctly at 768px', async ({ page }) => {
+      await page.setViewportSize({ width: 768, height: 1024 });
+      await page.goto('/users');
+      await expect(page.locator('text=User Management')).first().toBeVisible();
+    });
+    test('should load correctly at 1440px', async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto('/users');
+      await expect(page.locator('text=User Management')).first().toBeVisible();
+    });
   });
 
 
