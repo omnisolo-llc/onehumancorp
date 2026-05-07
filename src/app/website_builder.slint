@@ -263,6 +263,18 @@ export component WebsiteBuilder inherits Window {
 
                     CalendarBlock {}
 
+                    // Viral Storefront Footer
+                    GlassCard {
+                        height: 50px;
+                        background: rgba(255, 255, 255, 0.05);
+                        border-color: rgba(255, 255, 255, 0.1);
+                        border-radius: 12px;
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "Built with OHC — Start your free business →"; font-family: "Inter"; font-size: 12px; color: #a855f7; horizontal-alignment: center;}
+                        }
+                        TouchArea { clicked => { open_ohc_signup(); } }
+                    }
+
                     GlassCard {
                         VerticalBox {
                             padding: 16px;

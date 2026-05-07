@@ -99,3 +99,15 @@ fn create_verify_share_link() {
     ui.invoke_share_to_whatsapp();
     assert!(*called.borrow());
 }
+
+#[test]
+fn share_verify_preview_content() {
+    let ui = create();
+    ui.set_business_name("Bakery".into());
+    ui.set_business_tagline("Yummy cakes".into());
+    ui.set_share_link("ohc://join?ref=cake".into());
+
+    assert_eq!(ui.get_business_name(), "Bakery");
+    assert_eq!(ui.get_business_tagline(), "Yummy cakes");
+    assert_eq!(ui.get_share_link(), "ohc://join?ref=cake");
+}

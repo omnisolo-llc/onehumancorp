@@ -1,12 +1,12 @@
-import { Button, VerticalBox, HorizontalBox, TextEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, TextEdit, CheckBox, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component EmailMarketing inherits Window {
     width: 600px;
-    height: 700px;
+    height: 800px;
     title: "Email Marketing";
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     in property <int> total_subscribers: 150;
     in property <string> selected_template: "";
@@ -24,84 +24,106 @@ export component EmailMarketing inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Email Marketing"; font-size: 24px; font-weight: 700; color: #1e293b; vertical-alignment: center; }
+            Text { text: "Email Marketing"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
             Rectangle {}
             Button { text: "Close"; height: 44px; clicked => { close(); } }
         }
 
-        GlassCard {
+        ScrollView {
             VerticalBox {
-                padding: 16px;
-                spacing: 12px;
-                Text { text: "Audience"; font-weight: 700; color: #1e293b; font-size: 18px; }
-                Text { text: "Total Subscribers: " + total_subscribers; color: #64748b; font-size: 14px; }
-            }
-        }
+                spacing: 20px;
 
-        GlassCard {
-            VerticalBox {
-                padding: 16px;
-                spacing: 12px;
-                Text { text: "AI Templates"; font-weight: 700; color: #1e293b; font-size: 18px; }
-                Text { text: "Pick a template to let the AI draft your campaign."; color: #64748b; font-size: 14px; }
+                GlassCard {
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 12px;
+                        Text { text: "1. Select Audience"; font-weight: 700; color: white; font-size: 18px; font-family: "Outfit"; }
+                        Text { text: "Total Subscribers: " + total_subscribers; color: #94a3b8; font-size: 14px; font-family: "Inter"; }
 
-                HorizontalBox {
-                    spacing: 12px;
-                    Button {
-                        text: "New arrivals";
-                        height: 44px;
-                        clicked => { generate_template("New arrivals"); }
-                    }
-                    Button {
-                        text: "Flash sale";
-                        height: 44px;
-                        clicked => { generate_template("Flash sale"); }
-                    }
-                    Button {
-                        text: "Thank you";
-                        height: 44px;
-                        clicked => { generate_template("Thank you"); }
+                        VerticalBox {
+                            spacing: 8px;
+                            CheckBox { text: "All Customers (" + total_subscribers + ")"; checked: true; }
+                            CheckBox { text: "Recent Buyers (42)"; }
+                            CheckBox { text: "New Subscribers (12)"; }
+                        }
                     }
                 }
-            }
-        }
 
-        GlassCard {
-            VerticalBox {
-                padding: 16px;
-                spacing: 12px;
-                Text { text: "Preview & Send"; font-weight: 700; color: #1e293b; font-size: 18px; }
+                GlassCard {
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 12px;
+                        Text { text: "2. Pick an AI Template"; font-weight: 700; color: white; font-size: 18px; font-family: "Outfit"; }
+                        Text { text: "Our AI will draft a high-converting message for you."; color: #94a3b8; font-size: 14px; font-family: "Inter"; }
 
-                TextEdit {
-                    text: preview_text;
-                    height: 150px;
+                        HorizontalBox {
+                            spacing: 12px;
+                            Button {
+                                text: "📦 New arrivals";
+                                height: 44px;
+                                clicked => { generate_template("New arrivals"); }
+                            }
+                            Button {
+                                text: "🔥 Flash sale";
+                                height: 44px;
+                                clicked => { generate_template("Flash sale"); }
+                            }
+                            Button {
+                                text: "🙏 Thank you";
+                                height: 44px;
+                                clicked => { generate_template("Thank you"); }
+                            }
+                        }
+                    }
                 }
 
-                HorizontalBox {
-                    Button {
-                        text: "Send Campaign";
-                        primary: true;
-                        height: 44px;
-                        clicked => { send_campaign(); }
-                    }
-                    if (status_message != "") : Text {
-                        text: status_message;
-                        color: #10b981;
-                        font-size: 14px;
-                        vertical-alignment: center;
+                GlassCard {
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 12px;
+                        Text { text: "3. Preview & Send"; font-weight: 700; color: white; font-size: 18px; font-family: "Outfit"; }
+
+                        TextEdit {
+                            text: preview_text;
+                            height: 150px;
+                            font-family: "Inter";
+                        }
+
+                        HorizontalBox {
+                            Button {
+                                text: "🚀 Send Campaign";
+                                primary: true;
+                                height: 48px;
+                                clicked => { send_campaign(); }
+                            }
+                            if (status_message != "") : Text {
+                                text: status_message;
+                                color: #10b981;
+                                font-size: 14px;
+                                vertical-alignment: center;
+                                font-family: "Inter";
+                            }
+                        }
                     }
                 }
-            }
-        }
 
-        GlassCard {
-            VerticalBox {
-                padding: 16px;
-                spacing: 12px;
-                Text { text: "Analytics"; font-weight: 700; color: #1e293b; font-size: 18px; }
-                HorizontalBox {
-                    Text { text: "Emails Sent: " + emails_sent; color: #64748b; font-size: 14px; }
-                    Text { text: "Open Rate: " + open_rate; color: #64748b; font-size: 14px; }
+                GlassCard {
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 12px;
+                        Text { text: "Analytics"; font-weight: 700; color: white; font-size: 18px; font-family: "Outfit"; }
+                        HorizontalBox {
+                            spacing: 20px;
+                            VerticalBox {
+                                Text { text: "Emails Sent"; color: #94a3b8; font-size: 12px; font-family: "Inter"; }
+                                Text { text: emails_sent; color: white; font-size: 20px; font-weight: 700; font-family: "Outfit"; }
+                            }
+                            VerticalBox {
+                                Text { text: "Open Rate"; color: #94a3b8; font-size: 12px; font-family: "Inter"; }
+                                Text { text: open_rate; color: #a855f7; font-size: 20px; font-weight: 700; font-family: "Outfit"; }
+                            }
+                        }
+                    }
                 }
             }
         }
