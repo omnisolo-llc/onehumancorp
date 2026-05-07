@@ -539,7 +539,7 @@
     "@@rules_flutter+//flutter:extensions.bzl%flutter": {
       "general": {
         "bzlTransitiveDigest": "yEZVxv7vZRafxjfcsnAXXLLUTd6kAL7/4QnInr7y+bk=",
-        "usagesDigest": "wAEPX8aSrpX+McWAxRhXyPg9iHvfMtSsG8Y5KLngdEs=",
+        "usagesDigest": "QwAb0LTCsUcgZU1h9NPAOG7QuJ8o37UAm37QH+u3A6U=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "flutter_macos": {
@@ -581,7 +581,7 @@
     "@@rules_nodejs+//nodejs:extensions.bzl%node": {
       "general": {
         "bzlTransitiveDigest": "oZFClfRhTTwsYzpxVPkOpOt/r0+OzEfEV37au0jFZ0s=",
-        "usagesDigest": "GNqYcxi63hYPwtIOMvzRLtf+nOiXEsQ+NcT2xbwohR0=",
+        "usagesDigest": "Dnf0QXIT6A/3tkQ7m69hQaUykqkbRPHS8QY8ABFkNyE=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "nodejs_linux_amd64": {
@@ -712,7 +712,7 @@
     "@@rules_pkg+//toolchains/rpm:rpmbuild_configure.bzl%find_system_rpmbuild_bzlmod": {
       "general": {
         "bzlTransitiveDigest": "GRI4sIxHeBPRn+6AWpn8sfcSnU14cOcXwKE5j+yVfJk=",
-        "usagesDigest": "b4xRlyaDA3PI9qLwTpA/pycYrYFNEPnB3jyyV6qwGzw=",
+        "usagesDigest": "lvTFqE620s0b1C0zVgysaGKnlTwx+75XkKkXv+5snzA=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "rules_pkg_rpmbuild": {
@@ -755,7 +755,7 @@
     "@@rules_rust+//crate_universe:extensions.bzl%crate": {
       "general": {
         "bzlTransitiveDigest": "3PwaY69dmw68DCo0U8+7+k6SeFK8bkqrUdZIcpkWWOM=",
-        "usagesDigest": "eesJmPQr6MVO8AT+kHzQ/Dr77nme/A954smQi7hnH3w=",
+        "usagesDigest": "QW0MevYTcNJahxjO29/ITCvYKIxT1zv1Ji0SZo8/v2k=",
         "recordedInputs": [
           "ENV:CARGO_BAZEL_DEBUG \\0",
           "ENV:CARGO_BAZEL_GENERATOR_SHA256 \\0",
@@ -11212,7 +11212,7 @@
     "@@toolchains_buildbuddy+//:extensions.bzl%buildbuddy": {
       "general": {
         "bzlTransitiveDigest": "YThiSErJv+jiCHJzZIEyk0yegQRS/x+T/ce309eGTvA=",
-        "usagesDigest": "CbWv9zwSZj8v13CqPV+St2f8JkcSer/RTuQifXhbe50=",
+        "usagesDigest": "BIFdBDKHIeughMxKu+5/APsHXr9OB/eLdopsqn+fdF0=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "buildbuddy_toolchain": {
