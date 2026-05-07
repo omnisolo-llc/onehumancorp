@@ -87,7 +87,7 @@ export component UnifiedInbox inherits Window {
                                         Rectangle {}
                                         Text { text: conv.time; font-size: 12px; color: #64748b; }
                                     }
-                                    Text { text: conv.last_message; font-size: 14px; color: conv.unread ? #1e293b : #64748b; overflow: elide; }
+                                    Text { text: conv.last_message; font-size: 14px; color: conv.unread ? #1e293b : #64748b; wrap: word-wrap; }
                                 }
                             }
                         }
