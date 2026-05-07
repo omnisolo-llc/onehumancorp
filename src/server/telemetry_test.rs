@@ -422,3 +422,63 @@ fi"#;
         "Local Sovereignty violation: ohc-standalone.sh does not properly strictly enforce OHC_TELEMETRY_ENABLED opt-in boundary."
     );
 }
+
+#[test]
+fn test_redact_interface_pii_malicious_payloads() {
+    let payload = serde_json::json!({
+        "payload": {
+            "credit_card": "4111-1111-1111-1111",
+            "cvv": "123",
+            "dob": "1990-01-01",
+            "passport_number": "A1234567",
+            "bank_account": "123456789",
+            "stripe_token": "tok_123456789",
+            "billing_address": "123 Main St, Anytown USA",
+            "ssn": "123-45-6789",
+            "phone_number": "555-123-4567",
+            "email_address": "malicious@example.com",
+            "tenant_id": "tenant-123",
+            "organization_id": "org-456",
+            "session_id": "session-789",
+        },
+        "nested": {
+            "deep": {
+                "secret_key": "sk-1234567890",
+                "api_key": "ak-0987654321",
+                "auth_token": "Bearer token",
+                "password_hash": "hash",
+                "cookie_session": "cookie",
+                "credential_id": "cred-1",
+            }
+        },
+        "array_of_evil": [
+            { "name": "John Doe", "email": "john@doe.com" },
+            { "address": "456 Elm St", "phone": "555-987-6543" }
+        ],
+        "safe_field": "This should not be redacted",
+        "another_safe": 123
+    });
+
+    let redacted = crate::telemetry::redact_interface_pii(payload);
+
+    // Verify root level safe fields
+    assert_eq!(redacted["safe_field"], "This should not be redacted");
+    assert_eq!(redacted["another_safe"], 123);
+
+    // Because the key is "payload", the entire object gets redacted to "[REDACTED]"
+    assert_eq!(redacted["payload"], "[REDACTED]");
+
+    // Verify deeply nested secret redactions
+    assert_eq!(redacted["nested"]["deep"]["secret_key"], "[REDACTED]");
+    assert_eq!(redacted["nested"]["deep"]["api_key"], "[REDACTED]");
+    assert_eq!(redacted["nested"]["deep"]["auth_token"], "[REDACTED]");
+    assert_eq!(redacted["nested"]["deep"]["password_hash"], "[REDACTED]");
+    assert_eq!(redacted["nested"]["deep"]["cookie_session"], "[REDACTED]");
+    assert_eq!(redacted["nested"]["deep"]["credential_id"], "[REDACTED]");
+
+    // Verify array redactions
+    assert_eq!(redacted["array_of_evil"][0]["name"], "[REDACTED]");
+    assert_eq!(redacted["array_of_evil"][0]["email"], "[REDACTED]");
+    assert_eq!(redacted["array_of_evil"][1]["address"], "[REDACTED]");
+    assert_eq!(redacted["array_of_evil"][1]["phone"], "[REDACTED]");
+}
