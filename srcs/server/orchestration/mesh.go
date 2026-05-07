@@ -1,6 +1,10 @@
 package orchestration
 
 import (
+	"bytes"
+	"fmt"
+	"net/http"
+	"time"
 	"context"
 	"sync"
 )
@@ -80,15 +84,36 @@ func (m *LocalTeammateMesh) Subscribe(ctx context.Context, channel string, handl
 // CentrifugeMesh implements MeshHub using rueidis and Centrifugo primitives.
 // This is currently a stub for cloud-native setup.
 type CentrifugeMesh struct {
+	BaseURL    string
+	HTTPClient *http.Client
 }
 
 // NewCentrifugeMesh creates a new CentrifugeMesh.
-func NewCentrifugeMesh() *CentrifugeMesh {
-	return &CentrifugeMesh{}
+func NewCentrifugeMesh(baseURL string) *CentrifugeMesh {
+	return &CentrifugeMesh{
+		BaseURL:    baseURL,
+		HTTPClient: &http.Client{Timeout: 5 * time.Second},
+	}
 }
 
 // Publish is a stub for CentrifugeMesh.
 func (m *CentrifugeMesh) Publish(ctx context.Context, channel string, data []byte) error {
+	req, err := http.NewRequestWithContext(ctx, "POST", m.BaseURL, bytes.NewBuffer(data))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := m.HTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("publish failed with status: %d", resp.StatusCode)
+	}
+
 	return nil
 }
 
