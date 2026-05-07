@@ -8,9 +8,20 @@ go_library(
         "tasks_db.go",
         "state_machine.go",
         "sip.go",
+        "sub_agent.go",
+        "subagent_worker.go",
+        "sync_daemon.go",
+        "task_orchestrator.go",
+        "sanitizer.go",
+        "chaos_test.go",
     ],
     importpath = "onehumancorp/srcs/server/orchestration",
     visibility = ["//visibility:public"],
+    deps = [
+        "@in_gopkg_yaml_v3//:yaml_v3",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
 )
 
 go_test(
@@ -22,6 +33,12 @@ go_test(
         "state_machine_test.go",
         "state_machine_coverage_test.go",
         "sip_test.go",
+        "sub_agent_test.go",
+        "sub_agent_budget_test.go",
+        "subagent_worker_test.go",
+        "sync_daemon_test.go",
+        "tasks_db_parity_test.go",
+        "sanitizer_test.go",
     ],
     embed = [":orchestration"],
     deps = [
