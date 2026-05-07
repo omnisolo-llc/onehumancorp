@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"sync"
 
 	"onehumancorp/srcs/server/telemetry"
+	"onehumancorp/srcs/server/integrations/mcp/harness"
 )
 
 // InternalTool is the internal representation of an OHC tool.
@@ -83,16 +85,16 @@ type ClientManager struct {
 
 // MCPServer represents a connected MCP server.
 type MCPServer struct {
-	Config  ServerConfig
+	Config   ServerConfig
 	cmd      *exec.Cmd
 	stdin    io.WriteCloser
 	stdout   io.ReadCloser
-	decoder  *json.Decoder
 	mu       sync.Mutex
 	reqID    int
 	requests map[string]chan *JSONRPCMessage
 	ctx      context.Context
 	cancel   context.CancelFunc
+	bridge   harness.TransportBridge
 }
 
 // NewClientManager creates a new MCP client manager.
@@ -111,44 +113,70 @@ func (cm *ClientManager) ConnectStdio(ctx context.Context, config ServerConfig) 
 		return fmt.Errorf("server %s already connected", config.ID)
 	}
 
-	cmd := exec.CommandContext(ctx, config.Command, config.Args...)
-	cmd.Env = config.Env
+	mode := os.Getenv("OHC_EXECUTION_MODE")
+	var cmd *exec.Cmd
+	var stdin io.WriteCloser
+	var stdout io.ReadCloser
+	var err error
 
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return fmt.Errorf("failed to get stdin pipe: %w", err)
-	}
+	if mode != "cloud" {
+		cmd = exec.CommandContext(ctx, config.Command, config.Args...)
+		cmd.Env = config.Env
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("failed to get stdout pipe: %w", err)
-	}
+		stdin, err = cmd.StdinPipe()
+		if err != nil {
+			return fmt.Errorf("failed to get stdin pipe: %w", err)
+		}
 
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start server: %w", err)
+		stdout, err = cmd.StdoutPipe()
+		if err != nil {
+			return fmt.Errorf("failed to get stdout pipe: %w", err)
+		}
+
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("failed to start server: %w", err)
+		}
 	}
 
 	serverCtx, cancel := context.WithCancel(ctx)
+
+	channelID := "agent_" + config.ID
+
+	bridge := harness.NewUniversalBridge(stdout, stdin, channelID)
+
+	if bridge == nil {
+		cancel()
+		return fmt.Errorf("failed to initialize transport bridge: fallback to local failed due to nil stdio")
+	}
 
 	server := &MCPServer{
 		Config:   config,
 		cmd:      cmd,
 		stdin:    stdin,
 		stdout:   stdout,
-		decoder:  json.NewDecoder(stdout),
 		requests: make(map[string]chan *JSONRPCMessage),
 		ctx:      serverCtx,
 		cancel:   cancel,
+		bridge:   bridge,
 	}
 
 	go server.readLoop()
 
-	go func() {
-		// Wait for command to finish to avoid zombie processes
-		cmd.Wait()
-		server.cancel()
-		cm.Disconnect(config.ID)
-	}()
+	if cmd != nil {
+		go func() {
+			cmd.Wait()
+			server.cancel()
+			cm.Disconnect(config.ID)
+		}()
+	} else {
+		// In cloud mode, there is no cmd to wait on.
+		// The readLoop will return on context cancel or bridge error.
+		// We launch a cleanup watcher to remove the server when the server's context is canceled.
+		go func() {
+			<-serverCtx.Done()
+			cm.Disconnect(config.ID)
+		}()
+	}
 
 	cm.servers[config.ID] = server
 
@@ -168,6 +196,9 @@ func (cm *ClientManager) Disconnect(serverID string) {
 		server.cancel()
 		if server.cmd != nil && server.cmd.Process != nil {
 			server.cmd.Process.Kill()
+		}
+		if server.bridge != nil {
+			server.bridge.Close()
 		}
 	}
 }
@@ -262,13 +293,20 @@ func (s *MCPServer) nextID() int {
 func (s *MCPServer) readLoop() {
 	defer s.cancel()
 	for {
+		var data []byte
+		var err error
 		var msg JSONRPCMessage
-		if err := s.decoder.Decode(&msg); err != nil {
-			if err == io.EOF {
+
+		data, err = s.bridge.Receive(s.ctx)
+		if err != nil {
+			if err == io.EOF || err == context.Canceled {
 				return
 			}
-			// In a real application, we might want to log this error
 			return
+		}
+
+		if unmarshalErr := json.Unmarshal(data, &msg); unmarshalErr != nil {
+			continue
 		}
 
 		if msg.ID != nil {
@@ -282,6 +320,8 @@ func (s *MCPServer) readLoop() {
 			if ok {
 				ch <- &msg
 			}
+		} else {
+			// Handle notifications
 		}
 	}
 }
@@ -305,12 +345,8 @@ func (s *MCPServer) sendRequest(ctx context.Context, req JSONRPCMessage) (*JSONR
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	// Add newline to flush json over stdio
-	reqBytes = append(reqBytes, '\n')
-
-	// Write needs to be serialized to prevent garbled requests
 	s.mu.Lock()
-	_, writeErr := s.stdin.Write(reqBytes)
+	writeErr := s.bridge.Send(ctx, reqBytes)
 	s.mu.Unlock()
 
 	if writeErr != nil {
