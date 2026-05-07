@@ -213,23 +213,28 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::CostDashboardResponse>, tonic::Status> {
-        let _tenant_id = request.metadata().get("x-tenant-id")
+        let tenant_id = request.metadata().get("x-tenant-id")
             .map(|v| v.to_str().unwrap_or("default"))
             .unwrap_or("default");
 
         let auditor = self.hub.get_cost_auditor();
-        let total_costs = (auditor.get_total_cost() * 100.0) as i64;
-        let total_revenue = (auditor.get_total_revenue() * 100.0) as i64;
-        // llm_cost is basically the total cost in this context minus some other factors, but we can just map it properly.
-        // Actually since we don't track all granular cost types differently here, we will approximate them or use 0.
-        // The instructions want us to replace hardcoded data with actual metrics.
+        let llm_cost_f64 = auditor.get_total_cost();
+        let total_revenue_f64 = auditor.get_total_revenue();
+
+        let storage_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
+        let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+        let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
+
+        let payment_fees_f64 = total_revenue_f64 * 0.029;
+
+        let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
         Ok(tonic::Response::new(crate::ohc::orchestration::CostDashboardResponse {
-            total_revenue,
-            total_costs,
-            llm_cost: total_costs, // Total LLM costs is currently our primary tracked cost
-            storage_cost: 0,
-            payment_fees: 0,
+            total_revenue: (total_revenue_f64 * 100.0) as i64,
+            total_costs: (total_costs_f64 * 100.0) as i64,
+            llm_cost: (llm_cost_f64 * 100.0) as i64,
+            storage_cost: (storage_cost_f64 * 100.0) as i64,
+            payment_fees: (payment_fees_f64 * 100.0) as i64,
             period_start: "2024-05-01".to_string(), // In a real app this would be computed
             period_end: "2024-05-31".to_string(),
         }))
