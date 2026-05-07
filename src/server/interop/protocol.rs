@@ -385,6 +385,96 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_interop_listen_for_pings() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+
+        let protocol_listener = InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string());
+
+        let _cancel = protocol_listener.listen_for_pings().await.unwrap();
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        // Subscribe to the ACK
+        let ack_topic = format!("system:health_ack:sender_node");
+        let ack_topic_clone = ack_topic.clone();
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == ack_topic_clone {
+                rx.store(true, Ordering::SeqCst);
+            }
+        });
+        let _cancel_ack = bus.subscribe(ack_topic, handler).await.unwrap();
+
+        // Publish a ping
+        use prost::Message as ProstMessage;
+        let ping = proto::HealthPing {
+            current_mode: 0,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+            source_node_id: "sender_node".to_string(),
+        };
+
+        let mut buf = Vec::new();
+        ping.encode(&mut buf).unwrap();
+
+        let msg = Message {
+            topic: "system:health_ping".to_string(),
+            payload: buf,
+        };
+        bus.publish(msg).await.unwrap();
+
+        sleep(Duration::from_millis(100)).await;
+
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_listen_for_jobs() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+
+        let protocol_listener = InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string());
+
+        let _cancel = protocol_listener.listen_for_jobs("tenant_x").await.unwrap();
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        // Subscribe to the ACK
+        let ack_topic = format!("system:job_ack:job_123");
+        let ack_topic_clone = ack_topic.clone();
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == ack_topic_clone {
+                rx.store(true, Ordering::SeqCst);
+            }
+        });
+        let _cancel_ack = bus.subscribe(ack_topic, handler).await.unwrap();
+
+        // Publish a job
+        use prost::Message as ProstMessage;
+        let dispatch = proto::JobDispatch {
+            job_id: "job_123".to_string(),
+            tenant_id: "tenant_x".to_string(),
+            action_name: "test_action".to_string(),
+            payload_json: vec![1, 2, 3],
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+
+        let mut buf = Vec::new();
+        dispatch.encode(&mut buf).unwrap();
+
+        let msg = Message {
+            topic: "system:job_dispatch:tenant_x".to_string(),
+            payload: buf,
+        };
+        bus.publish(msg).await.unwrap();
+
+        sleep(Duration::from_millis(200)).await; // longer sleep for retry publish mechanism
+
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
     async fn test_interop_handoff_lock_deadlock_prevention() {
         let bus = Arc::new(MemoryBus::new());
         let lock = bus.clone();

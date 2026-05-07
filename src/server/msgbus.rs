@@ -609,6 +609,7 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
     
+
     #[tokio::test]
     async fn test_memory_bus_pub_sub() {
         let bus = MemoryBus::new();
@@ -767,6 +768,49 @@ mod tests {
 
         assert!(received.load(std::sync::atomic::Ordering::SeqCst));
         cancel();
+    }
+
+    #[tokio::test]
+    async fn test_health_monitor_ping_success() {
+        let bus = std::sync::Arc::new(MemoryBus::new());
+        let monitor = HealthMonitor::new(bus.clone());
+
+        // We need to listen for the ping and respond with an ack.
+        let bus_clone = bus.clone();
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "system:health_ping" {
+                use prost::Message as ProstMessage;
+                if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&msg.payload[..]) {
+                    let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
+                    let ack_msg = Message {
+                        topic: ack_topic,
+                        payload: vec![], // The content of the ack is currently ignored by ping()
+                    };
+                    let bus_inner = bus_clone.clone();
+                    tokio::spawn(async move {
+                        let _ = bus_inner.publish(ack_msg).await;
+                    });
+                }
+            }
+        });
+
+        let cancel = bus.subscribe("system:health_ping".to_string(), handler).await.unwrap();
+
+        // The ping should succeed.
+        assert!(monitor.ping().await.is_ok());
+
+        cancel();
+    }
+
+    #[tokio::test]
+    async fn test_health_monitor_ping_timeout() {
+        let bus = std::sync::Arc::new(MemoryBus::new());
+        let monitor = HealthMonitor::new(bus.clone());
+
+        // Without any handler to respond with an ack, ping should timeout.
+        let result = monitor.ping().await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Health ping timed out waiting for ack");
     }
 
     #[tokio::test]
