@@ -18,8 +18,18 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
     llm: &Arc<dyn LlmClientForParser>,
     req: ChatRequest,
     max_retries: usize,
+    schema: Option<serde_json::Value>,
 ) -> Result<T, ToolError> {
     let mut current_req = req.clone();
+
+    if let Some(s) = schema {
+        current_req.tools.push(crate::types::ToolDefinition {
+            name: "return_structured_output".to_string(),
+            description: "Return the parsed output object following the exact provided schema.".to_string(),
+            parameters: s,
+        });
+    }
+
     let mut attempt = 0;
 
     loop {
@@ -28,9 +38,17 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
             Ok(r) => r,
             Err(e) => return Err(ToolError::Transient(format!("LLM Error: {}", e))),
         };
+
+        // Output Parsing relying entirely on native tool_calls API objects
+        if let Some(tool_call) = resp.message.tool_calls.iter().find(|tc| tc.name == "return_structured_output") {
+            if let Ok(parsed) = serde_json::from_value::<T>(tool_call.arguments.clone()) {
+                return Ok(parsed);
+            }
+        }
+
         let completion = resp.message.content.clone();
 
-        // Output Parsing: JSON robust extraction mechanic.
+        // Fallback Output Parsing: JSON robust extraction mechanic.
         // Handles cases where LLM wraps response in markdown e.g. ```json ... ```
         let mut json_str = completion.trim();
         let obj_start = json_str.find('{');
@@ -134,7 +152,7 @@ mod tests {
             temperature: 0.0,
         };
 
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3, None).await.unwrap();
         assert_eq!(result.result, "success_markdown");
     }
 
@@ -153,7 +171,7 @@ mod tests {
             temperature: 0.0,
         };
 
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClient>), req, 3).await.unwrap();
+        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3, None).await.unwrap();
         assert_eq!(result.result, "success");
     }
 
@@ -175,8 +193,59 @@ mod tests {
             temperature: 0.0,
         };
 
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClient>), req, 3).await.unwrap();
+        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3, None).await.unwrap();
         assert_eq!(result.result, "success after retry");
+    }
+
+    #[tokio::test]
+    async fn test_parse_structured_output_native_tool_calls() {
+        struct MockLlmClientToolCalls {}
+
+        #[async_trait::async_trait]
+        impl LlmClientForParser for MockLlmClientToolCalls {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(ChatResponse {
+                    message: Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            crate::types::ToolCall {
+                                id: "mock-call".to_string(),
+                                name: "return_structured_output".to_string(),
+                                arguments: serde_json::json!({"result": "success_tool_call"}),
+                            }
+                        ],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                })
+            }
+        }
+
+        let client = Arc::new(MockLlmClientToolCalls {});
+
+        let req = ChatRequest {
+            model: "test".to_string(),
+            system: "".to_string(),
+            messages: vec![],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        };
+
+        let schema = serde_json::json!({
+            "type": "object",
+            "properties": {
+                "result": {"type": "string"}
+            }
+        });
+
+        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3, Some(schema)).await.unwrap();
+        assert_eq!(result.result, "success_tool_call");
     }
 
     #[tokio::test]
@@ -197,7 +266,7 @@ mod tests {
             temperature: 0.0,
         };
 
-        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2, None).await;
         assert!(result.is_err());
         if let Err(ToolError::Fatal(msg)) = result {
             assert!(msg.contains("Output parsing failed after 2 retries"));
