@@ -567,3 +567,13 @@ fn fix_issue_wizard_resolve_issue_callback() {
     ui.invoke_resolve_issue();
     assert!(*callback_called.borrow());
 }
+
+#[test]
+fn fix_issue_wizard_advanced_mode_toggle() {
+    crate::ui_tests::init();
+    let ui = crate::app::Wizard::new().unwrap();
+
+    assert_eq!(ui.get_is_advanced(), false);
+    ui.invoke_toggle_advanced();
+    assert_eq!(ui.get_is_advanced(), true);
+}

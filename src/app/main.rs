@@ -8132,3 +8132,13 @@ mod e2e_issue_9422_tests {
     }
 
 }
+#[test]
+fn test_advanced_mode_wizard_rust() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::Wizard::new().unwrap();
+
+    assert_eq!(ui.get_is_advanced(), false);
+    ui.invoke_toggle_advanced();
+    assert_eq!(ui.get_is_advanced(), true);
+}

@@ -1,0 +1,12 @@
+--- src/app/main.rs
++++ src/app/main.rs
+@@ -109,6 +109,10 @@
+     ui.on_resolve_issue(move || {
+         println!("Applying fix...");
+     });
++
++    let init_is_advanced = IS_ADVANCED.with(|ia| *ia.borrow());
++    ui.set_is_advanced(init_is_advanced);
+
+     #[cfg(not(target_arch = "wasm32"))]
+     {

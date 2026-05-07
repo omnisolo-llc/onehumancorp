@@ -1,0 +1,22 @@
+--- src/app/main.rs
++++ src/app/main.rs
+@@ -107,6 +107,13 @@
+     ui.on_resolve_issue(move || {
+         println!("Applying fix...");
+     });
++
++    let init_is_advanced = IS_ADVANCED.with(|ia| *ia.borrow());
++    ui.set_is_advanced(init_is_advanced);
++
++    ui.on_toggle_advanced({
++        let ui_handle = ui.as_weak();
++        move || {
++            if let Some(u) = ui_handle.upgrade() {
++                let is_adv = u.get_is_advanced();
++                set_global_is_advanced(is_adv);
++            }
++        }
++    });
+
+     #[cfg(not(target_arch = "wasm32"))]
+     {

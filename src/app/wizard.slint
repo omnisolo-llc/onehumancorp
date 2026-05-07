@@ -1,7 +1,11 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 
 export component Wizard inherits Window {
+    in-out property <bool> is_advanced: false;
+    callback toggle_advanced();
+    toggle_advanced => { is_advanced = !is_advanced; }
     min-width: 375px;
     preferred-width: 500px;
     height: 600px;
@@ -27,6 +31,10 @@ export component Wizard inherits Window {
 
         HorizontalBox {
             Text { text: "Help Me Fix This"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { toggle_advanced(); }
+            }
         }
 
         HorizontalBox {
@@ -104,6 +112,13 @@ export component Wizard inherits Window {
                     Text { text: "We need your permission to securely refresh the connection to your email provider. This takes one click and requires no technical knowledge."; font-family: "Inter"; font-size: 14px; color: #cbd5e1; wrap: word-wrap; }
                 }
             }
+            if (is_advanced) : GlassCard {
+                background: rgba(0, 0, 0, 0.5);
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "CLI Command: \n$ ohc-cli integrations reconnect --helper \"Customer Support\" --provider \"Email\""; font-family: "Inter"; font-size: 12px; color: #a855f7; wrap: word-wrap; }
+                }
+            }
         }
 
         // Step 2: Resolve & Apply
@@ -119,6 +134,13 @@ export component Wizard inherits Window {
                     spacing: 12px;
                     Text { text: "✅ Ready to fix"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: #10b981; }
                     Text { text: "Click the button below to securely apply the fix. Your helper will be back to work in seconds."; font-family: "Inter"; font-size: 14px; color: #cbd5e1; wrap: word-wrap; }
+                }
+            }
+            if (is_advanced) : GlassCard {
+                background: rgba(0, 0, 0, 0.5);
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Raw Configuration Delta: \n{ \"email_integration\": { \"status\": \"active\", \"retries\": 0 } }"; font-family: "Inter"; font-size: 12px; color: #a855f7; wrap: word-wrap; }
                 }
             }
         }
