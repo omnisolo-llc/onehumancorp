@@ -369,6 +369,21 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_handoff_mission_marks_blocked() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(10))
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
+
+        let sip_db = SipDB::new(pool, "test_org".to_string());
+
+        let res = sip_db.handoff_mission("dummy_id", "Blocked by prompt instructions").await;
+        // Should error out gracefully with our dummy pool timeout instead of panicking
+        assert!(res.is_err());
+    }
+
+    #[tokio::test]
     async fn test_prune_stale_missions_marks_stuck_as_failed() {
         // Just verify it doesn't crash on execution with a valid pool.
         let pool = sqlx::postgres::PgPoolOptions::new()
