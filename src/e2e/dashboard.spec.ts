@@ -36,14 +36,14 @@ test.describe('Dashboard Core', () => {
     await expect(page.locator('text=Ongoing Tasks')).toBeVisible();
   });
 
-  test('should display generative score stat card', async ({ page }) => {
+  test('should display store health score stat card', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Generative Score')).toBeVisible();
+    await expect(page.locator('text=Store Health')).toBeVisible();
   });
 
   test('should show quick actions section', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Business Advisory')).toBeVisible();
+    await expect(page.locator('text=Store Tips')).toBeVisible();
   });
 
   test('should display add product quick action', async ({ page }) => {
@@ -141,12 +141,12 @@ test.describe('Dashboard Mobile', () => {
     await page.goto('/');
     await expect(page.locator('text=Today\'s Sales')).toBeVisible();
     await expect(page.locator('text=Orders to Ship')).toBeVisible();
-    await expect(page.locator('text=Generative Score')).toBeVisible();
+    await expect(page.locator('text=Store Health')).toBeVisible();
     await expect(page.locator('text=Needs Your Approval')).toBeVisible();
   });
 
   test('should display quick actions on mobile', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Business Advisory')).toBeVisible();
+    await expect(page.locator('text=Store Tips')).toBeVisible();
   });
 });

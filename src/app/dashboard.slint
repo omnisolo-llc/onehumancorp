@@ -218,13 +218,13 @@ export component Dashboard inherits Window {
             }
         }
 
-        // Business Advisory Nudges
+        // Store Tips Nudges
         VerticalBox {
             spacing: 12px;
             HorizontalBox {
                 alignment: start;
                 spacing: 8px;
-                Text { text: "Business Advisory"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                Text { text: "Store Tips"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
                 TooltipElement { tooltip_id: "advisory_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_advisory_hint = !show_advisory_hint; } } }
             }
             if (show_advisory_hint) : Text { text: "AI analyzes your store to suggest the best actions to take."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
