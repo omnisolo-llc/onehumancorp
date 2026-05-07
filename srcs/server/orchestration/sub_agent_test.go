@@ -182,7 +182,7 @@ func TestSubAgentTimeout(t *testing.T) {
 
 	err := spawner.executeTask(ctx, task)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "context deadline exceeded")
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
 }
 
 func TestSubAgentSpawner_CircuitBreaker(t *testing.T) {
@@ -217,4 +217,85 @@ func TestSubAgentSpawner_CircuitBreaker(t *testing.T) {
 		}
 	}
 	assert.True(t, foundPaused)
+}
+func TestSubAgentSpawner_Monitor(t *testing.T) {
+	spawner := NewDefaultSubAgentSpawner(&mockMeshHub{}, false, 0)
+	err := spawner.Monitor(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestSubAgentSpawner_CircuitBreaker_HalfOpen(t *testing.T) {
+	cb := NewCircuitBreaker(1, 10*time.Millisecond)
+	cb.RecordFailure()
+	assert.False(t, cb.Allow())
+
+	// Wait for timeout
+	time.Sleep(15 * time.Millisecond)
+
+	// Should enter half-open state and return true
+	assert.True(t, cb.Allow())
+}
+
+func TestSubAgentSpawner_NilMesh(t *testing.T) {
+	spawner := NewDefaultSubAgentSpawner(nil, false, 0)
+	// Should not panic when broadcasting with nil mesh
+	spawner.broadcastLifecycleEvent(context.Background(), "task-1", "EVENT")
+}
+
+func TestSubAgentSpawner_MaxConcurrencyFallback(t *testing.T) {
+	spawner := NewDefaultSubAgentSpawner(&mockMeshHub{}, true, -1)
+	assert.NotNil(t, spawner.semaphore)
+	assert.Equal(t, 5, cap(spawner.semaphore)) // Default maxConcurrency is 5
+}
+
+func TestTaskOrchestrator_StartBackgroundWorker(t *testing.T) {
+	db := setupTestDBForSubAgent(t)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+
+	// Create a delegated task
+	err := store.CreateTask(context.Background(), &SharedTask{
+		ID:       "worker-delegated-1",
+		Status:   "PENDING",
+		Priority: "DELEGATED",
+	})
+	assert.NoError(t, err)
+
+	spawner := NewDefaultSubAgentSpawner(&mockMeshHub{}, true, 2)
+	orchestrator := NewDefaultTaskOrchestrator(store, spawner)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	orchestrator.StartBackgroundWorker(ctx)
+
+	// Wait for the worker to poll
+	time.Sleep(3 * time.Second)
+	cancel() // Stop the worker
+
+	// Ensure task was processed
+	fetchedTask, _ := store.GetTask(context.Background(), "worker-delegated-1")
+	assert.Equal(t, "ASSIGNED", fetchedTask.Status)
+}
+
+// mockTaskStore implements TaskStore for testing errors
+type errorMockTaskStore struct {
+	*SqliteTaskStore // Embed to fulfill interface mostly
+}
+
+func (m *errorMockTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error) {
+	return nil, assert.AnError
+}
+
+func TestTaskOrchestrator_PollTasks_Error(t *testing.T) {
+	db := setupTestDBForSubAgent(t)
+	defer db.Close()
+
+	baseStore := NewSqliteTaskStore(db)
+	store := &errorMockTaskStore{SqliteTaskStore: baseStore}
+
+	spawner := NewDefaultSubAgentSpawner(&mockMeshHub{}, true, 2)
+	orchestrator := NewDefaultTaskOrchestrator(store, spawner)
+
+	err := orchestrator.PollTasks(context.Background())
+	assert.Error(t, err)
 }
