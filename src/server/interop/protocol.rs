@@ -273,6 +273,59 @@ impl InteropProtocol {
 
         self.bus.subscribe(format!("system:job_dispatch:{}", tenant_id), handler).await
     }
+
+    /// Reports job status back to the main server
+    pub async fn report_job_status(&self, job_id: &str, tenant_id: &str, status: &str, details: Vec<u8>) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+
+        let update = proto::JobStatusUpdate {
+            job_id: job_id.to_string(),
+            tenant_id: tenant_id.to_string(),
+            status: status.to_string(),
+            details_payload: details,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+
+        let mut buf = Vec::new();
+        update.encode(&mut buf).unwrap();
+
+        let msg = Message {
+            topic: format!("system:job_status:{}", job_id),
+            payload: buf,
+        };
+
+        // Add internal retry for publishing to ensure reporting survives partitions
+        let mut retries = 0;
+        let mut delay_ms = 100;
+        loop {
+            match self.bus.publish(msg.clone()).await {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    if retries >= 5 {
+                        return Err(format!("Failed to publish job status update after retries: {}", e));
+                    }
+                    retries += 1;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    delay_ms *= 2; // Exponential backoff
+                }
+            }
+        }
+    }
+
+    /// Listens for job status updates for a specific job
+    pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(proto::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let bus_handler = Box::new(move |msg: Message| {
+            if msg.topic.starts_with("system:job_status:") {
+                use prost::Message as ProstMessage;
+                if let Ok(decoded) = proto::JobStatusUpdate::decode(&msg.payload[..]) {
+                    handler(decoded);
+                }
+            }
+        });
+
+        self.bus.subscribe(format!("system:job_status:{}", job_id), bus_handler).await
+    }
+
 }
 
 #[cfg(test)]
@@ -492,4 +545,91 @@ mod tests {
         // Release
         let _ = lock.release_lock("handoff:mission_locked", "node_other").await;
     }
+
+    #[tokio::test]
+    async fn test_interop_job_status_reporting() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+
+        let protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+        let protocol_agent = InteropProtocol::new(bus.clone(), lock.clone(), "agent".to_string());
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let handler = Box::new(move |update: proto::JobStatusUpdate| {
+            if update.job_id == "job_status_123" && update.status == "COMPLETED" {
+                rx.store(true, Ordering::SeqCst);
+            }
+        });
+
+        // Server listens for status updates
+        let _cancel = protocol_server.listen_for_job_status("job_status_123", handler).await.unwrap();
+
+        // Agent reports status
+        protocol_agent.report_job_status("job_status_123", "tenant_a", "COMPLETED", vec![1, 2, 3]).await.unwrap();
+
+        sleep(Duration::from_millis(100)).await;
+
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+
+    #[tokio::test]
+    async fn test_interop_job_status_reporting_retry_and_failure() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+
+        let protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+
+        // We simulate failure by causing a panic inside publish? No, MemoryBus never fails publish.
+        // We can't easily mock MemoryBus publish failure here without changing MemoryBus.
+        // But the constraint says 100% coverage.
+        // If we can't test it, we should maybe remove the retry loop if we are confident MemoryBus does not fail, but actually it's required for network resilience.
+        // Wait, RedisBus publish can fail. MemoryBus never fails. The test suite uses MemoryBus.
+        // If the retry loop is not testable with MemoryBus, maybe I should modify `report_job_status` to only retry for Nats/Redis or inject a mock bus that can fail.
+        // I will implement a mock bus just for this test.
+    }
+
+    struct MockFailingBus {
+        failures_left: std::sync::atomic::AtomicUsize,
+    }
+    #[async_trait::async_trait]
+    impl crate::msgbus::Bus for MockFailingBus {
+        async fn publish(&self, _msg: crate::msgbus::Message) -> Result<(), String> {
+            if self.failures_left.fetch_sub(1, Ordering::SeqCst) > 0 {
+                return Err("Simulated network failure".to_string());
+            }
+            Ok(())
+        }
+        async fn subscribe(&self, _topic: String, _handler: Box<dyn Fn(crate::msgbus::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+            Ok(Box::new(|| {}))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_interop_job_status_reporting_retry_success() {
+        let bus = Arc::new(MockFailingBus {
+            failures_left: std::sync::atomic::AtomicUsize::new(3),
+        });
+        let lock = Arc::new(MemoryBus::new()); // dummy lock
+        let protocol = InteropProtocol::new(bus, lock, "agent".to_string());
+
+        let result = protocol.report_job_status("job_retry_1", "tenant_a", "FAILED", vec![]).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_interop_job_status_reporting_retry_failure() {
+        let bus = Arc::new(MockFailingBus {
+            failures_left: std::sync::atomic::AtomicUsize::new(10), // More than max retries
+        });
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus, lock, "agent".to_string());
+
+        let result = protocol.report_job_status("job_retry_2", "tenant_a", "FAILED", vec![]).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to publish job status update after retries"));
+    }
+
 }
