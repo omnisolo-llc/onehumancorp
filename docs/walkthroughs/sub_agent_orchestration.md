@@ -2,11 +2,11 @@
 
 # Sub-Agent Orchestration Queue: Visual Walkthrough
 
-This guide details the architectural flow of the Sub-Agent Orchestration Queue, the robust background execution runtime enabling the OHC Swarm to scale and execute delegated tasks gracefully.
+This guide details the architectural flow of the Sub-Agent Orchestration Queue. It provides a robust background execution runtime that enables the OHC Swarm to scale and execute delegated tasks gracefully.
 
 ## 1. Overview of the Orchestration Queue
 
-As the OHC Swarm handles more complex workloads, we require a distributed execution framework handling sub-agent task routing, retries, exponential backoffs, and execution timeouts. The Sub-Agent Orchestration Queue provides this via a seamless transition between Redis-backed (Cloud mode) and SQLite-backed (Standalone mode) queues.
+As the OHC Swarm handles more complex workloads, we require a distributed execution framework. It must handle sub-agent task routing, retries, exponential backoffs, and execution timeouts. The Sub-Agent Orchestration Queue provides this by seamlessly transitioning between Redis-backed (Cloud mode) and SQLite-backed (Standalone mode) queues.
 
 ### Architecture Comparison
 
@@ -30,7 +30,7 @@ graph TD
 
 ## 2. Queue Lifecycle
 
-The job lifecycle guarantees at-least-once delivery, ensuring resilient task execution and dead-letter queuing for poisoned messages.
+The job lifecycle guarantees at-least-once delivery. This ensures resilient task execution and places poisoned messages in a dead-letter queue.
 
 1. **Enqueue**: The parent agent delegates a sub-task. The `TaskManager` inserts a `Job` record with `status='QUEUED'`.
 2. **Dequeue**: Worker sub-agents poll the queue for jobs matching their role.
