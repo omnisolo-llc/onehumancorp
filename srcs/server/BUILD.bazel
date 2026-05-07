@@ -9,5 +9,6 @@ go_binary(
         "//srcs/server/onboarding:onboarding",
         "//srcs/server/orchestration:orchestration",
         "//srcs/server/growth:growth",
+        "//srcs/server/telemetry:telemetry",
     ],
 )

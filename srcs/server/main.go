@@ -11,6 +11,7 @@ import (
 	"onehumancorp/srcs/server/memory"
 	"onehumancorp/srcs/server/onboarding"
 	"onehumancorp/srcs/server/orchestration"
+	"onehumancorp/srcs/server/telemetry"
 	"onehumancorp/srcs/server/growth"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -66,6 +67,13 @@ func main() {
 	defer cancel()
 
 	go daemon.Run(ctx)
+
+	// Initialize telemetry sync engine
+	telemetryEngine := telemetry.NewTelemetrySyncEngine(db, "https://api.onehumancorp.com/telemetry")
+	telemetry.InitGlobalSyncEngine(telemetryEngine)
+	go telemetryEngine.StartSyncDaemon(ctx, 30*time.Second)
+
+
 
 	log.Println("OHC Server is running. AutoDream daemon started.")
 
