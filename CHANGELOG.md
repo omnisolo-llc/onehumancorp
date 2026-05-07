@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🛡️ Sentry: Health Guardianship /api/v1/health improvements for multi-tenant state sync
+
+### Privacy/Offline Improvements
+- 🛡️ Sentry: Health Guardianship /api/v1/health improvements for standalone isolated node switching
+
 ### Cloud Scaling Improvements
 - 🧹 Maintainer: Ensure multitenant K8s compliance for all pods (#11546)
 
