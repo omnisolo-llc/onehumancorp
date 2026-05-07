@@ -3,7 +3,6 @@ package mcp_audit_sync
 import (
 	"context"
 	"testing"
-	"time"
 )
 
 // MockDB is a simple mock database for testing.
