@@ -64,7 +64,7 @@ impl SipDB {
                     .await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("DELETE FROM agent_missions WHERE status = 'STUCK' AND organization_id = $1")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' AND organization_id = $1")
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
