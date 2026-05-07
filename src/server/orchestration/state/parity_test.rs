@@ -25,24 +25,22 @@ mod parity_tests {
     }
 
     async fn setup_postgres_db() -> Option<Arc<DB>> {
-        if let Ok(url) = std::env::var("DATABASE_URL") {
-            if url.starts_with("postgres") {
-                let pool = PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(100))
-                    .connect(&url)
-                    .await
-                    .ok()?;
+        let pool = PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(100))
+            .connect_lazy("postgres://postgres:postgres@127.0.0.1:5432/ohc")
+            .ok()?;
 
-                let db = DB {
-                    pool: pool.clone(),
-                    store: DbStore::Postgres,
-                };
-                // We might not want to run migrations on a real DB here if it's shared,
-                // but for a test DB it's fine.
-                db.run_migrations().await.ok()?;
-                return Some(Arc::new(db));
-            }
+        let db = DB {
+            pool: pool.clone(),
+            store: DbStore::Postgres,
+        };
+        // Run a lightweight test query to ensure connection is actually alive without failing if it's not.
+        if sqlx::query("SELECT 1").execute(&db.pool).await.is_ok() {
+             db.run_migrations().await.ok()?;
+             Some(Arc::new(db))
+        } else {
+             None
         }
-        None
     }
 
     #[tokio::test]
