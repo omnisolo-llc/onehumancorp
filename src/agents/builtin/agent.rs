@@ -878,6 +878,7 @@ impl Agent {
                 messages = serde_json::from_value::<Vec<Message>>(cp.data.clone())
                     .map_err(|e| format!("Failed to deserialize requested checkpoint: {}", e))?;
                 last_checkpoint_id = Some(cp.checkpoint_id.clone());
+                checkpointer.restore_checkpoint(resume_id).await.map_err(|e| format!("Failed to restore workspace: {}", e))?;
             } else {
                 if let Ok(checkpoints) = checkpointer.list_checkpoints(thread_id).await {
                     if let Some(cp) = checkpoints.first() {

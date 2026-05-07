@@ -20,6 +20,8 @@ pub trait CheckpointSaver: Send + Sync {
     async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String>;
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String>;
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
+    #[allow(unused_variables)]
+    async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> { Ok(()) }
 }
 
 pub struct PgCheckpointer {
@@ -125,6 +127,33 @@ impl CheckpointSaver for GitCheckpointer {
         Ok(())
     }
 
+
+    async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
+        let output = Command::new("git")
+            .arg("reset")
+            .arg("--hard")
+            .arg(checkpoint_id)
+            .current_dir(&self.repo_path)
+            .output()
+            .map_err(|e| e.to_string())?;
+
+        if !output.status.success() {
+            return Err(format!("Failed to restore workspace (reset): {}", String::from_utf8_lossy(&output.stderr)));
+        }
+
+        let clean_output = Command::new("git")
+            .arg("clean")
+            .arg("-fd")
+            .current_dir(&self.repo_path)
+            .output()
+            .map_err(|e| e.to_string())?;
+
+        if !clean_output.status.success() {
+            return Err(format!("Failed to restore workspace (clean): {}", String::from_utf8_lossy(&clean_output.stderr)));
+        }
+
+        Ok(())
+    }
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
         let file_name = format!(".agent_progress_{}.json", thread_id);
 
@@ -214,6 +243,7 @@ impl CheckpointSaver for PgCheckpointer {
 
         Ok(())
     }
+
 
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
         let rows = sqlx::query(
@@ -443,5 +473,47 @@ mod tests {
         // Since we check all hashes, there should be at least two checkpoints
         // associated with that thread.
         assert!(list.len() >= 2);
+    }
+
+    #[tokio::test]
+    async fn test_git_checkpointer_restore() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        let cp1 = Checkpoint {
+            thread_id: "thread-git-restore".to_string(),
+            checkpoint_id: "cp-restore-1".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"state": "1"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        // Write a test file
+        let file_path = temp_dir.path().join("test_file.txt");
+        std::fs::write(&file_path, "state 1").unwrap();
+
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+
+        // Write new content to file
+        std::fs::write(&file_path, "state 2").unwrap();
+
+        let cp2 = Checkpoint {
+            thread_id: "thread-git-restore".to_string(),
+            checkpoint_id: "cp-restore-2".to_string(),
+            parent_id: Some("cp-restore-1".to_string()),
+            data: serde_json::json!({"state": "2"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        saver.put_checkpoint(cp2.clone()).await.unwrap();
+
+        // Restore to first checkpoint
+        saver.restore_checkpoint("cp-restore-1").await.unwrap();
+
+        // Verify the file was restored
+        let content = std::fs::read_to_string(&file_path).unwrap();
+        assert_eq!(content, "state 1");
     }
 }
