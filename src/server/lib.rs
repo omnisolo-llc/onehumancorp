@@ -977,13 +977,21 @@ impl HubService for MyHubService {
             return Err(Status::invalid_argument("parent_thread_id contains forbidden prompt injection sequences"));
         }
         
+        // Delegate to K8s Operator
+        let pod_id = crate::orchestration::hierarchical::K8sOperatorDelegator::spawn_sub_agent_pod(
+            &req.target_role,
+            &req.instruction,
+            &req.parent_thread_id,
+        ).await.map_err(|e| Status::internal(e))?;
+        tracing::info!("Spawned K8s Pod {} for Hierarchical Task Delegation", pod_id);
+
         let msg_id = format!("msg-{}-{}", req.task_id, now_nano);
         let msg = Message {
             id: msg_id,
             from_agent: req.from_agent_id,
             to_agent: sub_agent_id,
             r#type: "TaskDelegation".to_string(),
-            content: format!("Execute Task: {}\nContext: {}", req.instruction, req.parent_thread_id),
+            content: format!("Execute Task: {}\nContext: {}\nK8sPod: {}", req.instruction, req.parent_thread_id, pod_id),
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: String::new(),
         };
