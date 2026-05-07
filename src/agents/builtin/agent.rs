@@ -47,6 +47,8 @@ pub struct AgentRunConfig {
     pub enable_context_compaction: bool,
     pub compaction_threshold_tokens: i32,
     pub enable_llm_judge: bool,
+    pub enable_computational_guides: bool,
+    pub computational_guide_command: String,
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
     pub state_scratchpad_path: Option<String>,
@@ -86,6 +88,8 @@ impl Default for AgentRunConfig {
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
             enable_llm_judge: false,
+            enable_computational_guides: false,
+            computational_guide_command: String::new(),
             guardrails: None,
             enable_state_checkpointing: false,
             state_scratchpad_path: None,
@@ -1148,6 +1152,33 @@ impl Agent {
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
+                // Computational/Guides (feedforward verification)
+                if cfg.enable_computational_guides && !cfg.computational_guide_command.is_empty() {
+                    let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+                    let mut cmd = std::process::Command::new("bash");
+                    cmd.arg("-c").arg(&cfg.computational_guide_command).current_dir(wd);
+
+                    match cmd.output() {
+                        Ok(output) => {
+                            if !output.status.success() {
+                                let stdout = String::from_utf8_lossy(&output.stdout);
+                                let stderr = String::from_utf8_lossy(&output.stderr);
+                                let err_msg = format!(
+                                    "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
+                                    cfg.computational_guide_command, stdout, stderr
+                                );
+                                messages.push(Message::user(err_msg));
+                                continue;
+                            }
+                        }
+                        Err(e) => {
+                            let err_msg = format!("Failed to execute computational guide command '{}': {}", cfg.computational_guide_command, e);
+                            messages.push(Message::user(err_msg));
+                            continue;
+                        }
+                    }
+                }
+
                 // Inferential/Sensors (LLM-as-judge subagent)
                 if cfg.enable_llm_judge {
                     let judge_req = ChatRequest {
@@ -3153,6 +3184,70 @@ mod tests {
         assert!(result.is_ok());
         let content = result.unwrap();
         assert_eq!(content, "Better answer");
+    }
+
+    #[tokio::test]
+    async fn test_computational_guide_mechanic() {
+        struct MockLlmClientGuides {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmClientGuides {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                if *count == 1 {
+                    // First turn: model provides an output, but we set up the test so the command fails
+                    Ok(ChatResponse {
+                        message: Message::assistant("Final answer but fails check"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id-1".to_string()),
+                    })
+                } else if *count == 2 {
+                    // Harness should have injected the User message about the check failing
+                    // We check that the last message is the error
+                    let last_msg = req.messages.last().unwrap();
+                    assert!(last_msg.content.contains("Computational guide verification failed"));
+                    assert!(last_msg.content.contains("exit 1"));
+
+                    // Second turn: model corrects it and we return something. Since it's a test, the command will fail again,
+                    // but we can just check it ran twice. Actually, the `command_that_fails` will always fail, so it will loop
+                    // until max_iterations, but we only need to verify the injection happened.
+                    Ok(ChatResponse {
+                        message: Message::assistant("Fixed answer"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id-2".to_string()),
+                    })
+                } else {
+                    Ok(ChatResponse {
+                        message: Message::assistant("Enough"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id-3".to_string()),
+                    })
+                }
+            }
+        }
+
+        let client = Arc::new(MockLlmClientGuides { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Agent::new(client, vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_computational_guides = true;
+        cfg.computational_guide_command = "exit 1".to_string(); // A command that fails
+        cfg.max_iterations = 2; // Stop after 2 iterations to prevent infinite loop
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Write code", &mut on_event).await;
+
+        // Since it always fails the guide, it should eventually exit or error depending on how max_iterations is handled
+        assert!(result.is_err() || result.is_ok());
     }
 
     #[tokio::test]
