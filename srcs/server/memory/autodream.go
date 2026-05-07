@@ -65,6 +65,7 @@ func (d *AutoDreamDaemon) Run(ctx context.Context) {
 			return
 		case <-ticker.C:
 			d.processDirectories(ctx)
+			d.SweepCompletedTasks(ctx)
 		}
 	}
 }
