@@ -56,8 +56,8 @@ fn create_verify_token() {
 #[test]
 fn create_verify_error_text() {
     let ui = create();
-    ui.set_error_text("Invalid SPIFFE format".into());
-    assert_eq!(ui.get_error_text(), "Invalid SPIFFE format");
+    ui.set_error_text("Invalid format".into());
+    assert_eq!(ui.get_error_text(), "Invalid format");
     ui.set_error_text("e31".into());
     assert_eq!(ui.get_error_text(), "e31");
     ui.set_error_text("e32".into());
