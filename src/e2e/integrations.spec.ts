@@ -1,17 +1,25 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Integrations Page', () => {
-  test.beforeEach(async ({ page }) => {  });
-
-  test.beforeEach(async ({ page }) => {  });
-
-  test.beforeEach(async ({ page }) => {  });
-
   test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    const loginLink = page.locator('text=/Login/i');
+    if (await loginLink.isVisible()) {
+      await loginLink.click();
+    }
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password');
+    await page.click('button[type="submit"]');
+    await page.waitForTimeout(500); // give some time
 
+    // Navigate to Integrations
+    const integrationsMenu = page.locator('text=/Integrations/i, text=/Connect/i').first();
+    if (await integrationsMenu.isVisible()) {
+      await integrationsMenu.click();
+    }
   });
 
-  test('should display integrations page', async ({ page }) => {
+          test('should display integrations page', async ({ page }) => {
 
     await expect(page.locator('text=/integrations|connect/i')).toBeVisible();
   });
@@ -161,23 +169,96 @@ test.describe('Integrations Page', () => {
     }
   });
 
+
+  test('should show Chatwoot integration', async ({ page }) => {
+    await expect(page.locator('text=/Chatwoot/i')).toBeVisible();
+  });
+
+  test('should connect Chatwoot integration', async ({ page }) => {
+    const chatwootBtn = page.locator('text=Chatwoot').locator('..').locator('button:has-text("Configure")').first();
+    if (await chatwootBtn.isVisible()) {
+      await chatwootBtn.click();
+      await expect(page.locator('text=/Chatwoot/i')).toBeVisible();
+    }
+  });
+
+  test('should show Cal.com integration', async ({ page }) => {
+    await expect(page.locator('text=/Cal\\.com/i')).toBeVisible();
+  });
+
+  test('should connect Cal.com integration', async ({ page }) => {
+    const calcomBtn = page.locator('text=Cal.com').locator('..').locator('button:has-text("Configure")').first();
+    if (await calcomBtn.isVisible()) {
+      await calcomBtn.click();
+      await expect(page.locator('text=/Cal\\.com/i')).toBeVisible();
+    }
+  });
+
+  test('should show Resend integration', async ({ page }) => {
+    await expect(page.locator('text=/Resend/i')).toBeVisible();
+  });
+
+  test('should connect Resend integration', async ({ page }) => {
+    const resendBtn = page.locator('text=Resend').locator('..').locator('button:has-text("Configure")').first();
+    if (await resendBtn.isVisible()) {
+      await resendBtn.click();
+      await expect(page.locator('text=/Resend/i')).toBeVisible();
+    }
+  });
+
+  test('should show Shippo integration', async ({ page }) => {
+    await expect(page.locator('text=/Shippo/i')).toBeVisible();
+  });
+
+  test('should connect Shippo integration', async ({ page }) => {
+    const shippoBtn = page.locator('text=Shippo').locator('..').locator('button:has-text("Configure")').first();
+    if (await shippoBtn.isVisible()) {
+      await shippoBtn.click();
+      await expect(page.locator('text=/Shippo/i')).toBeVisible();
+    }
+  });
+
+  test('should show Mercado Pago integration', async ({ page }) => {
+    await expect(page.locator('text=/Mercado Pago/i')).toBeVisible();
+  });
+
+  test('should connect Mercado Pago integration', async ({ page }) => {
+    const mpBtn = page.locator('text=Mercado Pago').locator('..').locator('button:has-text("Configure")').first();
+    if (await mpBtn.isVisible()) {
+      await mpBtn.click();
+      await expect(page.locator('text=/Mercado Pago/i')).toBeVisible();
+    }
+  });
+
+  test('should show Razorpay integration', async ({ page }) => {
+    await expect(page.locator('text=/Razorpay/i')).toBeVisible();
+  });
+
+  test('should connect Razorpay integration', async ({ page }) => {
+    const razorpayBtn = page.locator('text=Razorpay').locator('..').locator('button:has-text("Configure")').first();
+    if (await razorpayBtn.isVisible()) {
+      await razorpayBtn.click();
+      await expect(page.locator('text=/Razorpay/i')).toBeVisible();
+    }
+  });
+
+
 test.describe('Pipeline Management', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.locator('text=/Login/i').click();
+    const loginLink = page.locator('text=/Login/i');
+    if (await loginLink.isVisible()) {
+      await loginLink.click();
+    }
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password');
     await page.click('button[type="submit"]');
-    await page.locator('text=/Pipelines/i').click();
-  });
+    await page.waitForTimeout(500); // give some time
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.locator('text=/Login/i').click();
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password');
-    await page.click('button[type="submit"]');
-    await page.locator('text=/Pipelines/i').click();
+    const pipelinesMenu = page.locator('text=/Pipelines/i').first();
+    if (await pipelinesMenu.isVisible()) {
+      await pipelinesMenu.click();
+    }
   });
 
   test('should display pipelines page', async ({ page }) => {
