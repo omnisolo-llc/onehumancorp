@@ -17,9 +17,7 @@ tokio = { workspace = true, features = ["full"] }
 tokio-stream = { version = "0.1", features = ["full"] }
 tonic = { workspace = true, features = ["transport"] }
 prost = { workspace = true }
-serde_yaml = { workspace = true }
 serde = { workspace = true }
-serde_json = { workspace = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 aes-gcm = "0.10"
@@ -74,7 +72,6 @@ prost = "0.13"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 chrono = { version = "0.4", features = ["serde"] }
-serde_yaml = "0.9"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 protoc-gen-prost = "0.4.0"
 protoc-gen-tonic = "0.4.0"
