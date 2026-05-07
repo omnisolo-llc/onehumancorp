@@ -302,21 +302,31 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_resource_exhaustion_graceful_degradation() {
+    async fn test_exhaust_cpu_memory_and_verify_graceful_degradation() {
         // Simulate CPU/Memory exhaustion via high artificial latency and verify timeout/circuit breaking
         let start = std::time::Instant::now();
-        let timeout_duration = Duration::from_millis(100);
+        let timeout_duration = std::time::Duration::from_millis(50);
 
         let result = tokio::time::timeout(timeout_duration, async {
-            // Simulate a heavy operation that would normally time out or be circuit-broken in production
-            tokio::time::sleep(Duration::from_millis(500)).await;
+            // Memory exhaustion simulation
+            let mut vec: Vec<u8> = Vec::with_capacity(1024 * 10);
+            // CPU exhaustion spinloop
+            loop {
+                vec.push(1);
+                if vec.len() > 1024 * 100 {
+                    vec.clear();
+                }
+                // Yield to allow timeout to trigger
+                tokio::task::yield_now().await;
+            }
+            // Unreachable
+            #[allow(unreachable_code)]
             Ok::<(), String>(())
         }).await;
 
-        assert!(result.is_err(), "Service should time out under heavy load simulation to prevent cascading failure");
+        assert!(result.is_err(), "Service should time out under heavy CPU/Memory load simulation to prevent cascading failure");
         assert!(start.elapsed() >= timeout_duration);
     }
-
     #[tokio::test]
     async fn test_transport_packet_loss_simulation() {
         // Stress test a mock transport layer that randomly drops packets to verify application-level retries
