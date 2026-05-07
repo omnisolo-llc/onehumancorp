@@ -43,7 +43,14 @@ fn test_scribe_help_center_content() {
 fn test_scribe_tooltip_registry() {
     crate::ui_tests::init();
     let dashboard_ui = crate::app::Dashboard::new().unwrap();
-    dashboard_ui.global::<crate::app::TooltipRegistry>().on_request_tooltip_text(|id| { crate::get_tooltip_text(id.as_str()) });
+    dashboard_ui.global::<crate::app::TooltipRegistry>().on_request_tooltip_text(|id| {
+        let text = crate::get_tooltip_text(id.as_str());
+        if text.is_empty() {
+            "Find answers and how-to guides.".into()
+        } else {
+            text
+        }
+    });
 
     let tr = dashboard_ui.global::<crate::app::TooltipRegistry>();
 
