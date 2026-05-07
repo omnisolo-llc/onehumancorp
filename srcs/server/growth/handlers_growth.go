@@ -1,9 +1,10 @@
 package growth
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
-	"sync"
+	"log"
 )
 
 type Referral struct {
@@ -18,15 +19,26 @@ type TeamInvite struct {
 }
 
 type GrowthService struct {
-	referrals   map[string]*Referral
-	teamInvites map[string]*TeamInvite
-	mu          sync.Mutex
+	db *sql.DB
 }
 
-func NewGrowthService() *GrowthService {
+func NewGrowthService(db *sql.DB) *GrowthService {
+	_, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS referrals (
+			id TEXT PRIMARY KEY,
+			clicks INTEGER DEFAULT 0,
+			conversions INTEGER DEFAULT 0
+		);
+		CREATE TABLE IF NOT EXISTS team_invites (
+			id TEXT PRIMARY KEY,
+			status TEXT DEFAULT 'PENDING'
+		);
+	`)
+	if err != nil {
+		log.Fatalf("Failed to initialize growth tables: %v", err)
+	}
 	return &GrowthService{
-		referrals:   make(map[string]*Referral),
-		teamInvites: make(map[string]*TeamInvite),
+		db: db,
 	}
 }
 
@@ -46,15 +58,18 @@ func (s *GrowthService) HandleReferralClick(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	var ref Referral
+	err := s.db.QueryRow(`
+		INSERT INTO referrals (id, clicks, conversions)
+		VALUES ($1, 1, 0)
+		ON CONFLICT(id) DO UPDATE SET clicks = clicks + 1
+		RETURNING id, clicks, conversions
+	`, req.ID).Scan(&ref.ID, &ref.Clicks, &ref.Conversions)
 
-	ref, ok := s.referrals[req.ID]
-	if !ok {
-		ref = &Referral{ID: req.ID}
-		s.referrals[req.ID] = ref
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
 	}
-	ref.Clicks++
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ref)
@@ -72,15 +87,18 @@ func (s *GrowthService) HandleReferralConvert(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	var ref Referral
+	err := s.db.QueryRow(`
+		INSERT INTO referrals (id, clicks, conversions)
+		VALUES ($1, 0, 1)
+		ON CONFLICT(id) DO UPDATE SET conversions = conversions + 1
+		RETURNING id, clicks, conversions
+	`, req.ID).Scan(&ref.ID, &ref.Clicks, &ref.Conversions)
 
-	ref, ok := s.referrals[req.ID]
-	if !ok {
-		ref = &Referral{ID: req.ID}
-		s.referrals[req.ID] = ref
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
 	}
-	ref.Conversions++
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ref)
@@ -98,15 +116,18 @@ func (s *GrowthService) HandleTeamInviteAccept(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	var inv TeamInvite
+	err := s.db.QueryRow(`
+		INSERT INTO team_invites (id, status)
+		VALUES ($1, 'ACCEPTED')
+		ON CONFLICT(id) DO UPDATE SET status = 'ACCEPTED'
+		RETURNING id, status
+	`, req.ID).Scan(&inv.ID, &inv.Status)
 
-	inv, ok := s.teamInvites[req.ID]
-	if !ok {
-		inv = &TeamInvite{ID: req.ID, Status: "PENDING"}
-		s.teamInvites[req.ID] = inv
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
 	}
-	inv.Status = "ACCEPTED"
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(inv)
