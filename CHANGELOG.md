@@ -1,5 +1,11 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
+
+- Scaling (Cloud): Add dual-mode caching layer to dashboard service to optimize latency (#11871).
+- Privacy/Offline (Standalone): Ensure dual-mode caching layer supports offline persistence securely (#11871).
+
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 ### Cloud Scaling Improvements
