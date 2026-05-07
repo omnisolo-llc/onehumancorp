@@ -367,9 +367,9 @@ export component SetupWizard inherits Window {
             // Step 5: Admin Account
             if (step == 5) : VerticalBox {
                 spacing: 16px;
-                Text { text: "Create your account"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+                Text { text: "Administrator account"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
 
-                Text { text: "Full Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                Text { text: "Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit { placeholder-text: "e.g. Maya Smith"; text <=> admin_name; height: 44px; edited => { save_state(); } }
 
                 Text { text: "Email Address"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
