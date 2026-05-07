@@ -266,6 +266,7 @@ service HubService {
   rpc AuditSetup(AuditSetupRequest) returns (AuditSetupResponse);
   rpc Diagnostics(DiagnosticsRequest) returns (DiagnosticsResponse);
   rpc GetWizardProfile(GetWizardProfileRequest) returns (GetWizardProfileResponse);
+  rpc PublishSite(PublishSiteRequest) returns (PublishSiteResponse);
   rpc Invite(InviteRequest) returns (InviteResponse);
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
   rpc GetMeetings(EmptyRequest) returns (GetMeetingsResponse);
@@ -501,6 +502,20 @@ message Admin {
 message ProvisionResponse {
   string status = 1;
   string message = 2;
+}
+
+message PublishSiteRequest {
+  string template = 1;
+  string color = 2;
+  string product_name = 3;
+  string product_price = 4;
+  string description = 5;
+  string domain_choice = 6;
+}
+
+message PublishSiteResponse {
+  string status = 1;
+  string url = 2;
 }
 
 message AuditSetupRequest {
