@@ -1924,3 +1924,305 @@ mod anthropic_memory_tests {
         assert_eq!(id, "rec_override", "The correct record should remain");
     }
 }
+
+#[cfg(test)]
+mod consolidation_tests {
+    use super::*;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use std::str::FromStr;
+
+    trait VectorStoreExt {
+        fn as_sqlite_pool(&self) -> sqlx::SqlitePool;
+    }
+
+    impl VectorStoreExt for crate::memory_store::VectorMemoryStore {
+        fn as_sqlite_pool(&self) -> sqlx::SqlitePool {
+            match self {
+                crate::memory_store::VectorMemoryStore::Sqlite(pool) => pool.clone(),
+                _ => panic!("Expected Sqlite pool"),
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_conflicting_pairs_sqlite_fallback() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let repo = crate::memory_store::VectorRepository::new_sqlite(pool);
+        let now = chrono::Utc::now();
+
+        let record1 = crate::memory_store::EmbeddingRecord {
+            id: "rec1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "Maya's cake price is $50".to_string(),
+            embedding: vec![1.0, 0.0, 0.0],
+            source_type: "SESSION_DATA".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let record2 = crate::memory_store::EmbeddingRecord {
+            id: "rec2".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent2".to_string(),
+            content: "Maya's cake price is $55".to_string(),
+            embedding: vec![1.0, 0.0, 0.0],
+            source_type: "SESSION_DATA".to_string(),
+            created_at: now + chrono::Duration::hours(1),
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record1).await.unwrap();
+        repo.upsert(&record2).await.unwrap();
+
+        let conflicts = repo.get_conflicting_pairs().await.unwrap();
+        assert_eq!(conflicts.len(), 1, "Should detect 1 conflict without sqlite-vec");
+
+        let count = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(count, 1, "Should resolve 1 conflict");
+
+        let conflicts_after = repo.get_conflicting_pairs().await.unwrap();
+        assert_eq!(conflicts_after.len(), 0, "Conflicts should be empty after resolution");
+    }
+
+    #[tokio::test]
+    async fn test_cross_department_context_sharing() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let repo = crate::memory_store::VectorRepository::new_sqlite(pool);
+        let now = chrono::Utc::now();
+
+        // Context created by Customer Success Department
+        let record1 = crate::memory_store::EmbeddingRecord {
+            id: "cs_note_1".to_string(),
+            tenant_id: "org_acme".to_string(),
+            agent_id: "cs_agent".to_string(),
+            content: "Customer unhappy with recent downtime".to_string(),
+            embedding: vec![0.5, 0.5, 0.5],
+            source_type: "SESSION_SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 80,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Context created by Business Advisory Department
+        let record2 = crate::memory_store::EmbeddingRecord {
+            id: "advisory_note_1".to_string(),
+            tenant_id: "org_acme".to_string(),
+            agent_id: "advisory_agent".to_string(),
+            content: "Acme Corp is considering expanding their contract".to_string(),
+            embedding: vec![0.1, 0.9, 0.1],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 70,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record1).await.unwrap();
+        repo.upsert(&record2).await.unwrap();
+
+        // Cross-department query: advisory agent looking for context on Acme Corp
+        let query_embedding = vec![0.5, 0.5, 0.5]; // Similar to CS note
+        let results = repo.semantic_search("org_acme", &query_embedding, 5).await.unwrap();
+
+        // Verify that the advisory agent can retrieve context written by the cs agent
+        assert!(!results.is_empty(), "Should find cross-department context");
+
+        // Check if the CS note is present
+        let cs_note_found = results.iter().any(|r| r.id == "cs_note_1" && r.agent_id == "cs_agent");
+        assert!(cs_note_found, "Cross-department sharing failed: CS note not found");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_by_reliability() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let repo = crate::memory_store::VectorRepository::new_sqlite(pool);
+        let now = chrono::Utc::now();
+
+        let record_low_rel = crate::memory_store::EmbeddingRecord {
+            id: "low_rel".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "Maya's cake price is $50".to_string(),
+            embedding: vec![1.0, 0.0, 0.0],
+            source_type: "SESSION_DATA".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 30,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let record_high_rel = crate::memory_store::EmbeddingRecord {
+            id: "high_rel".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent2".to_string(),
+            content: "Maya's cake price is $55".to_string(),
+            embedding: vec![1.0, 0.0, 0.0],
+            source_type: "TASK_DATA".to_string(),
+            created_at: now - chrono::Duration::days(1), // Older, but higher reliability
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 90,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record_low_rel).await.unwrap();
+        repo.upsert(&record_high_rel).await.unwrap();
+
+        repo.auto_resolve_conflicts().await.unwrap();
+
+        // Verify the one with higher reliability score won
+        use sqlx::Row;
+        let query = "SELECT id, reliability_score FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&repo.store.as_sqlite_pool()).await.unwrap();
+
+        assert_eq!(rows.len(), 1, "Should resolve to 1 record");
+        let id: String = rows[0].try_get("id").unwrap();
+        assert_eq!(id, "high_rel", "Higher reliability score should win");
+    }
+
+    #[tokio::test]
+    async fn test_prune_stale_records_with_low_reference_count() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let repo = crate::memory_store::VectorRepository::new_sqlite(pool);
+        let now = chrono::Utc::now();
+        let threshold = now - chrono::Duration::days(180);
+
+        // An old record, but reference count is >= 5, should NOT be deleted
+        let record1 = crate::memory_store::EmbeddingRecord {
+            id: "highly_referenced".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "Highly referenced".to_string(),
+            embedding: vec![1.0, 0.0, 0.0],
+            source_type: "SESSION_DATA".to_string(),
+            created_at: threshold - chrono::Duration::days(10),
+            last_referenced_at: threshold - chrono::Duration::days(10),
+            reference_count: 10,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // An old record, reference count < 5, should BE deleted
+        let record2 = crate::memory_store::EmbeddingRecord {
+            id: "lowly_referenced".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "Lowly referenced".to_string(),
+            embedding: vec![1.0, 0.0, 0.0],
+            source_type: "SESSION_DATA".to_string(),
+            created_at: threshold - chrono::Duration::days(10),
+            last_referenced_at: threshold - chrono::Duration::days(10),
+            reference_count: 2,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record1).await.unwrap();
+        repo.upsert(&record2).await.unwrap();
+
+        repo.prune_stale(threshold).await.unwrap();
+
+        use sqlx::Row;
+        let query = "SELECT id FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&repo.store.as_sqlite_pool()).await.unwrap();
+
+        assert_eq!(rows.len(), 1, "Only one record should remain");
+        let id: String = rows[0].try_get("id").unwrap();
+        assert_eq!(id, "highly_referenced", "The highly referenced record should remain");
+    }
+}
