@@ -392,6 +392,9 @@ impl AgentServiceImpl {
             let cp = crate::checkpointer::GitCheckpointer::new(std::path::PathBuf::from(wd));
             unarc_agent = unarc_agent.with_checkpointer(Arc::new(cp));
         }
+        if let Some(store) = &run_cfg.long_term_memory {
+            unarc_agent = unarc_agent.with_memory_store(store.clone());
+        }
         let agent = Arc::new(unarc_agent);
         
         let ralph = crate::ralph_loop::RalphLoop::new(agent, run_cfg, &progress_file);
@@ -458,6 +461,9 @@ impl AgentService for AgentServiceImpl {
         if let Some(wd) = &run_cfg.workspace_path {
             let cp = crate::checkpointer::GitCheckpointer::new(std::path::PathBuf::from(wd));
             unarc_agent = unarc_agent.with_checkpointer(Arc::new(cp));
+        }
+        if let Some(store) = &run_cfg.long_term_memory {
+            unarc_agent = unarc_agent.with_memory_store(store.clone());
         }
         let agent = Arc::new(unarc_agent);
 
