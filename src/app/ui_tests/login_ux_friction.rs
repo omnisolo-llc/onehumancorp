@@ -54,7 +54,7 @@ fn test_login_echo_plain_language_google() {
 #[test]
 fn test_login_echo_plain_language_settings() {
     let ui = create();
-    assert_eq!(ui.get_settings_button_text(), "⚙ Fix App Issues");
+    assert_eq!(ui.get_settings_button_text(), "Fix App Issues");
 }
 
 #[test]
