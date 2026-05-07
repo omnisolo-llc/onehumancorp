@@ -574,6 +574,8 @@ impl HealthMonitor {
         let cancel = self.bus.subscribe(ack_topic, handler).await?;
 
         let ping = crate::interop::protocol::proto::HealthPing {
+            current_mode: 0,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
             source_node_id: node_id,
         };
         let mut buf = Vec::new();

@@ -119,6 +119,9 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
 }
 
 pub mod ohc {
+    pub mod interop {
+        pub use interop_proto::ohc::interop::*;
+    }
     pub mod mcp_proxy {
         pub use mcp_proxy_proto::ohc::mcp_proxy::*;
     }
