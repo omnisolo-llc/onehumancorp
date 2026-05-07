@@ -55,7 +55,12 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 500));
 
   // 7. Dashboard Screen
-  await tester.ensureVisible(find.byKey(const Key('inboxBtn')));
+  await tester.drag(find.byType(ListView), const Offset(0, -500));
+  await tester.pump(const Duration(milliseconds: 500));
+  await tester.drag(find.byType(ListView), const Offset(0, -500));
+  await tester.pump(const Duration(milliseconds: 500));
+  //   //   await tester.ensureVisible(find.byKey(const Key('inboxBtn')));
+  await tester.pump(const Duration(seconds: 2));
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.byKey(const Key('inboxBtn')));
   await tester.pump(const Duration(milliseconds: 500));
