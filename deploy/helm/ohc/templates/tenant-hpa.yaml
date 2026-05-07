@@ -1,0 +1,28 @@
+{{- if .Values.multiTenant.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-tenant-hpa
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}-backend
+  minReplicas: {{ .Values.backend.autoscaling.minReplicas | default 2 }}
+  maxReplicas: {{ .Values.backend.autoscaling.maxReplicas | default 20 }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+{{- end }}

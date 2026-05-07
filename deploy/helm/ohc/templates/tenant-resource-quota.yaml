@@ -6,8 +6,8 @@ metadata:
     app: {{ .Release.Name }}
 spec:
   hard:
-    requests.cpu: "4"
-    requests.memory: "8Gi"
-    limits.cpu: "8"
-    limits.memory: "16Gi"
-    pods: "20"
+    requests.cpu: {{ .Values.backend.resourceQuota.requests.cpu | default "4" }}
+    requests.memory: {{ .Values.backend.resourceQuota.requests.memory | default "8Gi" }}
+    limits.cpu: {{ .Values.backend.resourceQuota.limits.cpu | default "8" }}
+    limits.memory: {{ .Values.backend.resourceQuota.limits.memory | default "16Gi" }}
+    pods: {{ .Values.backend.resourceQuota.limits.pods | default "20" }}
