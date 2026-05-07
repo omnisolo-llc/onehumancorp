@@ -84,6 +84,7 @@ pub fn init() {
     }
 }
 pub mod login_settings;
+pub mod login_ux_friction;
 pub mod setup_wizard_hero_test;
 pub mod docs_ux_test;
 pub mod scribe_tests;

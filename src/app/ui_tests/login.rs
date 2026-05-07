@@ -290,7 +290,10 @@ fn login_has_correct_title_and_window_size() {
 #[test]
 fn test_login_sso_button_text() {
     let ui = create();
+    ui.set_loading(false);
     assert_eq!(ui.get_sso_button_text(), "Continue with Google/Apple");
+    ui.set_loading(true);
+    assert_eq!(ui.get_sso_button_text(), "Connecting...");
 }
 
 #[test]
@@ -311,12 +314,18 @@ fn test_login_toggle_button_text() {
 fn test_login_submit_button_text_signin() {
     let ui = create();
     ui.set_is_sign_up(false);
+    ui.set_loading(false);
     assert_eq!(ui.get_submit_button_text(), "Sign In");
+    ui.set_loading(true);
+    assert_eq!(ui.get_submit_button_text(), "Signing in...");
 }
 
 #[test]
 fn test_login_submit_button_text_signup() {
     let ui = create();
     ui.set_is_sign_up(true);
+    ui.set_loading(false);
     assert_eq!(ui.get_submit_button_text(), "Sign Up");
+    ui.set_loading(true);
+    assert_eq!(ui.get_submit_button_text(), "Creating account...");
 }
