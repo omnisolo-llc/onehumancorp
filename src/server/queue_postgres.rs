@@ -56,7 +56,7 @@ impl TaskQueue for PostgresTaskQueue {
         let query_str = format!(
             "SELECT id, protobuf_blob
              FROM shared_tasks
-             WHERE status = 'pending' AND (locked_until IS NULL OR locked_until < now()) AND run_after <= now() AND agent_role IN ({}) AND protobuf_blob IS NOT NULL
+             WHERE status = 'pending' AND (locked_until IS NULL OR locked_until < extract(epoch from now())::bigint) AND run_after <= extract(epoch from now())::bigint AND agent_role IN ({}) AND protobuf_blob IS NOT NULL
              ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED",
             roles_placeholders
         );
@@ -72,7 +72,7 @@ impl TaskQueue for PostgresTaskQueue {
             let id: String = row.get("id");
             let blob: Vec<u8> = row.get("protobuf_blob");
 
-            sqlx::query("UPDATE shared_tasks SET locked_until = now() + interval '5 minutes' WHERE id = $1")
+            sqlx::query("UPDATE shared_tasks SET locked_until = extract(epoch from now())::bigint + 300 WHERE id = $1")
                 .bind(&id)
                 .execute(&mut *tx)
                 .await
@@ -88,27 +88,21 @@ impl TaskQueue for PostgresTaskQueue {
         Ok(None)
     }
 
-    async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
-        sqlx::query("UPDATE shared_tasks SET status = 'completed', updated_at = now() WHERE id = $1 AND organization_id = $2")
+    async fn complete(&self, job_id: &str) -> Result<(), String> {
+        sqlx::query("UPDATE shared_tasks SET status = 'completed', updated_at = extract(epoch from now())::bigint WHERE id = $1")
             .bind(job_id)
-            .bind(tenant_id)
             .execute(&*self.pool)
             .await
             .map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    async fn fail(&self, job_id: &str, tenant_id: &str, _reason: &str) -> Result<(), String> {
-        sqlx::query("UPDATE shared_tasks SET status = 'failed', updated_at = now() WHERE id = $1 AND organization_id = $2")
+    async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
+        sqlx::query("UPDATE shared_tasks SET status = 'failed', updated_at = extract(epoch from now())::bigint WHERE id = $1")
             .bind(job_id)
-            .bind(tenant_id)
             .execute(&*self.pool)
             .await
             .map_err(|e| e.to_string())?;
         Ok(())
-    }
-
-    async fn requeue(&self, job: Job) -> Result<(), String> {
-        self.enqueue(job).await
     }
 }

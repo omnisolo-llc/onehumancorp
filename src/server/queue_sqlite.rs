@@ -1,3 +1,10 @@
+use crate::ohc::orchestration::Job;
+use crate::queue::TaskQueue;
+use async_trait::async_trait;
+use std::sync::Arc;
+use sqlx::{SqlitePool, Row};
+use prost::Message;
+
 pub struct SqliteTaskQueue {
     pool: Arc<SqlitePool>,
 }
@@ -50,7 +57,7 @@ impl TaskQueue for SqliteTaskQueue {
         let query_str = format!(
             "SELECT id, protobuf_blob
              FROM shared_tasks
-             WHERE status = 'pending' AND (locked_until IS NULL OR locked_until < datetime('now')) AND run_after <= datetime('now') AND agent_role IN ({}) AND protobuf_blob IS NOT NULL
+             WHERE status = 'pending' AND (locked_until IS NULL OR locked_until < strftime('%s', 'now')) AND run_after <= strftime('%s', 'now') AND agent_role IN ({}) AND protobuf_blob IS NOT NULL
              ORDER BY created_at ASC LIMIT 1",
             roles_placeholders
         );
@@ -69,7 +76,7 @@ impl TaskQueue for SqliteTaskQueue {
             let id: String = row.get("id");
             let blob: Vec<u8> = row.get("protobuf_blob");
 
-            sqlx::query("UPDATE shared_tasks SET locked_until = datetime('now', '+5 minutes') WHERE id = ?")
+            sqlx::query("UPDATE shared_tasks SET locked_until = strftime('%s', 'now', '+5 minutes') WHERE id = ?")
                 .bind(&id)
                 .execute(&*self.pool)
                 .await
@@ -83,27 +90,21 @@ impl TaskQueue for SqliteTaskQueue {
         Ok(None)
     }
 
-    async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
-        sqlx::query("UPDATE shared_tasks SET status = 'completed', updated_at = datetime('now') WHERE id = ? AND organization_id = ?")
+    async fn complete(&self, job_id: &str) -> Result<(), String> {
+        sqlx::query("UPDATE shared_tasks SET status = 'completed', updated_at = strftime('%s', 'now') WHERE id = ?")
             .bind(job_id)
-            .bind(tenant_id)
             .execute(&*self.pool)
             .await
             .map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    async fn fail(&self, job_id: &str, tenant_id: &str, _reason: &str) -> Result<(), String> {
-        sqlx::query("UPDATE shared_tasks SET status = 'failed', updated_at = datetime('now') WHERE id = ? AND organization_id = ?")
+    async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
+        sqlx::query("UPDATE shared_tasks SET status = 'failed', updated_at = strftime('%s', 'now') WHERE id = ?")
             .bind(job_id)
-            .bind(tenant_id)
             .execute(&*self.pool)
             .await
             .map_err(|e| e.to_string())?;
         Ok(())
-    }
-
-    async fn requeue(&self, job: Job) -> Result<(), String> {
-        self.enqueue(job).await
     }
 }

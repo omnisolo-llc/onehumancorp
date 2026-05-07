@@ -3,7 +3,7 @@
 use std::time::Instant;
 use std::sync::Arc;
 use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue};
-use chrono::Utc;
+
 use uuid::Uuid;
 
 // Phase 1: Baseline / Phase 2: Parallel Fetching Optimization & Batching

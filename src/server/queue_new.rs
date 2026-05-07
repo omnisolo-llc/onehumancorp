@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use dashmap::DashMap;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::mpsc;
 use sqlx::{PgPool, SqlitePool, Row};
 use prost::Message;
 
@@ -42,7 +43,7 @@ impl TaskQueue for MemoryTaskQueue {
 
         for mut entry in self.jobs.iter_mut() {
             let job = entry.value_mut();
-            if job.status == "pending" && roles.contains(&job.agent_role) && job.run_after <= now && (job.locked_until == 0 || job.locked_until < now) {
+            if job.status == "PENDING" && roles.contains(&job.agent_role) && job.run_after <= now && (job.locked_until == 0 || job.locked_until < now) {
                 job.locked_until = now + 300; // Lock for 5 mins
                 return Ok(Some(job.clone()));
             }
@@ -55,7 +56,7 @@ impl TaskQueue for MemoryTaskQueue {
             if job.tenant_id != tenant_id {
                 return Err("tenant mismatch".to_string());
             }
-            job.status = "completed".to_string();
+            job.status = "COMPLETED".to_string();
             job.updated_at = chrono::Utc::now().timestamp();
             Ok(())
         } else {
@@ -68,7 +69,7 @@ impl TaskQueue for MemoryTaskQueue {
             if job.tenant_id != tenant_id {
                 return Err("tenant mismatch".to_string());
             }
-            job.status = "failed".to_string();
+            job.status = "FAILED".to_string();
             job.updated_at = chrono::Utc::now().timestamp();
             Ok(())
         } else {
@@ -118,7 +119,7 @@ impl TaskQueue for PostgresTaskQueue {
         .execute(&*self.pool)
         .await
         .map_err(|e| e.to_string())?;
-        
+
         Ok(())
     }
 
@@ -133,7 +134,7 @@ impl TaskQueue for PostgresTaskQueue {
         let query_str = format!(
             "SELECT id, protobuf_blob
              FROM shared_tasks
-             WHERE status = 'pending' AND (locked_until IS NULL OR locked_until < now()) AND run_after <= extract(epoch from now())::bigint AND agent_role IN ({}) AND protobuf_blob IS NOT NULL
+             WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < now()) AND run_after <= extract(epoch from now())::bigint AND agent_role IN ({}) AND protobuf_blob IS NOT NULL
              ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED",
             roles_placeholders
         );
@@ -148,8 +149,8 @@ impl TaskQueue for PostgresTaskQueue {
         if let Some(row) = row_opt {
             let id: String = row.get("id");
             let blob: Vec<u8> = row.get("protobuf_blob");
-            
-            sqlx::query("UPDATE shared_tasks SET locked_until = extract(epoch from now())::bigint + 300 WHERE id = $1")
+
+            sqlx::query("UPDATE shared_tasks SET locked_until = now() + interval '5 minutes' WHERE id = $1")
                 .bind(&id)
                 .execute(&mut *tx)
                 .await
@@ -166,7 +167,7 @@ impl TaskQueue for PostgresTaskQueue {
     }
 
     async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
-        sqlx::query("UPDATE shared_tasks SET status = 'completed', updated_at = extract(epoch from now())::bigint WHERE id = $1 AND organization_id = $2")
+        sqlx::query("UPDATE shared_tasks SET status = 'COMPLETED', updated_at = now() WHERE id = $1 AND organization_id = $2")
             .bind(job_id)
             .bind(tenant_id)
             .execute(&*self.pool)
@@ -176,7 +177,7 @@ impl TaskQueue for PostgresTaskQueue {
     }
 
     async fn fail(&self, job_id: &str, tenant_id: &str, _reason: &str) -> Result<(), String> {
-        sqlx::query("UPDATE shared_tasks SET status = 'failed', updated_at = extract(epoch from now())::bigint WHERE id = $1 AND organization_id = $2")
+        sqlx::query("UPDATE shared_tasks SET status = 'FAILED', updated_at = now() WHERE id = $1 AND organization_id = $2")
             .bind(job_id)
             .bind(tenant_id)
             .execute(&*self.pool)
@@ -190,7 +191,7 @@ impl TaskQueue for PostgresTaskQueue {
         job.encode(&mut buf).map_err(|e| e.to_string())?;
 
         sqlx::query(
-            "UPDATE shared_tasks SET status = 'pending', attempts = $1, max_attempts = $2, run_after = to_timestamp($3::double precision), locked_until = NULL, updated_at = extract(epoch from now())::bigint, protobuf_blob = $6 WHERE id = $4 AND organization_id = $5"
+            "UPDATE shared_tasks SET status = 'PENDING', attempts = $1, max_attempts = $2, run_after = to_timestamp($3::double precision), locked_until = NULL, updated_at = now(), protobuf_blob = $6 WHERE id = $4 AND organization_id = $5"
         )
         .bind(job.attempts)
         .bind(job.max_attempts)
@@ -257,7 +258,7 @@ impl TaskQueue for SqliteTaskQueue {
         let query_str = format!(
             "SELECT id, protobuf_blob
              FROM shared_tasks
-             WHERE status = 'pending' AND (locked_until IS NULL OR locked_until < strftime('%s', 'now')) AND run_after <= strftime('%s', 'now') AND agent_role IN ({}) AND protobuf_blob IS NOT NULL
+             WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < datetime('now')) AND run_after <= strftime('%s', 'now') AND agent_role IN ({}) AND protobuf_blob IS NOT NULL
              ORDER BY created_at ASC LIMIT 1",
             roles_placeholders
         );
@@ -275,8 +276,8 @@ impl TaskQueue for SqliteTaskQueue {
         if let Some(row) = row {
             let id: String = row.get("id");
             let blob: Vec<u8> = row.get("protobuf_blob");
-            
-            sqlx::query("UPDATE shared_tasks SET locked_until = strftime('%s', 'now', '+5 minutes') WHERE id = ?")
+
+            sqlx::query("UPDATE shared_tasks SET locked_until = datetime('now', '+5 minutes') WHERE id = ?")
                 .bind(&id)
                 .execute(&*self.pool)
                 .await
@@ -291,7 +292,7 @@ impl TaskQueue for SqliteTaskQueue {
     }
 
     async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
-        sqlx::query("UPDATE shared_tasks SET status = 'completed', updated_at = strftime('%s', 'now') WHERE id = ? AND organization_id = ?")
+        sqlx::query("UPDATE shared_tasks SET status = 'COMPLETED', updated_at = datetime('now') WHERE id = ? AND organization_id = ?")
             .bind(job_id)
             .bind(tenant_id)
             .execute(&*self.pool)
@@ -301,7 +302,7 @@ impl TaskQueue for SqliteTaskQueue {
     }
 
     async fn fail(&self, job_id: &str, tenant_id: &str, _reason: &str) -> Result<(), String> {
-        sqlx::query("UPDATE shared_tasks SET status = 'failed', updated_at = strftime('%s', 'now') WHERE id = ? AND organization_id = ?")
+        sqlx::query("UPDATE shared_tasks SET status = 'FAILED', updated_at = datetime('now') WHERE id = ? AND organization_id = ?")
             .bind(job_id)
             .bind(tenant_id)
             .execute(&*self.pool)
@@ -315,14 +316,14 @@ impl TaskQueue for SqliteTaskQueue {
         job.encode(&mut buf).map_err(|e| e.to_string())?;
 
         sqlx::query(
-            "UPDATE shared_tasks SET status = 'pending', attempts = ?, max_attempts = ?, run_after = datetime(?, 'unixepoch'), locked_until = NULL, updated_at = strftime('%s', 'now'), protobuf_blob = ? WHERE id = ? AND organization_id = ?"
+            "UPDATE shared_tasks SET status = 'PENDING', attempts = ?, max_attempts = ?, run_after = datetime(?, 'unixepoch'), locked_until = NULL, updated_at = datetime('now'), protobuf_blob = ? WHERE id = ? AND organization_id = ?"
         )
         .bind(job.attempts)
         .bind(job.max_attempts)
         .bind(job.run_after)
+        .bind(buf)
         .bind(&job.id)
         .bind(&job.tenant_id)
-        .bind(buf)
         .execute(&*self.pool)
         .await
         .map_err(|e| e.to_string())?;
@@ -349,7 +350,7 @@ impl RedisTaskQueue {
 impl TaskQueue for RedisTaskQueue {
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
-        
+
         let mut buf = Vec::new();
         job.encode(&mut buf).map_err(|e| e.to_string())?;
 
