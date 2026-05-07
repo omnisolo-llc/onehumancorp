@@ -1,19 +1,11 @@
 {
-  "ask_ai": "Ask your helper to do things for you.",
-  "menu": "Open the main menu for more options.",
   "help_center": "Find answers and how-to guides.",
-  "quick_actions_hint": "Things you can do right now.",
-  "grow_business": "Tools to help you get more customers.",
-  "referrals": "Manage your referral program.",
-  "stats": "See how your store is doing.",
-  "share": "Share your store link with others.",
-  "add_product": "Add a new product to your store.",
+  "add_product": "Add a new product or service to your store.",
   "view_orders": "View and manage your recent orders.",
-  "messages": "Check your customer messages.",
-  "api_docs": "Advanced: Connect other tools to your store.",
-  "advisory_hint": "Tips and advice from your business helper.",
-  "api_test_button": "Test if your custom software connects to your store.",
-  "api_docs_advanced": "Show the technical details needed to connect custom software.",
-  "ai_chat_send": "Send your question to the helper.",
-  "help_floating_button": "Open help center for answers and guides."
+  "messages": "Read and respond to customer messages.",
+  "stats": "View your store's performance analytics.",
+  "share": "Share your store link with customers.",
+  "ask_ai": "Ask the AI helper any question.",
+  "advisory_hint": "Insights and suggestions for your business.",
+  "quick_actions_hint": "These buttons are shortcuts to your most common daily tasks."
 }
