@@ -125,6 +125,11 @@ func RecordHarnessExecutionDuration(ctx context.Context, durationSecs float64) e
 		opts := metric.WithAttributes(getDeploymentModeAttribute())
 		executionDurationHistogram.Record(ctx, durationSecs, opts)
 	}
+
+	bufferMetricHelper(ctx, "harness_execution_duration_seconds", durationSecs, map[string]interface{}{
+		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
+	})
+
 	return nil
 }
 
@@ -137,6 +142,12 @@ func RecordMCPToolCall(ctx context.Context, toolName string) error {
 		)
 		mcpToolCallsCounter.Add(ctx, 1, opts)
 	}
+
+	bufferMetricHelper(ctx, "ohc_mcp_tool_calls_total", 1, map[string]interface{}{
+		"tool": toolName,
+		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
+	})
+
 	return nil
 }
 
@@ -152,6 +163,12 @@ func RecordHarnessToolInvocation(ctx context.Context, toolName string) error {
 		)
 		toolInvocationsCounter.Add(ctx, 1, opts)
 	}
+
+	bufferMetricHelper(ctx, "harness_tool_invocations_total", 1, map[string]interface{}{
+		"tool": toolName,
+		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
+	})
+
 	return nil
 }
 
@@ -178,6 +195,11 @@ func RecordHarnessInitLatency(ctx context.Context, durationSecs float64) error {
 		opts := metric.WithAttributes(getDeploymentModeAttribute())
 		harnessInitLatencyHistogram.Record(ctx, durationSecs, opts)
 	}
+
+	bufferMetricHelper(ctx, "harness_init_latency_seconds", durationSecs, map[string]interface{}{
+		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
+	})
+
 	return nil
 }
 
@@ -216,6 +238,11 @@ func RecordBubblewrapExecutionLatency(ctx context.Context, durationSecs float64)
 		opts := metric.WithAttributes(getDeploymentModeAttribute())
 		bubblewrapExecutionLatencyHistogram.Record(ctx, durationSecs, opts)
 	}
+
+	bufferMetricHelper(ctx, "bubblewrap_execution_latency_seconds", durationSecs, map[string]interface{}{
+		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
+	})
+
 	return nil
 }
 
