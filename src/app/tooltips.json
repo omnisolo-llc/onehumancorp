@@ -7,5 +7,9 @@
   "share": "Share your store link with customers.",
   "ask_ai": "Ask the AI helper any question.",
   "advisory_hint": "Insights and suggestions for your business.",
-  "quick_actions_hint": "These buttons are shortcuts to your most common daily tasks."
+  "quick_actions_hint": "These buttons are shortcuts to your most common daily tasks.",
+  "api_docs_advanced": "Toggle to see detailed API endpoints for developers.",
+  "api_test_button": "Run a live test against this endpoint.",
+  "ai_chat_send": "Send your message to the AI Helper.",
+  "help_floating_button": "Open the Help Center."
 }
