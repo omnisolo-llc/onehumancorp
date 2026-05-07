@@ -1,6 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_service.dart';
 
+// Provide ApiService allowing for mocking
+final apiServiceProvider = Provider<ApiService>((ref) {
+  return ApiService();
+});
+
 class WizardState {
   final int currentStep;
   final String? companyName;
@@ -50,8 +55,6 @@ class WizardState {
 }
 
 class WizardNotifier extends Notifier<WizardState> {
-  final ApiService _apiService = ApiService();
-
   @override
   WizardState build() {
     return WizardState();
@@ -111,7 +114,8 @@ class WizardNotifier extends Notifier<WizardState> {
       'adminPassword': state.adminPassword,
     };
 
-    await _apiService.submitBusinessData(data);
+    final apiService = ref.read(apiServiceProvider);
+    await apiService.submitBusinessData(data);
 
     // Proceed to the dashboard
     nextStep();

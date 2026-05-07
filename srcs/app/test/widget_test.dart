@@ -2,11 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/main.dart';
+import 'package:http/testing.dart';
+import 'package:http/http.dart' as http;
+import 'package:app/services/api_service.dart';
+import 'package:app/providers/wizard_provider.dart';
 
 void main() {
   testWidgets('Business Setup Wizard E2E test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const ProviderScope(child: OHCApp()));
+    // Provide a MockClient for tests
+    final mockClient = MockClient((request) async {
+      return http.Response('{}', 202);
+    });
+
+    // Build our app and trigger a frame with the mocked ApiService
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          apiServiceProvider.overrideWithValue(ApiService(client: mockClient)),
+        ],
+        child: const OHCApp(),
+      ),
+    );
 
     // 1. Welcome Screen
     expect(find.text('Welcome to One Human Corp'), findsOneWidget);
@@ -70,9 +86,8 @@ void main() {
     await tester.tap(find.text('Launch My AI Team'));
     await tester.pump();
 
-    // Wait for the simulated API call (2 seconds)
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump(const Duration(milliseconds: 500));
+    // The API request doesn't take 2 seconds anymore since it's mocked, but let's wait a bit
+    await tester.pump(const Duration(seconds: 1));
 
     // 7. Dashboard Screen
     expect(find.text("Dashboard"), findsOneWidget);
