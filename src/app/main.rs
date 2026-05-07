@@ -1674,17 +1674,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                        GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
-                dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
-                let dash_weak = dashboard.as_weak();
-                add_advanced_listener(Box::new(move |val| {
-                    if let Some(ui) = dash_weak.upgrade() {
-                        ui.set_is_advanced(val);
+            GLOBAL_DASHBOARD.with(|global| {
+                if let Some(weak) = global.borrow().as_ref() {
+                    if let Some(ui) = weak.upgrade() {
+                        let _ = ui.show();
+                        ui.invoke_action_add_product();
                     }
-                }));
-                dashboard.show().unwrap();
-            }
+                } else if let Ok(dashboard) = app::Dashboard::new() {
+                    *global.borrow_mut() = Some(dashboard.as_weak());
+                    dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+                    let dash_weak = dashboard.as_weak();
+                    add_advanced_listener(Box::new(move |val| {
+                        if let Some(ui) = dash_weak.upgrade() {
+                            ui.set_is_advanced(val);
+                        }
+                    }));
+                    dashboard.show().unwrap();
+                    dashboard.invoke_action_add_product();
+                    Box::leak(Box::new(dashboard));
+                }
+            });
         }
     });
 
@@ -1694,17 +1703,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = handle.upgrade() {
                 ui.hide().unwrap();
             }
-            if let Ok(dashboard) = app::Dashboard::new() {
-                        GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
-                dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
-                let dash_weak = dashboard.as_weak();
-                add_advanced_listener(Box::new(move |val| {
-                    if let Some(ui) = dash_weak.upgrade() {
-                        ui.set_is_advanced(val);
+            GLOBAL_INTEGRATIONS.with(|global| {
+                if let Some(weak) = global.borrow().as_ref() {
+                    if let Some(ui) = weak.upgrade() {
+                        let _ = ui.show();
                     }
-                }));
-                dashboard.show().unwrap();
-            }
+                } else if let Ok(integrations) = app::Integrations::new() {
+                    *global.borrow_mut() = Some(integrations.as_weak());
+                    integrations.show().unwrap();
+                    Box::leak(Box::new(integrations));
+                }
+            });
         }
     });
 

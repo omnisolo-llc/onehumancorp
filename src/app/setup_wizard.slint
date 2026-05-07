@@ -59,6 +59,7 @@ export component SetupWizard inherits Window {
 
     // Animation state
     property <float> pulse_scale: 1.0;
+    property <length> confetti_y: -100px;
     in-out property <string> shareable_link: "https://mybusiness.ohc.app";
 
     callback launch(string, string, string, string, string, string, string, string, string, string, string, string);
@@ -619,6 +620,19 @@ export component SetupWizard inherits Window {
                         padding: 16px;
                         alignment: center;
                         spacing: 16px;
+                        Rectangle {
+                            height: 60px;
+                            Text {
+                                text: "🎉";
+                                font-size: 40px;
+                                horizontal-alignment: center;
+                                y: confetti_y;
+                                animate y {
+                                    duration: 1000ms;
+                                    easing: ease-out-bounce;
+                                }
+                            }
+                        }
                         Text {
                             text: "🎉 CONFETTI Success! Your business is live! 🎉";
                             font-size: 24px;
@@ -795,6 +809,7 @@ export component SetupWizard inherits Window {
                 TouchArea { clicked => {
                     launching = true; copy_link(shareable_link);
                     launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password, price_type);
+                    confetti_y = 0px;
                 } }
             }
 
