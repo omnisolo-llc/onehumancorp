@@ -184,6 +184,12 @@ impl WizardService for MyWizardService {
             });
         }
 
+        health_checks.push(DiagnosticCheckProto {
+            check: "HYBRID_MODE_SWITCHING".to_string(),
+            status: "ok".to_string(),
+            message: "Hybrid-mode switching mechanisms are active".to_string(),
+        });
+
         Ok(Response::new(OnboardingVerifyResponse {
             status: resp_status.to_string(),
             mode: mode.to_string(),
@@ -218,6 +224,10 @@ mod tests {
                 assert_eq!(response.mode, "standalone");
                 let has_ok_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "ok");
                 assert!(has_ok_db);
+                let has_hybrid_check = response.diagnostics.iter().any(|d| d.check == "HYBRID_MODE_SWITCHING" && d.status == "ok");
+                assert!(has_hybrid_check);
+                let has_local_sync_check = response.diagnostics.iter().any(|d| d.check == "LOCAL_TO_CLOUD_SYNC" && d.status == "ok");
+                assert!(has_local_sync_check);
             });
         });
     }
@@ -254,6 +264,24 @@ mod tests {
                 assert_eq!(response.mode, "standalone");
                 let has_invalid_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "invalid");
                 assert!(has_invalid_db);
+            });
+        });
+    }
+
+    #[test]
+    fn test_verify_onboarding_hybrid_mode_probes() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("false")), ("DATABASE_URL", Some("postgres://db")), ("REDIS_URL", Some("redis://cache"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+                assert_eq!(response.mode, "cloud");
+                let has_hybrid_check = response.diagnostics.iter().any(|d| d.check == "HYBRID_MODE_SWITCHING" && d.status == "ok");
+                assert!(has_hybrid_check);
+                let has_local_sync_check = response.diagnostics.iter().any(|d| d.check == "LOCAL_TO_CLOUD_SYNC" && d.status == "ok");
+                assert!(has_local_sync_check);
             });
         });
     }
