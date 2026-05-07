@@ -366,3 +366,21 @@ async fn test_record_queue_length_with_deployment_mode() {
     let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
     assert!(parsed.get("deployment_mode").is_some());
 }
+
+    #[test]
+    fn test_strict_pii_no_exfiltration() {
+        let malicious_payload = serde_json::json!({
+            "session_id": "sess_123",
+            "email": "hacker@test.com",
+            "password": "pwned",
+            "nested": {
+                "secret_key": "sk_live_12345",
+                "org_id": "org_secret",
+            }
+        });
+        let redacted = crate::telemetry::redact_interface_pii(malicious_payload);
+        assert_eq!(redacted["session_id"], "[REDACTED]");
+        assert_eq!(redacted["email"], "[REDACTED]");
+        assert_eq!(redacted["password"], "[REDACTED]");
+        assert_eq!(redacted["nested"]["secret_key"], "[REDACTED]");
+    }
