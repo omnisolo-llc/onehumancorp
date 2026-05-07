@@ -187,3 +187,15 @@ proto_rust_library(
 )
 
 # ── MCP Proxy ──────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "interop_proto",
+    srcs = ["interop.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "interop",
+    proto = ":interop_proto",
+    visibility = ["//visibility:public"],
+)
