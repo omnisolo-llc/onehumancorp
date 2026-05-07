@@ -258,7 +258,8 @@ mod tests {
                            lower_line.contains("error!") ||
                            lower_line.contains("warn!") ||
                            lower_line.contains("debug!") ||
-                           lower_line.contains("tracing::")
+                           lower_line.contains("tracing::") ||
+                           lower_line.contains("dbg!")
                         {
                             if lower_line.contains("tenant_id") ||
                                lower_line.contains("organization_id") ||
@@ -270,7 +271,10 @@ mod tests {
                                lower_line.contains("password") ||
                                lower_line.contains("pii") ||
                                lower_line.contains("api_key") ||
-                               lower_line.contains("secret_key") {
+                               lower_line.contains("secret_key") ||
+                               lower_line.contains("credit_card") ||
+                               lower_line.contains("dob") ||
+                               lower_line.contains("billing") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }
