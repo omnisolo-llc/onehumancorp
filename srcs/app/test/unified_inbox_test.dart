@@ -50,14 +50,23 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.ensureVisible(launchBtn);
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(launchBtn);
-  await tester.pump();
+
+  // Wait for pulse animation and API call
   await tester.pump(const Duration(seconds: 2));
-  await tester.pump(const Duration(milliseconds: 500));
+
+  // Dashboard is visible now. Avoid pumpAndSettle due to pulse animation running.
+  // Wait explicitly instead
+  await tester.pump(const Duration(seconds: 1));
 
   // 7. Dashboard Screen
-  await tester.ensureVisible(find.byKey(const Key('inboxBtn')));
+  final inboxBtn = find.byKey(const Key('inboxBtn'));
+  await tester.dragUntilVisible(
+    inboxBtn,
+    find.byType(ListView).first,
+    const Offset(0, -100),
+  );
   await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.byKey(const Key('inboxBtn')));
+  await tester.tap(inboxBtn);
   await tester.pump(const Duration(milliseconds: 500));
   await tester.pump(const Duration(seconds: 1)); // Navigator transition
 }
