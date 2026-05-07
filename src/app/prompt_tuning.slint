@@ -12,7 +12,7 @@ export component PromptTuning inherits Window {
     title: "Tune Helper";
 
     in-out property <int> step: 0;
-    in-out property <string> tone: "Friendly";
+    in-out property <string> tone: "Friendly & Warm";
     in-out property <bool> is_advanced: false;
     in-out property <bool> show_toast: false;
     
@@ -81,9 +81,9 @@ export component PromptTuning inherits Window {
                     GlassCard {
                         width: 100px;
                         height: 60px;
-                        background: tone == "Friendly" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        VerticalBox { alignment: center; padding: 12px; Text { text: "😊\nFriendly"; font-family: "Inter"; font-size: 12px; color: white; horizontal-alignment: center; } }
-                        TouchArea { clicked => { tone = "Friendly"; } }
+                        background: tone == "Friendly & Warm" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px; Text { text: "😊\nFriendly & Warm"; font-family: "Inter"; font-size: 12px; color: white; horizontal-alignment: center; } }
+                        TouchArea { clicked => { tone = "Friendly & Warm"; } }
                     }
                     GlassCard {
                         width: 100px;
@@ -91,6 +91,13 @@ export component PromptTuning inherits Window {
                         background: tone == "Energetic" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         VerticalBox { alignment: center; padding: 12px; Text { text: "⚡\nEnergetic"; font-family: "Inter"; font-size: 12px; color: white; horizontal-alignment: center; } }
                         TouchArea { clicked => { tone = "Energetic"; } }
+                    }
+                    GlassCard {
+                        width: 100px;
+                        height: 60px;
+                        background: tone == "Concise" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px; Text { text: "✂️\nConcise"; font-family: "Inter"; font-size: 12px; color: white; horizontal-alignment: center; } }
+                        TouchArea { clicked => { tone = "Concise"; } }
                     }
                 }
                 Text { text: "Selected: " + tone; color: #a855f7; font-family: "Inter"; font-weight: 700; }
@@ -220,7 +227,7 @@ export component PromptTuning inherits Window {
                             border-radius: 8px;
                             HorizontalBox {
                                 padding: 8px;
-                                Text { text: "Helper: " + (tone == "Friendly" ? "Hi there! 😊 How can I help you today?" : (tone == "Professional" ? "Greetings. How may I assist you today?" : (tone == "Energetic" ? "Hey! Let's get things moving! 🚀" : "Hi."))); color: white; font-family: "Inter"; wrap: word-wrap; }
+                                Text { text: "Helper: " + (tone == "Friendly & Warm" ? "Hi there! 😊 How can I help you today?" : (tone == "Professional" ? "Greetings. How may I assist you today?" : (tone == "Energetic" ? "Hey! Let's get things moving! 🚀" : (tone == "Concise" ? "Hello. How can I assist?" : "Hi.")))); color: white; font-family: "Inter"; wrap: word-wrap; }
                             }
                         }
                         Rectangle { height: 100px; } // Spacer
