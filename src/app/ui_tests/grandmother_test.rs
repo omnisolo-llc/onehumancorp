@@ -326,9 +326,9 @@ fn test_grandmother_login_error_message_ux() {
     crate::ui_tests::init();
     let ui = crate::app::Login::new().unwrap();
     // Simulate setting an internal error message with jargon
-    ui.set_error_message("API error 500: null pointer exception at 0x0041".into());
+    ui.set_error_message("We couldn't sign you in.".into());
     // Assert that the raw property gets set
-    assert_eq!(ui.get_error_message(), "API error 500: null pointer exception at 0x0041");
+    assert_eq!(ui.get_error_message(), "We couldn't sign you in.");
     // Verify that callbacks don't panic even when error is active
     let action_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let action_invoked_clone = action_invoked.clone();
@@ -351,8 +351,8 @@ fn test_grandmother_secure_agent_config_error_ux() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
     let ui = crate::app::SecureAgentConfig::new().unwrap();
-    ui.set_error_text("Connection refused by SPIRE sidecar".into());
-    assert_eq!(ui.get_error_text(), "Connection refused by SPIRE sidecar");
+    ui.set_error_text("Could not connect to the helper.".into());
+    assert_eq!(ui.get_error_text(), "Could not connect to the helper.");
 }
 
 #[test]
@@ -372,7 +372,7 @@ fn test_grandmother_secure_agent_config_submit_ux() {
     crate::ui_tests::init();
     let ui = crate::app::SecureAgentConfig::new().unwrap();
     ui.set_token("secure-token-123".into());
-    ui.set_error_text("Internal Server Error: 500".into());
+    ui.set_error_text("Connection failed.".into());
     let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let invoked_clone = invoked.clone();
     ui.on_save_config(move |t| {
