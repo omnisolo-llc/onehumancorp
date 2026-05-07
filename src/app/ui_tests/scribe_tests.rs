@@ -1,4 +1,4 @@
-use slint::{ComponentHandle, SharedString, Model};
+use slint::Model;
 use crate::app;
 
 #[test]
