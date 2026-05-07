@@ -50,7 +50,7 @@ pkg_deb(
     architecture = "amd64",
     maintainer = "One Human Corp <support@onehumancorp.com>",
     package = "ohc-app",
-    version = "0.4.32+1",
+    version = "0.4.33+1",
     description = "One Human Corp Desktop Application",
     section = "utils",
     priority = "optional",
@@ -60,7 +60,7 @@ pkg_deb(
 pkg_rpm(
     name = "app_rpm",
     package_name = "ohc-app",
-    version = "0.4.32+1",
+    version = "0.4.33+1",
     license = "Apache-2.0",
     summary = "One Human Corp Desktop Application",
     description = "One Human Corp Desktop Application",
@@ -72,7 +72,7 @@ pkg_rpm(
 pkg_zip(
     name = "app_windows_zip",
     srcs = [":app_files"],
-    package_file_name = "ohc-app-windows-0.4.32+1.zip",
+    package_file_name = "ohc-app-windows-0.4.33+1.zip",
     visibility = ["//visibility:public"],
 )
 

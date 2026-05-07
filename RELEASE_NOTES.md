@@ -1,3 +1,9 @@
+## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
+
+- Scaling (Cloud): Prepare hybrid semver release and promote across Cloud/Standalone environments.
+
+- Privacy/Offline (Standalone): Finalize standalone multi-tenant resource controls.
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 - Scaling (Cloud): update api routing to use axum 0.8 style path variables (#11553).

@@ -1,4 +1,11 @@
 # OHC Hybrid Agentic OS - Changelog
+## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
+### Cloud Scaling Improvements
+- 🧹 Maintainer: Prepare hybrid semver release and promote across Cloud/Standalone environments
+
+### Privacy/Offline Improvements
+- 🧹 Maintainer: Finalize standalone multi-tenant resource controls
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🧹 Maintainer: Ensure multitenant K8s compliance for all pods (#11546)
