@@ -248,12 +248,16 @@ impl DashboardService for MyDashboardService {
         let mut original_prompts_len = 0;
         let mut compressed_prompts_len = 0;
 
-        let all_hub_agents = self.hub.get_agents();
-        let org_agents: Vec<_> = all_hub_agents.iter().filter(|a| a.organization_id == req.organization_id || a.id.starts_with(&format!("{}-", req.organization_id))).collect();
+        let mut final_agents = _filtered_agents.into_iter().map(|a| crate::ohc::agent::Agent {
+            id: a.id,
+            name: a.name,
+            role: crate::ohc::common::Role::Unspecified as i32,
+            status: crate::ohc::common::AgentStatus::Idle as i32,
+            organization_id: a.organization_id,
+        }).collect::<Vec<_>>();
 
-        for agent in org_agents {
-            // Note: we fetch the agent system prompts here (this simulation fetches basic descriptive info or we assume generic size if absent)
-            let prompt = &agent.name; // In full architecture this is loaded from db/roles, but since the Agent structure doesn't have a direct 'system_prompt' field exposed here, we compress role/name as representative text.
+        for agent in final_agents.iter() {
+            let prompt = &agent.name;
             let orig_len = prompt.len();
             if orig_len > 0 {
                 original_prompts_len += orig_len;
@@ -279,14 +283,6 @@ impl DashboardService for MyDashboardService {
             projected_monthly_usd: 0.0,
             agents: vec![],
         };
-
-        let mut final_agents = _filtered_agents.into_iter().map(|a| crate::ohc::agent::Agent {
-            id: a.id,
-            name: a.name,
-            role: crate::ohc::common::Role::Unspecified as i32,
-            status: crate::ohc::common::AgentStatus::Idle as i32,
-            organization_id: a.organization_id,
-        }).collect::<Vec<_>>();
 
         if req.mobile_optimized {
             for agent in final_agents.iter_mut() {
