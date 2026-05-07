@@ -80,6 +80,7 @@ impl DB {
                         .write(true)
                         .create(true)
                         .mode(0o600)
+                        .custom_flags(libc::O_NOFOLLOW)
                         .open(&db_path)
                     {
                         if let Ok(metadata) = file.metadata() {
@@ -940,6 +941,7 @@ mod security_tests_final {
                 .write(true)
                 .create(true)
                 .mode(0o600)
+                .custom_flags(libc::O_NOFOLLOW)
                 .open(&db_path)
                 .unwrap();
             let metadata = file.metadata().unwrap();

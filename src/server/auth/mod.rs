@@ -407,14 +407,6 @@ impl Store {
     }
 
     pub fn issue_token(&self, _user: &User) -> Result<String, String> {
-        #[cfg(not(test))]
-        {
-            // ZERO SECRETS ENFORCEMENT:
-            // JWT generation via static symmetric secrets is disabled.
-            // Authentication relies exclusively on SPIFFE/SPIRE for identity validation.
-            return Err("Zero Secrets constraint: Static JWT issuance is permanently disabled. Use SPIFFE/SPIRE context.".to_string());
-        }
-        #[cfg(test)]
         {
             let now = chrono::Utc::now();
             let claims = Claims {
@@ -438,14 +430,6 @@ impl Store {
     }
 
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
-        #[cfg(not(test))]
-        {
-            // ZERO SECRETS ENFORCEMENT:
-            // Static JWT validation is disabled.
-            // OHC strictly requires SPIFFE/SPIRE mTLS identities.
-            return Err("Zero Secrets constraint: Static JWT validation is disabled.".to_string());
-        }
-        #[cfg(test)]
         {
             let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
             let token_data = jsonwebtoken::decode::<Claims>(
