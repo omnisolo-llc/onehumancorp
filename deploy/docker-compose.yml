@@ -19,8 +19,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
         reservations:
           cpus: "0.1"
           memory: 64M
@@ -49,11 +49,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
         reservations:
           cpus: "0.2"
-          memory: 128M
+          memory: 64M
     image: onehumancorp/server:latest
     environment:
       LOG_LEVEL: "info"
@@ -133,8 +133,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
 
   postgres:
     logging:
@@ -162,8 +162,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
 
   powersync:
     logging:
@@ -186,8 +186,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
 
   chatwoot-migrate:
     logging:
@@ -236,8 +236,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
 
   chatwoot-worker:
     logging:
@@ -261,8 +261,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
 
   prometheus:
     logging:
@@ -278,8 +278,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
 
   grafana:
     logging:
@@ -301,8 +301,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
 
 
 
@@ -320,7 +320,7 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: 128M
+          memory: 64M
 
   telemetry-mcp-bridge:
     logging:

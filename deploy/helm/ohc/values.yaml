@@ -10,7 +10,7 @@ backend:
     enabled: true
     minReplicas: 2
     maxReplicas: 20
-    targetCPUUtilizationPercentage: 80
+    targetCPUUtilizationPercentage: 75
     targetMemoryUtilizationPercentage: 80
   resources:
     requests:
@@ -22,7 +22,7 @@ backend:
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
-  multiTenant: false
+  multiTenant: true
 
   resourceQuota:
     enabled: true
@@ -60,7 +60,7 @@ ohcCore:
       memory: "64Mi"
     limits:
       cpu: "500m"
-      memory: "512Mi"
+      memory: "1Gi"
 
 # Redis subchart (Bitnami) – used for session caching and pub/sub
 redis:
