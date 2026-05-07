@@ -8,10 +8,11 @@ import (
 
 	"net/http"
 
+	"onehumancorp/srcs/server/growth"
 	"onehumancorp/srcs/server/memory"
 	"onehumancorp/srcs/server/onboarding"
 	"onehumancorp/srcs/server/orchestration"
-	"onehumancorp/srcs/server/growth"
+	"onehumancorp/srcs/server/orchestration/statemachine"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -73,7 +74,7 @@ func main() {
 
 	// Initialize Onboarding
 	tenantStore := onboarding.NewSqliteTenantStore(db)
-	taskStore := orchestration.NewSqliteTaskStore(db)
+	taskStore := orchestration.NewSqliteTaskStoreWithStateMachine(db, statemachine.NewStateMachine(db, nil, orchestration.NewLocalTeammateMesh()))
 	onboardingService := onboarding.NewService(tenantStore, taskStore)
 	onboardingAPI := onboarding.NewAPIHandler(onboardingService)
 
