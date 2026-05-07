@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"log"
 	"time"
 
 	"net/http"
@@ -12,6 +11,8 @@ import (
 	"onehumancorp/srcs/server/onboarding"
 	"onehumancorp/srcs/server/orchestration"
 	"onehumancorp/srcs/server/growth"
+	"fmt"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -25,12 +26,13 @@ func (m *MockLLMClient) GenerateEmbedding(ctx context.Context, text string) ([]f
 }
 
 func main() {
-	log.Println("Starting OHC Server...")
+	fmt.Println("Starting OHC Server...")
 
 	// Initialize SQLite database (or Postgres in a real environment)
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
-		log.Fatalf("Failed to open database: %v", err)
+		fmt.Fprintf(os.Stderr, "Failed to open database: %v\n", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
@@ -43,7 +45,8 @@ func main() {
 		)
 	`)
 	if err != nil {
-		log.Fatalf("Failed to create memory_embeddings table: %v", err)
+		fmt.Fprintf(os.Stderr, "Failed to create memory_embeddings table: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Initialize the mock LLM client
@@ -58,7 +61,8 @@ func main() {
 		5*time.Second,
 	)
 	if err != nil {
-		log.Fatalf("Failed to initialize AutoDream daemon: %v", err)
+		fmt.Fprintf(os.Stderr, "Failed to initialize AutoDream daemon: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Run AutoDream daemon in background
@@ -67,7 +71,6 @@ func main() {
 
 	go daemon.Run(ctx)
 
-	log.Println("OHC Server is running. AutoDream daemon started.")
 
 	// Block forever (or implement graceful shutdown)
 
@@ -87,9 +90,9 @@ func main() {
 	mux.HandleFunc("/api/growth/team-invites/accept", growthSvc.HandleTeamInviteAccept)
 
 	go func() {
-		log.Println("Listening on :8080...")
 		if err := http.ListenAndServe(":8080", mux); err != nil {
-			log.Fatalf("Server failed: %v", err)
+			fmt.Fprintf(os.Stderr, "Server failed: %v\n", err)
+			os.Exit(1)
 		}
 	}()
 

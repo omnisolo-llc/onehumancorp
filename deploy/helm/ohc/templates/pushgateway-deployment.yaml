@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: pushgateway
-        image: prom/pushgateway:latest
+        image: prom/pushgateway:v1.6.2
         args:
         - "--log.level=info"
         - "--log.format=json"
