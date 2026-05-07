@@ -1579,7 +1579,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
         if let Ok(mut client) = ohc::billing::billing_service_client::BillingServiceClient::connect(hub_url).await {
-            let mut req = tonic::Request::new(ohc::billing::TokenUsage {
+            let req = tonic::Request::new(ohc::billing::TokenUsage {
                 organization_id: std::env::var("OHC_BOOTSTRAP_ORG_ID").unwrap_or_else(|_| "default".to_string()),
                 ..Default::default()
             });
