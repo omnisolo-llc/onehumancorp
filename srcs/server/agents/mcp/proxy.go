@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
+	"onehumancorp/srcs/server/telemetry"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -11,6 +13,8 @@ import (
 )
 
 func NewBlobProxy(ctx context.Context) (storage.BlobProvider, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordHarnessInitLatency(ctx, time.Since(start).Seconds()) }()
 	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
 	isMultitenant := os.Getenv("OHC_MULTITENANT") == "true"
 
