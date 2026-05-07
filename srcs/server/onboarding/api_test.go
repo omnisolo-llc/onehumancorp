@@ -27,7 +27,7 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	// Setup mock router/mux
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/onboarding/start", handler.HandleStartOnboarding)
-	mux.HandleFunc("/api/onboarding/status", handler.HandleGetStatus)
+	mux.HandleFunc("/api/onboarding/status", TenantAuthMiddleware(handler.HandleGetStatus))
 
 	// Create test server
 	ts := httptest.NewServer(mux)
@@ -60,7 +60,10 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	assert.Len(t, tasks, 3)
 
 	// 3. Poll Status
-	statusResp, err := http.Get(ts.URL + "/api/onboarding/status?tenant_id=" + startRes.TenantID)
+	req1, err := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
+	assert.NoError(t, err)
+	req1.Header.Set("X-Tenant-Id", startRes.TenantID)
+	statusResp, err := http.DefaultClient.Do(req1)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp.StatusCode)
 
@@ -78,7 +81,9 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	}
 
 	// 5. Poll Status Again
-	statusResp2, err := http.Get(ts.URL + "/api/onboarding/status?tenant_id=" + startRes.TenantID)
+	req2, _ := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
+	req2.Header.Set("X-Tenant-Id", startRes.TenantID)
+	statusResp2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp2.StatusCode)
 
