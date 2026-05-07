@@ -222,6 +222,31 @@ impl Agent {
         self
     }
 
+    /// Run the agent as an async stream (Anthropic Claude Agent SDK & Claude Code archetype)
+    /// Implements the harness via a single `query()` function that returns an async iterator streaming messages.
+    /// Uses a "dumb loop" Gather-Act-Verify cycle internally.
+    pub fn query(
+        self: Arc<Self>,
+        cfg: AgentRunConfig,
+        initial_message: String,
+    ) -> tokio_stream::wrappers::UnboundedReceiverStream<AgentEvent> {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+        tokio::spawn(async move {
+            let mut on_event = |event| {
+                // Ignore send errors if receiver dropped. Use unbounded_channel to avoid blocking and data loss inside sync closure.
+                let _ = tx.send(event);
+            };
+
+            let res = self.run(&cfg, &initial_message, &mut on_event).await;
+            if let Err(e) = res {
+                let _ = tx.send(AgentEvent::TaskError { error: e.to_string() });
+            }
+        });
+
+        tokio_stream::wrappers::UnboundedReceiverStream::new(rx)
+    }
+
     /// Run the agent loop. Calls `on_event` for each event.
     #[tracing::instrument(skip(self, _on_event, cfg), fields(model = %cfg.model))]
     pub async fn run_langgraph<F>(
@@ -1821,6 +1846,44 @@ mod tests {
     use ohc_builtin_agent_core::types::{ChatResponse, Message, Role, ToolCall, Usage};
     use tokio::sync::Mutex;
     use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_anthropic_claude_query_stream_mechanic() {
+        use tokio_stream::StreamExt;
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ohc_builtin_agent_core::types::ChatResponse {
+                    message: Message::assistant("Streamed Final Answer"),
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                }
+            ]),
+        });
+
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let cfg = AgentRunConfig::default();
+
+        let mut stream = agent.query(cfg, "Hello Claude".to_string());
+
+        let mut events = Vec::new();
+        while let Some(event) = stream.next().await {
+            events.push(event);
+        }
+
+        // We expect at least a RunStarted and a TaskComplete event
+        assert!(events.len() >= 2);
+
+        let mut found_task_complete = false;
+        for e in events {
+            if let AgentEvent::TaskComplete { content } = e {
+                assert_eq!(content, "Streamed Final Answer");
+                found_task_complete = true;
+            }
+        }
+        assert!(found_task_complete, "Stream should yield a TaskComplete event");
+    }
 
     #[tokio::test]
     async fn test_acon_context_strategy() {
