@@ -27,7 +27,7 @@ grep -q "internal-default-agent:bazel" "$build_file"
 
 # Verify docker-compose uses the consolidated server image.
 grep -q "server:" "$compose_file"
-grep -q "onehumancorp/server:latest" "$compose_file"
+grep -q "onehumancorp/server:v1.0.0" "$compose_file"
 ! grep -q "onehumancorp/ui" "$compose_file"
 ! grep -q "^  ui:" "$compose_file"
 

@@ -1,0 +1,25 @@
+{{- if and .Values.pushgateway.enabled .Values.pushgateway.vpa.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-pushgateway-vpa
+  labels:
+    app: {{ .Release.Name }}-pushgateway
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind:       Deployment
+    name:       {{ .Release.Name }}-pushgateway
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: pushgateway
+        controlledResources: ["cpu", "memory"]
+        minAllowed:
+          cpu: {{ .Values.pushgateway.resources.requests.cpu }}
+          memory: {{ .Values.pushgateway.resources.requests.memory }}
+        maxAllowed:
+          cpu: {{ .Values.pushgateway.resources.limits.cpu }}
+          memory: {{ .Values.pushgateway.resources.limits.memory }}
+{{- end }}

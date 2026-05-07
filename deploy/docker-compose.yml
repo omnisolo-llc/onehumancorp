@@ -54,7 +54,7 @@ services:
         reservations:
           cpus: "0.1"
           memory: 64M
-    image: onehumancorp/server:latest
+    image: onehumancorp/server:v1.0.0
     environment:
       LOG_LEVEL: "info"
       REDIS_ADDR: redis:6379
@@ -171,7 +171,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: journeyapps/powersync-service:latest
+    image: journeyapps/powersync-service:v1.12.0
     ports:
       - "8081:8080"
     environment:
@@ -195,7 +195,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: chatwoot/chatwoot:latest
+    image: chatwoot/chatwoot:v3.15.1
     command: bundle exec rails db:chatwoot_prepare
     environment:
       LOG_LEVEL: "info"
@@ -218,7 +218,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: chatwoot/chatwoot:latest
+    image: chatwoot/chatwoot:v3.15.1
     command: bundle exec rails s -p 3000 -b 0.0.0.0
     environment:
       LOG_LEVEL: "info"
@@ -245,7 +245,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: chatwoot/chatwoot:latest
+    image: chatwoot/chatwoot:v3.15.1
     command: bundle exec sidekiq -C config/sidekiq.yml
     environment:
       LOG_LEVEL: "info"
@@ -270,7 +270,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.52.0
     volumes:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
@@ -287,7 +287,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: grafana/grafana:latest
+    image: grafana/grafana:v10.4.2
     ports:
       - "3000:3000"
     environment:
@@ -313,7 +313,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: prom/pushgateway:latest
+    image: prom/pushgateway:v1.9.0
     ports:
       - "9091:9091"
     deploy:
@@ -328,7 +328,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: mcp/telemetry-bridge:latest
+    image: mcp/telemetry-bridge:v1.0.0
     environment:
       LOG_LEVEL: "info"
       PROMETHEUS_URL: http://prometheus:9090
@@ -345,3 +345,28 @@ services:
 volumes:
   # Persists the bootstrap marker so the admin-init script runs only once.
   server-init-data:
+
+  loki:
+    image: grafana/loki:3.0.0
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    volumes:
+      - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64M

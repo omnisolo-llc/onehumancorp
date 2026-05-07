@@ -1,0 +1,30 @@
+{{- if and .Values.pushgateway.enabled .Values.pushgateway.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-pushgateway
+  labels:
+    app: {{ .Release.Name }}-pushgateway
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}-pushgateway
+  minReplicas: {{ .Values.pushgateway.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.pushgateway.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.pushgateway.autoscaling.targetCPUUtilizationPercentage }}
+{{- if .Values.pushgateway.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.pushgateway.autoscaling.targetMemoryUtilizationPercentage }}
+{{- end }}
+{{- end }}

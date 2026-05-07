@@ -1,5 +1,5 @@
 backend:
-  image: onehumancorp/server:latest
+  image: onehumancorp/server:v1.0.0
   replicas: 1
   headless: false
   service:
@@ -44,7 +44,7 @@ backend:
 # In cloud-native mode the core runs as a dedicated micro-service.
 ohcCore:
   enabled: true
-  image: onehumancorp/mono-core:latest
+  image: onehumancorp/mono-core:v1.0.0
   replicas: 1
   service:
     port: 18789
@@ -129,7 +129,7 @@ multiTenant:
 # PowerSync - synchronization engine
 powersync:
   enabled: true
-  image: journeyapps/powersync-service:latest
+  image: journeyapps/powersync-service:v1.12.0
   replicas: 1
   service:
     type: ClusterIP
@@ -167,6 +167,16 @@ kube-prometheus-stack:
 # Pushgateway for Prometheus metrics
 pushgateway:
   enabled: true
+  networkPolicy:
+    enabled: true
+  vpa:
+    enabled: true
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 85
   resources:
     requests:
       cpu: "50m"
@@ -174,3 +184,20 @@ pushgateway:
     limits:
       cpu: "200m"
       memory: "512Mi"
+
+# Fluent Bit for Unified Logging
+fluent-bit:
+  enabled: true
+  resources:
+    requests:
+      cpu: "10m"
+      memory: "32Mi"
+    limits:
+      cpu: "100m"
+      memory: "128Mi"
+
+loki:
+  enabled: true
+
+promtail:
+  enabled: true
