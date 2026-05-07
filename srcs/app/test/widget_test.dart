@@ -67,12 +67,15 @@ void main() {
     expect(find.text('Cloud'), findsOneWidget);
     expect(find.text('John Doe'), findsOneWidget);
 
-    await tester.tap(find.text('Launch My AI Team'));
+    final launchBtn = find.text('Launch My AI Team');
+    await tester.ensureVisible(launchBtn);
+    await tester.tap(launchBtn);
     await tester.pump();
 
     // Wait for the simulated API call (2 seconds)
     await tester.pump(const Duration(seconds: 2));
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(seconds: 1));
+    // await tester.pumpAndSettle();
 
     // 7. Dashboard Screen
     expect(find.text("Dashboard"), findsOneWidget);
