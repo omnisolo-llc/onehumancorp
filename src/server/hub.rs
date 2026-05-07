@@ -670,19 +670,29 @@ impl Hub {
     pub async fn check_health(&self) -> Result<serde_json::Value, String> {
         let start = std::time::Instant::now();
 
-        let ping_future = async {
-            match sqlx::query("SELECT 1").execute(&self.pool).await {
+        let pool1 = self.pool.clone();
+        let ping_future = tokio::task::spawn(async move {
+            match sqlx::query("SELECT 1").execute(&pool1).await {
                 Ok(_) => start.elapsed().as_millis() as u64,
                 Err(_) => 0,
             }
-        };
-        let backlog_future = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')").fetch_one(&self.pool);
-        let sync_queue_future = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE _sync_status = 'pending'").fetch_one(&self.pool);
+        });
 
-        let (db_ping, backlog_res, sync_queue_res) = tokio::join!(ping_future, backlog_future, sync_queue_future);
+        let pool2 = self.pool.clone();
+        let backlog_future = tokio::task::spawn(async move {
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')").fetch_one(&pool2).await
+        });
 
-        let mission_sync_backlog = backlog_res.unwrap_or(0);
-        let local_to_cloud_sync_queue = sync_queue_res.unwrap_or(0);
+        let pool3 = self.pool.clone();
+        let sync_queue_future = tokio::task::spawn(async move {
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE _sync_status = 'pending'").fetch_one(&pool3).await
+        });
+
+        let (db_ping_res, backlog_res_outer, sync_queue_res_outer) = tokio::join!(ping_future, backlog_future, sync_queue_future);
+
+        let db_ping = db_ping_res.unwrap_or(0);
+        let mission_sync_backlog = backlog_res_outer.unwrap_or(Ok(0)).unwrap_or(0);
+        let local_to_cloud_sync_queue = sync_queue_res_outer.unwrap_or(Ok(0)).unwrap_or(0);
 
         let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
             "standalone"
