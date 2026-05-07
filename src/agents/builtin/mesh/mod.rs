@@ -123,20 +123,18 @@ impl TeammateMesh for TeammateMeshClient {
         let msg_id = uuid::Uuid::new_v4().to_string();
         let ack_topic = format!("mesh:ack:{}", msg_id);
 
-        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
         let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
-            let _ = tx.try_send(());
+            let _ = tx.send(());
         })).await?;
-
-        tokio::task::yield_now().await;
 
         let mut retries = 0;
         let mut backoff = 200;
 
         loop {
             if retries > 5 {
-                cancel();
+                tokio::spawn(async move { cancel(); });
                 return Err("Failed to receive ack after retries".to_string());
             }
 
@@ -151,12 +149,12 @@ impl TeammateMesh for TeammateMeshClient {
             // In a real implementation we would attach the msg_id to the event,
             // but the proto might not have it. Let's send it anyway.
             if let Err(e) = self.transport.publish(topic, event).await {
-                cancel();
+                tokio::spawn(async move { cancel(); });
                 return Err(e);
             }
 
             if let Ok(Some(())) = tokio::time::timeout(tokio::time::Duration::from_millis(backoff), rx.recv()).await {
-                cancel();
+                tokio::spawn(async move { cancel(); });
                 return Ok(());
             }
 

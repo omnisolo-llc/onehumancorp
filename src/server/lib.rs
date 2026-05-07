@@ -11,7 +11,6 @@ pub mod autodream;
 pub mod tasks;
 pub mod settings;
 pub mod scheduler;
-pub mod msgbus;
 pub mod pipeline;
 pub mod oidc;
 pub mod sip;
