@@ -19,10 +19,9 @@ echo ""
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
-export GOMAXPROCS=2
+export TOKIO_WORKER_THREADS=2
+export RAYON_NUM_THREADS=2
 export OHC_STANDALONE=true
-export GOMEMLIMIT="64MiB"
-export GOGC=30
 export LOG_FORMAT="json"
 export LOG_LEVEL="info"
 export OHC_RUNTIME_DIR=".ohc/runtime"
