@@ -1,10 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'docs.dart';
 
 void main() {
   runApp(const OHCApp());
 }
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class OHCApp extends StatelessWidget {
   const OHCApp({super.key});
@@ -12,6 +15,7 @@ class OHCApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'One Human Corp',
       theme: ThemeData(
         useMaterial3: true,
@@ -22,6 +26,37 @@ class OHCApp extends StatelessWidget {
         ),
       ),
       home: const OnboardingScreen(),
+      builder: (context, child) {
+        return Stack(
+          children: [
+            if (child != null) child,
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  FloatingActionButton(
+                    heroTag: 'global_help_btn',
+                    backgroundColor: const Color(0xFF3B82F6),
+                    onPressed: () => navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const HelpCenterScreen())),
+                    child: const Icon(Icons.question_mark, color: Colors.white),
+                  ),
+                  const SizedBox(height: 16),
+                  FloatingActionButton.extended(
+                    heroTag: 'global_chat_btn',
+                    backgroundColor: const Color(0xFF8B5CF6),
+                    onPressed: () => navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const AiHelpChatScreen())),
+                    icon: const Icon(Icons.chat_bubble, color: Colors.white),
+                    label: const Text('Ask anything', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -269,75 +304,112 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  bool _showWalkthrough = true;
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Stack(
       children: [
-        const SizedBox(height: 20),
-        const Text(
-          "Dashboard",
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 20),
-        GlassContainer(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Revenue',
-                style: TextStyle(fontSize: 14, color: Colors.white70),
-              ),
-              SizedBox(height: 5),
-              Text(
-                '\$0.00',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
+        Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MenuScreen())),
+              )
             ],
           ),
-        ),
-        const SizedBox(height: 20),
-        GlassContainer(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Pending Agent Approvals',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'No pending approvals.',
-                style: TextStyle(color: Colors.white70),
-              ),
-            ],
+          body: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 20),
+                const Text(
+                  "Dashboard",
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ContextualTooltip(
+                  tooltipKey: 'revenue',
+                  child: GlassContainer(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Revenue',
+                          style: TextStyle(fontSize: 14, color: Colors.white70),
+                        ),
+                        SizedBox(height: 5),
+                        Text(
+                          '\$0.00',
+                          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ContextualTooltip(
+                  tooltipKey: 'approvals',
+                  child: GlassContainer(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Pending Agent Approvals',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          'No pending approvals.',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ContextualTooltip(
+                  tooltipKey: 'orders',
+                  child: GlassContainer(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Recent Orders',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          'No orders yet.',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+
         ),
-        const SizedBox(height: 20),
-        GlassContainer(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Recent Orders',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'No orders yet.',
-                style: TextStyle(color: Colors.white70),
-              ),
-            ],
-          ),
-        ),
+        if (_showWalkthrough) WalkthroughOverlay(onDismiss: () => setState(() => _showWalkthrough = false)),
       ],
     );
   }
