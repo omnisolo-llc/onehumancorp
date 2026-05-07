@@ -125,3 +125,8 @@ func TestRecordBubblewrapViolation(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 }
+
+func init() {
+	// Initialize a dummy sync engine for tests to avoid nil issues
+	// when bufferMetricHelper is called.
+}
