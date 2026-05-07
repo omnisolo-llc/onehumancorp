@@ -741,6 +741,46 @@ pub async fn insert_autodream_memory(
 
     pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
+
+        let stagnant_missions: Vec<(String, String)> = match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                let rows = sqlx::query("SELECT id, payload FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < ?")
+                    .bind(threshold.to_rfc3339())
+                    .fetch_all(sqlite_pool)
+                    .await?;
+                rows.into_iter().map(|row| (row.get(0), row.get(1))).collect()
+            },
+            DbStore::Postgres => {
+                let rows = sqlx::query("SELECT id, payload FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < $1")
+                    .bind(threshold)
+                    .fetch_all(&self.pool)
+                    .await?;
+                rows.into_iter().map(|row| (row.get(0), row.get(1))).collect()
+            }
+        };
+
+        if !stagnant_missions.is_empty() {
+            tokio::fs::create_dir_all(".agent-task/archive").await?;
+            for (id, payload) in &stagnant_missions {
+                let filepath = format!(".agent-task/archive/{}.json", id);
+                tokio::fs::write(&filepath, payload).await?;
+            }
+            match &self.store {
+                DbStore::Sqlite(sqlite_pool) => {
+                    sqlx::query("DELETE FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < ?")
+                        .bind(threshold.to_rfc3339())
+                        .execute(sqlite_pool)
+                        .await?;
+                },
+                DbStore::Postgres => {
+                    sqlx::query("DELETE FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < $1")
+                        .bind(threshold)
+                        .execute(&self.pool)
+                        .await?;
+                }
+            };
+        }
+
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
@@ -755,6 +795,7 @@ pub async fn insert_autodream_memory(
                     .await?.rows_affected()
             }
         };
+
         if affected > 0 {
             tracing::info!("Cleaned up {} stagnant missions older than {} seconds", affected, timeout_secs);
         }
