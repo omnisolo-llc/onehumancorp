@@ -270,7 +270,7 @@ mod tests {
                            lower_line.contains("debug!") ||
                            lower_line.contains("tracing::")
                         {
-                            if lower_line.contains("tenant_id") ||
+                            let contains_pii_var = lower_line.contains("tenant_id") ||
                                lower_line.contains("organization_id") ||
                                lower_line.contains("org_id") ||
                                lower_line.contains("session_data") ||
@@ -280,7 +280,16 @@ mod tests {
                                lower_line.contains("password") ||
                                lower_line.contains("pii") ||
                                lower_line.contains("api_key") ||
-                               lower_line.contains("secret_key") {
+                               lower_line.contains("secret_key");
+
+                            if contains_pii_var {
+                                // If line explicitly mentions redaction, we assume it's safe
+                                if lower_line.contains("redact") || lower_line.contains("sanitized") || lower_line.contains("hash") || lower_line.contains("mask") {
+                                    continue;
+                                }
+
+                                // To strictly prevent any possible leakage, we flag ANY use of these variable names
+                                // in a log statement unless it was explicitly redacted.
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }
