@@ -32,6 +32,7 @@ export component Dashboard inherits Window {
     in property <int> tasks_in_progress_count: 0;
     in property <string> generative_score: "85";
     in property <bool> is_loading: false;
+    in-out property <bool> is_advanced: false;
 
     // AutoDream Memory Pipeline Telemetry
     in property <string> telemetry_cache_hits: "84%";
@@ -123,36 +124,8 @@ export component Dashboard inherits Window {
                 TooltipElement { tooltip_id: "api_docs"; Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } } }
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
                 Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
-                Button { text: "KAIROS Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
+                Button { text: "Automations Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
-            }
-        }
-
-        if (show_milestone) : GlassCard {
-            border-color: #f59e0b;
-            border-width: 1px;
-            background: rgba(245, 158, 11, 0.1);
-
-            HorizontalBox {
-                padding: 16px;
-                spacing: 12px;
-                alignment: start;
-
-                Text { text: "🎉"; font-size: 32px; vertical-alignment: center; }
-
-                VerticalBox {
-                    spacing: 4px;
-                    Text { text: milestone_title; font-weight: 700; font-size: 18px; color: white; }
-                    Text { text: milestone_message; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
-                }
-
-                Rectangle {}
-
-                Button {
-                    text: "Dismiss";
-                    height: 44px;
-                    clicked => { dismiss_milestone(); }
-                }
             }
         }
 
@@ -196,8 +169,36 @@ export component Dashboard inherits Window {
             }
         }
 
+        if (show_milestone) : GlassCard {
+            border-color: #f59e0b;
+            border-width: 1px;
+            background: rgba(245, 158, 11, 0.1);
+
+            HorizontalBox {
+                padding: 16px;
+                spacing: 12px;
+                alignment: start;
+
+                Text { text: "🎉"; font-size: 32px; vertical-alignment: center; }
+
+                VerticalBox {
+                    spacing: 4px;
+                    Text { text: milestone_title; font-weight: 700; font-size: 18px; color: white; }
+                    Text { text: milestone_message; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+                }
+
+                Rectangle {}
+
+                Button {
+                    text: "Dismiss";
+                    height: 44px;
+                    clicked => { dismiss_milestone(); }
+                }
+            }
+        }
+
         // AI Assistant Health (Telemetry Visualization)
-        if (show_telemetry_visualization) : VerticalBox {
+        if (show_telemetry_visualization && is_advanced) : VerticalBox {
             spacing: 12px;
             Text { text: "System Status"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
 
@@ -255,7 +256,7 @@ export component Dashboard inherits Window {
                 TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
                 TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } } }
                 TooltipElement { tooltip_id: "email_marketing"; Button { text: "Email Marketing"; height: 44px; clicked => { action_open_email_marketing(); } } }
-                TooltipElement { tooltip_id: "kairos_orchestration"; Button { text: "Kairos Orchestration"; height: 44px; clicked => { action_open_kairos_orchestration(); } } }
+                TooltipElement { tooltip_id: "kairos_orchestration"; Button { text: "Automations"; height: 44px; clicked => { action_open_kairos_orchestration(); } } }
                 if (new_orders_count > 0) : Button {
                     text: "Mark Order Ready";
                     height: 44px;
