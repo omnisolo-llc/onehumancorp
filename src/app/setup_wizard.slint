@@ -594,10 +594,30 @@ export component SetupWizard inherits Window {
                         padding: 16px;
                         alignment: center;
                         spacing: 16px;
-                        Text { text: "✨ Success! Your business is live! ✨"; font-size: 24px; font-family: "Outfit"; color: #10b981; font-weight: 700; horizontal-alignment: center; }
+
+                        // Animated Confetti Effect
+                        Rectangle {
+                            height: 60px;
+                            Rectangle {
+                                width: 10px; height: 10px; background: red; border-radius: 5px;
+                                x: Math.mod(animation-tick() / 10ms, 100) * 1px;
+                                y: Math.mod(animation-tick() / 5ms, 50) * 1px;
+                            }
+                            Rectangle {
+                                width: 8px; height: 8px; background: yellow; border-radius: 4px;
+                                x: 200px - Math.mod(animation-tick() / 15ms, 100) * 1px;
+                                y: Math.mod(animation-tick() / 8ms, 50) * 1px;
+                            }
+                            Rectangle {
+                                width: 12px; height: 12px; background: blue; border-radius: 6px;
+                                x: 100px + Math.mod(animation-tick() / 12ms, 100) * 1px;
+                                y: Math.mod(animation-tick() / 6ms, 50) * 1px;
+                            }
+                            Text { text: "✨ CONFETTI SUCCESS! Your business is live! ✨"; font-size: 24px; font-family: "Outfit"; color: #10b981; font-weight: 700; horizontal-alignment: center; }
+                        }
                         Text { text: "You can now start selling to the world."; font-size: 16px; font-family: "Inter"; color: white; horizontal-alignment: center; }
                         Button {
-                            text: "Copy Store Link";
+                            text: "Copy Shareable Link";
                             height: 44px;
                             clicked => { copy_link(shareable_link); }
                         }

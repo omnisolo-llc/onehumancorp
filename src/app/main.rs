@@ -2345,6 +2345,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         ui.set_launch_success(true);
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
+
+                                        // Auto-copy the shareable link to the clipboard upon success
+                                        let shareable_link = ui.get_shareable_link();
+                                        CLIPBOARD.with(|cb| {
+                                            if let Some(ctx) = cb.borrow_mut().as_mut() {
+                                                let _ = ctx.set_contents(shareable_link.to_string());
+                                            }
+                                        });
+
                                         ui.invoke_copy_link(ui.get_shareable_link());
                                     }
                                 }).unwrap();

@@ -535,3 +535,45 @@ fn test_e2e_wizard_instant_build_flow() {
     assert_eq!(ui.get_payment_pref(), "online");
     assert_eq!(ui.get_is_generating_instant_preview(), false);
 }
+
+#[test]
+fn test_confetti_success_message() {
+    let ui = create();
+    ui.set_launch_success(true);
+    assert_eq!(ui.get_launch_success(), true);
+}
+
+#[test]
+fn test_copy_shareable_link_button() {
+    let ui = create();
+    ui.set_launch_success(true);
+    let test_url = "https://ohc.app/test_share_link_123".to_string();
+    ui.set_shareable_link(test_url.clone().into());
+    let clipboard_val = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let cv_clone = clipboard_val.clone();
+    ui.on_copy_link(move |link| {
+        *cv_clone.borrow_mut() = link.to_string();
+    });
+    ui.invoke_copy_link(ui.get_shareable_link());
+    assert_eq!(*clipboard_val.borrow(), test_url);
+}
+
+#[test]
+fn test_wizard_shareable_link_initial() {
+    let ui = create();
+    assert_eq!(ui.get_shareable_link(), "https://mybusiness.ohc.app");
+}
+
+#[test]
+fn test_wizard_set_launch_details() {
+    let ui = create();
+    ui.set_launch_details("Launching app now".into());
+    assert_eq!(ui.get_launch_details(), "Launching app now");
+}
+
+#[test]
+fn test_wizard_set_launch_status() {
+    let ui = create();
+    ui.set_launch_status("Finished".into());
+    assert_eq!(ui.get_launch_status(), "Finished");
+}
