@@ -268,7 +268,12 @@ mod tests {
                            lower_line.contains("error!") ||
                            lower_line.contains("warn!") ||
                            lower_line.contains("debug!") ||
-                           lower_line.contains("tracing::")
+                           lower_line.contains("tracing::") ||
+                           lower_line.contains("log.print") ||
+                           lower_line.contains("log.fatal") ||
+                           lower_line.contains("log.panic") ||
+                           lower_line.contains("fmt.print") ||
+                           lower_line.contains("fmt.errorf")
                         {
                             if lower_line.contains("tenant_id") ||
                                lower_line.contains("organization_id") ||

@@ -189,7 +189,7 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 		if len(payloadBytes) > 0 {
 			sanitized, err := SanitizePayload(string(payloadBytes))
 			if err != nil {
-				log.Printf("Error sanitizing payload for task %s: %v", task.ID, err)
+				log.Printf("Error sanitizing data for task %s: %v", task.ID, err)
 				continue
 			}
 			sanitizedRaw := json.RawMessage(sanitized)
