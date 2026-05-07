@@ -53,20 +53,33 @@ impl DashboardService for MyDashboardService {
         let org_id2 = req.organization_id.clone();
         let org_id3 = req.organization_id.clone();
 
+        let hub_prod = self.hub.clone();
+        let hub_orders = self.hub.clone();
+
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::task::spawn(async move { hub1.get_agents() }),
-            tokio::task::spawn(async move { hub2.get_meetings() }),
-            tokio::task::spawn(async move {
+            tokio::task::spawn_blocking(move || { hub1.get_agents() }),
+            tokio::task::spawn_blocking(move || { hub2.get_meetings() }),
+            tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
                 (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
             }),
-            tokio::task::spawn(async move {
+            tokio::task::spawn_blocking(move || {
                 let org_id = org_id1;
 
                 // Caching layer logic (Phase 4)
+                let cache_key = format!("hub:products:{}", org_id);
 
+                if let Some(client) = &hub_prod.redis_client {
+                    if let Ok(mut conn) = client.get_connection() {
+                        use redis::Commands;
+                        if let Ok(Some(data)) = conn.get::<&str, Option<String>>(&cache_key) {
+                            if let Ok(products) = serde_json::from_str(&data) {
+                                return Ok::<_, String>(products);
+                            }
+                        }
+                    }
+                }
 
-                let _cache_key = format!("hub:products:{}", org_id);
                 let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
                 if let Ok(guard) = cache.read() {
                     if let Some(products) = guard.get(&org_id) {
@@ -80,7 +93,7 @@ impl DashboardService for MyDashboardService {
                 let mut results = Vec::new();
                 match &db1.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db1.pool).await {
+                        if let Ok(rows) = tokio::runtime::Handle::current().block_on(sqlx::query(q).bind(&org_id).fetch_all(&db1.pool)) {
                             for r in rows {
                                 let p = crate::ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
@@ -97,7 +110,7 @@ impl DashboardService for MyDashboardService {
                         }
                     },
                     crate::db::DbStore::Sqlite(pool) => {
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                        if let Ok(rows) = tokio::runtime::Handle::current().block_on(sqlx::query(q).bind(&org_id).fetch_all(pool)) {
                             for r in rows {
                                 let p = crate::ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
@@ -116,6 +129,15 @@ impl DashboardService for MyDashboardService {
                 }
 
 
+                if let Some(client) = &hub_prod.redis_client {
+                    if let Ok(mut conn) = client.get_connection() {
+                        use redis::Commands;
+                        if let Ok(data) = serde_json::to_string(&results) {
+                            let _ = conn.set_ex::<_, _, ()>(&cache_key, data, 3600);
+                        }
+                    }
+                }
+
                 let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
                 if let Ok(mut guard) = cache.write() {
                     guard.insert(org_id, results.clone());
@@ -123,9 +145,22 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(results)
             }),
 
-            tokio::task::spawn(async move {
+            tokio::task::spawn_blocking(move || {
                 let org_id = org_id2;
-                                let cache = ORDERS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+                let cache_key = format!("hub:orders:{}", org_id);
+
+                if let Some(client) = &hub_orders.redis_client {
+                    if let Ok(mut conn) = client.get_connection() {
+                        use redis::Commands;
+                        if let Ok(Some(data)) = conn.get::<&str, Option<String>>(&cache_key) {
+                            if let Ok(orders) = serde_json::from_str(&data) {
+                                return Ok::<_, String>(orders);
+                            }
+                        }
+                    }
+                }
+
+                let cache = ORDERS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
                 if let Ok(guard) = cache.read() {
                     if let Some(orders) = guard.get(&org_id) {
                         return Ok::<_, String>(orders.clone());
@@ -136,7 +171,7 @@ impl DashboardService for MyDashboardService {
                 let mut results = Vec::new();
                 match &db2.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db2.pool).await {
+                        if let Ok(rows) = tokio::runtime::Handle::current().block_on(sqlx::query(q).bind(&org_id).fetch_all(&db2.pool)) {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = crate::ohc::app::Order {
@@ -152,7 +187,7 @@ impl DashboardService for MyDashboardService {
                         }
                     },
                     crate::db::DbStore::Sqlite(pool) => {
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                        if let Ok(rows) = tokio::runtime::Handle::current().block_on(sqlx::query(q).bind(&org_id).fetch_all(pool)) {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = crate::ohc::app::Order {
@@ -170,21 +205,30 @@ impl DashboardService for MyDashboardService {
                 }
 
 
-                                let cache = ORDERS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+                if let Some(client) = &hub_orders.redis_client {
+                    if let Ok(mut conn) = client.get_connection() {
+                        use redis::Commands;
+                        if let Ok(data) = serde_json::to_string(&results) {
+                            let _ = conn.set_ex::<_, _, ()>(&cache_key, data, 5);
+                        }
+                    }
+                }
+
+                let cache = ORDERS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
                 if let Ok(mut guard) = cache.write() {
                     guard.insert(org_id, results.clone());
                 }
                 Ok::<_, String>(results)
             }),
 
-            tokio::task::spawn(async move {
+            tokio::task::spawn_blocking(move || {
                 let org_id = org_id3;
                 let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
                 use sqlx::Row;
                 let mut org = None;
                 match &db3.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(&db3.pool).await {
+                        if let Ok(Some(row)) = tokio::runtime::Handle::current().block_on(sqlx::query(q).bind(&org_id).fetch_optional(&db3.pool)) {
                             org = Some(crate::ohc::organization::Organization {
                                 id: row.try_get("tenant_id").unwrap_or_default(),
                                 name: row.try_get("business_name").unwrap_or_default(),
@@ -198,7 +242,7 @@ impl DashboardService for MyDashboardService {
                         }
                     },
                     crate::db::DbStore::Sqlite(pool) => {
-                        if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(pool).await {
+                        if let Ok(Some(row)) = tokio::runtime::Handle::current().block_on(sqlx::query(q).bind(&org_id).fetch_optional(pool)) {
                             org = Some(crate::ohc::organization::Organization {
                                 id: row.try_get("tenant_id").unwrap_or_default(),
                                 name: row.try_get("business_name").unwrap_or_default(),
