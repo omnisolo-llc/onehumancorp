@@ -72,6 +72,13 @@ redis:
   architecture: standalone
   auth:
     enabled: false
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
 
 # CloudNative PostgreSQL operator cluster
 # Set cnpg.enabled=true when the CNPG operator is installed in the cluster.
@@ -83,6 +90,13 @@ cnpg:
     size: 10Gi
   database: ohc
   owner: ohc
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
 
 # Chatwoot – open-source chat platform used for all chat room communication
 # (agent-to-agent, agent-to-human, agent-to-customer, human-to-customer).
