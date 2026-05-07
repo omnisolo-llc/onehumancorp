@@ -35,7 +35,7 @@ export component Diagnostics inherits Window {
                     padding: 12px;
                     Text { text: "🗄️ Business Records"; color: #1e293b; }
                     Rectangle {}
-                    Text { text: "Connected"; color: #10b981; }
+                    Text { text: root.db_status; color: #10b981; }
                 }
             }
             Rectangle {
@@ -48,7 +48,7 @@ export component Diagnostics inherits Window {
                     padding: 12px;
                     Text { text: "🧠 Memory"; color: #1e293b; }
                     Rectangle {}
-                    Text { text: "Connected"; color: #10b981; }
+                    Text { text: root.cache_status; color: #10b981; }
                 }
             }
             Rectangle {
@@ -61,7 +61,7 @@ export component Diagnostics inherits Window {
                     padding: 12px;
                     Text { text: "🧠 AI Connections"; color: #1e293b; }
                     Rectangle {}
-                    Text { text: "Connected"; color: #10b981; }
+                    Text { text: root.ai_status; color: #10b981; }
                 }
             }
         }
@@ -74,22 +74,22 @@ export component Diagnostics inherits Window {
             HorizontalBox {
                 Text { text: "Execution Mode"; color: #64748b; }
                 Rectangle {}
-                Text { text: "STANDALONE"; color: #a855f7; font-weight: 700; }
+                Text { text: root.execution_mode; color: #a855f7; font-weight: 700; }
             }
             HorizontalBox {
                 Text { text: "Cloud Connectivity"; color: #64748b; }
                 Rectangle {}
-                Text { text: "CONNECTED"; color: #10b981; font-weight: 700; }
+                Text { text: root.cloud_connectivity; color: #10b981; font-weight: 700; }
             }
             HorizontalBox {
                 Text { text: "Mesh Status"; color: #64748b; }
                 Rectangle {}
-                Text { text: "ACTIVE"; color: #10b981; font-weight: 700; }
+                Text { text: root.mesh_status; color: #10b981; font-weight: 700; }
             }
             HorizontalBox {
                 Text { text: "Stuck Missions"; color: #64748b; }
                 Rectangle {}
-                Text { text: "0"; color: #1e293b; font-weight: 700; }
+                Text { text: "\{root.stuck_missions}"; color: #1e293b; font-weight: 700; }
             }
         }
 
