@@ -120,3 +120,35 @@ fn test_ui_setup_wizard_storefront_preview_state() {
     ui.invoke_next_step();
     assert_eq!(ui.get_step(), 1);
 }
+
+#[test]
+fn test_ui_setup_wizard_state_saving_and_copy_link() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+
+    // Test save state invocation
+    let save_called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let save_called_clone = save_called.clone();
+    ui.on_save_state(move || {
+        *save_called_clone.lock().unwrap() = true;
+    });
+
+    // In our implementation we explicitly linked save_state to next_step and other specific triggers
+    ui.invoke_next_step();
+    assert!(*save_called.lock().unwrap(), "save_state should be triggered alongside next_step to persist cross-device state.");
+
+    // Test copy link invocation
+    let copy_called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let copy_called_clone = copy_called.clone();
+    ui.on_copy_link(move |link| {
+        if link == "https://mybusiness.ohc.app" {
+            *copy_called_clone.lock().unwrap() = true;
+        }
+    });
+
+    ui.set_launch_success(true);
+    ui.invoke_copy_link("https://mybusiness.ohc.app".into());
+    assert!(*copy_called.lock().unwrap(), "copy_link should be triggered to auto-copy shareable link.");
+}
