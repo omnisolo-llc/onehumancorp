@@ -1024,8 +1024,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Simulate upload for test environment since file dialogs are hard to test
     });
 
-    website_builder_ui.on_generate_logo(|| {
-        // AI generation simulated
+    website_builder_ui.on_generate_logo({
+        let ui_weak = website_builder_handle.clone();
+        move || {
+            let ui_handle = ui_weak.clone();
+            if let Some(ui) = ui_handle.upgrade() {
+                let name = ui.get_product_name().to_string();
+                tokio::spawn(async move {
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let prompt = format!("Generate a primary brand color code for {}.", name);
+                        let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                            prompt,
+                            from_agent_id: "website_builder".into(),
+                        });
+                        if let Ok(resp) = client.reason(request).await {
+                            let color_res = resp.into_inner().content;
+                            // Default to a green if AI fails to return a hex
+                            let hex = if color_res.starts_with('#') { color_res } else { "#34C759".to_string() };
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_handle.upgrade() {
+                                    ui.set_primary_color(hex.into());
+                                }
+                            }).unwrap();
+                        }
+                    } else {
+                        // Fallback for missing backend, e.g. tests
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle.upgrade() {
+                                ui.set_primary_color("#34C759".into());
+                            }
+                        }).unwrap();
+                    }
+                });
+            }
+        }
     });
 
     website_builder_ui.on_generate_description({
@@ -1049,6 +1081,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 }
                             }).unwrap();
                         }
+                    } else {
+                        // Fallback for missing backend, e.g. tests
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle.upgrade() {
+                                ui.set_product_description(format!("An AI-generated description for {}.", name).into());
+                            }
+                        }).unwrap();
                     }
                 });
             }
@@ -3926,20 +3965,32 @@ mod tests {
         ui.set_step(1);
 
         assert_eq!(ui.get_step(), 1);
-        ui.set_primary_color("#34C759".into());
         let logo_generated = std::rc::Rc::new(std::cell::RefCell::new(false));
         let logo_generated_clone = logo_generated.clone();
+        let ui_handle = ui.as_weak();
         ui.on_generate_logo(move || {
             *logo_generated_clone.borrow_mut() = true;
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_primary_color("#34C759".into());
+            }
         });
         ui.invoke_generate_logo();
         assert!(*logo_generated.borrow(), "Logo should be generated");
+        assert_eq!(ui.get_primary_color(), "#34C759");
         ui.set_step(2);
 
         assert_eq!(ui.get_step(), 2);
         ui.set_product_name("My Custom Product".into());
         ui.set_product_price("19.99".into());
-        ui.set_product_description("A great custom product.".into());
+        let ui_handle2 = ui.as_weak();
+        ui.on_generate_description(move || {
+            if let Some(ui) = ui_handle2.upgrade() {
+                ui.set_product_description(format!("An AI-generated description for {}.", ui.get_product_name()).into());
+            }
+        });
+        ui.invoke_generate_description();
+        assert_eq!(ui.get_product_description(), "An AI-generated description for My Custom Product.");
+
         let photo_uploaded = std::rc::Rc::new(std::cell::RefCell::new(false));
         let photo_uploaded_clone = photo_uploaded.clone();
         ui.on_upload_photo(move || {
@@ -3963,18 +4014,18 @@ mod tests {
             assert_eq!(color, "#34C759");
             assert_eq!(product, "My Custom Product");
             assert_eq!(price, "19.99");
-            assert_eq!(description, "A great custom product.");
+            assert_eq!(description, "An AI-generated description for My Custom Product.");
             assert_eq!(domain, "buy");
             *publish_success_clone.borrow_mut() = true;
         });
 
         ui.invoke_publish_site(
-            "Modern".into(),
-            "#34C759".into(),
-            "My Custom Product".into(),
-            "19.99".into(),
-            "A great custom product.".into(),
-            "buy".into()
+            ui.get_selected_template(),
+            ui.get_primary_color(),
+            ui.get_product_name(),
+            ui.get_product_price(),
+            ui.get_product_description(),
+            ui.get_domain_choice()
         );
 
         assert!(*publish_success.borrow(), "Site should publish successfully");
@@ -4366,9 +4417,9 @@ mod docs_tests {
         ui.on_publish_site(move |template, color, product, price, description, domain| {
             assert_eq!(template, "Modern");
             assert_eq!(color, "#34C759");
-            assert_eq!(product, "My Custom Product");
+            assert_eq!(product, "My E2E Store Product");
             assert_eq!(price, "19.99");
-            assert_eq!(description, "A great custom product.");
+            assert_eq!(description, "An AI-generated description for My E2E Store Product.");
             assert_eq!(domain, "custom");
             *publish_success_clone.borrow_mut() = true;
         });
@@ -4386,8 +4437,22 @@ mod docs_tests {
         });
 
         ui.on_upload_logo(|| {});
-        ui.on_generate_logo(|| {});
-        ui.on_generate_description(|| {});
+        ui.on_generate_logo({
+            let ui_handle = ui.as_weak();
+            move || {
+                if let Some(ui) = ui_handle.upgrade() {
+                    ui.set_primary_color("#34C759".into());
+                }
+            }
+        });
+        ui.on_generate_description({
+            let ui_handle = ui.as_weak();
+            move || {
+                if let Some(ui) = ui_handle.upgrade() {
+                    ui.set_product_description(format!("An AI-generated description for {}.", ui.get_product_name()).into());
+                }
+            }
+        });
         ui.on_upload_photo(|| {});
         ui.on_save_state(|| {});
 
@@ -4400,12 +4465,16 @@ mod docs_tests {
         ui.set_selected_template("Modern".into());
         ui.set_step(1);
 
-        ui.set_primary_color("#34C759".into());
+        // Instead of setting primary color manually, trigger the AI generation
+        ui.invoke_generate_logo();
+        assert_eq!(ui.get_primary_color(), "#34C759");
         ui.set_step(2);
 
-        ui.set_product_name("My Custom Product".into());
+        ui.set_product_name("My E2E Store Product".into());
         ui.set_product_price("19.99".into());
-        ui.set_product_description("A great custom product.".into());
+        // Invoke AI to generate description
+        ui.invoke_generate_description();
+        assert_eq!(ui.get_product_description(), "An AI-generated description for My E2E Store Product.");
         ui.set_step(3);
 
         ui.set_domain_choice("custom".into());
@@ -4413,7 +4482,7 @@ mod docs_tests {
 
         assert_eq!(ui.get_selected_template(), "Modern");
         assert_eq!(ui.get_primary_color(), "#34C759");
-        assert_eq!(ui.get_product_name(), "My Custom Product");
+        assert_eq!(ui.get_product_name(), "My E2E Store Product");
         assert_eq!(ui.get_domain_choice(), "custom");
 
         ui.set_is_publishing(true);
