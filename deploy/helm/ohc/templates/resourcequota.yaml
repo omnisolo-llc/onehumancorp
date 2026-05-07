@@ -1,0 +1,17 @@
+{{- if .Values.backend.resourceQuota.enabled }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ include "ohc.fullname" . }}-resource-quota
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  hard:
+    requests.cpu: {{ .Values.backend.resourceQuota.requests.cpu }}
+    requests.memory: {{ .Values.backend.resourceQuota.requests.memory }}
+    requests.ephemeral-storage: {{ .Values.backend.resourceQuota.requests.ephemeralStorage }}
+    limits.cpu: {{ .Values.backend.resourceQuota.limits.cpu }}
+    limits.memory: {{ .Values.backend.resourceQuota.limits.memory }}
+    limits.ephemeral-storage: {{ .Values.backend.resourceQuota.limits.ephemeralStorage }}
+    pods: {{ .Values.backend.resourceQuota.limits.pods }}
+{{- end }}
