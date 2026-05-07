@@ -135,7 +135,7 @@ mod tests {
 
         let labels_json: String = row.get("labels_json");
         let parsed: Value = serde_json::from_str(&labels_json).unwrap();
-        assert_eq!(parsed["organization_id"], "org_test");
+        assert_eq!(parsed["organization_id"], "[REDACTED]");
     }
 
     #[tokio::test]
@@ -161,7 +161,7 @@ mod tests {
         let labels_json: String = row.get("labels_json");
         let parsed: Value = serde_json::from_str(&labels_json).unwrap();
         assert_eq!(parsed["agent_id"], "agent-123");
-        assert_eq!(parsed["organization_id"], "org-1");
+        assert_eq!(parsed["organization_id"], "[REDACTED]");
         assert_eq!(parsed["entity"], "test-entity");
     }
 
@@ -187,7 +187,7 @@ mod tests {
 
         let labels_json: String = row.get("labels_json");
         let parsed: Value = serde_json::from_str(&labels_json).unwrap();
-        assert_eq!(parsed["organization_id"], "org-2");
+        assert_eq!(parsed["organization_id"], "[REDACTED]");
         assert_eq!(parsed["entity"], "test-entity-2");
     }
 
