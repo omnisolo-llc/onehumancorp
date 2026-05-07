@@ -562,11 +562,43 @@ impl HealthMonitor {
     }
 
     pub async fn ping(&self) -> Result<(), String> {
+        let node_id = uuid::Uuid::new_v4().to_string();
+        let ack_topic = format!("system:health_ack:{}", node_id);
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let handler = Box::new(move |_msg: Message| {
+            let _ = tx.send(());
+        });
+
+        let cancel = self.bus.subscribe(ack_topic, handler).await?;
+
+        let ping = crate::interop::protocol::proto::HealthPing {
+            source_node_id: node_id,
+        };
+        let mut buf = Vec::new();
+        prost::Message::encode(&ping, &mut buf).map_err(|e| e.to_string())?;
+
         let msg = Message {
             topic: "system:health_ping".to_string(),
-            payload: vec![],
+            payload: buf,
         };
-        self.bus.publish(msg).await
+
+        if let Err(e) = self.bus.publish(msg).await {
+            cancel();
+            return Err(e);
+        }
+
+        match tokio::time::timeout(tokio::time::Duration::from_millis(500), rx.recv()).await {
+            Ok(Some(_)) => {
+                cancel();
+                Ok(())
+            }
+            _ => {
+                cancel();
+                Err("Health ping timed out waiting for ack".to_string())
+            }
+        }
     }
 }
 
@@ -678,9 +710,23 @@ mod tests {
         let received = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         let received_clone = received.clone();
 
+        let bus_clone = bus.clone();
+
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:health_ping" {
                 received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+
+                use prost::Message as ProstMessage;
+                if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&msg.payload[..]) {
+                    let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
+                    let bus_inner = bus_clone.clone();
+                    tokio::spawn(async move {
+                        let _ = bus_inner.publish(Message {
+                            topic: ack_topic,
+                            payload: vec![],
+                        }).await;
+                    });
+                }
             }
         });
 
