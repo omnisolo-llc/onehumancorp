@@ -41,13 +41,17 @@ impl DashboardService for MyDashboardService {
         let org_id2 = req.organization_id.clone();
         let org_id3 = req.organization_id.clone();
 
+        let agents_task = tokio::task::spawn_blocking(move || hub1.get_agents());
+        let meetings_task = tokio::task::spawn_blocking(move || hub2.get_meetings());
+        let cost_task = tokio::task::spawn_blocking(move || {
+            let cost_auditor = hub3.get_cost_auditor();
+            (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
+        });
+
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings()),
-            tokio::task::spawn_blocking(move || {
-                let cost_auditor = hub3.get_cost_auditor();
-                (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-            }),
+            agents_task,
+            meetings_task,
+            cost_task,
             tokio::task::spawn(async move {
                 let org_id = org_id1;
 
