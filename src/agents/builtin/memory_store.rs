@@ -1192,6 +1192,199 @@ mod get_conflicts_tests {
         assert_eq!(results.get("rec3_b"), Some(&2));
     }
 
+
+
+    #[tokio::test]
+    async fn test_prune_stale_sqlite() {
+        // Just mock the execution or write a very small unit test using sqlite memory database but to test the prune edge case
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+        let very_old_time = now - chrono::Duration::days(200);
+
+        // Record 1: Old enough, source_type is TASK_SUMMARY, reference_count < 5 -> Should be pruned
+        let record1 = EmbeddingRecord {
+            id: "rec1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "hello world 1".to_string(),
+            embedding: vec![1.0, 2.0, 3.0],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: very_old_time,
+            last_referenced_at: very_old_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Record 2: Old enough, source_type is TASK_SUMMARY, but owner_override = TRUE -> Should be kept
+        let record2 = EmbeddingRecord {
+            id: "rec2".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "hello world 2".to_string(),
+            embedding: vec![1.0, 2.0, 3.0],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: very_old_time,
+            last_referenced_at: very_old_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        // Record 3: Old enough, source_type is TASK_SUMMARY, but reference_count >= 5 -> Should be kept
+        let record3 = EmbeddingRecord {
+            id: "rec3".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "hello world 3".to_string(),
+            embedding: vec![1.0, 2.0, 3.0],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: very_old_time,
+            last_referenced_at: very_old_time,
+            reference_count: 5,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Record 4: Old enough, but source_type is NOT TASK_SUMMARY -> Should be kept
+        let record4 = EmbeddingRecord {
+            id: "rec4".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "hello world 4".to_string(),
+            embedding: vec![1.0, 2.0, 3.0],
+            source_type: "SUPPORT_TICKET".to_string(),
+            created_at: very_old_time,
+            last_referenced_at: very_old_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record1).await.unwrap();
+        repo.upsert(&record2).await.unwrap();
+        repo.upsert(&record3).await.unwrap();
+        repo.upsert(&record4).await.unwrap();
+
+        // Prune stale test
+        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+
+        // Verify prune
+        let query = "SELECT id FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(rows.len(), 3, "Three records should remain");
+
+        let mut remaining_ids: Vec<String> = rows.into_iter().map(|row| row.try_get("id").unwrap()).collect();
+        remaining_ids.sort();
+
+        assert_eq!(remaining_ids, vec!["rec2", "rec3", "rec4"], "The correct records should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_fallback() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+
+        // Conflict resolved by fallback (same override, reliability, timestamp)
+        let r1 = EmbeddingRecord {
+            id: "rec4_a".to_string(),
+            tenant_id: "org4".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "identical 1".to_string(),
+            embedding: vec![0.9, 0.9, 0.9],
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+        let r2 = EmbeddingRecord {
+            id: "rec4_b".to_string(),
+            tenant_id: "org4".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "identical 2".to_string(),
+            embedding: vec![0.9, 0.9, 0.9],
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 2,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&r1).await.unwrap();
+        repo.upsert(&r2).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1);
+
+        let query = "SELECT id, reference_count FROM consolidated_memory WHERE tenant_id = 'org4'";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(rows.len(), 1);
+        let id: String = rows[0].try_get("id").unwrap();
+        let ref_count: i32 = rows[0].try_get("reference_count").unwrap();
+
+        // It will pick `r1` as winner arbitrarily (since a=r1, b=r2, and we return (&a, &b))
+        assert_eq!(id, "rec4_a");
+        // new ref count = r1.reference_count (1) + r2.reference_count (2) + 1 = 4
+        assert_eq!(ref_count, 4);
+    }
+
     #[tokio::test]
     async fn test_get_conflicting_pairs_and_prune() {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
