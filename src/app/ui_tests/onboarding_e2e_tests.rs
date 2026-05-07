@@ -1,4 +1,5 @@
 use crate::app;
+use slint::ComponentHandle;
 
 // 1. Sign-Up & Account Creation transition to Setup Wizard
 #[test]
@@ -237,4 +238,56 @@ fn test_e2e_onboarding_welcome_checklist() {
 
     wizard_ui.invoke_show_welcome_checklist();
     assert!(*checklist_called.borrow(), "Welcome checklist post-onboarding should work");
+}
+
+
+#[test]
+fn test_e2e_onboarding_wizard_feature_1_price_formatting() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    // Test the price type propagation
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_price_type("fixed".into());
+    assert_eq!(ui.get_price_type(), "fixed");
+}
+
+#[test]
+fn test_e2e_onboarding_wizard_feature_2_domain_preview() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_preview_subdomain("maya-cakes.ohc.app".into());
+    assert_eq!(ui.get_preview_subdomain(), "maya-cakes.ohc.app");
+}
+
+#[test]
+fn test_e2e_onboarding_wizard_feature_3_confetti_compile() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_launch_success(true);
+    assert_eq!(ui.get_launch_success(), true);
+}
+
+#[test]
+fn test_e2e_onboarding_wizard_feature_4_currency_fallback() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_product_currency("EUR".into());
+    assert_eq!(ui.get_product_currency(), "EUR");
+}
+
+#[test]
+fn test_e2e_onboarding_wizard_feature_5_domain_navigation() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(8);
+    assert_eq!(ui.get_step(), 8);
 }

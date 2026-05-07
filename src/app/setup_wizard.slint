@@ -2,6 +2,36 @@ import { PasswordInput } from "password_input.slint";
 import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
+
+export component Confetti {
+    property <int> time: 0;
+    in property <bool> active: false;
+
+    Timer {
+        interval: 16ms;
+        running: active;
+        triggered => {
+            time = time + 16;
+            if (time > 3000) {
+                time = 0;
+            }
+        }
+    }
+
+    for i in 20: Rectangle {
+        property <length> start_x: mod(i * 37, 400) * 1px;
+        property <length> start_y: -50px;
+        property <float> speed: 100.0 + mod(i * 17, 200.0);
+
+        x: start_x;
+        y: start_y + (time / 1000.0 * speed) * 1px;
+        width: 10px;
+        height: 10px;
+        background: mod(i, 3) == 0 ? #10b981 : (mod(i, 3) == 1 ? #a855f7 : #3b82f6);
+        border-radius: mod(i, 2) == 0 ? 0px : 5px;
+    }
+}
+
 export component SetupWizard inherits Window {
     min-width: 375px;
     preferred-width: 400px;
@@ -82,6 +112,9 @@ export component SetupWizard inherits Window {
     callback select_template(string);
     callback show_welcome_checklist();
     callback select_domain(string);
+    callback format_price(string);
+    callback update_subdomain_preview(string);
+    in property <string> preview_subdomain: "mybusiness.ohc.app";
     callback save_state();
     callback toggle_advanced();
 
@@ -271,6 +304,7 @@ export component SetupWizard inherits Window {
                     placeholder-text: "e.g. Maya's Cakes";
                     text <=> company_name;
                     height: 44px;
+                    edited => { update_subdomain_preview(self.text); }
                 }
 
                 Text { text: "Tagline / Description (AI will help!)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
@@ -524,7 +558,7 @@ export component SetupWizard inherits Window {
                             background: rgba(255, 255, 255, 0.05);
                             VerticalBox { alignment: center; Text { text: product_currency; color: white; horizontal-alignment: center; } }
                         }
-                        LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; }
+                        LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; accepted => { format_price(self.text); } }
                     }
                 }
 
@@ -568,7 +602,7 @@ export component SetupWizard inherits Window {
                     background: domain_choice == "subdomain" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🌐 Free OHC Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "mybusiness.ohc.app"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: preview_subdomain; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_domain("subdomain"); save_state(); } }
                 }
@@ -616,7 +650,15 @@ export component SetupWizard inherits Window {
                         padding: 16px;
                         alignment: center;
                         spacing: 16px;
-                        Text { text: "🎉 CONFETTI SUCCESS! Your business is live! 🎉"; font-size: 24px; font-family: "Outfit"; color: #10b981; font-weight: 700; horizontal-alignment: center; }
+
+                        Rectangle {
+                            height: 60px;
+                            width: 100%;
+                            clip: true;
+                            Confetti { active: launch_success; width: 100%; height: 100%; }
+                            Text { text: "🎉 SUCCESS! Your business is live! 🎉"; font-size: 24px; font-family: "Outfit"; color: #10b981; font-weight: 700; horizontal-alignment: center; y: 15px; width: 100%; }
+                        }
+
                         Text { text: "You can now start selling to the world."; font-size: 16px; font-family: "Inter"; color: white; horizontal-alignment: center; }
                         Button {
                             text: "Copy Shareable Link";

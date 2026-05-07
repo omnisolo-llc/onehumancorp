@@ -2558,6 +2558,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     });
 
+
+    setup_wizard_ui.on_format_price({
+        let ui_handle = setup_wizard_handle.clone();
+        move |price| {
+            if let Some(ui) = ui_handle.upgrade() {
+                if let Some(formatted) = crate::format_price_string(&price) {
+                    ui.set_product_price(formatted.into());
+                }
+                if ui.get_product_currency() == "USD" || ui.get_product_currency().is_empty() {
+                    ui.set_product_currency("$".into());
+                }
+            }
+        }
+    });
+
+    setup_wizard_ui.on_update_subdomain_preview({
+        let ui_handle = setup_wizard_handle.clone();
+        move |company_name| {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_preview_subdomain(crate::generate_preview_subdomain(&company_name).into());
+            }
+        }
+    });
+
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password, price_type| {
@@ -7379,5 +7403,49 @@ mod e2e_login_to_dashboard_tests {
         });
         manager_ui.invoke_submit("SERVICE".into(), "Consulting".into(), "".into(), "100".into(), "60".into(), "Mon-Fri 9am-5pm".into());
         assert!(*submitted.borrow());
+    }
+}
+
+
+pub fn format_price_string(price: &str) -> Option<String> {
+    let parsed: Result<f64, _> = price.parse();
+    if let Ok(val) = parsed {
+        return Some(format!("{:.2}", val));
+    } else if !price.is_empty() {
+        let sanitized: String = price.chars().filter(|c| c.is_digit(10) || *c == '.').collect();
+        if let Ok(val) = sanitized.parse::<f64>() {
+            return Some(format!("{:.2}", val));
+        }
+    }
+    None
+}
+
+pub fn generate_preview_subdomain(company_name: &str) -> String {
+    let mut base = company_name.to_lowercase().replace(" ", "-").chars().filter(|c| c.is_alphanumeric() || *c == '-').collect::<String>();
+    if base.is_empty() {
+        base = "mybusiness".to_string();
+    }
+    format!("{}.ohc.app", base)
+}
+
+
+
+#[cfg(test)]
+mod onboarding_logic_tests {
+    use super::*;
+
+    #[test]
+    fn test_format_price_string() {
+        assert_eq!(format_price_string("45"), Some("45.00".to_string()));
+        assert_eq!(format_price_string("45.5"), Some("45.50".to_string()));
+        assert_eq!(format_price_string("abc12.5abc"), Some("12.50".to_string()));
+        assert_eq!(format_price_string("invalid"), None);
+    }
+
+    #[test]
+    fn test_generate_preview_subdomain() {
+        assert_eq!(generate_preview_subdomain("Maya Cakes"), "maya-cakes.ohc.app");
+        assert_eq!(generate_preview_subdomain(""), "mybusiness.ohc.app");
+        assert_eq!(generate_preview_subdomain("!@#$%^&*()"), "mybusiness.ohc.app");
     }
 }
