@@ -61,4 +61,68 @@ test.describe('Social Media Autoposting Flow', () => {
     // Verify it disappears from the feed
     await expect(page.locator('text=Drafted Instagram Post').first()).toBeHidden();
   });
+
+  test('user can connect Facebook', async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard');
+
+    await page.goto('/social-posting');
+
+    const connectFbBtn = page.locator('button:has-text("Connect Facebook")');
+    await expect(connectFbBtn).toBeVisible();
+    await connectFbBtn.click();
+
+    await expect(page.locator('button:has-text("Facebook Connected")')).toBeVisible();
+  });
+
+  test('user can edit an AI draft', async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard');
+
+    await page.goto('/social-posting');
+
+    const generateBtn = page.locator('button:has-text("Generate Post with AI")');
+    await expect(generateBtn).toBeVisible();
+    await generateBtn.click();
+
+    const textArea = page.locator('textarea').first();
+    await expect(textArea).toBeVisible();
+    await textArea.fill('My edited custom post text!');
+
+    await expect(page.locator('text=My edited custom post text!').last()).toBeVisible();
+  });
+
+  test('user can schedule a post', async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard');
+
+    await page.goto('/social-posting');
+
+    const scheduleBtn = page.locator('button:has-text("Schedule")');
+    await expect(scheduleBtn).toBeVisible();
+    await scheduleBtn.click();
+  });
+
+  test('user can approve a post', async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard');
+
+    await page.goto('/social-posting');
+
+    const approveBtn = page.locator('button:has-text("Approve & Post Now")');
+    await expect(approveBtn).toBeVisible();
+    await approveBtn.click();
+  });
 });

@@ -17,10 +17,10 @@ test.describe('Business Share & Embed', () => {
     await shareStoreBtn.click();
 
     // 3. Verify the Share Store component pops up
-    await expect(page.locator('text=Share Your Store')).toBeVisible();
+    await expect(page.locator('text=Share my business').first()).toBeVisible();
 
     // Verify OpenGraph Preview elements
-    await expect(page.locator('text=Logo / Cover Image')).toBeVisible();
+    await expect(page.locator('text=✨')).toBeVisible();
     await expect(page.locator('text=My Awesome Store')).toBeVisible();
     await expect(page.locator('text=The best place to buy things')).toBeVisible();
     await expect(page.locator('text=ohc://share?b=123')).toBeVisible();
@@ -30,12 +30,63 @@ test.describe('Business Share & Embed', () => {
     await expect(copyBtn).toBeVisible();
     await copyBtn.click();
 
-    await expect(page.locator('button:has-text("📷 Share to Instagram")')).toBeVisible();
-    await expect(page.locator('button:has-text("🐦 Share to X")')).toBeVisible();
+    await expect(page.locator('button:has-text("📷 Instagram")')).toBeVisible();
+    await expect(page.locator('button:has-text("🐦 X (Twitter)")')).toBeVisible();
 
     // Close the Share Store dialog
     const closeBtn = page.locator('button:has-text("Close")');
     await expect(closeBtn).toBeVisible();
     await closeBtn.click();
+  });
+
+  test('should verify Instagram sharing functionality', async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
+
+    await page.waitForURL('**/*');
+
+    const shareStoreBtn = page.locator('button:has-text("Share Store")');
+    await expect(shareStoreBtn).toBeVisible();
+    await shareStoreBtn.click();
+
+    const instagramBtn = page.locator('button:has-text("📷 Instagram")');
+    await expect(instagramBtn).toBeVisible();
+    await instagramBtn.click();
+  });
+
+  test('should verify X sharing functionality', async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
+
+    await page.waitForURL('**/*');
+
+    const shareStoreBtn = page.locator('button:has-text("Share Store")');
+    await expect(shareStoreBtn).toBeVisible();
+    await shareStoreBtn.click();
+
+    const xBtn = page.locator('button:has-text("🐦 X (Twitter)")');
+    await expect(xBtn).toBeVisible();
+    await xBtn.click();
+  });
+
+  test('should verify WhatsApp sharing functionality', async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
+
+    await page.waitForURL('**/*');
+
+    const shareStoreBtn = page.locator('button:has-text("Share Store")');
+    await expect(shareStoreBtn).toBeVisible();
+    await shareStoreBtn.click();
+
+    const waBtn = page.locator('button:has-text("💬 Share to WhatsApp")');
+    await expect(waBtn).toBeVisible();
+    await waBtn.click();
   });
 });
