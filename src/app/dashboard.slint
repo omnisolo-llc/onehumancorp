@@ -250,7 +250,7 @@ export component Dashboard inherits Window {
                 Text { text: "Quick Actions"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
                 TooltipElement { tooltip_id: "quick_actions_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } } }
             }
-            if (show_quick_actions_hint) : Text { text: "Tap here to quickly manage your store."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+            if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             HorizontalBox {
                 spacing: 8px;
                 TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
