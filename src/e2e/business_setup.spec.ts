@@ -10,7 +10,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show welcome step', async ({ page }) => {
-    await expect(page.locator('text=Welcome')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
   });
 
   test('should display the Setup Wizard hero animation elements', async ({ page }) => {

@@ -10,7 +10,7 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
     await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome"')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
@@ -71,7 +71,7 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
 
     // Check that we can navigate back to dashboard
     await page.click('button:has-text("Go to Dashboard")');
-    await expect(page.locator('text="Welcome"')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 });
 
 test('verify wizard AI agent configuration', async ({ page }) => {
@@ -258,7 +258,7 @@ test('verify checklist flow and integration', async ({ page }) => {
     await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome"')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
@@ -327,7 +327,7 @@ test('verify checklist connects instagram routing', async ({ page }) => {
     await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome"')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
@@ -382,7 +382,7 @@ test('verify checklist share link routing', async ({ page }) => {
     await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome"')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
@@ -437,7 +437,7 @@ test('verify checklist fully completed state', async ({ page }) => {
     await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome"')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
@@ -496,7 +496,7 @@ test('verify checklist completion progress', async ({ page }) => {
     await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome"')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
