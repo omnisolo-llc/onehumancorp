@@ -896,7 +896,7 @@ mod chaos_tests {
 
         // In cloud chaos, we tolerate network drop failures
         assert!(success + failed == 100);
-        println!("Cloud chaos results: {} success, {} failed", success, failed);
+        tracing::info!("Cloud chaos results: {} success, {} failed", success, failed);
     }
 
     #[tokio::test]
@@ -957,6 +957,6 @@ mod chaos_tests {
         }
 
         assert!(success + failed == 10);
-        println!("Standalone chaos results: {} success, {} failed", success, failed);
+        tracing::info!("Standalone chaos results: {} success, {} failed", success, failed);
     }
 }
