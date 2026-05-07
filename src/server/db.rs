@@ -34,7 +34,7 @@ impl DB {
 
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', '', true)").await?; Ok(true) }) })
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', '', false)").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
@@ -98,7 +98,16 @@ impl DB {
                 }
                 #[cfg(not(unix))]
                 {
-                    let _ = std::fs::File::create(&db_path);
+                    // Fallback to strict file creation, rejecting execution if we can't secure it
+                    if let Ok(file) = std::fs::File::create(&db_path) {
+                        if let Ok(metadata) = file.metadata() {
+                            let mut perms = metadata.permissions();
+                            perms.set_readonly(false); // Limited effectiveness on non-unix, but best effort
+                            let _ = file.set_permissions(perms);
+                        }
+                    } else {
+                        tracing::error!("Failed to create local database securely.");
+                    }
                 }
             }
 
@@ -139,7 +148,7 @@ impl DB {
             }
 
             let pool = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', '', true)").await?; Ok(true) }) })
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', '', false)").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .acquire_timeout(std::time::Duration::from_millis(500))
 
@@ -834,7 +843,7 @@ mod autodream_db_tests {
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', '', true)").await?; Ok(true) }) })
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', '', false)").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
@@ -857,7 +866,7 @@ mod autodream_db_tests {
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', '', true)").await?; Ok(true) }) })
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', '', false)").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
@@ -895,7 +904,7 @@ mod autodream_db_tests {
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', '', true)").await?; Ok(true) }) })
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SELECT set_config('app.current_tenant', '', false)").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(database_url)

@@ -17,7 +17,7 @@ where
             .await?;
     } else {
         // No need to RESET ROLE since SET LOCAL is transaction scoped.
-        query("SELECT set_config('app.current_tenant', $1, true)")
+        query("SELECT set_config('app.current_tenant', $1, false)")
             .bind(org_id)
             .execute(executor)
             .await?;

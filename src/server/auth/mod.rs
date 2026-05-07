@@ -410,9 +410,11 @@ impl Store {
         #[cfg(not(test))]
         {
             // ZERO SECRETS ENFORCEMENT:
-            // JWT generation via static symmetric secrets is disabled.
-            // Authentication relies exclusively on SPIFFE/SPIRE for identity validation.
-            return Err("Zero Secrets constraint: Static JWT issuance is permanently disabled. Use SPIFFE/SPIRE context.".to_string());
+            if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) != "true" {
+                return Err("Zero Secrets constraint: Static JWT issuance is permanently disabled in cloud deployments. Use SPIFFE/SPIRE context.".to_string());
+            } else {
+                return Err("Not a test environment".to_string());
+            }
         }
         #[cfg(test)]
         {
@@ -441,9 +443,11 @@ impl Store {
         #[cfg(not(test))]
         {
             // ZERO SECRETS ENFORCEMENT:
-            // Static JWT validation is disabled.
-            // OHC strictly requires SPIFFE/SPIRE mTLS identities.
-            return Err("Zero Secrets constraint: Static JWT validation is disabled.".to_string());
+            if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) != "true" {
+                return Err("Zero Secrets constraint: Static JWT validation is disabled in cloud deployments.".to_string());
+            } else {
+                return Err("Not a test environment".to_string());
+            }
         }
         #[cfg(test)]
         {
