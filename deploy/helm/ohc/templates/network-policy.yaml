@@ -19,7 +19,9 @@ spec:
             matchLabels:
               app: {{ .Release.Name }}-ohc-core
     - from:
-        - namespaceSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
               app.kubernetes.io/component: controller

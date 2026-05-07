@@ -15,6 +15,21 @@ impl TaskRepository {
     pub async fn create_task(&self, task: Task) -> Result<Task, String> {
         match &self.db.store {
             DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+                if !task.organization_id.is_empty() {
+                    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+                        .bind(&task.organization_id)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                } else {
+                    sqlx::query("SELECT set_config('app.current_tenant', '', true)")
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+
                 sqlx::query(
                     r#"
                     INSERT INTO tasks (
@@ -32,9 +47,11 @@ impl TaskRepository {
                 .bind(&task.assigned_agent_role)
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
-                .execute(&self.db.pool)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
@@ -65,7 +82,22 @@ impl TaskRepository {
     pub async fn get_tasks_by_org(&self, organization_id: &str) -> Result<Vec<Task>, String> {
         let tasks = match &self.db.store {
             DbStore::Postgres => {
-                sqlx::query_as::<_, Task>(
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+                if !organization_id.is_empty() {
+                    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+                        .bind(organization_id)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                } else {
+                    sqlx::query("SELECT set_config('app.current_tenant', '', true)")
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+
+                let res = sqlx::query_as::<_, Task>(
                     r#"
                     SELECT id, organization_id, parent_task_id, title, description,
                            status, assigned_agent_role, created_at, updated_at
@@ -74,9 +106,12 @@ impl TaskRepository {
                     "#
                 )
                 .bind(organization_id)
-                .fetch_all(&self.db.pool)
+                .fetch_all(&mut *tx)
                 .await
-                .map_err(|e| e.to_string())?
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+                res
             }
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query_as::<_, Task>(
@@ -100,6 +135,21 @@ impl TaskRepository {
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+                if !organization_id.is_empty() {
+                    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+                        .bind(organization_id)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                } else {
+                    sqlx::query("SELECT set_config('app.current_tenant', '', true)")
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+
                 let result = sqlx::query(
                     r#"
                     UPDATE tasks
@@ -111,9 +161,11 @@ impl TaskRepository {
                 .bind(now)
                 .bind(task_id)
                 .bind(organization_id)
-                .execute(&self.db.pool)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
 
                 if result.rows_affected() == 0 {
                     return Err("Task not found or does not belong to organization".to_string());
@@ -246,5 +298,34 @@ mod tests {
 
         let tasks_after = repo.get_tasks_by_org(&org_id).await.unwrap();
         assert_eq!(tasks_after[0].status, "IN_PROGRESS");
+    }
+
+    #[tokio::test]
+    async fn test_task_tenant_isolation_rls() {
+        // This test simulates the RLS multi-tenant logic. Since the test harness
+        // uses SQLite for isolation tests by default, we just verify the standard
+        // fallback and the multi-tenant query logic returns empty correctly.
+        let db = setup_test_db().await;
+        let repo = TaskRepository::new(db);
+
+        let t = Task {
+            id: "rls-task-1".to_string(),
+            organization_id: "org-isolation".to_string(),
+            parent_task_id: None,
+            title: "RLS Test Task".to_string(),
+            description: Some("A task to test RLS".to_string()),
+            assigned_agent_role: Some("agent".to_string()),
+            created_at: Some(Utc::now()),
+            updated_at: Some(Utc::now()),
+            status: "TODO".to_string(),
+        };
+
+        repo.create_task(t.clone()).await.unwrap();
+
+        let tasks = repo.get_tasks_by_org("org-isolation").await.unwrap();
+        assert_eq!(tasks.len(), 1);
+
+        let no_tasks = repo.get_tasks_by_org("other-org").await.unwrap();
+        assert_eq!(no_tasks.len(), 0);
     }
 }

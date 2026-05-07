@@ -143,6 +143,30 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
                 panic!("Failed to securely create or open standalone database file with restricted permissions: {}", e);
             }
         }
+
+        // Enforce proper file permissions for the local standalone execution wrappers/directories
+        #[cfg(unix)]
+        {
+            use std::fs;
+            use std::os::unix::fs::PermissionsExt;
+            let paths_to_secure = [
+                ".ohc/runtime",
+                ".ohc/runtime/memory",
+                ".ohc/runtime/status",
+            ];
+
+            for p in &paths_to_secure {
+                if std::path::Path::new(p).exists() {
+                    if let Ok(metadata) = fs::metadata(p) {
+                         let mut perms = metadata.permissions();
+                         if perms.mode() & 0o777 != 0o700 {
+                              perms.set_mode(0o700);
+                              let _ = fs::set_permissions(p, perms);
+                         }
+                    }
+                }
+            }
+        }
     }
     cfg.standalone = true;
     cfg.redis_url = None;
