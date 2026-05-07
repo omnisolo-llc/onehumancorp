@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wizard_provider.dart';
 import '../main.dart'; // For GlassContainer
+import '../widgets/contextual_tooltip.dart';
+import '../widgets/walkthrough_overlay.dart';
+import 'help/help_center_screen.dart';
 
 class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
   const BusinessSetupWizardScreen({super.key});
@@ -21,6 +24,8 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
 
   late AnimationController _pulseAnimationController;
   late Animation<double> _pulseAnimation;
+
+  bool _showWalkthrough = true;
 
   @override
   void initState() {
@@ -73,14 +78,28 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: _buildCurrentStep(state.currentStep, state),
+      body: Stack(
+        children: [
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: _buildCurrentStep(state.currentStep, state),
+              ),
+            ),
           ),
-        ),
+          Positioned(
+            top: 40,
+            right: 20,
+            child: IconButton(
+              icon: const Icon(Icons.help_outline, color: Colors.white, size: 30),
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpCenterScreen()));
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -141,16 +160,24 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 40),
-        ElevatedButton(
-          onPressed: _nextStep,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6B4EFF),
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
+        WalkthroughHighlight(
+          showHighlight: _showWalkthrough,
+          speechBubbleText: "Start setting up your store here!",
+          onDismiss: () => setState(() => _showWalkthrough = false),
+          child: ElevatedButton(
+            onPressed: () {
+              setState(() => _showWalkthrough = false);
+              _nextStep();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6B4EFF),
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
             ),
+            child: const Text('Get Started', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
           ),
-          child: const Text('Get Started', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       ],
     );
@@ -188,8 +215,10 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         const SizedBox(height: 15),
         GlassContainer(
           child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              key: const Key('industryDropdown'),
+            child: ContextualTooltip(
+              tooltipKey: 'industryDropdown',
+              child: DropdownButton<String>(
+                key: const Key('industryDropdown'),
               value: state.industry,
               isExpanded: true,
               dropdownColor: const Color(0xFF1E293B),
@@ -202,17 +231,20 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   child: Text(value),
                 );
               }).toList(),
-              onChanged: (newValue) {
-                ref.read(wizardProvider.notifier).updateBusinessProfile(industry: newValue);
-              },
+                onChanged: (newValue) {
+                  ref.read(wizardProvider.notifier).updateBusinessProfile(industry: newValue);
+                },
+              ),
             ),
           ),
         ),
         const SizedBox(height: 15),
         GlassContainer(
           child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              key: const Key('sizeDropdown'),
+            child: ContextualTooltip(
+              tooltipKey: 'sizeDropdown',
+              child: DropdownButton<String>(
+                key: const Key('sizeDropdown'),
               value: state.size,
               isExpanded: true,
               dropdownColor: const Color(0xFF1E293B),
@@ -225,9 +257,10 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   child: Text(value),
                 );
               }).toList(),
-              onChanged: (newValue) {
-                ref.read(wizardProvider.notifier).updateBusinessProfile(size: newValue);
-              },
+                onChanged: (newValue) {
+                  ref.read(wizardProvider.notifier).updateBusinessProfile(size: newValue);
+                },
+              ),
             ),
           ),
         ),

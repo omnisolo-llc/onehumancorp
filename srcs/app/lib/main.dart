@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/unified_inbox_screen.dart';
 import 'screens/business_setup_wizard_screen.dart';
+import 'screens/help/help_center_screen.dart';
+import 'screens/help/ai_help_chat_screen.dart';
 
 
 void main() {
@@ -60,6 +62,26 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline, color: Colors.white),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpCenterScreen()));
+            },
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const AiHelpChatScreen()));
+        },
+        backgroundColor: const Color(0xFF6B4EFF),
+        icon: const Icon(Icons.support_agent, color: Colors.white),
+        label: const Text('Ask Anything', style: TextStyle(color: Colors.white)),
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
