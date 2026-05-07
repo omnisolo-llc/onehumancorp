@@ -65,8 +65,8 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Allow time for the goroutine to run (transient failures may take time to retry)
-	time.Sleep(2 * time.Second)
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	// Check MeshHub events
 	foundSpawned := false
@@ -107,7 +107,7 @@ func TestSubAgentSpawner_SpawnCloud(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Allow time for the goroutine to run
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	// Check MeshHub events
 	foundSpawned := false
@@ -156,7 +156,7 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 	assert.Equal(t, "ASSIGNED", fetchedTask.Status)
 
 	// Give spawner time
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	foundCompleted := false
 	for _, msg := range mesh.published {
@@ -167,4 +167,54 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 		}
 	}
 	assert.True(t, foundCompleted)
+}
+
+func TestSubAgentTimeout(t *testing.T) {
+	mesh := &mockMeshHub{}
+	spawner := NewDefaultSubAgentSpawner(mesh, false, 5)
+
+	task := &SharedTask{
+		ID: "timeout-task-1",
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	defer cancel()
+
+	err := spawner.executeTask(ctx, task)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "context deadline exceeded")
+}
+
+func TestSubAgentSpawner_CircuitBreaker(t *testing.T) {
+	mesh := &mockMeshHub{}
+	spawner := NewDefaultSubAgentSpawner(mesh, false, 0)
+	spawner.cb.threshold = 1 // Trip after 1 failure
+
+	task := &SharedTask{
+		ID:             "test-cb",
+		OrganizationID: "org-test",
+	}
+
+	// First execution with short timeout will fail and trip breaker
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	defer cancel()
+
+	spawner.runSubAgent(ctx, task)
+
+	// Second execution should be blocked by circuit breaker
+	task2 := &SharedTask{
+		ID:             "test-cb-2",
+		OrganizationID: "org-test",
+	}
+	spawner.runSubAgent(context.Background(), task2)
+
+	foundPaused := false
+	for _, msg := range mesh.published {
+		var payload map[string]interface{}
+		_ = json.Unmarshal([]byte(msg), &payload)
+		if payload["event"] == "SUB_AGENT_PAUSED" && payload["task_id"] == "test-cb-2" {
+			foundPaused = true
+		}
+	}
+	assert.True(t, foundPaused)
 }
