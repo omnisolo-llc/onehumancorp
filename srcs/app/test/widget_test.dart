@@ -42,7 +42,12 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    // 4. Deployment Preference Screen
+    // 4. External Integrations Screen
+    expect(find.text('External Integrations'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 5. Deployment Preference Screen
     expect(find.text('Deployment Preference'), findsOneWidget);
     await tester.tap(find.text('Cloud'));
     await tester.pump(const Duration(milliseconds: 500));
@@ -50,7 +55,7 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    // 5. Administrator Account Screen
+    // 6. Administrator Account Screen
     expect(find.text('Administrator Account'), findsOneWidget);
     await tester.enterText(find.byKey(const Key('adminNameField')), 'John Doe');
     await tester.enterText(find.byKey(const Key('adminEmailField')), 'john@acme.com');
@@ -59,7 +64,7 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    // 6. Review & Launch Screen
+    // 7. Review & Launch Screen
     expect(find.text('Review & Launch'), findsOneWidget);
     expect(find.text('Acme Corp'), findsOneWidget);
     expect(find.text('Technology'), findsOneWidget);
@@ -77,7 +82,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     // await tester.pumpAndSettle();
 
-    // 7. Dashboard Screen
+    // 8. Dashboard Screen
     expect(find.text("Dashboard"), findsOneWidget);
     expect(find.text("Welcome Checklist"), findsOneWidget);
     expect(find.text("✅ Business live"), findsOneWidget);
