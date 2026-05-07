@@ -123,7 +123,7 @@ impl Store {
                     mac.finalize().into_bytes().to_vec()
                 } else {
                     tracing::warn!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence");
-                    random_bytes(32)
+                    panic!("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
                 };
 
                 #[cfg(unix)]
@@ -710,7 +710,7 @@ mod tests {
             std::env::set_var("ADMIN_EMAIL", "testadmin@test.com");
         }
         
-        let s = Store::new();
+        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         let users = s.list_users("");
         assert_eq!(users.len(), 1);
         assert_eq!(users[0].username, "testadmin");
@@ -718,7 +718,7 @@ mod tests {
 
     #[test]
     fn test_store_create_and_authenticate() {
-        let s = Store::new();
+        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("alice".to_string(), "alice@test.com".to_string(), "hunter2!".to_string(), vec![ROLE_VIEWER.to_string()], "".to_string()).unwrap();
         
         let got = s.authenticate("alice", "hunter2!", "").unwrap();
@@ -730,20 +730,20 @@ mod tests {
 
     #[test]
     fn test_store_duplicate_username() {
-        let s = Store::new();
+        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         s.create_user("bob".to_string(), "bob@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).unwrap();
         assert!(s.create_user("bob".to_string(), "bob2@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).is_err());
     }
 
     #[test]
     fn test_store_short_password_rejected() {
-        let s = Store::new();
+        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         assert!(s.create_user("short".to_string(), "short@test.com".to_string(), "abc".to_string(), vec![], "".to_string()).is_err());
     }
 
     #[test]
     fn test_store_update_and_delete_user() {
-        let s = Store::new();
+        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("charlie".to_string(), "c@test.com".to_string(), "p@ssw0rd".to_string(), vec![ROLE_VIEWER.to_string()], "".to_string()).unwrap();
         
         let new_email = "charlie2@test.com".to_string();
@@ -759,7 +759,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_jwt_round_trip() {
-        let s = Store::new();
+        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("jwt-user".to_string(), "jwt@test.com".to_string(), "jwtpass1".to_string(), vec![ROLE_OPERATOR.to_string()], "".to_string()).unwrap();
         
         let token = s.issue_token(&u).unwrap();
@@ -772,7 +772,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_jwt_empty_sub_jti() {
-        let s = Store::new();
+        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("empty-claims".to_string(), "empty@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).unwrap();
         let token = s.issue_token(&u).unwrap();
 
@@ -819,13 +819,13 @@ mod tests {
         // when OHC_SQLITE_KEY is present without altering environment variables dynamically
         // Note: setting environment variables in unit tests is unsafe in Rust
         // For regression testing we just check that the Store initialized with some secret
-        let s = Store::new();
+        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         assert!(!s.secret.is_empty(), "Store secret should be initialized (either randomly or from env/file)");
     }
 
     #[tokio::test]
     async fn test_jwt_revoked_token() {
-        let s = Store::new();
+        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("revoke-me".to_string(), "revoke@test.com".to_string(), "revpass1".to_string(), vec![], "".to_string()).unwrap();
         let token = s.issue_token(&u).unwrap();
         
@@ -978,7 +978,7 @@ mod isolation_tests {
 
     #[test]
     fn test_auth_tenant_isolation_sys_org() {
-        let s = Store::new();
+        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         // Create user in a specific organization
         let org_user = s.create_user(
             "tenant_user".to_string(),
