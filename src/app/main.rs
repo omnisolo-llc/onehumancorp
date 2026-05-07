@@ -94,6 +94,7 @@ thread_local! {
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
     static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
+    static GLOBAL_CATALOG_COUNT: RefCell<i32> = RefCell::new(0);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -110,6 +111,7 @@ thread_local! {
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
     static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
+    static GLOBAL_CATALOG_COUNT: RefCell<i32> = RefCell::new(0);
 }
 
 #[cfg(test)]
@@ -1216,7 +1218,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = social_posting_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                ui.set_post_content("Check out our new products!".into());
+                let content = "Check out our new products! 🚀 #newarrival";
+                ui.set_post_content(content.into());
+
+                GLOBAL_DASHBOARD.with(|g| {
+                    if let Some(weak_dash) = g.borrow().as_ref() {
+                        if let Some(dash) = weak_dash.upgrade() {
+                            let mut current_tasks: Vec<app::UiPendingApproval> = dash.get_pending_approvals().iter().collect();
+                            current_tasks.push(app::UiPendingApproval {
+                                helper_name: "The Promoter".into(),
+                                task_id: format!("ig-draft-{}", chrono::Utc::now().timestamp()).into(),
+                                title: "Drafted Instagram Post".into(),
+                                proposed_content: content.into(),
+                            });
+                            dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks)).into());
+                        }
+                    }
+                });
             }
         }
     });
@@ -1225,7 +1243,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = social_posting_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                ui.set_post_content("Post scheduled for 10:00 AM.".into());
+                let content = "Post scheduled for 10:00 AM.";
+                ui.set_post_content(content.into());
+
+                GLOBAL_DASHBOARD.with(|g| {
+                    if let Some(weak_dash) = g.borrow().as_ref() {
+                        if let Some(dash) = weak_dash.upgrade() {
+                            let mut current_tasks: Vec<app::UiPendingApproval> = dash.get_pending_approvals().iter().collect();
+                            current_tasks.push(app::UiPendingApproval {
+                                helper_name: "The Promoter".into(),
+                                task_id: format!("ig-sched-{}", chrono::Utc::now().timestamp()).into(),
+                                title: "Scheduled Social Post".into(),
+                                proposed_content: content.into(),
+                            });
+                            dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks)).into());
+                        }
+                    }
+                });
             }
         }
     });
@@ -1825,7 +1859,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             ui.invoke_action_failed("Tier limit reached: 10 products".into());
                                         } else {
                                             // Handle success case
-                                            // We could log or do something else here, but to avoid regressions, we don't block
+                                            GLOBAL_CATALOG_COUNT.with(|g| {
+                                                let mut count = g.borrow_mut();
+                                                *count += 1;
+                                                if *count == 5 {
+                                                    ui.set_milestone_title("🎉 Catalog Growing!".into());
+                                                    ui.set_milestone_message("You've added 5 products. Your store is looking great!".into());
+                                                    ui.set_show_milestone(true);
+                                                }
+                                            });
                                         }
                                     }
                                 }).unwrap();
@@ -1840,6 +1882,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         slint::invoke_from_event_loop(move || {
                             if let Some(ui) = dashboard_handle_inner.upgrade() {
                                 // For WASM target, we simulate it currently to avoid the E0433 errors and keep WASM functioning
+                                GLOBAL_CATALOG_COUNT.with(|g| {
+                                    let mut count = g.borrow_mut();
+                                    *count += 1;
+                                    if *count == 5 {
+                                        ui.set_milestone_title("🎉 Catalog Growing!".into());
+                                        ui.set_milestone_message("You've added 5 products. Your store is looking great!".into());
+                                        ui.set_show_milestone(true);
+                                    }
+                                });
                             }
                         }).unwrap();
                     });
@@ -2647,10 +2698,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     });
 
+    let pricing_handle_launch = pricing_handle.clone();
+    setup_wizard_ui.on_action_upgrade(move || {
+        if let Some(ui) = pricing_handle_launch.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
     setup_wizard_ui.on_launch({
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password, price_type| {
             let ui = ui_handle.unwrap();
+
+            // Growth Loop: Soft Paywall for Pro Features
+            if domain_choice == "custom" || domain_choice == "buy" || website_template == "Bold" {
+                ui.set_upgrade_prompt_message(format!(
+                    "The '{}' {} and '{}' domain are Pro features. Upgrade to launch with a professional brand!",
+                    website_template,
+                    if website_template == "Bold" { "template" } else { "style" },
+                    if domain_choice == "custom" { "custom" } else { "premium" }
+                ).into());
+                ui.set_show_upgrade_prompt(true);
+                ui.set_launching(false);
+                return;
+            }
+
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
                 ("company_name".to_string(), company_name.to_string()),

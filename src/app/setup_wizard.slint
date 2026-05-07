@@ -2,6 +2,7 @@ import { PasswordInput } from "password_input.slint";
 import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { AdvancedToggle } from "advanced_toggle.slint";
+import { UpgradePrompt } from "upgrade_prompt.slint";
 
 export component SetupWizard inherits Window {
     min-width: 375px;
@@ -57,6 +58,9 @@ export component SetupWizard inherits Window {
     in-out property <bool> launch_success: false;
     in-out property <bool> is_cropping_photo: false;
 
+    in-out property <bool> show_upgrade_prompt: false;
+    in-out property <string> upgrade_prompt_message: "";
+
     // Animation state
     property <float> pulse_scale: 1.0;
     in-out property <string> shareable_link: "https://mybusiness.ohc.app";
@@ -71,6 +75,7 @@ export component SetupWizard inherits Window {
     callback go_to_add_products();
     callback go_to_connect_instagram();
     callback go_to_share_link();
+    callback action_upgrade();
 
     callback next_step();
     callback select_business_type(string);
@@ -99,6 +104,12 @@ export component SetupWizard inherits Window {
     toggle_advanced => { is_advanced = !is_advanced; save_state(); }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    if (show_upgrade_prompt) : UpgradePrompt {
+        message: root.upgrade_prompt_message;
+        action_dismiss => { root.show_upgrade_prompt = false; }
+        action_upgrade => { root.action_upgrade(); }
+    }
 
     Timer {
         interval: 1000ms;

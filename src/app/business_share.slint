@@ -30,12 +30,14 @@ export component BusinessShare inherits Window {
 
         Text { text: "This is how your store will look when shared:"; color: #94a3b8; font-size: 14px; font-family: "Inter"; }
 
-        // High-Fidelity OpenGraph Preview
+        // High-Fidelity OpenGraph Preview with OHC Premium Tokens
         GlassCard {
-            border-color: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.15);
             border-width: 1px;
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(255, 255, 255, 0.08);
             padding: 0px;
+            drop-shadow-blur: 24px;
+            drop-shadow-color: rgba(0, 0, 0, 0.2);
 
             VerticalBox {
                 padding: 0px;
