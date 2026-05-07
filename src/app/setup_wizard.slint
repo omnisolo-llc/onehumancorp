@@ -468,6 +468,12 @@ export component SetupWizard inherits Window {
                 Text { text: "Add your first product or service"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
                 Text { text: "You can add more later"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
+                if (is_advanced) : VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Raw Product Metadata (JSON)"; font-family: "Inter"; font-size: 14px; color: #a855f7; }
+                    LineEdit { text: "{\"name\":\"" + product_name + "\", \"price\":\"" + product_price + "\"}"; height: 60px; }
+                }
+
                 Text { text: "Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit { placeholder-text: "e.g. Custom Birthday Cake"; text <=> product_name; height: 44px; }
 
@@ -559,9 +565,10 @@ export component SetupWizard inherits Window {
 
                 if (is_advanced) : VerticalBox {
                     spacing: 8px;
-                    Text { text: "Custom DNS Target (A/CNAME)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "target.ohc.app"; text <=> custom_dns_target; height: 44px; }
+                    Text { text: "DNS Records / CNAME configuration"; font-family: "Inter"; font-size: 14px; color: #a855f7; }
+                    LineEdit { text: "CNAME mybusiness.ohc.app"; height: 44px; }
                 }
+
 
                 GlassCard {
                     height: 80px;

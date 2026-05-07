@@ -211,6 +211,12 @@ export component WebsiteBuilder inherits Window {
             Text { text: "Choose a Domain"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
             Text { text: "Where will customers find you?"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "DNS Target: cname.ohc.app"; font-family: "Inter"; font-size: 14px; color: #a855f7; }
+                LineEdit { text: "CNAME " + domain_choice; height: 44px; }
+            }
+
             GlassCard {
                 height: 80px;
                 background: domain_choice == "subdomain" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);

@@ -2350,6 +2350,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let agents_ui = app::Agents::new()?;
+    agents_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let agents_handle = agents_ui.as_weak();
+    let ag_ui_weak = agents_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = ag_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+
     let agent_hire_ui = app::AgentHire::new()?;
     let fix_agent_ui = app::FixAgent::new()?;
     let upgrade_ui = app::Upgrade::new()?;
