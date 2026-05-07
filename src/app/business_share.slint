@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { TooltipElement } from "tooltip_element.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component BusinessShare inherits Window {
@@ -11,6 +12,7 @@ export component BusinessShare inherits Window {
     in property <string> business_name: "My Awesome Store";
     in property <string> business_tagline: "The best place to buy things";
     in property <string> share_link: "ohc://share?b=123";
+    in-out property <bool> show_hint: false;
 
     callback copy_link();
     callback share_to_instagram();
@@ -24,9 +26,12 @@ export component BusinessShare inherits Window {
 
         HorizontalBox {
             Text { text: "Share my business"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            TooltipElement { tooltip_id: "bs_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_hint = !show_hint; } } }
             Rectangle {}
             Button { text: "Close"; height: 44px; clicked => { close(); } }
         }
+        if (show_hint) : Text { text: "Tap a button below to copy your store link or share it directly to your favorite social media app."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+
 
         Text { text: "This is how your store will look when shared:"; color: #94a3b8; font-size: 14px; font-family: "Inter"; }
 

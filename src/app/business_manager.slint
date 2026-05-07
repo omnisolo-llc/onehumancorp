@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
+import { TooltipElement } from "tooltip_element.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component BusinessManager inherits Window {
@@ -8,6 +9,7 @@ export component BusinessManager inherits Window {
     title: "Add Offering";
 
     in-out property <int> step: 0;
+    in-out property <bool> show_hint: false;
     in-out property <string> selected_type: "";
 
     // Form fields
@@ -36,10 +38,13 @@ export component BusinessManager inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Add Offering"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: "Add Offering"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            TooltipElement { tooltip_id: "bm_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_hint = !show_hint; } } }
             Rectangle {}
-            Button { text: "Close"; clicked => { close(); } }
+            Button { text: "Close"; clicked => { close(); } height: 44px; }
         }
+        if (show_hint) : Text { text: "Choose what you want to sell. A physical item you ship, a digital file they download, or your time for a service."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+
 
         // Step 0: Select Type
         if (step == 0) : VerticalBox {

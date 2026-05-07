@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { TooltipElement } from "tooltip_element.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component GrowBusiness inherits Window {
@@ -8,6 +9,7 @@ export component GrowBusiness inherits Window {
     title: "Grow My Business";
 
     in-out property <int> step: 0;
+    in-out property <bool> show_hint: false;
     in-out property <string> selected_strategy: "";
     in-out property <bool> is_advanced: false;
     in-out property <bool> execution_started: false;
@@ -39,12 +41,14 @@ export component GrowBusiness inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Growth Strategies"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: "Growth Strategies"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white;  }
+            TooltipElement { tooltip_id: "gb_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_hint = !show_hint; } } }
             Rectangle {}
             HorizontalBox {
                 spacing: 8px;
                 alignment: end;
-                Text { text: "Expert Mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+
+                Text { text: "Expert Mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px;  }
                 TouchArea {
                     width: 20px;
                     height: 20px;
@@ -61,6 +65,8 @@ export component GrowBusiness inherits Window {
                 }
             }
         }
+
+        if (show_hint) : Text { text: "Choose a goal below and our AI will suggest the best steps to make it happen."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
 
         // Step 0: Select Strategy
         if (step == 0) : VerticalBox {
