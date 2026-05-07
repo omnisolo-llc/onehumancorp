@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Job {
     pub id: String,
+    pub tenant_id: String,
     pub parent_task_id: String,
     pub agent_role: String,
     pub payload: String,

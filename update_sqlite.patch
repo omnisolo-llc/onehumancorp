@@ -1,0 +1,47 @@
+--- src/server/orchestration/queue/sqlite_queue.rs
++++ src/server/orchestration/queue/sqlite_queue.rs
+@@ -21,11 +21,12 @@
+         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+         for job in jobs {
+             sqlx::query(
+-                "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after)
+-                 VALUES (?, ?, ?, ?, 'QUEUED', ?)"
++                "INSERT INTO sub_agent_jobs (id, organization_id, parent_task_id, agent_role, payload, status, run_after)
++                 VALUES (?, ?, ?, ?, ?, 'QUEUED', ?)"
+             )
+             .bind(&job.id)
++            .bind(&job.tenant_id)
+             .bind(&job.parent_task_id)
+             .bind(&job.agent_role)
+             .bind(&job.payload)
+@@ -39,11 +40,12 @@
+
+     async fn enqueue(&self, job: Job) -> Result<(), String> {
+         sqlx::query(
+-            "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after)
+-             VALUES (?, ?, ?, ?, 'QUEUED', ?)"
++            "INSERT INTO sub_agent_jobs (id, organization_id, parent_task_id, agent_role, payload, status, run_after)
++             VALUES (?, ?, ?, ?, ?, 'QUEUED', ?)"
+         )
+         .bind(&job.id)
++        .bind(&job.tenant_id)
+         .bind(&job.parent_task_id)
+         .bind(&job.agent_role)
+         .bind(&job.payload)
+@@ -62,7 +64,7 @@
+
+         let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+         let query_str = format!(
+-            "SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at
++            "SELECT id, organization_id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at
+              FROM sub_agent_jobs
+              WHERE status = 'QUEUED' AND agent_role IN ({})
+              LIMIT 1",
+@@ -79,6 +81,7 @@
+         if let Some(row) = job_opt {
+             let job = Job {
+                 id: row.get("id"),
++                tenant_id: row.try_get("organization_id").unwrap_or_default(),
+                 parent_task_id: row.get("parent_task_id"),
+                 agent_role: row.get("agent_role"),
+                 payload: row.get("payload"),
