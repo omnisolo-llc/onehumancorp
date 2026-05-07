@@ -13,11 +13,15 @@ spec:
   - Egress
   ingress:
   - from:
-    - namespaceSelector: {}
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Release.Namespace }}
       podSelector:
         matchLabels:
           app: {{ .Release.Name }}-frontend
-    - namespaceSelector: {}
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Release.Namespace }}
       podSelector:
         matchLabels:
           app: {{ .Release.Name }}-ingress
@@ -49,4 +53,6 @@ spec:
     - protocol: TCP
       port: 6379
   - to:
-    - namespaceSelector: {}
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Release.Namespace }}
