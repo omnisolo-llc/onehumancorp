@@ -42,6 +42,14 @@
 
 # Release Notes
 
+## v0.4.34 (Cloud) / v0.4.34+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🧙 Wizard: Progressive Disclosure in Fix Issue Wizard (#11985)
+
+### Privacy/Offline Improvements
+- 🧙 Wizard: Progressive Disclosure in Fix Issue Wizard (#11985)
+
 ## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
 
 - Scaling (Cloud): Add dual-mode caching layer to dashboard service to optimize latency (#11871).

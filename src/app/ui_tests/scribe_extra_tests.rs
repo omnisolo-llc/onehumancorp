@@ -101,7 +101,7 @@ fn test_release_notes_edge_cases() {
     crate::ui_tests::init();
     let ui = crate::app::ReleaseNotes::new().unwrap();
 
-    assert_eq!(ui.get_current_version(), SharedString::from("v0.4.33"));
+    assert_eq!(ui.get_current_version(), SharedString::from("v0.4.34"));
 
     ui.set_current_version("v1.0.0".into());
     assert_eq!(ui.get_current_version(), SharedString::from("v1.0.0"));
