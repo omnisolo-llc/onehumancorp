@@ -92,3 +92,7 @@ alias(
     actual = "//src/examples/hello-world-agent:hello-world",
     tags = ["manual"],
 )
+
+load("@gazelle//:def.bzl", "gazelle")
+# gazelle:prefix onehumancorp
+gazelle(name = "gazelle")

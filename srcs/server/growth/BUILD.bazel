@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "growth",
+    srcs = ["handlers_growth.go"],
+    importpath = "onehumancorp/srcs/server/growth",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "growth_test",
+    srcs = ["handlers_growth_test.go"],
+    embed = [":growth"],
+    visibility = ["//visibility:public"],
+)
