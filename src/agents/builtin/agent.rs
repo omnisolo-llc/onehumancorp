@@ -396,7 +396,7 @@ impl Agent {
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             let mut retry_count = 0;
                             let max_retries = 2;
-                            let mut final_res;
+                            let final_res;
 
                             loop {
                                 match tool.execute.execute(args.clone()).await {
@@ -474,7 +474,7 @@ impl Agent {
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
                         let max_retries = 2;
-                        let mut final_res;
+                        let final_res;
 
                         loop {
                             match tool.execute.execute(args.clone()).await {

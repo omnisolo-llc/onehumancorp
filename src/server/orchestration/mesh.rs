@@ -2,7 +2,7 @@ use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
 use crate::ohc::orchestration::TeammateMeshEvent;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
-use opentelemetry::trace::{Tracer, TraceContextExt};
+use opentelemetry::trace::Tracer;
 use std::sync::Arc;
 use async_trait::async_trait;
 use opentelemetry::KeyValue;
@@ -304,7 +304,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                 .map_err(|e| format!("Failed to create RedisTransport: {}", e))?;
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }
-        crate::db::DbStore::Sqlite(pool) => {
+        crate::db::DbStore::Sqlite(_pool) => {
             if let Ok(pg_url) = std::env::var("DATABASE_URL") {
                 if pg_url.starts_with("postgres://") || pg_url.starts_with("postgresql://") {
                     match ohc_builtin_agent::mesh::transport::PgTransport::new(&pg_url).await {
