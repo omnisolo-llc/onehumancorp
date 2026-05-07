@@ -1,8 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'screens/unified_inbox_screen.dart';
 import 'screens/business_setup_wizard_screen.dart';
-import 'dart:async';
+
 
 void main() {
   runApp(const ProviderScope(child: OHCApp()));
@@ -127,6 +128,24 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  key: const Key('inboxBtn'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const UnifiedInboxScreen()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6B4EFF),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text('Inbox', style: TextStyle(color: Colors.white, fontSize: 16)),
                 ),
               ],
             ),
