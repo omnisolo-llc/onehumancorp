@@ -404,7 +404,7 @@ impl AutoDreamWorker {
     }
 
     async fn consolidate_agent_task_memories(db: &Arc<DB>, counter: &Counter<u64>) -> Result<(), Box<dyn std::error::Error>> {
-        let memory_dir = std::path::Path::new(".agent-task/memory");
+        let memory_dir = std::path::Path::new(".ohc/runtime/memory");
 
         if !memory_dir.exists() {
             return Ok(());
@@ -414,8 +414,23 @@ impl AutoDreamWorker {
 
         let client = crate::minimax::LocalLLMClient::new();
 
+        let retention_period = tokio::time::Duration::from_secs(86400 * 7); // 7 days retention
+        let now = std::time::SystemTime::now();
+
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
+
+            if path.is_file() {
+                if let Ok(metadata) = entry.metadata().await {
+                    if let Ok(modified) = metadata.modified() {
+                        if now.duration_since(modified).unwrap_or(std::time::Duration::from_secs(0)) > retention_period {
+                            let _ = tokio::fs::remove_file(&path).await;
+                            continue;
+                        }
+                    }
+                }
+            }
+
             if path.is_file() && path.extension().map_or(false, |ext| ext == "yml") {
                 let content = tokio::fs::read_to_string(&path).await?;
 

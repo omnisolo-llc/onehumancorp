@@ -29,7 +29,7 @@ impl CompetitorAuditWorker {
 
     pub async fn run_audit(db: &crate::db::DB) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Implement `CompetitorAuditWorker` that periodically probes competitor update channels.
-        // Integrates with OHC-SIP by publishing findings to `.agent-task/memory/`.
+        // Integrates with OHC-SIP by publishing findings to `.ohc/runtime/memory/`.
 
         let competitors = vec![
             ("AI coding assistant", "https://api.github.com/repos/cursor/cursor/commits"),
@@ -84,11 +84,11 @@ impl CompetitorAuditWorker {
         }
 
         // Ensure the directory exists
-        std::fs::create_dir_all(".agent-task/memory")?;
+        std::fs::create_dir_all(".ohc/runtime/memory")?;
 
         let findings = "Competitor Audit Finding: OHC-HA dynamic escalation is functioning. Local SQLite fallback is operational.";
         std::fs::write(
-            format!(".agent-task/memory/competitor_audit_{}.txt", Utc::now().timestamp()),
+            format!(".ohc/runtime/memory/competitor_audit_{}.txt", Utc::now().timestamp()),
             findings
         )?;
 

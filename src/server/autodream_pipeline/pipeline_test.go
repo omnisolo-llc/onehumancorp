@@ -177,8 +177,8 @@ func TestStartDaemon(t *testing.T) {
 	worker := NewAutoDreamWorker(db, api, "/path/that/does/not/exist", nil)
 	// Test creating worker with empty string
 	worker2 := NewAutoDreamWorker(db, api, "", nil)
-	if worker2.memDir != ".agent-task/memory" {
-		t.Errorf("expected memDir to fallback to .agent-task/memory")
+	if worker2.memDir != ".ohc/runtime/memory" {
+		t.Errorf("expected memDir to fallback to .ohc/runtime/memory")
 	}
 
 	worker.StartDaemon(0)

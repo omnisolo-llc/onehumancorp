@@ -30,7 +30,7 @@ type AutoDreamWorker struct {
 
 func NewAutoDreamWorker(db DB, api EmbeddingApi, memDir string, cache *pricing.LocalEmbeddingCache) *AutoDreamWorker {
 	if memDir == "" {
-		memDir = ".agent-task/memory"
+		memDir = ".ohc/runtime/memory"
 	}
 	return &AutoDreamWorker{
 		db:     db,
@@ -45,6 +45,9 @@ func (w *AutoDreamWorker) SweepAndConsolidate() error {
 		return nil
 	}
 
+	retentionPeriod := 7 * 24 * time.Hour
+	now := time.Now()
+
 	err := filepath.WalkDir(w.memDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -52,6 +55,13 @@ func (w *AutoDreamWorker) SweepAndConsolidate() error {
 		if d.IsDir() {
 			return nil
 		}
+
+		info, err := d.Info()
+		if err == nil && now.Sub(info.ModTime()) > retentionPeriod {
+			_ = os.Remove(path)
+			return nil
+		}
+
 		if filepath.Ext(path) != ".yml" {
 			return nil
 		}
