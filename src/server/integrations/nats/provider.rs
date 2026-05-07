@@ -99,7 +99,8 @@ mod tests {
     // A shared mock that acts as a real broker between the instances
     struct SharedBrokerMock {
         published_messages: Arc<AtomicUsize>,
-        handlers: std::sync::RwLock<Vec<Box<dyn Fn(Vec<u8>) + Send + Sync>>>,
+        handlers: Arc<std::sync::RwLock<std::collections::HashMap<usize, Box<dyn Fn(Vec<u8>) + Send + Sync>>>>,
+        next_id: std::sync::atomic::AtomicUsize,
     }
 
     #[async_trait]
@@ -107,7 +108,7 @@ mod tests {
         async fn publish(&self, _subject: &str, data: Vec<u8>) -> Result<(), String> {
             self.published_messages.fetch_add(1, Ordering::SeqCst);
             let handlers = self.handlers.read().unwrap();
-            for handler in handlers.iter() {
+            for handler in handlers.values() {
                 handler(data.clone());
             }
             Ok(())
@@ -118,8 +119,12 @@ mod tests {
             _subject: &str,
             handler: Box<dyn Fn(Vec<u8>) + Send + Sync>,
         ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-            self.handlers.write().unwrap().push(handler);
-            Ok(Box::new(|| {}))
+            let id = self.next_id.fetch_add(1, Ordering::SeqCst);
+            self.handlers.write().unwrap().insert(id, handler);
+            let handlers_clone = self.handlers.clone();
+            Ok(Box::new(move || {
+                handlers_clone.write().unwrap().remove(&id);
+            }))
         }
     }
 
@@ -128,7 +133,8 @@ mod tests {
         let published_count = Arc::new(AtomicUsize::new(0));
         let broker = Arc::new(SharedBrokerMock {
             published_messages: published_count.clone(),
-            handlers: std::sync::RwLock::new(Vec::new()),
+            handlers: Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
+            next_id: std::sync::atomic::AtomicUsize::new(0),
         });
 
         // Mocking Cloud Node sharing the same broker
