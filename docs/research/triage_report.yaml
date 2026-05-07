@@ -1,0 +1,6 @@
+issue_category: cleanup
+status: completed
+details:
+  - Cleaned backlog without hallucinating features since no task was given.
+debt_report: |
+  No tasks assigned.
