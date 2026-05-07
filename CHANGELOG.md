@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.34 (Cloud) / v0.4.34+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement Standalone Local Metric Buffer and Cloud Sync (#11916)
+
+### Privacy/Offline Improvements
+- Implement Standalone Local Metric Buffer and Cloud Sync (#11916)
+
 ## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
 
 - Scaling (Cloud): Add dual-mode caching layer to dashboard service to optimize latency (#11871).
