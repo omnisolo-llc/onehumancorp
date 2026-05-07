@@ -7632,6 +7632,18 @@ fn test_scribe_feature_dashboard_functionality() {
     dashboard.on_open_walkthrough(move || { *wt_clone.borrow_mut() = true; });
     dashboard.invoke_open_walkthrough();
     assert!(*walkthrough_opened.borrow());
+
+    let video_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let video_clone = video_opened.clone();
+    dashboard.on_open_video_tutorials(move || { *video_clone.borrow_mut() = true; });
+    dashboard.invoke_open_video_tutorials();
+    assert!(*video_opened.borrow());
+
+    let api_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let api_clone = api_opened.clone();
+    dashboard.on_open_api_docs(move || { *api_clone.borrow_mut() = true; });
+    dashboard.invoke_open_api_docs();
+    assert!(*api_opened.borrow());
 }
 
 #[cfg(test)]
