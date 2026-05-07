@@ -38,7 +38,7 @@ mkdir -p "${OHC_MEMORY_DIR}/auto/" "${OHC_MEMORY_DIR}/team/" "${OHC_STATUS_DIR}"
 
 echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 # Launch the API Server (local persistence)
-npx @bazel/bazelisk run //src/server:server > /dev/null 2>&1 &
+npx @bazel/bazelisk run //src/server:server &
 SERVER_PID=$!
 echo -e "  ${GREEN}✓ Server started with PID $SERVER_PID${RESET}"
 
