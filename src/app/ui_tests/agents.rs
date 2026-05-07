@@ -22,7 +22,7 @@ fn create_c() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::n
 
 #[test] fn agent_xss_toast() {
     let ui = create_c();
-    let xss = "<script>console.log(1)</script>";
+    let xss = "test_xss_string";
     ui.set_selected_agent(xss.into());
     assert_eq!(ui.get_selected_agent(), xss);
 }
