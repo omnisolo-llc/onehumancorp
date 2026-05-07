@@ -1818,7 +1818,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = dashboard_handle_inner.upgrade() {
                                         if used >= 10 { // Free tier limit
-                                            ui.set_upgrade_prompt_message("Scale your business with unlimited products! Upgrade to Starter to unlock the full potential of your storefront.".into());
+                                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.".into());
                                             ui.set_show_upgrade_prompt(true);
                                             ui.invoke_action_failed("Tier limit reached: 10 products".into());
                                         } else {
@@ -2456,7 +2456,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = agents_ui_handle_inner.upgrade() {
                             if total_agents >= 1 {
-                                ui.set_upgrade_prompt_message("Supercharge your team! Upgrade to Starter to hire unlimited AI agents and accelerate your growth.".into());
+                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
                                 ui.set_show_upgrade_prompt(true);
                             } else {
                                 if let Some(hire_ui) = agent_hire_handle_inner.upgrade() {
@@ -5268,7 +5268,7 @@ mod docs_tests {
 
         dashboard_ui.on_action_add_product(move || {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your limit of 3 AI departments on the Starter plan. Upgrade to Pro to hire 'The Accountant' and unlock unlimited agents.".into());
+                ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
@@ -5276,12 +5276,13 @@ mod docs_tests {
         dashboard_ui.invoke_action_add_product();
         assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
 
+        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.");
         // Test agents limit soft paywall
         let agents_ui = app::Agents::new().unwrap();
         let agents_ui_handle = agents_ui.as_weak();
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your limit of 3 AI departments on the Starter plan. Upgrade to Pro to hire 'The Accountant' and unlock unlimited agents.".into());
+                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
@@ -5572,27 +5573,27 @@ mod remaining_e2e_tests {
 
         dashboard_ui.on_action_add_product(move || {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
-                ui.set_upgrade_prompt_message("Scale your business with unlimited products! Upgrade to Starter to unlock the full potential of your storefront.".into());
+                ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
         dashboard_ui.invoke_action_add_product();
         assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
-        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "Scale your business with unlimited products! Upgrade to Starter to unlock the full potential of your storefront.");
+        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.");
 
         let agents_ui = app::Agents::new().unwrap();
         let agents_ui_handle = agents_ui.as_weak();
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("Supercharge your team! Upgrade to Starter to hire unlimited AI agents and accelerate your growth.".into());
+                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
         agents_ui.invoke_hire_agent();
         assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
-        assert_eq!(agents_ui.get_upgrade_prompt_message(), "Supercharge your team! Upgrade to Starter to hire unlimited AI agents and accelerate your growth.");
+        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.");
 
         let wb_ui = app::WebsiteBuilder::new().unwrap();
         wb_ui.set_domain_choice("subdomain".into());
