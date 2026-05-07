@@ -30,6 +30,7 @@ type TaskStore interface {
 	GetTask(ctx context.Context, id string) (*SharedTask, error)
 	UpdateTaskStatus(ctx context.Context, id string, status string) error
 	GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error)
+	PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error)
 }
 
 // PostgresTaskStore implementation
@@ -200,6 +201,76 @@ func (s *PostgresTaskStore) UpdateTaskStatus(ctx context.Context, id string, sta
 	return tx.Commit()
 }
 
+
+func (s *PostgresTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	query := `
+		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
+		FROM shared_tasks
+		WHERE status = 'PENDING' AND priority = 'DELEGATED'
+		FOR UPDATE SKIP LOCKED
+		LIMIT $1
+	`
+	rows, err := tx.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*SharedTask
+	var claimedIDs []string
+	for rows.Next() {
+		task := &SharedTask{}
+		var payloadBytes, depsBytes []byte
+		err := rows.Scan(
+			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status,
+			&task.AgentID, &task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
+			&task.CreatedAt, &task.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if len(payloadBytes) > 0 {
+			raw := json.RawMessage(payloadBytes)
+			task.Payload = &raw
+		}
+		if len(depsBytes) > 0 {
+			task.Dependencies = json.RawMessage(depsBytes)
+		}
+		tasks = append(tasks, task)
+		claimedIDs = append(claimedIDs, task.ID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+
+	if len(claimedIDs) > 0 {
+		for _, id := range claimedIDs {
+			updateQuery := `UPDATE shared_tasks SET status = 'ASSIGNED', updated_at = CURRENT_TIMESTAMP WHERE id = $1`
+			_, err = tx.ExecContext(ctx, updateQuery, id)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	for _, task := range tasks {
+		task.Status = "ASSIGNED"
+	}
+
+	return tasks, nil
+}
 
 func (s *PostgresTaskStore) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -381,6 +452,86 @@ func (s *SqliteTaskStore) CreateTask(ctx context.Context, task *SharedTask) erro
     }
 
 	return err
+}
+
+func (s *SqliteTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	query := `
+		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
+		FROM shared_tasks
+		WHERE status = 'PENDING' AND priority = 'DELEGATED'
+		LIMIT ?
+	`
+	rows, err := tx.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*SharedTask
+	var claimedIDs []string
+
+	for rows.Next() {
+		task := &SharedTask{}
+		var payloadBytes, depsBytes []byte
+		var createdAtStr, updatedAtStr string
+		err := rows.Scan(
+			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status,
+			&task.AgentID, &task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
+			&createdAtStr, &updatedAtStr,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if t, err := time.Parse(time.RFC3339, createdAtStr); err == nil {
+			task.CreatedAt = t
+		}
+		if t, err := time.Parse(time.RFC3339, updatedAtStr); err == nil {
+			task.UpdatedAt = t
+		}
+		if len(payloadBytes) > 0 {
+			raw := json.RawMessage(payloadBytes)
+			task.Payload = &raw
+		}
+		if len(depsBytes) > 0 {
+			task.Dependencies = json.RawMessage(depsBytes)
+		}
+		tasks = append(tasks, task)
+		claimedIDs = append(claimedIDs, task.ID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+
+	if len(claimedIDs) > 0 {
+		for _, id := range claimedIDs {
+			updateQuery := `UPDATE shared_tasks SET status = 'ASSIGNED', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'PENDING'`
+			_, err = tx.ExecContext(ctx, updateQuery, id)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	for _, task := range tasks {
+		task.Status = "ASSIGNED"
+	}
+
+	return tasks, nil
 }
 
 func (s *SqliteTaskStore) GetTask(ctx context.Context, id string) (*SharedTask, error) {
