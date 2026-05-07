@@ -1570,6 +1570,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let my_plan_handle = my_plan_ui.as_weak();
 
     let pricing_ui = app::Pricing::new().unwrap();
+    pricing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let pricing_handle = pricing_ui.as_weak();
+    let p_ui_weak = pricing_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = p_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
     let pricing_handle = pricing_ui.as_weak();
 
     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
@@ -2352,6 +2360,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let agents_ui = app::Agents::new()?;
     let agent_hire_ui = app::AgentHire::new()?;
     let fix_agent_ui = app::FixAgent::new()?;
+    let fix_issue_ui = app::Wizard::new()?;
+    fix_issue_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let fix_issue_handle = fix_issue_ui.as_weak();
+    let fi_ui_weak = fix_issue_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = fi_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+    let fix_issue_ui = app::Wizard::new()?;
+    fix_issue_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let fix_issue_handle = fix_issue_ui.as_weak();
+    let fi_ui_weak = fix_issue_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = fi_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
     let upgrade_ui = app::Upgrade::new()?;
     let billing_ui = app::Billing::new()?;
 
@@ -6006,6 +6032,14 @@ mod remaining_e2e_tests {
         my_plan_ui.invoke_download_invoice();
 
         let pricing_ui = app::Pricing::new().unwrap();
+    pricing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let pricing_handle = pricing_ui.as_weak();
+    let p_ui_weak = pricing_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = p_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
         let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let plan_selected_clone = plan_selected.clone();
         pricing_ui.on_select_plan(move |plan| {
@@ -6131,6 +6165,14 @@ mod remaining_e2e_tests {
         assert!(*upgrade_opened.borrow(), "Upgrade should be opened from MyPlan");
 
         let pricing_ui = app::Pricing::new().unwrap();
+    pricing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let pricing_handle = pricing_ui.as_weak();
+    let p_ui_weak = pricing_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = p_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
         let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let plan_selected_clone = plan_selected.clone();
         pricing_ui.on_select_plan(move |plan| {
@@ -6158,6 +6200,14 @@ mod remaining_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let pricing_ui = app::Pricing::new().unwrap();
+    pricing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let pricing_handle = pricing_ui.as_weak();
+    let p_ui_weak = pricing_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = p_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
         let pricing_ui_toggle_handle = pricing_ui.as_weak();
         pricing_ui.on_toggle_billing_cycle(move || {
             if let Some(ui) = pricing_ui_toggle_handle.upgrade() {

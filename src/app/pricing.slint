@@ -73,13 +73,39 @@ export component Pricing inherits Window {
     callback select_plan(string);
     callback toggle_billing_cycle();
     callback add_credits();
+    in-out property <bool> is_advanced: false;
+    callback toggle_advanced();
+    callback save_state();
+    toggle_advanced => { is_advanced = !is_advanced; save_state(); }
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
         width: 100%;
 
-        Text { text: "Pricing & Billing"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+        HorizontalBox {
+            Text { text: "Pricing & Billing"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            HorizontalBox {
+                spacing: 8px;
+                alignment: end;
+                Text { text: "Expert Mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                TouchArea {
+                    width: 20px;
+                    height: 20px;
+                    clicked => { toggle_advanced(); }
+                    Rectangle {
+                        width: 100%;
+                        height: 100%;
+                        border-radius: 4px;
+                        border-color: #a855f7;
+                        border-width: 1px;
+                        background: is_advanced ? #a855f7 : transparent;
+                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
+                    }
+                }
+            }
+        }
 
         HorizontalBox {
             spacing: 10px;
@@ -141,6 +167,11 @@ export component Pricing inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 12px;
+                    if (is_advanced) : VerticalBox {
+                        spacing: 8px;
+                        Text { text: "Raw Metrics (JSON)"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                        LineEdit { text: "{\"api_calls\": 450, \"storage_gb\": 1.2}"; height: 44px; }
+                    }
                     Text { text: "Projected Cost this Month"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                     Text { text: projected_cost; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
                 }
