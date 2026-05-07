@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS Changelog
 
+## v0.4.31 (Cloud) / v0.4.31+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🔨 Forge: Business Journey Architecture - Scaled end-to-end "Onboarding Wizard" flow with OpenTelemetry tracking (#11433)
+
+### Privacy/Offline Improvements
+- 🔨 Forge: Business Journey Architecture - Ensured 375px mobile-first constraints support robust local testing parity (#11433)
+
 ## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🔨 Forge: Refactor GrowthReferralWidget to use GlassCard for premium aesthetic (#11347)
