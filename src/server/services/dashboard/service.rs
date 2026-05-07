@@ -257,11 +257,23 @@ impl DashboardService for MyDashboardService {
             let orig_len = prompt.len();
             if orig_len > 0 {
                 original_prompts_len += orig_len;
-                if let Ok(compressed) = crate::pricing::compression::compress_lossless(prompt) {
-                    compressed_prompts_len += compressed.len();
-                } else {
-                    compressed_prompts_len += orig_len;
-                }
+
+                let stop_words: std::collections::HashSet<&str> = [
+                    "a", "an", "the", "is", "are",
+                    "and", "or", "but", "in", "on",
+                    "at", "to", "for", "with", "by",
+                    "about", "as", "of",
+                ].iter().cloned().collect();
+
+                let compressed = prompt.split_whitespace()
+                    .filter(|word| {
+                        let clean_word = word.to_lowercase();
+                        !stop_words.contains(clean_word.as_str())
+                    })
+                    .collect::<Vec<&str>>()
+                    .join(" ");
+
+                compressed_prompts_len += compressed.len();
             }
         }
 
