@@ -7,17 +7,46 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      tenant: isolated
+      app: {{ .Release.Name }}-backend
   policyTypes:
   - Ingress
   - Egress
   ingress:
   - from:
-    - podSelector:
+    - namespaceSelector: {}
+      podSelector:
         matchLabels:
-          tenant: isolated
+          app: {{ .Release.Name }}-frontend
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app: {{ .Release.Name }}-ingress
   egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
   - to:
     - podSelector:
         matchLabels:
-          tenant: isolated
+          app: {{ .Values.cnpg.clusterName }}-rw
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: {{ .Release.Name }}-redis-master
+    ports:
+    - protocol: TCP
+      port: 6379
+  - to:
+    - namespaceSelector: {}
