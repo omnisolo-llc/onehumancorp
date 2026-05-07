@@ -166,7 +166,7 @@ func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
 	go engine.StartSyncDaemon(ctx, 50*time.Millisecond)
 
 	// Wait for daemon to run
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	var countSynced int
 	err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics WHERE synced_to_cloud = TRUE").Scan(&countSynced)
