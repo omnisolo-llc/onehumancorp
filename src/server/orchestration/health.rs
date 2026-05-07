@@ -38,7 +38,7 @@ pub async fn run_health_monitor(
                 if sync_errors > 10 {
                     tracing::warn!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
                 } else if sync_errors > 0 {
-                    tracing::info!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
+                    tracing::trace!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
                 }
             }
         }
