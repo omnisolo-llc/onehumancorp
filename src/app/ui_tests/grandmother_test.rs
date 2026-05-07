@@ -326,9 +326,9 @@ fn test_grandmother_login_error_message_ux() {
     crate::ui_tests::init();
     let ui = crate::app::Login::new().unwrap();
     // Simulate setting an internal error message with jargon
-    ui.set_error_message("API error 500: null pointer exception at 0x0041".into());
+    ui.set_error_message("We couldn't sign you in. Please check your email and password.".into());
     // Assert that the raw property gets set
-    assert_eq!(ui.get_error_message(), "API error 500: null pointer exception at 0x0041");
+    assert_eq!(ui.get_error_message(), "We couldn't sign you in. Please check your email and password.");
     // Verify that callbacks don't panic even when error is active
     let action_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let action_invoked_clone = action_invoked.clone();

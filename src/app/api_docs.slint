@@ -12,11 +12,11 @@ export component ApiDocs inherits Window {
     preferred-width: 800px;
     preferred-height: 600px;
     min-width: 375px;
-    title: "Connect Custom Software";
+    title: "Connect Apps";
     out property <string> test_title: root.title;
     background: #0f172a;
-    in-out property <string> api_key: "sk_live_...";
-    in-out property <string> endpoint_url: "https://api.ohc.io";
+    in-out property <string> api_key: "my_secret_token";
+    in-out property <string> endpoint_url: "https://app.ohc.io";
     in-out property <bool> is_advanced: false;
     in property <[ApiEndpoint]> endpoints: [];
     in-out property <string> api_response: "";
