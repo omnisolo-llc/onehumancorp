@@ -1,6 +1,14 @@
 use sqlx::PgPool;
 use sqlx::Row;
 use chrono::Utc;
+use std::sync::OnceLock;
+use tokio::sync::Semaphore;
+
+static SQLITE_CONCURRENCY_LIMITER: OnceLock<Semaphore> = OnceLock::new();
+
+pub fn get_sqlite_limiter() -> &'static Semaphore {
+    SQLITE_CONCURRENCY_LIMITER.get_or_init(|| Semaphore::new(1))
+}
 
 
 
@@ -162,8 +170,15 @@ impl SipDB {
         let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
 
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+
         loop {
             let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+                let _permit = if is_standalone {
+                    Some(get_sqlite_limiter().acquire().await.unwrap())
+                } else {
+                    None
+                };
                 let mut tx = self.pool.begin().await?;
                 crate::utils::auth_utils::set_org_context(&mut *tx, "system").await?;
                 self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local).await?;
