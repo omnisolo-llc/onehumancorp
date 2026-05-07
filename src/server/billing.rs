@@ -1,3 +1,4 @@
+use crate::integrations::mercadopago::client::MercadoPagoClient;
 // Billing module stub - provides Tracker struct used by hub.rs
 #[allow(unused_imports)]
 pub use crate::services::billing::auditor::CostAuditor;
@@ -10,14 +11,16 @@ use std::sync::Arc;
 pub struct Tracker {
     rate_limiter: Option<Arc<RedisRateLimiter>>,
     pub stripe_client: Option<Arc<StripeClient>>,
+    pub mercadopago_client: Option<Arc<MercadoPagoClient>>,
 }
 
 impl Tracker {
     pub fn new() -> Self {
-        Tracker { rate_limiter: None, stripe_client: None }
+        Tracker { rate_limiter: None, stripe_client: None, mercadopago_client: None }
     }
 
     pub fn new_with_redis(redis_url: &str) -> Self {
+        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| Arc::new(MercadoPagoClient::new(token)));
         let stripe_client = std::env::var("STRIPE_API_KEY")
             .ok()
             .map(|key| Arc::new(StripeClient::new(key)));
@@ -25,9 +28,10 @@ impl Tracker {
             Tracker {
                 rate_limiter: Some(Arc::new(RedisRateLimiter::new(client))),
                 stripe_client,
+                mercadopago_client: mercadopago_client.clone(),
             }
         } else {
-            Tracker { rate_limiter: None, stripe_client }
+            Tracker { rate_limiter: None, stripe_client, mercadopago_client }
         }
     }
 
