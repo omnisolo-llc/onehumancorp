@@ -188,13 +188,14 @@ impl Bus for RedisBus {
 
 #[allow(dead_code)]
 pub struct IpcBus {
+    instance_id: String,
     pool: sqlx::SqlitePool,
     subs: std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, tokio::sync::broadcast::Sender<Message>>>>,
 }
 
 #[allow(dead_code)]
 impl IpcBus {
-    pub async fn new(db_url: &str) -> Result<Self, String> {
+    pub async fn new(db_url: &str, instance_id: String) -> Result<Self, String> {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
         let options = options.create_if_missing(true);
@@ -234,10 +235,7 @@ impl IpcBus {
         .map_err(|e| e.to_string())?;
 
         let subs = std::sync::Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new()));
-        let bus = IpcBus {
-            pool: pool.clone(),
-            subs: subs.clone(),
-        };
+        let bus = IpcBus { instance_id, pool: pool.clone(), subs: subs.clone() };
 
         bus.start_worker().await;
 
@@ -258,8 +256,9 @@ impl IpcBus {
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
+        let subscriber_id = self.instance_id.clone();
         tokio::spawn(async move {
-            let subscriber_id = "standalone_node".to_string();
+
             let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM bus_checkpoints WHERE subscriber_id = ?")
                 .bind(&subscriber_id)
                 .fetch_optional(&pool)
@@ -599,7 +598,7 @@ mod tests {
         let db_path = format!("{}/test_ipc_bus_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
         let db_url = format!("sqlite://{}", db_path);
 
-        let bus = IpcBus::new(&db_url).await.unwrap();
+        let bus = IpcBus::new(&db_url, uuid::Uuid::new_v4().to_string()).await.unwrap();
 
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
