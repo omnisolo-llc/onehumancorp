@@ -184,3 +184,95 @@ fn grow_business_test_social_media_add_products() {
     ui.set_selected_strategy("Add 5 more products".into());
     assert_eq!(ui.get_selected_strategy(), "Add 5 more products");
 }
+
+#[test]
+fn test_grow_business_e2e_flow_products() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::GrowBusiness::new().unwrap();
+
+    assert_eq!(ui.get_step(), 0);
+    ui.invoke_select_strategy("Add 5 more products".into());
+    assert_eq!(ui.get_selected_strategy(), "Add 5 more products");
+
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 1);
+
+    let executed = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let executed_clone = executed.clone();
+    ui.on_execute(move |strategy, _kpi| {
+        assert_eq!(strategy, "Add 5 more products");
+        *executed_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_execute("Add 5 more products".into(), "".into());
+    assert!(*executed.borrow(), "Execute should be triggered");
+
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 2);
+
+    let returned = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let returned_clone = returned.clone();
+    ui.on_return_to_dashboard(move || {
+        *returned_clone.borrow_mut() = true;
+    });
+    ui.invoke_return_to_dashboard();
+    assert!(*returned.borrow(), "Return to dashboard should be triggered");
+}
+
+#[test]
+fn test_grow_business_advanced_toggle() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::GrowBusiness::new().unwrap();
+
+    assert_eq!(ui.get_is_advanced(), false);
+    ui.invoke_toggle_advanced();
+    assert_eq!(ui.get_is_advanced(), true);
+
+    ui.set_kpi_target("15".into());
+    assert_eq!(ui.get_kpi_target(), "15");
+}
+
+#[test]
+fn test_grow_business_e2e_flow_instagram() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::GrowBusiness::new().unwrap();
+
+    assert_eq!(ui.get_step(), 0);
+    ui.invoke_select_strategy("Connect Instagram".into());
+    assert_eq!(ui.get_selected_strategy(), "Connect Instagram");
+
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 1);
+}
+
+#[test]
+fn test_grow_business_e2e_flow_email() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::GrowBusiness::new().unwrap();
+
+    assert_eq!(ui.get_step(), 0);
+    ui.invoke_select_strategy("Run your first email campaign".into());
+    assert_eq!(ui.get_selected_strategy(), "Run your first email campaign");
+
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 1);
+
+    ui.invoke_prev_step();
+    assert_eq!(ui.get_step(), 0);
+}
+
+#[test]
+fn test_grow_business_step_bounds() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::GrowBusiness::new().unwrap();
+
+    ui.set_step(10);
+    assert_eq!(ui.get_step(), 10);
+    ui.set_step(-1);
+    assert_eq!(ui.get_step(), -1);
+}

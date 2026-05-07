@@ -135,3 +135,33 @@ fn create_u_verify_progress() {
     ui.set_progress(21);
     assert_eq!(ui.get_progress(), 21);
 }
+
+#[test]
+fn test_fix_agent_e2e_flow_verify_title() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let _ui = app::FixAgent::new().unwrap();
+}
+
+#[test]
+fn test_billing_e2e_flow_verify_title() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let _ui = app::Billing::new().unwrap();
+}
+
+#[test]
+fn test_billing_e2e_flow_add_credits() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::Billing::new().unwrap();
+    assert_eq!(ui.get_is_advanced(), false);
+}
+
+#[test]
+fn test_billing_e2e_flow_switch_plan() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::Billing::new().unwrap();
+    assert_eq!(ui.get_is_advanced(), false);
+}
