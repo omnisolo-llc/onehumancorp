@@ -151,3 +151,16 @@ fn test_agents_ui_fix_callback() {
     ui.invoke_fix_agent("agent-123".into());
     assert_eq!(*fixed_id.borrow(), "agent-123");
 }
+#[test]
+fn test_agents_ui_tune_callback() {
+    let ui = create_agents_ui();
+    let tuned_id = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+
+    let tuned_id_clone = tuned_id.clone();
+    ui.on_tune_agent(move |id| {
+        *tuned_id_clone.borrow_mut() = id.into();
+    });
+
+    ui.invoke_tune_agent("agent-456".into());
+    assert_eq!(*tuned_id.borrow(), "agent-456");
+}
