@@ -92,6 +92,13 @@ export component PromptTuning inherits Window {
                         VerticalBox { alignment: center; padding: 12px; Text { text: "⚡\nEnergetic"; font-family: "Inter"; font-size: 12px; color: white; horizontal-alignment: center; } }
                         TouchArea { clicked => { tone = "Energetic"; } }
                     }
+                    GlassCard {
+                        width: 100px;
+                        height: 60px;
+                        background: tone == "Concise" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px; Text { text: "📝\nConcise"; font-family: "Inter"; font-size: 12px; color: white; horizontal-alignment: center; } }
+                        TouchArea { clicked => { tone = "Concise"; } }
+                    }
                 }
                 Text { text: "Selected: " + tone; color: #a855f7; font-family: "Inter"; font-weight: 700; }
             }
@@ -220,7 +227,7 @@ export component PromptTuning inherits Window {
                             border-radius: 8px;
                             HorizontalBox {
                                 padding: 8px;
-                                Text { text: "Helper: " + (tone == "Friendly" ? "Hi there! 😊 How can I help you today?" : (tone == "Professional" ? "Greetings. How may I assist you today?" : (tone == "Energetic" ? "Hey! Let's get things moving! 🚀" : "Hi."))); color: white; font-family: "Inter"; wrap: word-wrap; }
+                                Text { text: "Helper: " + (tone == "Friendly" ? "Hi there! 😊 How can I help you today?" : (tone == "Professional" ? "Greetings. How may I assist you today?" : (tone == "Energetic" ? "Hey! Let's get things moving! 🚀" : (tone == "Concise" ? "Yes." : "Hi.")))); color: white; font-family: "Inter"; wrap: word-wrap; }
                             }
                         }
                         Rectangle { height: 100px; } // Spacer

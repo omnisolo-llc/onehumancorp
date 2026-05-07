@@ -338,7 +338,7 @@ export component SetupWizard inherits Window {
                     background: payment_pref == "online" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🌐 Online only"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Get paid on your website (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "Get paid on your website (Estimated time to first payment: Instant)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("online"); save_state(); } }
                 }
@@ -347,7 +347,7 @@ export component SetupWizard inherits Window {
                     background: payment_pref == "inperson" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🤝 In-person (Take payments on your phone)"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Use your phone as a card reader (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "Use your phone as a card reader (Estimated time to first payment: Instant)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("inperson"); save_state(); } }
                 }
@@ -356,7 +356,7 @@ export component SetupWizard inherits Window {
                     background: payment_pref == "both" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "🌍 Both Online & In-person"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "Sell everywhere, synced in one place"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "Sell everywhere, synced in one place (Estimated time to first payment: Instant)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("both"); save_state(); } }
                 }
@@ -365,7 +365,7 @@ export component SetupWizard inherits Window {
                     background: payment_pref == "skip" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "⏭️ Skip for now"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                        Text { text: "You can set up payments later from your dashboard"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        Text { text: "You can set up payments later from your dashboard (Estimated time to first payment: None)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("skip"); save_state(); } }
                 }
