@@ -1114,6 +1114,83 @@ mod get_conflicts_tests {
     use std::str::FromStr;
 
     #[tokio::test]
+    async fn test_resolve_conflict_logic() {
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+
+        let winner = EmbeddingRecord {
+            id: "winner".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "winner data".to_string(),
+            embedding: vec![0.5, 0.5],
+            source_type: "MANUAL".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 2,
+            reliability_score: 90,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let loser = EmbeddingRecord {
+            id: "loser".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent2".to_string(),
+            content: "loser data".to_string(),
+            embedding: vec![0.5, 0.5],
+            source_type: "MANUAL".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 5,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&winner).await.unwrap();
+        repo.upsert(&loser).await.unwrap();
+
+        repo.resolve_conflict(&winner, &loser).await.unwrap();
+
+        let rows = sqlx::query("SELECT id, reference_count FROM consolidated_memory")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(rows.len(), 1);
+        let id: String = rows[0].get("id");
+        let ref_count: i32 = rows[0].get("reference_count");
+
+        assert_eq!(id, "winner");
+        assert_eq!(ref_count, 2 + 5 + 1); // winner.ref_count + loser.ref_count + 1
+    }
+
+    #[tokio::test]
     async fn test_auto_resolve_conflicts() {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
@@ -1467,6 +1544,99 @@ mod get_conflicts_tests {
     }
 
     #[tokio::test]
+    async fn test_search_cross_department_explicit() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+
+        let record_dept_a = EmbeddingRecord {
+            id: "dept_a_rec".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent_a".to_string(),
+            content: "dept A data".to_string(),
+            embedding: vec![1.0, 0.0],
+            source_type: "MANUAL".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let record_dept_b = EmbeddingRecord {
+            id: "dept_b_rec".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent_b".to_string(),
+            content: "dept B data".to_string(),
+            embedding: vec![1.0, 0.0],
+            source_type: "MANUAL".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let record_other_tenant = EmbeddingRecord {
+            id: "other_tenant_rec".to_string(),
+            tenant_id: "org2".to_string(),
+            agent_id: "agent_a".to_string(),
+            content: "other tenant data".to_string(),
+            embedding: vec![1.0, 0.0],
+            source_type: "MANUAL".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record_dept_a).await.unwrap();
+        repo.upsert(&record_dept_b).await.unwrap();
+        repo.upsert(&record_other_tenant).await.unwrap();
+
+        // semantic_search should return records from both agent_a and agent_b for org1,
+        // but exclude the record from org2.
+        let results = repo.semantic_search("org1", &[1.0, 0.0], 10).await.unwrap();
+
+        assert_eq!(results.len(), 2);
+        let mut found_a = false;
+        let mut found_b = false;
+        for r in results {
+            assert_eq!(r.tenant_id, "org1");
+            if r.agent_id == "agent_a" { found_a = true; }
+            if r.agent_id == "agent_b" { found_b = true; }
+        }
+        assert!(found_a);
+        assert!(found_b);
+    }
+
+    #[tokio::test]
     async fn test_cross_department_sharing() {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
@@ -1616,6 +1786,82 @@ mod anthropic_memory_tests {
 
         let results3 = store.retrieve("nonexistent", 5).await.unwrap();
         assert_eq!(results3.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_prune_stale_retention() {
+        use std::str::FromStr;
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = super::VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+        let threshold = now - chrono::Duration::days(180);
+        let older_time = threshold - chrono::Duration::days(10);
+        let newer_time = threshold + chrono::Duration::days(10);
+
+        let old_record = super::EmbeddingRecord {
+            id: "old_rec".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old data".to_string(),
+            embedding: vec![1.0],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: older_time,
+            last_referenced_at: older_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let new_record = super::EmbeddingRecord {
+            id: "new_rec".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "new data".to_string(),
+            embedding: vec![1.0],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: newer_time,
+            last_referenced_at: newer_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&old_record).await.unwrap();
+        repo.upsert(&new_record).await.unwrap();
+
+        repo.prune_stale(threshold).await.unwrap();
+
+        use sqlx::Row;
+        let query = "SELECT id FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(rows.len(), 1, "Only one record should remain");
+        let id: String = rows[0].try_get("id").unwrap();
+        assert_eq!(id, "new_rec", "The newer record should remain");
     }
 
     #[tokio::test]
