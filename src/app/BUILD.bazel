@@ -32,6 +32,7 @@ rust_binary(
     ],
     compile_data = ["tooltips.json"],
     data = [
+        "advanced_toggle.slint",
         "agent_config.slint",
         "walkthrough.slint",
         "experiments.slint",
@@ -127,6 +128,7 @@ rust_test(
     compile_data = ["tooltips.json"],
     crate_root = "main.rs",
     data = [
+        "advanced_toggle.slint",
         "agent_config.slint",
         "walkthrough.slint",
         "experiments.slint",

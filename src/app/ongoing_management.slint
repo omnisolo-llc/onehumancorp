@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component FixAgent inherits Window {
@@ -26,24 +27,9 @@ export component FixAgent inherits Window {
         HorizontalBox {
             Text { text: "Help me fix this"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
             Rectangle {}
-            HorizontalBox {
-                spacing: 8px;
-                alignment: end;
-                Text { text: "Advanced"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
-                TouchArea {
-                    width: 20px;
-                    height: 20px;
-                    clicked => { is_advanced = !is_advanced; save_state(); }
-                    Rectangle {
-                        width: 100%;
-                        height: 100%;
-                        border-radius: 4px;
-                        border-color: #a855f7;
-                        border-width: 1px;
-                        background: is_advanced ? #a855f7 : transparent;
-                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
-                    }
-                }
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { save_state(); }
             }
         }
 
@@ -146,24 +132,9 @@ export component Upgrade inherits Window {
         HorizontalBox {
             Text { text: "Upgrade to v2.4 ✨"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
             Rectangle {}
-            HorizontalBox {
-                spacing: 8px;
-                alignment: end;
-                Text { text: "Advanced"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
-                TouchArea {
-                    width: 20px;
-                    height: 20px;
-                    clicked => { is_advanced = !is_advanced; save_state(); }
-                    Rectangle {
-                        width: 100%;
-                        height: 100%;
-                        border-radius: 4px;
-                        border-color: #a855f7;
-                        border-width: 1px;
-                        background: is_advanced ? #a855f7 : transparent;
-                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
-                    }
-                }
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { save_state(); }
             }
         }
 
@@ -237,24 +208,9 @@ export component Billing inherits Window {
         HorizontalBox {
             Text { text: "How much does this cost?"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
             Rectangle {}
-            HorizontalBox {
-                spacing: 8px;
-                alignment: end;
-                Text { text: "Advanced"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
-                TouchArea {
-                    width: 20px;
-                    height: 20px;
-                    clicked => { is_advanced = !is_advanced; save_state(); }
-                    Rectangle {
-                        width: 100%;
-                        height: 100%;
-                        border-radius: 4px;
-                        border-color: #a855f7;
-                        border-width: 1px;
-                        background: is_advanced ? #a855f7 : transparent;
-                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
-                    }
-                }
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { save_state(); }
             }
         }
 
