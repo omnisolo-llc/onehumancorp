@@ -103,13 +103,25 @@ export component Login inherits Window {
                     wrap: word-wrap;
                 }
 
-                Button {
+                if (loading) : GlassCard {
+                    height: 44px;
+                    width: 100%;
+                    background: rgba(168, 85, 247, 0.4);
+                    border-color: rgba(168, 85, 247, 0.8);
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: is_sign_up ? "Creating your store..." : "Signing you in securely..."; color: white; font-family: "Inter"; font-weight: 700; horizontal-alignment: center; }
+                    }
+                }
+
+                if (!loading) : Button {
                     height: 44px;
                     text: root.submit_button_text;
                     clicked => { login(username, password); }
                 }
 
                 Button {
+                    enabled: !loading;
                     height: 44px;
                     text: root.toggle_button_text;
                     clicked => {
@@ -119,22 +131,25 @@ export component Login inherits Window {
 
                 HorizontalBox {
                     alignment: center;
-                    Text { text: "OR"; color: #9ca3af; font-weight: 700; }
+                    Text { text: "or"; color: #9ca3af; font-weight: 700; }
                 }
 
                 Button {
+                    enabled: !loading;
                     height: 44px;
                     text: root.sso_button_text;
                     clicked => { oauth_login("SSO"); }
                 }
 
                 Button {
+                    enabled: !loading;
                     height: 44px;
                     text: root.settings_button_text;
                     clicked => { open_settings(); }
                 }
 
                 Button {
+                    enabled: !loading;
                     height: 44px;
                     text: "Guided Setup";
                     clicked => { start_setup_wizard(); }

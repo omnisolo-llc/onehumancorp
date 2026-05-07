@@ -8,6 +8,9 @@ export component BusinessManager inherits Window {
     title: "Add Offering";
 
     in-out property <int> step: 0;
+    in-out property <bool> show_type_hint: false;
+    callback toggle_type_hint();
+    toggle_type_hint => { show_type_hint = !show_type_hint; }
     in-out property <string> selected_type: "";
 
     // Form fields
@@ -44,7 +47,16 @@ export component BusinessManager inherits Window {
         // Step 0: Select Type
         if (step == 0) : VerticalBox {
             spacing: 16px;
-            Text { text: "What are you offering?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "What are you offering?"; color: #94a3b8; font-family: "Inter"; font-size: 16px; vertical-alignment: center; }
+                Button { text: "?"; width: 32px; height: 32px; clicked => { toggle_type_hint(); } }
+            }
+            if (show_type_hint) : Text {
+                text: "Not sure? Choose Physical if you ship boxes, Digital for files, or Service to book your time.";
+                color: #cbd5e1; font-size: 14px; font-family: "Inter"; wrap: word-wrap;
+            }
 
             ScrollView {
                 VerticalBox {

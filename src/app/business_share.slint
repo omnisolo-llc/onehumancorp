@@ -11,6 +11,9 @@ export component BusinessShare inherits Window {
     in property <string> business_name: "My Awesome Store";
     in property <string> business_tagline: "The best place to buy things";
     in property <string> share_link: "ohc://share?b=123";
+    in-out property <bool> show_share_hint: false;
+    callback toggle_share_hint();
+    toggle_share_hint => { show_share_hint = !show_share_hint; }
 
     callback copy_link();
     callback share_to_instagram();
@@ -28,7 +31,16 @@ export component BusinessShare inherits Window {
             Button { text: "Close"; height: 44px; clicked => { close(); } }
         }
 
-        Text { text: "This is how your store will look when shared:"; color: #94a3b8; font-size: 14px; font-family: "Inter"; }
+        HorizontalBox {
+            alignment: start;
+            spacing: 8px;
+            Text { text: "This is how your store will look when shared:"; color: #94a3b8; font-size: 14px; font-family: "Inter"; vertical-alignment: center; }
+            Button { text: "?"; width: 32px; height: 32px; clicked => { toggle_share_hint(); } }
+        }
+        if (show_share_hint) : Text {
+            text: "Sharing your store on social media brings in more customers. Tap Instagram to post your store link directly to your profile or story.";
+            color: #cbd5e1; font-size: 14px; font-family: "Inter"; wrap: word-wrap;
+        }
 
         // High-Fidelity OpenGraph Preview
         GlassCard {

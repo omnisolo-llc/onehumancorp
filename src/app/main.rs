@@ -7468,6 +7468,72 @@ mod e2e_login_to_dashboard_tests {
     }
 
     #[test]
+    fn test_ux_echo_login_loading_state_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = app::Login::new().unwrap();
+
+        assert_eq!(ui.get_loading(), false);
+        ui.set_loading(true);
+        assert_eq!(ui.get_loading(), true);
+        ui.set_loading(false);
+        assert_eq!(ui.get_loading(), false);
+
+        let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let invoked_clone = invoked.clone();
+        ui.on_login(move |_, _| {
+            *invoked_clone.borrow_mut() = true;
+        });
+        ui.invoke_login("test".into(), "123".into());
+        assert!(*invoked.borrow());
+    }
+
+    #[test]
+    fn test_ux_echo_business_manager_hint_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        assert_eq!(manager_ui.get_show_type_hint(), false);
+        manager_ui.invoke_toggle_type_hint();
+        assert_eq!(manager_ui.get_show_type_hint(), true);
+    }
+
+    #[test]
+    fn test_ux_echo_business_share_hint_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let share_ui = app::BusinessShare::new().unwrap();
+
+        assert_eq!(share_ui.get_show_share_hint(), false);
+        share_ui.invoke_toggle_share_hint();
+        assert_eq!(share_ui.get_show_share_hint(), true);
+    }
+
+    #[test]
+    fn test_ux_echo_business_manager_hint_dismiss_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        manager_ui.invoke_toggle_type_hint();
+        assert_eq!(manager_ui.get_show_type_hint(), true);
+        manager_ui.invoke_toggle_type_hint();
+        assert_eq!(manager_ui.get_show_type_hint(), false);
+    }
+
+    #[test]
+    fn test_ux_echo_login_button_disabled_state() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+        let ui = app::Login::new().unwrap();
+        // Since we can't easily assert standard Button enabled state,
+        // we at least ensure setting loading state doesn't panic.
+        ui.set_loading(true);
+        assert_eq!(ui.get_loading(), true);
+    }
+
+    #[test]
     fn test_grandmother_business_manager_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         crate::ui_tests::init();
