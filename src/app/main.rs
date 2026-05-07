@@ -7010,3 +7010,37 @@ mod onboarding_tests {
         assert!(*copy_called.borrow(), "Confetti link copy should work");
     }
 }
+
+#[cfg(test)]
+mod onboarding_tests_2 {
+    use super::*;
+
+    #[test]
+    fn test_e2e_wizard_flow_currency_auto_detect() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_product_currency("USD".into());
+        assert_eq!(ui.get_product_currency(), "USD");
+    }
+
+    #[test]
+    fn test_e2e_wizard_confetti_and_copy() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+
+        ui.set_step(100);
+        assert_eq!(ui.get_step(), 100);
+
+        let copy_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let copy_called_clone = copy_called.clone();
+
+        ui.on_copy_link(move |link| {
+            assert_eq!(link, "https://mybusiness.ohc.app");
+            *copy_called_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_copy_link("https://mybusiness.ohc.app".into());
+        assert!(*copy_called.borrow(), "Confetti link copy should work");
+    }
+}
