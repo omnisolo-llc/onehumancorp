@@ -8,7 +8,7 @@ test('verify omnichannel inbox AI draft flow', async ({ page }) => {
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Login")');
 
-    await expect(page.locator('text="Welcome"')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -37,7 +37,7 @@ test('verify inbox mobile layout constraints', async ({ page }) => {
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Login")');
 
-    await expect(page.locator('text="Welcome"')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -57,7 +57,7 @@ test('verify quick reply usage', async ({ page }) => {
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Login")');
 
-    await expect(page.locator('text="Welcome"')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -76,7 +76,7 @@ test('verify sending custom message clears input', async ({ page }) => {
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Login")');
 
-    await expect(page.locator('text="Welcome"')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -97,7 +97,7 @@ test('verify empty state when no conversation is selected', async ({ page }) => 
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Login")');
 
-    await expect(page.locator('text="Welcome"')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
