@@ -271,6 +271,10 @@ export component SetupWizard inherits Window {
                     placeholder-text: "e.g. Maya's Cakes";
                     text <=> company_name;
                     height: 44px;
+                    accepted => {
+                        is_generating_company_description = true;
+                        generate_company_description(company_name, business_type);
+                    }
                 }
 
                 Text { text: "Tagline / Description (AI will help!)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
@@ -469,7 +473,15 @@ export component SetupWizard inherits Window {
                 Text { text: "You can add more later"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
                 Text { text: "Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit { placeholder-text: "e.g. Custom Birthday Cake"; text <=> product_name; height: 44px; }
+                LineEdit {
+                    placeholder-text: "e.g. Custom Birthday Cake";
+                    text <=> product_name;
+                    height: 44px;
+                    accepted => {
+                        is_generating_product_description = true;
+                        generate_product_description(product_name);
+                    }
+                }
 
                 Text { text: "Description (AI will help!)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit {
