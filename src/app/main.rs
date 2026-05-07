@@ -1276,6 +1276,49 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let business_manager_ui = app::BusinessManager::new().unwrap();
+
+    let dummy_products = vec![
+        app::UiProduct {
+            id: "prod_1".into(),
+            name: "Custom Vegan Cake".into(),
+            type_label: "Physical".into(),
+            price: "$40.00".into(),
+            inventory_count: 5,
+            is_out_of_stock: false,
+        },
+        app::UiProduct {
+            id: "prod_2".into(),
+            name: "Website Template".into(),
+            type_label: "Digital".into(),
+            price: "$19.00".into(),
+            inventory_count: 0,
+            is_out_of_stock: false,
+        },
+        app::UiProduct {
+            id: "prod_3".into(),
+            name: "Plumbing Repair".into(),
+            type_label: "Service".into(),
+            price: "$150.00".into(),
+            inventory_count: 0,
+            is_out_of_stock: true,
+        },
+    ];
+    let product_model = slint::VecModel::from(dummy_products);
+    let product_model_rc = std::rc::Rc::new(product_model);
+    business_manager_ui.set_products(product_model_rc.clone().into());
+
+    business_manager_ui.on_action_edit({
+        move |id| {
+            println!("Edit action triggered for product: {}", id);
+        }
+    });
+
+    business_manager_ui.on_action_archive({
+        move |id| {
+            println!("Archive action triggered for product: {}", id);
+        }
+    });
+
     let business_manager_handle = business_manager_ui.as_weak();
     Box::leak(Box::new(business_manager_ui));
 
