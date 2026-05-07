@@ -2,6 +2,7 @@ pub mod onboarding_e2e_tests;
 pub mod login;
 pub mod wizard;
 pub mod dashboard;
+mod dashboard_ux_friction;
 pub mod referrals;
 pub mod builder;
 pub mod scribe_e2e_tests;
