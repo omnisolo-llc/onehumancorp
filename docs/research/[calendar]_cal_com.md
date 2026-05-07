@@ -1,21 +1,17 @@
-## [Calendar & Scheduling] Issue Brief: Native Booking Engine & Google Calendar Sync
+# Scout: Tool Integration Research Q2
 
-**Title**: Scout 🔍: Integrate Cal.com API for Conflict-Free Booking
-**Problem Statement**:
-Service providers like Leo (Music Tutor) and Carlos (Handyman) need clients to book their time. Doing this manually via text or email leads to double-booking and timezone confusion. They need a simple booking widget that automatically respects their personal calendar availability.
+## 2. Calendar & Scheduling
+**Title**: Integrate Cal.com for Zero-Config Booking & Calendar Sync
+**Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
 **Research Report**:
-- **Tool**: Cal.com API (or direct Google Calendar API).
-- **Evaluation**: Cal.com offers an open-source, API-first scheduling infrastructure. It handles timezone math, calendar conflict checks, and event generation seamlessly.
-- **Ease of Use**: High. The business owner connects their Google/Outlook calendar with one click, sets their working hours (e.g., 9 AM - 5 PM), and the platform generates a beautiful booking interface.
-- **Pricing**: Cal.com API is highly scalable; basic usage can be very cheap or self-hosted. Direct Google Calendar API is free but requires more engineering effort to handle timezone and scheduling logic.
-- **Cloud vs. Standalone**: Cal.com works well in Cloud. For Standalone, direct Google Calendar OAuth is more appropriate to avoid third-party API dependencies.
+- Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box.
+- It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
+- Free tier available for individuals; great for our free tier users.
+- Alternative is building from scratch, which is error-prone.
 **Design Doc**:
-- A new "Booking & Schedule" module in the OHC platform.
-- User sets "Service Types" (e.g., 1-hour lesson).
-- User connects external calendars to block out busy times.
-- The storefront displays available time slots to the end customer.
-- Upon booking, an event is created in the user's calendar.
-**Implementation Prompt**:
-Build a booking system that allows business owners to define services with durations and prices. Integrate with Google Calendar via OAuth to check for conflicts before displaying available times to the customer. When a customer books, automatically add the event to the business owner's calendar and send a confirmation email.
+- "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
+- Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.
+- When a customer books a slot on the OHC public page, Cal.com manages the calendar event and conflict resolution transparently.
+**Implementation Prompt**: Embed Cal.com's infrastructure so users can sync their personal calendars and provide a public booking widget on their storefront that prevents double-booking.
 **Priority**: P0
-**Estimated Scope**: Large
+**Estimated Scope**: Medium
