@@ -440,7 +440,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                 let _ = ui.show();
                                             }
                                         });
-                                        Box::leak(Box::new(billing_ui));
+                                        let my_plan_handle_clone_dashboard = my_plan_ui.as_weak();
+                        dashboard.on_open_my_plan(move || {
+                            if let Some(ui) = my_plan_handle_clone_dashboard.upgrade() {
+                                let _ = ui.show();
+                            }
+                        });
+                        Box::leak(Box::new(billing_ui));
                                         let my_plan_handle_clone2 = my_plan_ui.as_weak();
                                         dashboard.on_action_failed(move |msg| {
                                             if msg.contains("Tier limit reached") {
@@ -630,6 +636,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let billing_handle_clone = billing_ui.as_weak();
                         dashboard.on_open_billing(move || {
                             if let Some(ui) = billing_handle_clone.upgrade() {
+                                let _ = ui.show();
+                            }
+                        });
+                        let my_plan_handle_clone_dashboard = my_plan_ui.as_weak();
+                        dashboard.on_open_my_plan(move || {
+                            if let Some(ui) = my_plan_handle_clone_dashboard.upgrade() {
                                 let _ = ui.show();
                             }
                         });
@@ -2111,7 +2123,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 unified_inbox_ui.on_request_ai_draft(move || {
                     let ui_handle = unified_inbox_handle_draft.clone();
                     if let Some(ui) = ui_handle.upgrade() {
-                        let active_id = ui.get_active_conversation_id().to_string();
+                        let _active_id = ui.get_active_conversation_id().to_string();
                         // Get conversation context for the prompt
                         let mut context_msg = String::new();
                         let current_msgs: Vec<app::UiInboxMessage> = ui.get_current_messages().iter().collect();
@@ -2318,6 +2330,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let billing_handle_clone_dashboard = billing_ui_inner.as_weak();
                 dashboard.on_open_billing(move || {
                     if let Some(ui) = billing_handle_clone_dashboard.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+                let my_plan_handle_clone_dashboard2 = my_plan_ui.as_weak();
+                dashboard.on_open_my_plan(move || {
+                    if let Some(ui) = my_plan_handle_clone_dashboard2.upgrade() {
                         let _ = ui.show();
                     }
                 });
