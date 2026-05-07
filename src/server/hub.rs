@@ -702,12 +702,19 @@ impl Hub {
             sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE _sync_status = 'pending'").fetch_one(&pool3).await
         });
 
-        let (db_ping_res, sync_queue_res_res) = tokio::join!(ping_future, sync_queue_future);
+        let pool4 = self.pool.clone();
+        let sync_errors_future = tokio::task::spawn(async move {
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE sync_error IS NOT NULL AND synced_to_cloud = false").fetch_one(&pool4).await
+        });
+
+        let (db_ping_res, sync_queue_res_res, sync_errors_res_res) = tokio::join!(ping_future, sync_queue_future, sync_errors_future);
 
         let db_ping = db_ping_res.unwrap_or(0);
         let sync_queue_res = sync_queue_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
 
+        let sync_errors_res = sync_errors_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
         let local_to_cloud_sync_queue = sync_queue_res.unwrap_or(0);
+        let sync_error_count = sync_errors_res.unwrap_or(0);
 
         let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
             "standalone"
@@ -733,6 +740,7 @@ impl Hub {
             "cloud_connected": cloud_connected,
             "hybrid_mode_ready": hybrid_mode_ready,
             "local_to_cloud_sync_queue": local_to_cloud_sync_queue,
+            "sync_error_count": sync_error_count,
         }))
     }
 }
