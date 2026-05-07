@@ -70,3 +70,34 @@ func TestRecordHarnessViolation(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 }
+
+func TestGetDeploymentModeAttribute(t *testing.T) {
+	os.Setenv("STANDALONE_MODE", "true")
+	attr := getDeploymentModeAttribute()
+	if attr.Value.AsString() != "standalone" {
+		t.Errorf("Expected standalone mode attribute, got %v", attr.Value.AsString())
+	}
+	os.Unsetenv("STANDALONE_MODE")
+	os.Setenv("OHC_STANDALONE", "false")
+	attr = getDeploymentModeAttribute()
+	if attr.Value.AsString() != "cloud" {
+		t.Errorf("Expected cloud mode attribute, got %v", attr.Value.AsString())
+	}
+	os.Unsetenv("OHC_STANDALONE")
+}
+
+func TestRecordHarnessInitLatency(t *testing.T) {
+	ctx := context.Background()
+	err := RecordHarnessInitLatency(ctx, 1.0)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+}
+
+func TestRecordHarnessDbIOLatency(t *testing.T) {
+	ctx := context.Background()
+	err := RecordHarnessDbIOLatency(ctx, 0.5, "SELECT")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+}
