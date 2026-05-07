@@ -199,7 +199,7 @@ pub fn redact_interface_pii(val: Value) -> Value {
     }
 }
 
-fn is_sensitive_key(key: &str) -> bool {
+pub fn is_sensitive_key(key: &str) -> bool {
     let k = key.to_lowercase();
     k.contains("password") ||
     k.contains("secret") ||
@@ -220,7 +220,7 @@ fn is_sensitive_key(key: &str) -> bool {
     k.contains("payload")
 }
 
-fn is_email(s: &str) -> bool {
+pub fn is_email(s: &str) -> bool {
     s.contains('@') && s.contains('.')
 }
 
