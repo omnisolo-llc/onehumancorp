@@ -6,7 +6,7 @@ pub struct AppConfig {
     pub listen_addr: String,
     pub grpc_addr: String,
     pub database_url: Option<String>,
-    pub standalone: bool,
+    pub is_standalone: bool,
     pub sqlite_encryption_key: Option<String>,
     pub redis_url: Option<String>,
     pub multitenant: bool,
@@ -62,7 +62,7 @@ pub(crate) fn load() -> Result<AppConfig, config::ConfigError> {
         .set_default("bootstrap_org_id", "bootstrap")?
         .set_default("bootstrap_org_name", "Bootstrap Organization")?
         .set_default("bootstrap_ceo_name", "Platform Admin")?
-        .set_default("standalone", false)?
+        .set_default("is_standalone", false)?
         .set_default("multitenant", false)?
         .set_default("headless", false)?
         .set_default("agent_auth_disabled", false)?
@@ -81,80 +81,84 @@ pub(crate) fn load() -> Result<AppConfig, config::ConfigError> {
 
     let mut cfg: AppConfig = s.try_deserialize()?;
 
-    // Standalone enforcement
-    cfg = standalone_enforce(cfg);
+    // Hybrid Hygiene: Apply mode-specific enforcement logic
+    cfg = ModeEnforcer::apply(cfg);
 
     Ok(cfg)
 }
 
-#[cfg(feature = "standalone")]
-fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
-    if let Some(db_url) = &cfg.database_url {
-        if db_url != "sqlite://ohc-standalone.db" {
-            tracing::info!("standalone: DATABASE_URL is ignored in standalone desktop builds; using SQLite");
-        }
-    }
-    if let Some(redis_url) = &cfg.redis_url {
-        if !redis_url.is_empty() {
-            tracing::info!("standalone: REDIS_URL is ignored in standalone desktop builds; using embedded NATS");
-        }
-    }
+struct ModeEnforcer;
 
-    let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
-        if !key.is_empty() {
-            format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", key)
+impl ModeEnforcer {
+    #[cfg(feature = "standalone")]
+    fn apply(mut cfg: AppConfig) -> AppConfig {
+        if let Some(db_url) = &cfg.database_url {
+            if db_url != "sqlite://ohc-standalone.db" {
+                tracing::info!("standalone: DATABASE_URL is ignored in standalone desktop builds; using SQLite");
+            }
+        }
+        if let Some(redis_url) = &cfg.redis_url {
+            if !redis_url.is_empty() {
+                tracing::info!("standalone: REDIS_URL is ignored in standalone desktop builds; using embedded NATS");
+            }
+        }
+
+        let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
+            if !key.is_empty() {
+                format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", key)
+            } else {
+                let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+                format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
+            }
         } else {
             let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
             format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
-        }
-    } else {
-        let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
-        format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
-    };
-    cfg.database_url = Some(sqlite_url);
+        };
+        cfg.database_url = Some(sqlite_url);
 
-    // Set proper file permissions for local storage wrapper in standalone mode atomically
-    #[cfg(unix)]
-    {
-        use std::fs::OpenOptions;
-        use std::os::unix::fs::OpenOptionsExt;
-        use std::os::unix::fs::PermissionsExt;
-
-        let db_path = "ohc-standalone.db";
-        match OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .mode(0o600)
-            .open(db_path)
+        // Set proper file permissions for local storage wrapper in standalone mode atomically
+        #[cfg(unix)]
         {
-            Ok(file) => {
-                if let Ok(metadata) = file.metadata() {
-                    let mut perms = metadata.permissions();
-                    if perms.mode() & 0o777 != 0o600 {
-                        perms.set_mode(0o600);
-                        if let Err(e) = file.set_permissions(perms) {
-                            tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
-                            std::process::exit(1); // Fail-closed
+            use std::fs::OpenOptions;
+            use std::os::unix::fs::OpenOptionsExt;
+            use std::os::unix::fs::PermissionsExt;
+
+            let db_path = "ohc-standalone.db";
+            match OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .mode(0o600)
+                .open(db_path)
+            {
+                Ok(file) => {
+                    if let Ok(metadata) = file.metadata() {
+                        let mut perms = metadata.permissions();
+                        if perms.mode() & 0o777 != 0o600 {
+                            perms.set_mode(0o600);
+                            if let Err(e) = file.set_permissions(perms) {
+                                tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
+                                std::process::exit(1); // Fail-closed
+                            }
                         }
                     }
                 }
-            }
-            Err(e) => {
-                panic!("Failed to securely create or open standalone database file with restricted permissions: {}", e);
+                Err(e) => {
+                    panic!("Failed to securely create or open standalone database file with restricted permissions: {}", e);
+                }
             }
         }
+        cfg.is_standalone = true;
+        cfg.redis_url = None;
+        cfg.multitenant = false;
+        cfg.telemetry_enabled = std::env::var("OHC_TELEMETRY_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
+        cfg
     }
-    cfg.standalone = true;
-    cfg.redis_url = None;
-    cfg.multitenant = false;
-    cfg.telemetry_enabled = std::env::var("OHC_TELEMETRY_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
-    cfg
-}
 
-#[cfg(not(feature = "standalone"))]
-fn standalone_enforce(cfg: AppConfig) -> AppConfig {
-    cfg
+    #[cfg(not(feature = "standalone"))]
+    fn apply(cfg: AppConfig) -> AppConfig {
+        cfg
+    }
 }
 
 #[cfg(test)]
