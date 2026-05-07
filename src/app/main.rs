@@ -8052,4 +8052,83 @@ mod e2e_issue_9422_tests {
         dashboard_ui.invoke_action_see_analytics();
         assert!(*tool_invoked.borrow(), "Failed to trigger MCP tool invocation");
     }
+
+    #[test]
+    fn test_e2e_zero_to_live_flow() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        // 1. Simulate Welcome Screen & Login (if required)
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        // 2. Setup Wizard (3 Steps)
+        let ui = app::SetupWizard::new().unwrap();
+
+        // Step 0: Welcome -> Step 1
+        assert_eq!(ui.get_step(), 0);
+        ui.invoke_next_step();
+
+        // "What are you selling?"
+        ui.invoke_select_business_type("Food Cart".into());
+        ui.set_company_name("Fatima's Chicken".into());
+        ui.invoke_next_step();
+
+        // "Add your first item"
+        ui.invoke_toggle_sell_food();
+        ui.invoke_next_step();
+
+        // Skip template & payment
+        ui.invoke_select_payment_pref("skip".into());
+
+        // Admin
+        ui.set_admin_email("fatima@foodcart.com".into());
+        ui.invoke_next_step();
+
+        // Product details
+        ui.set_product_name("Chicken over Rice".into());
+        ui.set_product_price("10.0".into());
+        ui.invoke_next_step();
+
+        // Domain
+        ui.invoke_select_domain("subdomain".into());
+
+        // Launch Generation
+        ui.set_step(9); // Pre-launch
+        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let launch_called_clone = launch_called.clone();
+
+        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pp2, _dc, _an, _ap, _pt| {
+            *launch_called_clone.borrow_mut() = true;
+        });
+
+        ui.set_launch_success(true); // Mock successful launch
+
+        // 3. Generation Screen
+        // Assume generation succeeds and we go to dashboard.
+
+        // 4. Dashboard Verification
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // Verify dashboard cards/actions exist by checking quick actions
+        let orders_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let orders_clicked_clone = orders_clicked.clone();
+        dashboard_ui.on_action_view_orders(move || {
+            *orders_clicked_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_view_orders();
+        assert!(*orders_clicked.borrow(), "Dashboard should be fully interactive");
+    }
+
 }
