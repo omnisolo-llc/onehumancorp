@@ -11,7 +11,7 @@ spec:
     kind:       Deployment
     name:       {{ .Release.Name }}-backend
   updatePolicy:
-    updateMode: "Initial"
+    updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
       - containerName: backend
