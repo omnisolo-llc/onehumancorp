@@ -43,11 +43,7 @@ fn test_scribe_help_center_content() {
 fn test_scribe_tooltip_registry() {
     crate::ui_tests::init();
     let dashboard_ui = crate::app::Dashboard::new().unwrap();
-    dashboard_ui.global::<crate::app::TooltipRegistry>().on_request_tooltip_text(|id| {
-        static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
-        let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("../tooltips.json")).unwrap_or_default());
-        tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
-    });
+    dashboard_ui.global::<crate::app::TooltipRegistry>().on_request_tooltip_text(|id| { crate::get_tooltip_text(id.as_str()) });
 
     let tr = dashboard_ui.global::<crate::app::TooltipRegistry>();
 
