@@ -19,7 +19,7 @@ test('verify omnichannel inbox AI draft flow', async ({ page }) => {
 
     // 3. Click the "✨ AI Draft" button and verify the input field populates
     await page.click('button:has-text("✨ AI Draft")');
-    // Wait for the mock text "Sure, we have plenty of vegan options!" or generated text to appear in input
+    // Wait for the text "Sure, we have plenty of vegan options!" or generated text to appear in input
     await expect(page.locator('input[placeholder="Type a message..."]')).toHaveValue(/vegan/i, { timeout: 10000 });
 
     // 4. Edit the response and send the message

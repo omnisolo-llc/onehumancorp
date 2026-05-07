@@ -1697,6 +1697,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let my_plan_handle = my_plan_ui.as_weak();
 
     let pricing_ui = app::Pricing::new().unwrap();
+    let pricing_handle_fetch = pricing_ui.as_weak();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+            if let Ok(token) = std::env::var("OHC_TOKEN") {
+                req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+            }
+            if let Ok(res) = client.get_my_plan(req).await {
+                let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = pricing_handle_fetch.upgrade() {
+                        let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
+                        let used = plan.ai_actions_used as f32;
+                        let progress = if limit > 0.0 { used / limit } else { 0.0 };
+                        ui.set_usage_progress(progress);
+                        ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
+                    }
+                }).unwrap();
+            }
+        }
+    });
     let pricing_handle = pricing_ui.as_weak();
 
     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
@@ -6227,6 +6248,27 @@ mod remaining_e2e_tests {
         my_plan_ui.invoke_download_invoice();
 
         let pricing_ui = app::Pricing::new().unwrap();
+    let pricing_handle_fetch = pricing_ui.as_weak();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+            if let Ok(token) = std::env::var("OHC_TOKEN") {
+                req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+            }
+            if let Ok(res) = client.get_my_plan(req).await {
+                let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = pricing_handle_fetch.upgrade() {
+                        let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
+                        let used = plan.ai_actions_used as f32;
+                        let progress = if limit > 0.0 { used / limit } else { 0.0 };
+                        ui.set_usage_progress(progress);
+                        ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
+                    }
+                }).unwrap();
+            }
+        }
+    });
         let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let plan_selected_clone = plan_selected.clone();
         pricing_ui.on_select_plan(move |plan| {
@@ -6352,6 +6394,27 @@ mod remaining_e2e_tests {
         assert!(*upgrade_opened.borrow(), "Upgrade should be opened from MyPlan");
 
         let pricing_ui = app::Pricing::new().unwrap();
+    let pricing_handle_fetch = pricing_ui.as_weak();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+            if let Ok(token) = std::env::var("OHC_TOKEN") {
+                req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+            }
+            if let Ok(res) = client.get_my_plan(req).await {
+                let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = pricing_handle_fetch.upgrade() {
+                        let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
+                        let used = plan.ai_actions_used as f32;
+                        let progress = if limit > 0.0 { used / limit } else { 0.0 };
+                        ui.set_usage_progress(progress);
+                        ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
+                    }
+                }).unwrap();
+            }
+        }
+    });
         let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let plan_selected_clone = plan_selected.clone();
         pricing_ui.on_select_plan(move |plan| {
@@ -6379,6 +6442,27 @@ mod remaining_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let pricing_ui = app::Pricing::new().unwrap();
+    let pricing_handle_fetch = pricing_ui.as_weak();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+            if let Ok(token) = std::env::var("OHC_TOKEN") {
+                req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+            }
+            if let Ok(res) = client.get_my_plan(req).await {
+                let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = pricing_handle_fetch.upgrade() {
+                        let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
+                        let used = plan.ai_actions_used as f32;
+                        let progress = if limit > 0.0 { used / limit } else { 0.0 };
+                        ui.set_usage_progress(progress);
+                        ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
+                    }
+                }).unwrap();
+            }
+        }
+    });
         let pricing_ui_toggle_handle = pricing_ui.as_weak();
         pricing_ui.on_toggle_billing_cycle(move || {
             if let Some(ui) = pricing_ui_toggle_handle.upgrade() {
