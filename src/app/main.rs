@@ -1961,6 +1961,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
                 let bs_handle_clone = business_share_handle.clone();
                 let ref_handle_clone_for_open = referrals_handle.clone();
+
+                let pos_terminal_ui = app::MockPosTerminal::new().unwrap();
+                let pos_terminal_handle = pos_terminal_ui.as_weak();
+                dashboard.on_action_open_pos_terminal(move || {
+                    if let Some(ui) = pos_terminal_handle.upgrade() {
+                        ui.set_amount("$45.00".into());
+                        ui.set_status("waiting".into());
+                        let _ = ui.show();
+                    }
+                });
+                let pos_terminal_close_clone = pos_terminal_ui.as_weak();
+                pos_terminal_ui.on_close(move || {
+                    if let Some(ui) = pos_terminal_close_clone.upgrade() {
+                        let _ = ui.hide();
+                    }
+                });
+                let pos_terminal_tap_clone = pos_terminal_ui.as_weak();
+                pos_terminal_ui.on_simulate_tap(move || {
+                    if let Some(ui) = pos_terminal_tap_clone.upgrade() {
+                        ui.set_status("processing".into());
+                        let ui_weak = ui.as_weak();
+                        slint::Timer::single_shot(std::time::Duration::from_millis(1500), move || {
+                            if let Some(ui) = ui_weak.upgrade() {
+                                ui.set_status("success".into());
+                            }
+                        });
+                    }
+                });
+
                 dashboard.on_action_open_referrals(move || {
                     if let Some(ui) = ref_handle_clone_for_open.upgrade() {
                         ui.invoke_refresh();

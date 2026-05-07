@@ -1,0 +1,56 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component MockPosTerminal inherits Window {
+    width: 375px;
+    height: 600px;
+    title: "Stripe Terminal POS";
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    in-out property <string> amount: "$0.00";
+    in-out property <string> status: "waiting"; // waiting, processing, success
+    callback close();
+    callback simulate_tap();
+
+    VerticalBox {
+        padding: 24px;
+        spacing: 24px;
+        HorizontalBox {
+            Text { text: "Stripe Terminal"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            Button { text: "Close"; clicked => { root.close(); } }
+        }
+        GlassCard {
+            height: 120px;
+            VerticalBox {
+                alignment: center;
+                Text { text: "Total Amount"; font-size: 14px; color: #94a3b8; horizontal-alignment: center; }
+                Text { text: root.amount; font-size: 48px; font-family: "Outfit"; font-weight: 700; color: white; horizontal-alignment: center; }
+            }
+        }
+        GlassCard {
+            height: 200px;
+            background: root.status == "success" ? rgba(16, 185, 129, 0.2) : (root.status == "processing" ? rgba(168, 85, 247, 0.2) : rgba(255, 255, 255, 0.05));
+            border-color: root.status == "success" ? rgba(16, 185, 129, 0.5) : (root.status == "processing" ? rgba(168, 85, 247, 0.5) : rgba(255, 255, 255, 0.1));
+            border-width: 1px;
+            VerticalBox {
+                alignment: center;
+                spacing: 16px;
+                Text {
+                    text: root.status == "waiting" ? "💳 Tap to Pay" : (root.status == "processing" ? "Processing..." : "✅ Payment Successful");
+                    font-size: 24px;
+                    font-family: "Outfit";
+                    color: white;
+                    horizontal-alignment: center;
+                }
+            }
+            TouchArea {
+                clicked => {
+                    if (root.status == "waiting") {
+                        root.simulate_tap();
+                    }
+                }
+            }
+        }
+    }
+}
