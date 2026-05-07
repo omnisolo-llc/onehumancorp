@@ -1,5 +1,13 @@
 # Release Notes
 
+## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
+### Cloud Scaling Improvements
+- 🧹 Maintainer: Ensure multitenant K8s compliance for all pods (#11546)
+
+### Privacy/Offline Improvements
+- 🧹 Maintainer: Centralize PII compliance guardrails and enforce hybrid privacy audit (#11546)
+
+
 ## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🔨 Forge: Refactor GrowthReferralWidget to use GlassCard for premium aesthetic (#11347)
