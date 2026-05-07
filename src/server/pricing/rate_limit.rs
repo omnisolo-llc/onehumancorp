@@ -133,7 +133,7 @@ impl RedisRateLimiter {
         let _ : () = conn.expire(&agent_key, 60 * 60 * 24 * 60).await.unwrap_or(());
 
         if let Some(limit) = tier.monthly_action_limit() {
-            if tenant_used > limit {
+            if tenant_used >= limit {
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
@@ -151,7 +151,7 @@ impl RedisRateLimiter {
         }
 
         if let Some(limit) = tier.agent_action_limit() {
-            if agent_used > limit {
+            if agent_used >= limit {
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit
                     soft_limit_reached: true,
