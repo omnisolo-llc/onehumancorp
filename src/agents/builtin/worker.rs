@@ -126,9 +126,34 @@ impl TaskWorker {
                     let issue_id = issue.id.clone();
                     let agent_id = a.id.clone();
                     
+                    let plane_client_clone = plane_client.clone();
                     tokio::spawn(async move {
-                        if let Err(e) = Self::dispatch_to_builtin_agent(&payload_str, &format!("plane issue {}", issue_id), &role).await {
-                            debug!("builtin agent dispatch error: {}, agent_id: {}", e, agent_id);
+                        let mut success = false;
+                        for attempt in 1..=3 {
+                            let res = tokio::time::timeout(
+                                std::time::Duration::from_secs(60),
+                                Self::dispatch_to_builtin_agent(&payload_str, &format!("plane issue {}", issue_id), &role)
+                            ).await;
+
+                            match res {
+                                Ok(Ok(_)) => {
+                                    success = true;
+                                    break;
+                                }
+                                Ok(Err(e)) => {
+                                    debug!("builtin agent dispatch error: {}, agent_id: {} (attempt {})", e, agent_id, attempt);
+                                }
+                                Err(_) => {
+                                    debug!("builtin agent dispatch timed out for agent_id: {} (attempt {})", agent_id, attempt);
+                                }
+                            }
+                            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                        }
+
+                        if !success {
+                            error!("AI agent failed after 3 attempts. Entering paused state.");
+                            let _ = plane_client_clone.update_issue_status(&issue_id, "paused").await;
+                            debug!("Notified business owner of paused agent state.");
                         }
                     });
                 }

@@ -365,13 +365,10 @@ impl Agent {
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
                         let max_retries = 2;
-                        let mut final_res = Err(crate::types::ToolError::Unexpected("Not executed".to_string()));
-
-                        loop {
+                        let final_res = loop {
                             match tool.execute.execute(args.clone()).await {
                                 Ok(res) => {
-                                    final_res = Ok(res);
-                                    break;
+                                    break Ok(res);
                                 }
                                 Err(crate::types::ToolError::Transient(msg)) => {
                                     if retry_count < max_retries {
@@ -380,16 +377,14 @@ impl Agent {
                                         tokio::time::sleep(backoff).await;
                                         continue;
                                     } else {
-                                        final_res = Err(crate::types::ToolError::Transient(msg));
-                                        break;
+                                        break Err(crate::types::ToolError::Transient(msg));
                                     }
                                 }
                                 Err(e) => {
-                                    final_res = Err(e);
-                                    break;
+                                    break Err(e);
                                 }
                             }
-                        }
+                        };
 
                         match final_res {
                             Ok(res) => {
