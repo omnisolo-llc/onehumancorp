@@ -1,3 +1,11 @@
+## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🛡️ Sentry: Health Guardianship /api/v1/health improvements for multi-tenant state sync
+
+### Privacy/Offline Improvements
+- 🛡️ Sentry: Health Guardianship /api/v1/health improvements for standalone isolated node switching
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 - Scaling (Cloud): update api routing to use axum 0.8 style path variables (#11553).
