@@ -2045,6 +2045,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let dashboard_approve_handle = dashboard.as_weak();
                 dashboard.on_approve_task(move |task_id| {
+                    let task_id_str = task_id.to_string();
                     if let Some(ui) = dashboard_approve_handle.upgrade() {
                         let current = ui.get_pending_approvals();
                         let mut remaining = Vec::new();
@@ -2056,6 +2057,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                         ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining)));
+
+                        tokio::spawn(async move {
+                            if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                                let req = tonic::Request::new(ohc::orchestration::ApproveTaskRequest {
+                                    task_id: task_id_str,
+                                    is_approved: true,
+                                });
+                                let _ = client.approve_task(req).await;
+                            }
+                        });
                     }
                 });
 
@@ -3453,6 +3464,7 @@ mod e2e_tests {
         // The approve_task callback updates state optimistically in the app
         let dashboard_approve_handle = dashboard_ui.as_weak();
         dashboard_ui.on_approve_task(move |task_id| {
+            let task_id_str = task_id.to_string();
             if let Some(ui) = dashboard_approve_handle.upgrade() {
                 let current = ui.get_pending_approvals();
                 let mut remaining = Vec::new();
@@ -3464,6 +3476,16 @@ mod e2e_tests {
                     }
                 }
                 ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining)));
+
+                tokio::spawn(async move {
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let req = tonic::Request::new(ohc::orchestration::ApproveTaskRequest {
+                            task_id: task_id_str,
+                            is_approved: true,
+                        });
+                        let _ = client.approve_task(req).await;
+                    }
+                });
             }
         });
 

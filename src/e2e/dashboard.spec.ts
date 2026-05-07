@@ -127,6 +127,24 @@ test.describe('Dashboard Core', () => {
     await expect(editBtn).toBeVisible();
   });
 
+  test('should handle draft approval optimistic UI', async ({ page }) => {
+    await page.goto('/');
+    const draftsSection = page.locator('text=Needs Your Approval');
+    await expect(draftsSection).toBeVisible();
+
+    // There should be a draft with an Approve button
+    const approveBtn = page.locator('button:has-text("Approve")').first();
+    await expect(approveBtn).toBeVisible();
+
+    // Click the approve button
+    await approveBtn.click();
+
+    // The draft card should disappear (the button should no longer be visible)
+    // Note: If there are multiple drafts, the next one will show up, but for the first one clicked, the exact locator match might change.
+    // A simpler way is to ensure we can click it, and no error is thrown, and optimistic UI triggers
+    await expect(page.locator('button:has-text("Approve")').first()).not.toBeVisible();
+  });
+
 });
 
 test.describe('Dashboard Mobile', () => {
