@@ -1,22 +1,9 @@
-CREATE TABLE IF NOT EXISTS swarm_tasks (
-    mission_id UUID PRIMARY KEY,
-    parent_plan_id TEXT,
-    dependencies JSONB,
-    title VARCHAR,
+CREATE TABLE IF NOT EXISTS agent_missions (
+    id VARCHAR PRIMARY KEY,
     status VARCHAR,
-    assigned_agent_id VARCHAR,
-    payload JSONB,
-    locked_until TIMESTAMP,
-    created_at TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS state_machine_transitions (
-    id SERIAL PRIMARY KEY,
-    entity_id UUID,
-    entity_type VARCHAR,
-    from_state VARCHAR,
-    to_state VARCHAR,
-    agent_id VARCHAR,
-    reason TEXT,
-    created_at TIMESTAMP
+    payload TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    organization_id VARCHAR,
+    mission_log TEXT
 );

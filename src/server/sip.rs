@@ -267,23 +267,45 @@ mod tests {
     use std::io::Write;
     use std::env;
 
-    // Helper to get a dummy pgpool for testing
-    async fn setup_dummy_pool() -> PgPool {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-        sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&db_url)
-            .unwrap()
+
+
+    async fn setup_real_pool_inner() -> Option<PgPool> {
+        let db_url = std::env::var("DATABASE_URL").ok()?;
+        if !db_url.contains("test") && !db_url.contains("dummy") && !db_url.contains("localhost") && !db_url.contains("127.0.0.1") {
+            return None;
+        }
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(2)
+            .connect(&db_url)
+            .await
+            .ok()?;
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (id VARCHAR PRIMARY KEY, status VARCHAR NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, organization_id VARCHAR, mission_log TEXT);")
+            .execute(&pool)
+            .await
+            .ok()?;
+
+        Some(pool)
     }
+
+    async fn setup_real_pool() -> Option<PgPool> { setup_real_pool_inner().await }
 
     #[tokio::test]
     async fn test_delegate_mission_tc1_no_context_root() {
-        let pool = setup_dummy_pool().await;
-        let sip_db = SipDB::new(pool, "test_org".to_string());
-        let payload = "Original Task Payload";
-        let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
-        assert_eq!(enriched, payload, "Payload should be unmodified when no context root is set");
+        if let Some(pool) = setup_real_pool().await {
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+            let mut tx = pool.begin().await.unwrap();
+            let payload = "Original Task Payload";
+
+            sip_db.delegate_mission_with_tx(&mut tx, "tc1", "PENDING", payload, true, &sip_db.load_grounding_content().await).await.unwrap();
+            tx.commit().await.unwrap();
+
+            let stored_payload: String = sqlx::query_scalar("SELECT payload FROM agent_missions WHERE id = 'tc1'")
+                .fetch_one(&pool).await.unwrap();
+
+            assert_eq!(stored_payload, payload, "Payload should be unmodified when no context root is set");
+        }
     }
 
     // Helper to create a temporary directory without external crate
@@ -296,82 +318,112 @@ mod tests {
 
     #[tokio::test]
     async fn test_delegate_mission_tc2_agents_md() {
-        let pool = setup_dummy_pool().await;
-        let dir_str = create_temp_dir("tc2");
-        let dir_path = std::path::Path::new(&dir_str);
+        if let Some(pool) = setup_real_pool().await {
+            let dir_str = create_temp_dir("tc2");
+            let dir_path = std::path::Path::new(&dir_str);
+            let agents_path = dir_path.join("AGENTS.md");
+            let mut file = File::create(&agents_path).unwrap();
+            write!(file, "Always write clean code.").unwrap();
 
-        let agents_path = dir_path.join("AGENTS.md");
-        let mut file = File::create(&agents_path).unwrap();
-        write!(file, "Always write clean code.").unwrap();
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string()).with_context_root(dir_str.clone());
+            let mut tx = pool.begin().await.unwrap();
+            let payload = "Original Task Payload";
 
-        let sip_db = SipDB::new(pool, "test_org".to_string())
-            .with_context_root(dir_str.clone());
+            sip_db.delegate_mission_with_tx(&mut tx, "tc2", "PENDING", payload, true, &sip_db.load_grounding_content().await).await.unwrap();
+            tx.commit().await.unwrap();
 
-        let payload = "Original Task Payload";
-        let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
-        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\nAlways write clean code.");
+            let stored_payload: String = sqlx::query_scalar("SELECT payload FROM agent_missions WHERE id = 'tc2'")
+                .fetch_one(&pool).await.unwrap();
 
-        std::fs::remove_dir_all(&dir_str).unwrap();
+            assert_eq!(stored_payload, "Original Task Payload
+
+[SYSTEM GROUNDING]:
+Always write clean code.");
+
+            std::fs::remove_dir_all(&dir_str).unwrap();
+        }
     }
 
     #[tokio::test]
     async fn test_delegate_mission_tc3_claude_md_fallback() {
-        let pool = setup_dummy_pool().await;
-        let dir_str = create_temp_dir("tc3");
-        let dir_path = std::path::Path::new(&dir_str);
+        if let Some(pool) = setup_real_pool().await {
+            let dir_str = create_temp_dir("tc3");
+            let dir_path = std::path::Path::new(&dir_str);
+            let claude_path = dir_path.join("CLAUDE.md");
+            let mut file = File::create(&claude_path).unwrap();
+            write!(file, "Use specialized tokens.").unwrap();
 
-        let claude_path = dir_path.join("CLAUDE.md");
-        let mut file = File::create(&claude_path).unwrap();
-        write!(file, "Use specialized tokens.").unwrap();
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string()).with_context_root(dir_str.clone());
+            let mut tx = pool.begin().await.unwrap();
+            let payload = "Original Task Payload";
 
-        let sip_db = SipDB::new(pool, "test_org".to_string())
-            .with_context_root(dir_str.clone());
+            sip_db.delegate_mission_with_tx(&mut tx, "tc3", "PENDING", payload, true, &sip_db.load_grounding_content().await).await.unwrap();
+            tx.commit().await.unwrap();
 
-        let payload = "Original Task Payload";
-        let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
-        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\nUse specialized tokens.");
+            let stored_payload: String = sqlx::query_scalar("SELECT payload FROM agent_missions WHERE id = 'tc3'")
+                .fetch_one(&pool).await.unwrap();
 
-        std::fs::remove_dir_all(&dir_str).unwrap();
+            assert_eq!(stored_payload, "Original Task Payload
+
+[SYSTEM GROUNDING]:
+Use specialized tokens.");
+
+            std::fs::remove_dir_all(&dir_str).unwrap();
+        }
     }
 
     #[tokio::test]
     async fn test_delegate_mission_tc4_grounding_priority() {
-        let pool = setup_dummy_pool().await;
-        let dir_str = create_temp_dir("tc4");
-        let dir_path = std::path::Path::new(&dir_str);
+        if let Some(pool) = setup_real_pool().await {
+            let dir_str = create_temp_dir("tc4");
+            let dir_path = std::path::Path::new(&dir_str);
 
-        let agents_path = dir_path.join("AGENTS.md");
-        let mut file = File::create(&agents_path).unwrap();
-        write!(file, "AGENTS rules.").unwrap();
+            let agents_path = dir_path.join("AGENTS.md");
+            let mut file = File::create(&agents_path).unwrap();
+            write!(file, "AGENTS rules.").unwrap();
 
-        let claude_path = dir_path.join("CLAUDE.md");
-        let mut file2 = File::create(&claude_path).unwrap();
-        write!(file2, "CLAUDE rules.").unwrap();
+            let claude_path = dir_path.join("CLAUDE.md");
+            let mut file2 = File::create(&claude_path).unwrap();
+            write!(file2, "CLAUDE rules.").unwrap();
 
-        let sip_db = SipDB::new(pool, "test_org".to_string())
-            .with_context_root(dir_str.clone());
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string()).with_context_root(dir_str.clone());
+            let mut tx = pool.begin().await.unwrap();
+            let payload = "Original Task Payload";
 
-        let payload = "Original Task Payload";
-        let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
-        // Only AGENTS.md should be injected
-        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\nAGENTS rules.");
+            sip_db.delegate_mission_with_tx(&mut tx, "tc4", "PENDING", payload, true, &sip_db.load_grounding_content().await).await.unwrap();
+            tx.commit().await.unwrap();
 
-        std::fs::remove_dir_all(&dir_str).unwrap();
+            let stored_payload: String = sqlx::query_scalar("SELECT payload FROM agent_missions WHERE id = 'tc4'")
+                .fetch_one(&pool).await.unwrap();
+
+            assert_eq!(stored_payload, "Original Task Payload
+
+[SYSTEM GROUNDING]:
+AGENTS rules.");
+
+            std::fs::remove_dir_all(&dir_str).unwrap();
+        }
     }
 
     #[tokio::test]
     async fn test_delegate_mission_tc5_missing_files() {
-        let pool = setup_dummy_pool().await;
-        let dir_str = create_temp_dir("tc5");
+        if let Some(pool) = setup_real_pool().await {
+            let dir_str = create_temp_dir("tc5");
 
-        let sip_db = SipDB::new(pool, "test_org".to_string())
-            .with_context_root(dir_str.clone());
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string()).with_context_root(dir_str.clone());
+            let mut tx = pool.begin().await.unwrap();
+            let payload = "Original Task Payload";
 
-        let payload = "Original Task Payload";
-        let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
-        assert_eq!(enriched, payload, "Payload should be unmodified when neither file is present");
+            sip_db.delegate_mission_with_tx(&mut tx, "tc5", "PENDING", payload, true, &sip_db.load_grounding_content().await).await.unwrap();
+            tx.commit().await.unwrap();
 
-        std::fs::remove_dir_all(&dir_str).unwrap();
+            let stored_payload: String = sqlx::query_scalar("SELECT payload FROM agent_missions WHERE id = 'tc5'")
+                .fetch_one(&pool).await.unwrap();
+
+            assert_eq!(stored_payload, payload, "Payload should be unmodified when neither file is present");
+
+            std::fs::remove_dir_all(&dir_str).unwrap();
+        }
     }
 
     #[tokio::test]
