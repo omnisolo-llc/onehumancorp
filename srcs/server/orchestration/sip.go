@@ -49,3 +49,13 @@ func (s *SIPDB) DelegateMission(ctx context.Context, mission *AgentMission) erro
 
 	return nil
 }
+
+func (s *SIPDB) HandoffMission(ctx context.Context, missionID string, blockers string) error {
+	_, err := s.db.ExecContext(
+		ctx,
+		"UPDATE agent_missions SET status = 'blocked', mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END WHERE id = $2",
+		blockers,
+		missionID,
+	)
+	return err
+}

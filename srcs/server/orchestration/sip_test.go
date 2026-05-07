@@ -21,7 +21,8 @@ func setupSIPDB(t *testing.T) (*sql.DB, func()) {
 		id TEXT PRIMARY KEY,
 		status TEXT,
 		payload TEXT,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		mission_log TEXT
 	)`)
 	require.NoError(t, err)
 
@@ -180,4 +181,41 @@ func TestDelegateMission_DatabaseError(t *testing.T) {
 
 	err = sipdb.DelegateMission(context.Background(), mission)
 	assert.Error(t, err)
+}
+
+func TestHandoffMission(t *testing.T) {
+	db, cleanup := setupSIPDB(t)
+	defer cleanup()
+
+	sipdb := NewSIPDB(db)
+
+	mission := &AgentMission{
+		ID:      "m_handoff",
+		Status:  "PENDING",
+		Payload: json.RawMessage(`{"task":"do work"}`),
+	}
+
+	err := sipdb.DelegateMission(context.Background(), mission)
+	require.NoError(t, err)
+
+	// First handoff
+	err = sipdb.HandoffMission(context.Background(), "m_handoff", "Blocked by missing API key")
+	require.NoError(t, err)
+
+	var status, missionLog string
+	err = db.QueryRow("SELECT status, mission_log FROM agent_missions WHERE id = ?", "m_handoff").Scan(&status, &missionLog)
+	require.NoError(t, err)
+
+	assert.Equal(t, "blocked", status)
+	assert.Equal(t, "Blocked by missing API key", missionLog)
+
+	// Second handoff to verify append behavior
+	err = sipdb.HandoffMission(context.Background(), "m_handoff", "Also blocked by database outage")
+	require.NoError(t, err)
+
+	err = db.QueryRow("SELECT status, mission_log FROM agent_missions WHERE id = ?", "m_handoff").Scan(&status, &missionLog)
+	require.NoError(t, err)
+
+	assert.Equal(t, "blocked", status)
+	assert.Equal(t, "Blocked by missing API key\nAlso blocked by database outage", missionLog)
 }
