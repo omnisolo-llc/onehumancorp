@@ -42,6 +42,13 @@
 
 # Release Notes
 
+
+## v0.4.34 (Cloud) / v0.4.34+1 (Standalone)
+
+- Scaling (Cloud): Harness Upgrade - Omni-Context Sub-agent Routing (#11908) to eliminate context latency.
+- Privacy/Offline (Standalone): Omni-Context Sub-agent routing ensures offline local context efficiency without wasting tokens on file reads (#11908).
+
+
 ## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
 
 - Scaling (Cloud): Add dual-mode caching layer to dashboard service to optimize latency (#11871).
