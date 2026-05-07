@@ -3,7 +3,7 @@ import { GlassCard } from "glass_card.slint";
 
 export component BusinessShare inherits Window {
     width: 375px;
-    height: 600px;
+    height: 700px;
     title: "Share Store";
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
@@ -23,32 +23,70 @@ export component BusinessShare inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Share Your Store"; font-size: 24px; font-weight: 700; color: white; vertical-alignment: center; }
+            Text { text: "Share Your Store"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
             Rectangle {}
             Button { text: "Close"; height: 44px; clicked => { close(); } }
         }
 
-        // OpenGraph Preview
+        Text { text: "This is how your store will look when shared:"; color: #94a3b8; font-size: 14px; font-family: "Inter"; }
+
+        // High-Fidelity OpenGraph Preview
         GlassCard {
-            border-color: #a855f7;
+            border-color: rgba(255, 255, 255, 0.2);
             border-width: 1px;
-            background: rgba(168, 85, 247, 0.1);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0px;
 
             VerticalBox {
-                padding: 20px;
-                spacing: 12px;
-                alignment: center;
+                padding: 0px;
+                spacing: 0px;
 
+                // Cover Image Placeholder
                 Rectangle {
-                    height: 120px;
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 8px;
-                    Text { text: "Logo / Cover Image"; color: #cbd5e1; horizontal-alignment: center; vertical-alignment: center; }
+                    height: 180px;
+                    background: @linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+                    border-top-left-radius: 12px;
+                    border-top-right-radius: 12px;
+
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "✨"; font-size: 48px; horizontal-alignment: center; }
+                    }
                 }
 
-                Text { text: business_name; font-size: 20px; font-weight: 700; color: white; horizontal-alignment: center; }
-                Text { text: business_tagline; font-size: 14px; color: #cbd5e1; horizontal-alignment: center; wrap: word-wrap; }
-                Text { text: share_link; font-size: 12px; color: #a855f7; horizontal-alignment: center; }
+                VerticalBox {
+                    padding: 20px;
+                    spacing: 8px;
+
+                    Text {
+                        text: business_name;
+                        font-size: 22px;
+                        font-family: "Outfit";
+                        font-weight: 700;
+                        color: white;
+                    }
+
+                    Text {
+                        text: business_tagline;
+                        font-size: 14px;
+                        font-family: "Inter";
+                        color: #cbd5e1;
+                        wrap: word-wrap;
+                        max-height: 40px;
+                    }
+
+                    HorizontalBox {
+                        spacing: 4px;
+                        Text { text: "🔗"; font-size: 12px; vertical-alignment: center; }
+                        Text {
+                            text: share_link;
+                            font-size: 12px;
+                            font-family: "Inter";
+                            color: #a855f7;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
             }
         }
 
@@ -57,20 +95,24 @@ export component BusinessShare inherits Window {
 
             Button {
                 text: "📋 Copy Shareable Link";
-                height: 48px;
+                height: 52px;
+                primary: true;
                 clicked => { copy_link(); }
             }
 
-            Button {
-                text: "📷 Share to Instagram";
-                height: 48px;
-                clicked => { share_to_instagram(); }
-            }
+            HorizontalBox {
+                spacing: 12px;
+                Button {
+                    text: "📷 Instagram";
+                    height: 48px;
+                    clicked => { share_to_instagram(); }
+                }
 
-            Button {
-                text: "🐦 Share to X";
-                height: 48px;
-                clicked => { share_to_x(); }
+                Button {
+                    text: "🐦 X (Twitter)";
+                    height: 48px;
+                    clicked => { share_to_x(); }
+                }
             }
 
             Button {

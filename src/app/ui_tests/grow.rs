@@ -184,3 +184,22 @@ fn grow_business_test_social_media_add_products() {
     ui.set_selected_strategy("Add 5 more products".into());
     assert_eq!(ui.get_selected_strategy(), "Add 5 more products");
 }
+
+#[test]
+fn grow_business_test_strategy_execution_flow() {
+    let ui = create();
+    ui.set_selected_strategy("Connect Instagram".into());
+    ui.set_is_advanced(true);
+    ui.set_kpi_target("25%".into());
+
+    let execute_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let ec = execute_called.clone();
+    ui.on_execute(move |strategy, kpi| {
+        assert_eq!(strategy, "Connect Instagram");
+        assert_eq!(kpi, "25%");
+        *ec.borrow_mut() = true;
+    });
+
+    ui.invoke_execute("Connect Instagram".into(), "25%".into());
+    assert!(*execute_called.borrow());
+}
