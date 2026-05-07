@@ -96,7 +96,7 @@ export component SetupWizard inherits Window {
     select_payment_pref(p) => { payment_pref = p; save_state(); }
     select_template(t) => { website_template = t; save_state(); }
     select_domain(d) => { domain_choice = d; save_state(); }
-    toggle_advanced => { is_advanced = !is_advanced; save_state(); }
+    toggle_advanced => { save_state(); }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
