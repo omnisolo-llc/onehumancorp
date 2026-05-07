@@ -33,4 +33,19 @@ test.describe('Success Milestones Notifications', () => {
     // 6. Assert the milestone UI disappears
     await expect(milestoneTitle).toBeHidden();
   });
+
+  test('should verify 100 visitors milestone when viewing stats', async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
+    await page.waitForURL('**/*');
+
+    const statsBtn = page.locator('button:has-text("Stats")');
+    await expect(statsBtn).toBeVisible({ timeout: 10000 });
+    await statsBtn.click();
+
+    const milestoneTitle = page.locator('text=🚀 Your store has 100 visitors today!');
+    await expect(milestoneTitle).toBeVisible({ timeout: 5000 });
+  });
 });

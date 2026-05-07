@@ -87,6 +87,7 @@ thread_local! {
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
+    static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -102,6 +103,7 @@ thread_local! {
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
+    static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
 }
 
 #[cfg(test)]
@@ -1907,7 +1909,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let see_analytics_called_clone = see_analytics_called.clone();
-                dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+                let dashboard_handle_for_stats = dashboard_handle.clone();
+                dashboard.on_action_see_analytics(move || {
+                    *see_analytics_called_clone.borrow_mut() = true;
+                    if let Some(ui) = dashboard_handle_for_stats.upgrade() {
+                        GLOBAL_VISITORS_COUNT.with(|g| {
+                            let mut count = g.borrow_mut();
+                            *count += 100;
+                            if *count == 100 {
+                                ui.set_milestone_title("🚀 Your store has 100 visitors today!".into());
+                                ui.set_milestone_message("These feel like wins, not metrics.".into());
+                                ui.set_show_milestone(true);
+                            }
+                        });
+                    }
+                });
 
                 let business_share_ui = app::BusinessShare::new().unwrap();
                 let business_share_handle = business_share_ui.as_weak();
@@ -2241,7 +2257,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     ui.set_milestone_message("You completed 3 orders!".into());
                                     ui.set_show_milestone(true);
                                 } else if *count == 10 {
-                                    ui.set_milestone_title("🎉 10th Order!".into());
+                                    ui.set_milestone_title("🎉 You just got your 10th order!".into());
                                     ui.set_milestone_message("Amazing! You've reached 10 orders.".into());
                                     ui.set_show_milestone(true);
                                 }
