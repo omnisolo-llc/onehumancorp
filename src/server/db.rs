@@ -749,6 +749,22 @@ pub async fn insert_autodream_memory(
 
     pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
+
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STAGNANT' AND updated_at < ?")
+                    .bind(threshold.to_rfc3339())
+                    .execute(sqlite_pool)
+                    .await?;
+            },
+            DbStore::Postgres => {
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STAGNANT' AND updated_at < $1")
+                    .bind(threshold)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        };
+
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
@@ -797,6 +813,37 @@ pub async fn insert_autodream_memory(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_cleanup_stagnant_missions_sqlite() {
+        let db_url = "sqlite::memory:";
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+            .connect_lazy(db_url)
+            .unwrap();
+
+        // Use casting to instantiate DB with Sqlite store
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap();
+        let db = DB { pool: pg_pool, store: DbStore::Sqlite(pool.clone()) };
+
+        let _ = sqlx::query("CREATE TABLE agent_missions (id TEXT, status TEXT, updated_at TEXT)")
+            .execute(&pool).await.unwrap();
+
+        let past = (chrono::Utc::now() - chrono::Duration::seconds(7200)).to_rfc3339();
+
+        sqlx::query("INSERT INTO agent_missions (id, status, updated_at) VALUES ('1', 'STAGNANT', ?), ('2', 'PENDING', ?)")
+            .bind(&past).bind(&past).execute(&pool).await.unwrap();
+
+        let res = db.cleanup_stagnant_missions(3600).await;
+        assert!(res.is_ok());
+
+        let failed_count: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'FAILED'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(failed_count, 1);
+
+        let stagnant_count: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'STAGNANT'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(stagnant_count, 1);
+    }
 
     #[test]
     fn test_db_new_fails_without_server() {

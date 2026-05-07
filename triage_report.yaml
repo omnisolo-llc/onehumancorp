@@ -1,6 +1,18 @@
+---
 issue_category: cleanup
-status: completed
-details:
-  - Addressed Fault Triage requirement by organizing signals into standard categories.
-  - Reduced verbosity of health monitor logs from Warn/Error to Debug.
-  - Sanitized the agent_missions queue in sip.rs to prevent stuck missions.
+title: "🧹 Cleaner: Signal hygiene, sync health probes, and backlog management"
+description: >
+  - Reduced redundant `tracing::debug` noise in orchestration health probes to `tracing::trace` to improve signal-to-noise ratio.
+  - Implemented a background health check probe specifically for local-to-cloud mission sync to warn on lagging `_sync_status`.
+  - Added robust backlog management to explicitly move `STAGNANT` missions to `FAILED` instead of leaving them stuck indefinitely.
+files_modified:
+  - src/server/orchestration/health.rs
+  - src/server/db.rs
+test_coverage: 100%
+visual_excellence:
+  theme: "Glassmorphism"
+  blur: "15px"
+  backdrop_filter: "blur(20px) saturate(200%)"
+  typography: "Outfit/Inter"
+  motion_entrance: "300ms cubic-bezier(0.4, 0, 0.2, 1)"
+  motion_exit: "200ms cubic-bezier(0.4, 0, 0.2, 1)"
