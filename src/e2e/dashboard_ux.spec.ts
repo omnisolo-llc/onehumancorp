@@ -101,3 +101,67 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
   await expect(page.locator('button:has-text("App Tour")')).toBeVisible();
   await expect(page.locator('button:has-text("What\'s New")')).toBeVisible();
 });
+
+test('should use plain language Automations instead of Kairos Orchestration', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'test@example.com');
+  await page.fill('input[type="password"]', 'password123');
+  await page.click('button:has-text("Sign In")');
+  await page.waitForURL('**/*');
+
+  await expect(page.locator('button:has-text("Automations")')).toBeVisible();
+  await expect(page.locator('button:has-text("Kairos Orchestration")')).not.toBeVisible();
+});
+
+test('should use plain language Automation Tour instead of KAIROS Tour', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'test@example.com');
+  await page.fill('input[type="password"]', 'password123');
+  await page.click('button:has-text("Sign In")');
+  await page.waitForURL('**/*');
+
+  const menuBtn = page.locator('button:has-text("Menu")');
+  await menuBtn.click();
+
+  await expect(page.locator('button:has-text("Automation Tour")')).toBeVisible();
+  await expect(page.locator('button:has-text("KAIROS Tour")')).not.toBeVisible();
+});
+
+test('should use plain language AI Helper Status instead of System Status', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'test@example.com');
+  await page.fill('input[type="password"]', 'password123');
+  await page.click('button:has-text("Sign In")');
+  await page.waitForURL('**/*');
+
+  await expect(page.locator('text=AI Helper Status')).toBeVisible();
+  await expect(page.locator('text=System Status')).not.toBeVisible();
+});
+
+test('should display First-Time User Tour hint when clicking ? on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'test@example.com');
+  await page.fill('input[type="password"]', 'password123');
+  await page.click('button:has-text("Sign In")');
+  await page.waitForURL('**/*');
+
+  const questionMarkBtn = page.locator('button:has-text("?")').first();
+  await expect(questionMarkBtn).toBeVisible();
+  await questionMarkBtn.click();
+  await expect(page.locator('text=Tap here to quickly manage your store.')).toBeVisible();
+});
+
+test('should have an Ask anything button of adequate size', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'test@example.com');
+  await page.fill('input[type="password"]', 'password123');
+  await page.click('button:has-text("Sign In")');
+  await page.waitForURL('**/*');
+
+  const askAiBtn = page.locator('text=Ask anything').first();
+  await expect(askAiBtn).toBeVisible();
+  const box = await askAiBtn.boundingBox();
+  expect(box?.height).toBeGreaterThanOrEqual(44);
+  expect(box?.width).toBeGreaterThanOrEqual(44);
+});

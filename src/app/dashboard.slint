@@ -123,7 +123,7 @@ export component Dashboard inherits Window {
                 TooltipElement { tooltip_id: "api_docs"; Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } } }
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
                 Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
-                Button { text: "KAIROS Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
+                Button { text: "Automation Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
             }
         }
@@ -199,7 +199,7 @@ export component Dashboard inherits Window {
         // AI Assistant Health (Telemetry Visualization)
         if (show_telemetry_visualization) : VerticalBox {
             spacing: 12px;
-            Text { text: "System Status"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Text { text: "AI Helper Status"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
 
             HorizontalBox {
                 spacing: 16px;
@@ -255,7 +255,7 @@ export component Dashboard inherits Window {
                 TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
                 TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } } }
                 TooltipElement { tooltip_id: "email_marketing"; Button { text: "Email Marketing"; height: 44px; clicked => { action_open_email_marketing(); } } }
-                TooltipElement { tooltip_id: "kairos_orchestration"; Button { text: "Kairos Orchestration"; height: 44px; clicked => { action_open_kairos_orchestration(); } } }
+                TooltipElement { tooltip_id: "kairos_orchestration"; Button { text: "Automations"; height: 44px; clicked => { action_open_kairos_orchestration(); } } }
                 if (new_orders_count > 0) : Button {
                     text: "Mark Order Ready";
                     height: 44px;
