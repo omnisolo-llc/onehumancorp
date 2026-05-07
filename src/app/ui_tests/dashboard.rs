@@ -231,11 +231,11 @@ fn dashboard_test_visitor_milestone_trigger() {
     let ui = create();
 
     // Simulate the milestone being triggered (the logic in main.rs)
-    ui.set_milestone_title("🚀 100 Visitors Today!".into());
+    ui.set_milestone_title("🚀 Your store has 100 visitors today!".into());
     ui.set_milestone_message("Your store is trending! Keep up the great work.".into());
     ui.set_show_milestone(true);
 
     assert!(ui.get_show_milestone());
-    assert_eq!(ui.get_milestone_title(), "🚀 100 Visitors Today!");
+    assert_eq!(ui.get_milestone_title(), "🚀 Your store has 100 visitors today!");
     assert_eq!(ui.get_milestone_message(), "Your store is trending! Keep up the great work.");
 }
