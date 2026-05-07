@@ -1,5 +1,5 @@
 import { GlassCard } from "glass_card.slint";
-import { HeroBlock, ProductGridBlock, CalendarBlock } from "smart_blocks.slint";
+import { HeroBlock, ProductGridBlock, CalendarBlock, TestimonialsBlock, ContactFormBlock } from "smart_blocks.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit, CheckBox } from "std-widgets.slint";
 
 export component WebsiteBuilder inherits Window {
@@ -272,6 +272,10 @@ export component WebsiteBuilder inherits Window {
                     }
 
                     CalendarBlock {}
+
+                    TestimonialsBlock {}
+
+                    ContactFormBlock {}
 
                     // Viral Storefront Footer
                     GlassCard {
