@@ -1,0 +1,16 @@
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "chaos_bench_test",
+    srcs = ["chaos_bench.rs"],
+    edition = "2024",
+    deps = [
+        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/server:server_lib",
+        "@crates//:tokio",
+        "@crates//:uuid",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+)

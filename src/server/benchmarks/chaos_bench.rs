@@ -35,7 +35,7 @@ mod tests {
     async fn test_drop_network_packets() {
         // Simulating packet loss/retry loop for TeammateMesh events
         // Using Mock Mesh behavior
-        use crate::orchestration::mesh::TeammateMesh;
+        use server_lib::orchestration::mesh::TeammateMesh;
         use ohc_builtin_agent::mesh::transport::{Message, MemoryTransport, MeshTransport};
         use async_trait::async_trait;
 
