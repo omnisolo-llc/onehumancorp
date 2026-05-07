@@ -1,6 +1,30 @@
 #[cfg(test)]
 mod tests {
 
+    #[test]
+    fn test_analytics_pii_redaction() {
+        let mut props = std::collections::HashMap::new();
+        props.insert("username".to_string(), "maya".to_string());
+        props.insert("password".to_string(), "secret-123".to_string());
+        props.insert("contact".to_string(), "maya@example.com".to_string());
+        props.insert("safe_field".to_string(), "safe_value".to_string());
+
+        let mut sanitized_props = props;
+        for (k, v) in sanitized_props.iter_mut() {
+            if crate::telemetry::is_sensitive_key(k) {
+                *v = "[REDACTED]".to_string();
+            } else if crate::telemetry::is_email(v) {
+                *v = "[EMAIL_REDACTED]".to_string();
+            }
+        }
+
+        assert_eq!(sanitized_props.get("username").unwrap(), "[REDACTED]"); // Because username contains "name"
+        assert_eq!(sanitized_props.get("password").unwrap(), "[REDACTED]"); // Because it contains "password"
+        assert_eq!(sanitized_props.get("contact").unwrap(), "[EMAIL_REDACTED]");
+        assert_eq!(sanitized_props.get("safe_field").unwrap(), "safe_value");
+    }
+
+
     use serde_json::{json, Value};
     use crate::telemetry::{redact_interface_pii, buffer_metric};
 
