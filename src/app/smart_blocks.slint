@@ -102,6 +102,111 @@ export component ProductGridBlock inherits GlassCard {
     }
 }
 
+export component TestimonialsBlock inherits GlassCard {
+    in-out property <string> quote: "\"The best service I've ever used!\"";
+    in-out property <string> author: "- Happy Customer";
+
+    min-width: 327px;
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 16px;
+
+        Text {
+            text: "Testimonials";
+            font-family: "Outfit";
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            horizontal-alignment: left;
+        }
+
+        GlassCard {
+            background: rgba(255, 255, 255, 0.05);
+            VerticalBox {
+                padding: 16px;
+                spacing: 8px;
+                Text {
+                    text: root.quote;
+                    font-family: "Inter";
+                    font-size: 16px;
+                    color: white;
+                    font-italic: true;
+                    wrap: word-wrap;
+                }
+                Text {
+                    text: root.author;
+                    font-family: "Inter";
+                    font-size: 14px;
+                    color: #a855f7;
+                    font-weight: 700;
+                    horizontal-alignment: right;
+                }
+            }
+        }
+    }
+}
+
+export component ContactFormBlock inherits GlassCard {
+    min-width: 327px;
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 16px;
+
+        Text {
+            text: "Contact Us";
+            font-family: "Outfit";
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            horizontal-alignment: left;
+        }
+
+        VerticalBox {
+            spacing: 12px;
+
+            GlassCard {
+                height: 44px;
+                background: rgba(255, 255, 255, 0.05);
+                VerticalBox {
+                    alignment: center;
+                    padding-left: 12px;
+                    Text { text: "Your Name"; font-family: "Inter"; color: #94a3b8; font-size: 14px; }
+                }
+            }
+
+            GlassCard {
+                height: 44px;
+                background: rgba(255, 255, 255, 0.05);
+                VerticalBox {
+                    alignment: center;
+                    padding-left: 12px;
+                    Text { text: "Your Email"; font-family: "Inter"; color: #94a3b8; font-size: 14px; }
+                }
+            }
+
+            GlassCard {
+                height: 80px;
+                background: rgba(255, 255, 255, 0.05);
+                VerticalBox {
+                    padding: 12px;
+                    Text { text: "Your Message..."; font-family: "Inter"; color: #94a3b8; font-size: 14px; }
+                }
+            }
+
+            GlassCard {
+                height: 44px;
+                background: rgba(168, 85, 247, 0.8);
+                VerticalBox {
+                    alignment: center;
+                    Text { text: "Send Message"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; }
+                }
+            }
+        }
+    }
+}
+
 export component CalendarBlock inherits GlassCard {
     min-width: 327px;
 
