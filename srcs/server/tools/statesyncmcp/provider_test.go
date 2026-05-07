@@ -41,9 +41,6 @@ func (m *mockLocalDB) GetTasksByOrganization(ctx context.Context, organizationID
 	return m.tasks, m.getErr
 }
 
-func (m *mockLocalDB) PollDelegatedTasks(ctx context.Context, limit int) ([]*orchestration.SharedTask, error) {
-	return nil, nil
-}
 
 func TestDefaultProvider_SyncUp(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

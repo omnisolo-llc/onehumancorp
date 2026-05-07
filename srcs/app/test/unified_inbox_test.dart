@@ -55,7 +55,7 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 500));
 
   // 7. Dashboard Screen
-  await tester.ensureVisible(find.byKey(const Key('inboxBtn')));
+  await tester.scrollUntilVisible(find.byKey(const Key('inboxBtn')), 50);
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.byKey(const Key('inboxBtn')));
   await tester.pump(const Duration(milliseconds: 500));
