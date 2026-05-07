@@ -70,6 +70,6 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
 
     // The setup wizard should appear
     // We expect the first setup wizard text / step to be visible
-    await expect(page.locator('text="Welcome"').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="Your business, live in minutes."').first()).toBeVisible({ timeout: 5000 });
   });
 });
