@@ -1,0 +1,16 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "analytics",
+    srcs = ["tracker.go"],
+    importpath = "onehumancorp/srcs/server/lib/analytics",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "analytics_test",
+    srcs = ["tracker_test.go"],
+    embed = [":analytics"],
+    deps = ["@com_github_mattn_go_sqlite3//:go_sqlite3"],
+    visibility = ["//visibility:public"],
+)

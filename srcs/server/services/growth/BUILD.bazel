@@ -1,0 +1,16 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "growth_services",
+    srcs = ["experiments.go"],
+    importpath = "onehumancorp/srcs/server/services/growth",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "growth_services_test",
+    srcs = ["experiments_test.go"],
+    embed = [":growth_services"],
+    deps = ["@com_github_mattn_go_sqlite3//:go_sqlite3"],
+    visibility = ["//visibility:public"],
+)

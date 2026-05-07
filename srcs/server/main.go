@@ -12,6 +12,8 @@ import (
 	"onehumancorp/srcs/server/onboarding"
 	"onehumancorp/srcs/server/orchestration"
 	"onehumancorp/srcs/server/growth"
+	"onehumancorp/srcs/server/lib/analytics"
+	experiment_services "onehumancorp/srcs/server/services/growth"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -85,6 +87,16 @@ func main() {
 	mux.HandleFunc("/api/growth/referrals/click", growthSvc.HandleReferralClick)
 	mux.HandleFunc("/api/growth/referrals/convert", growthSvc.HandleReferralConvert)
 	mux.HandleFunc("/api/growth/team-invites/accept", growthSvc.HandleTeamInviteAccept)
+
+	// Analytics
+	tracker := analytics.NewTracker(db)
+	mux.HandleFunc("/api/analytics/track", tracker.HandleTrackEvent)
+
+	// Experiments
+	experimentsService := experiment_services.NewExperimentsService(db)
+	mux.HandleFunc("/api/experiments/add", experimentsService.HandleAddExperiment)
+	mux.HandleFunc("/api/experiments/assignment", experimentsService.HandleGetAssignment)
+
 
 	go func() {
 		log.Println("Listening on :8080...")
