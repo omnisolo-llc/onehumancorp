@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ohc.fullname" . }}-grafana-dashboard
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  ohc-infra-dash.json: |-
+{{ .Files.Get "dashboards/grafana-dashboard.json" | indent 4 }}
