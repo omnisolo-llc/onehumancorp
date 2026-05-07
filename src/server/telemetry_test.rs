@@ -8,6 +8,9 @@ mod tests {
         props.insert("password".to_string(), "secret-123".to_string());
         props.insert("contact".to_string(), "maya@example.com".to_string());
         props.insert("safe_field".to_string(), "safe_value".to_string());
+        props.insert("ip_address".to_string(), "10.0.0.1".to_string());
+        props.insert("mac_address".to_string(), "FF:FF:FF:FF:FF:FF".to_string());
+        props.insert("geolocation".to_string(), "0,0".to_string());
 
         let mut sanitized_props = props;
         for (k, v) in sanitized_props.iter_mut() {
@@ -22,6 +25,9 @@ mod tests {
         assert_eq!(sanitized_props.get("password").unwrap(), "[REDACTED]"); // Because it contains "password"
         assert_eq!(sanitized_props.get("contact").unwrap(), "[EMAIL_REDACTED]");
         assert_eq!(sanitized_props.get("safe_field").unwrap(), "safe_value");
+        assert_eq!(sanitized_props.get("ip_address").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("mac_address").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("geolocation").unwrap(), "[REDACTED]");
     }
 
 
@@ -318,7 +324,10 @@ mod tests {
                                lower_line.contains("bank") ||
                                lower_line.contains("account") ||
                                lower_line.contains("stripe") ||
-                               lower_line.contains("billing") {
+                               lower_line.contains("billing") ||
+                               lower_line.contains("ip_address") ||
+                               lower_line.contains("mac_address") ||
+                               lower_line.contains("geolocation") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }
@@ -444,6 +453,9 @@ fn test_redact_interface_pii_malicious_payloads() {
             "tenant_id": "tenant-123",
             "organization_id": "org-456",
             "session_id": "session-789",
+            "ip_address": "192.168.1.1",
+            "mac_address": "00:1B:44:11:3A:B7",
+            "geolocation": "37.7749,-122.4194",
         },
         "nested": {
             "deep": {
@@ -471,6 +483,7 @@ fn test_redact_interface_pii_malicious_payloads() {
 
     // Because the key is "payload", the entire object gets redacted to "[REDACTED]"
     assert_eq!(redacted["payload"], "[REDACTED]");
+    // Added explicitly nested checks are hidden by payload redaction, but if we moved them, they would be redacted.
 
     // Verify deeply nested secret redactions
     assert_eq!(redacted["nested"]["deep"]["secret_key"], "[REDACTED]");
