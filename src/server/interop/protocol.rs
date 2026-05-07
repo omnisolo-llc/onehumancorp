@@ -1,69 +1,25 @@
 use crate::msgbus::{Bus, DistributedLock, Message};
 use std::sync::Arc;
 use tokio::time::{sleep, timeout, Duration};
-
-/// Simulated generated protobuf types (in a real scenario, this would use prost-build)
-/// For now, we mock the encoded structs to satisfy the protobuf requirement.
-pub mod proto {
-    #[derive(Clone, prost::Message)]
-    pub struct StateHandoff {
-        #[prost(string, tag = "1")]
-        pub mission_id: String,
-        #[prost(string, tag = "2")]
-        pub tenant_id: String,
-        #[prost(int64, tag = "5")]
-        pub timestamp_ms: i64,
-        #[prost(bytes, tag = "6")]
-        pub state_snapshot_json: Vec<u8>,
-    }
-
-    #[derive(Clone, prost::Message)]
-    pub struct HealthPing {
-        #[prost(string, tag = "1")]
-        pub source_node_id: String,
-    }
-
-    #[derive(Clone, prost::Message)]
-    pub struct HealthAck {
-        #[prost(string, tag = "1")]
-        pub target_node_id: String,
-    }
-
-    #[derive(Clone, prost::Message)]
-    pub struct JobDispatch {
-        #[prost(string, tag = "1")]
-        pub job_id: String,
-        #[prost(string, tag = "2")]
-        pub tenant_id: String,
-        #[prost(string, tag = "3")]
-        pub action_name: String,
-        #[prost(bytes, tag = "4")]
-        pub payload_json: Vec<u8>,
-        #[prost(int64, tag = "5")]
-        pub timestamp_ms: i64,
-    }
-
-    #[derive(Clone, prost::Message)]
-    pub struct JobAck {
-        #[prost(string, tag = "1")]
-        pub job_id: String,
-        #[prost(string, tag = "2")]
-        pub node_id: String,
-        #[prost(int64, tag = "3")]
-        pub timestamp_ms: i64,
-    }
-}
+use crate::ohc::interop as proto;
+use dashmap::DashMap;
 
 /// Interop Layer protocol for mode-switch behaviour and sync
 pub struct InteropProtocol {
     bus: Arc<dyn Bus>,
     lock: Arc<dyn DistributedLock>,
     node_id: String,
+    completed_handoffs: DashMap<String, bool>,
 }
 
 impl InteropProtocol {
     pub fn new(bus: Arc<dyn Bus>, lock: Arc<dyn DistributedLock>, node_id: String) -> Self {
-        Self { bus, lock, node_id }
+        Self {
+            bus,
+            lock,
+            node_id,
+            completed_handoffs: DashMap::new(),
+        }
     }
 
     /// Triggers a state handoff when switching modes using protobuf on the wire
@@ -72,23 +28,26 @@ impl InteropProtocol {
 
         let lock_resource = format!("handoff:{}", mission_id);
 
-        // Wait for lock with a timeout to prevent deadlocks
-        let acquire_future = async {
-            loop {
-                if self.lock.acquire_lock(&lock_resource, &self.node_id, 10).await.unwrap_or(false) {
-                    break;
-                }
-                sleep(Duration::from_millis(50)).await;
-            }
-        };
+        // We acquire a lock that DOES NOT expire for an extended period, preventing other nodes from re-running the handoff.
+        // The lock acts as our distributed idempotency mechanism, while `completed_handoffs` is a local fast-path.
+        if self.completed_handoffs.contains_key(mission_id) {
+            return Ok(());
+        }
 
-        if timeout(Duration::from_secs(5), acquire_future).await.is_err() {
-            return Err("Timeout waiting for lock".to_string());
+        // Acquire a long-lived lock (e.g. 24 hours). If we can't acquire it immediately,
+        // someone else is either currently handling it or has already handled it.
+        // This enforces distributed idempotency.
+        let acquired = self.lock.acquire_lock(&lock_resource, &self.node_id, 86400).await.unwrap_or(false);
+        if !acquired {
+            // Already handled by another node (or currently being handled).
+            return Ok(());
         }
 
         let handoff_msg = proto::StateHandoff {
             mission_id: mission_id.to_string(),
             tenant_id: tenant_id.to_string(),
+            source_mode: proto::DeploymentMode::ModeUnspecified.into(),
+            target_mode: proto::DeploymentMode::ModeUnspecified.into(),
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             state_snapshot_json: state_payload,
         };
@@ -103,7 +62,15 @@ impl InteropProtocol {
 
         let result = self.bus.publish(msg).await;
 
-        let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
+        // We DO NOT release the lock. The lock serves as the tombstone indicating
+        // that this mission handoff has already been processed by the swarm.
+
+        if result.is_ok() {
+            self.completed_handoffs.insert(mission_id.to_string(), true);
+        } else {
+            // If publishing failed, we should release the lock so it can be retried.
+            let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
+        }
 
         result
     }
@@ -118,7 +85,9 @@ impl InteropProtocol {
                 use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::HealthPing::decode(&msg.payload[..]) {
                     let ack = proto::HealthAck {
+                        source_node_id: node_id.clone(),
                         target_node_id: decoded.source_node_id.clone(),
+                        timestamp_ms: chrono::Utc::now().timestamp_millis(),
                     };
                     let mut buf = Vec::new();
                     if ack.encode(&mut buf).is_ok() {
@@ -157,6 +126,8 @@ impl InteropProtocol {
 
         let ping = proto::HealthPing {
             source_node_id: self.node_id.clone(),
+            current_mode: proto::DeploymentMode::ModeUnspecified.into(),
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 
         let mut buf = Vec::new();

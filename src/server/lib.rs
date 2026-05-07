@@ -137,6 +137,9 @@ pub mod ohc {
     pub mod organization {
         pub use organization_proto::ohc::organization::*;
     }
+    pub mod interop {
+        pub use interop_proto::ohc::interop::*;
+    }
     pub mod common {
         pub use common_proto::ohc::common::*;
     }

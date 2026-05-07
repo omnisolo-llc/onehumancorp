@@ -9,10 +9,25 @@ exports_files([
     "billing.proto",
     "common.proto",
     "hub.proto",
+    "interop.proto",
     "model.proto",
     "organization.proto",
     "skills.proto",
 ], visibility = ["//visibility:public"])
+
+# ── Interop ────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "interop_proto",
+    srcs = ["interop.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "interop",
+    proto = ":interop_proto",
+    visibility = ["//visibility:public"],
+)
 
 # ── Hub / Orchestration ────────────────────────────────────────────────────────
 
