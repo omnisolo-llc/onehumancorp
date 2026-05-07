@@ -24,7 +24,7 @@ export component Login inherits Window {
 
     // Test hooks
     out property <string> sso_button_text: root.loading ? "Connecting..." : "Use Google or Apple";
-    out property <string> settings_button_text: "⚙ Fix App Issues";
+    out property <string> settings_button_text: "Fix App Issues";
     out property <string> toggle_button_text: is_sign_up ? "Have an account? Sign In" : "New here? Create an account";
     out property <string> submit_button_text: is_sign_up ? (root.loading ? "Creating account..." : "Sign Up") : (root.loading ? "Signing in..." : "Sign In");
 
@@ -104,7 +104,7 @@ export component Login inherits Window {
                         Text { text: "We couldn't sign you in"; color: #ef4444; font-weight: 700; font-family: "Inter"; font-size: 14px; }
                         Text {
                             width: 100%;
-                            text: "Please check your email and password and try again.";
+                            text: error_message;
                             color: #ef4444;
                             font-family: "Inter";
                             font-size: 14px;
