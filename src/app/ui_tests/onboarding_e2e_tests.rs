@@ -122,12 +122,17 @@ fn test_e2e_onboarding_welcome_checklist_progress() {
     assert_eq!(ui.get_progress(), 0);
     assert_eq!(ui.get_is_completed(), false);
 
-    // Mock completion logic flow
-    ui.set_progress(25);
+    // Test true completion logic flow via real state propagation
+    ui.set_task1_done(false); // Make sure it starts fresh
+    assert_eq!(ui.get_progress(), 0);
+
+    ui.set_task1_done(true);
     assert_eq!(ui.get_progress(), 25);
 
-    ui.set_progress(100);
-    ui.set_is_completed(true);
+    ui.set_task2_done(true);
+    ui.set_task3_done(true);
+    ui.set_task4_done(true);
+
     assert_eq!(ui.get_is_completed(), true);
     assert_eq!(ui.get_progress(), 100);
 
