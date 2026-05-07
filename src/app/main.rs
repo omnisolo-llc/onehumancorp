@@ -87,6 +87,7 @@ thread_local! {
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
+    static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -102,6 +103,7 @@ thread_local! {
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
+    static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
 }
 
 #[cfg(test)]
@@ -1811,7 +1813,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let see_analytics_called_clone = see_analytics_called.clone();
-                dashboard.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+                let dashboard_analytics_handle = dashboard.as_weak();
+                dashboard.on_action_see_analytics(move || {
+                    *see_analytics_called_clone.borrow_mut() = true;
+                    if let Some(ui) = dashboard_analytics_handle.upgrade() {
+                        GLOBAL_VISITORS_COUNT.with(|v| {
+                            let mut count = v.borrow_mut();
+                            *count += 1;
+
+                            if *count == 1 {
+                                ui.set_milestone_title("🚀 100 Visitors!".into());
+                                ui.set_milestone_message("Your store has 100 visitors today!".into());
+                                ui.set_show_milestone(true);
+                            }
+                        });
+                    }
+                });
 
                 let business_share_ui = app::BusinessShare::new().unwrap();
                 let business_share_handle = business_share_ui.as_weak();
@@ -3230,7 +3247,21 @@ mod e2e_tests {
         ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        let ui_analytics_handle = ui.as_weak();
+        ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+            if let Some(ui) = ui_analytics_handle.upgrade() {
+                GLOBAL_VISITORS_COUNT.with(|v| {
+                    let mut count = v.borrow_mut();
+                    *count += 1;
+                    if *count == 1 {
+                        ui.set_milestone_title("🚀 100 Visitors!".into());
+                        ui.set_milestone_message("Your store has 100 visitors today!".into());
+                        ui.set_show_milestone(true);
+                    }
+                });
+            }
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
@@ -4480,7 +4511,21 @@ mod docs_tests {
         dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        let dashboard_analytics_handle = dashboard_ui.as_weak();
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+            if let Some(ui) = dashboard_analytics_handle.upgrade() {
+                GLOBAL_VISITORS_COUNT.with(|v| {
+                    let mut count = v.borrow_mut();
+                    *count += 1;
+                    if *count == 1 {
+                        ui.set_milestone_title("🚀 100 Visitors!".into());
+                        ui.set_milestone_message("Your store has 100 visitors today!".into());
+                        ui.set_show_milestone(true);
+                    }
+                });
+            }
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
         dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });

@@ -99,3 +99,11 @@ fn create_verify_share_link() {
     ui.invoke_share_to_whatsapp();
     assert!(*called.borrow());
 }
+
+#[test]
+fn test_business_share_component_default_values() {
+    let ui = create();
+    assert_eq!(ui.get_business_name(), "My Awesome Store");
+    assert_eq!(ui.get_business_tagline(), "The best place to buy things");
+    assert_eq!(ui.get_share_link(), "ohc://share?b=123");
+}

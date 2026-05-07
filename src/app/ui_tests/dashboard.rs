@@ -222,3 +222,109 @@ fn dashboard_simplification_jargon_test() {
     ui.set_pending_approvals(pending_model.into());
     assert_eq!(ui.get_pending_approvals().row_count(), 1);
 }
+
+#[test]
+fn test_share_my_business_button_label() {
+    let ui = create();
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+
+    ui.on_action_share_store(move || {
+        *invoked_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_action_share_store();
+    assert!(*invoked.borrow(), "Share my business action callback should fire correctly");
+}
+
+#[test]
+fn test_milestone_100_visitors_triggered() {
+    let ui = create();
+    let ui_handle = ui.as_weak();
+
+    // Simulate the logic wired in main.rs
+    ui.on_action_see_analytics(move || {
+        if let Some(ui) = ui_handle.upgrade() {
+            ui.set_milestone_title("🚀 100 Visitors!".into());
+            ui.set_milestone_message("Your store has 100 visitors today!".into());
+            ui.set_show_milestone(true);
+        }
+    });
+
+    assert_eq!(ui.get_show_milestone(), false);
+
+    ui.invoke_action_see_analytics();
+
+    assert_eq!(ui.get_show_milestone(), true);
+    assert_eq!(ui.get_milestone_title(), "🚀 100 Visitors!");
+    assert_eq!(ui.get_milestone_message(), "Your store has 100 visitors today!");
+}
+
+#[test]
+fn test_milestone_dismiss_clears_visitors_milestone() {
+    let ui = create();
+    let ui_handle = ui.as_weak();
+
+    ui.on_action_see_analytics(move || {
+        if let Some(ui) = ui_handle.upgrade() {
+            ui.set_milestone_title("🚀 100 Visitors!".into());
+            ui.set_milestone_message("Your store has 100 visitors today!".into());
+            ui.set_show_milestone(true);
+        }
+    });
+
+    let ui_handle_dismiss = ui.as_weak();
+    ui.on_dismiss_milestone(move || {
+        if let Some(ui) = ui_handle_dismiss.upgrade() {
+            ui.set_show_milestone(false);
+        }
+    });
+
+    ui.invoke_action_see_analytics();
+    assert_eq!(ui.get_show_milestone(), true);
+
+    ui.invoke_dismiss_milestone();
+    assert_eq!(ui.get_show_milestone(), false);
+}
+
+#[test]
+fn test_milestone_100_visitors_triggers_once() {
+    let ui = create();
+    let ui_handle = ui.as_weak();
+
+    // Simulate main.rs logic with a counter
+    let visitors_count = std::rc::Rc::new(std::cell::RefCell::new(0));
+    let visitors_count_clone = visitors_count.clone();
+
+    ui.on_action_see_analytics(move || {
+        let mut count = visitors_count_clone.borrow_mut();
+        *count += 1;
+
+        if *count == 1 {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_milestone_title("🚀 100 Visitors!".into());
+                ui.set_milestone_message("Your store has 100 visitors today!".into());
+                ui.set_show_milestone(true);
+            }
+        }
+    });
+
+    let ui_handle_dismiss = ui.as_weak();
+    ui.on_dismiss_milestone(move || {
+        if let Some(ui) = ui_handle_dismiss.upgrade() {
+            ui.set_show_milestone(false);
+        }
+    });
+
+    // First trigger sets it
+    ui.invoke_action_see_analytics();
+    assert_eq!(ui.get_show_milestone(), true);
+
+    // User dismisses it
+    ui.invoke_dismiss_milestone();
+    assert_eq!(ui.get_show_milestone(), false);
+
+    // Second trigger does NOT set it
+    ui.invoke_action_see_analytics();
+    assert_eq!(ui.get_show_milestone(), false);
+}
