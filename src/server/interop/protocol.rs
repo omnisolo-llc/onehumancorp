@@ -1,5 +1,7 @@
 use crate::msgbus::{Bus, DistributedLock, Message};
 use std::sync::Arc;
+use std::sync::RwLock;
+use std::collections::HashSet;
 use tokio::time::{sleep, timeout, Duration};
 
 pub mod proto {
@@ -11,26 +13,44 @@ pub struct InteropProtocol {
     bus: Arc<dyn Bus>,
     lock: Arc<dyn DistributedLock>,
     node_id: String,
+    processed_handoffs: RwLock<HashSet<String>>,
 }
 
 impl InteropProtocol {
     pub fn new(bus: Arc<dyn Bus>, lock: Arc<dyn DistributedLock>, node_id: String) -> Self {
-        Self { bus, lock, node_id }
+        Self {
+            bus,
+            lock,
+            node_id,
+            processed_handoffs: RwLock::new(HashSet::new()),
+        }
     }
 
     /// Triggers a state handoff when switching modes using protobuf on the wire
     pub async fn handoff(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
+        // Idempotency check: if we somehow already handled this exact handoff, return Ok.
+        {
+            let processed = self.processed_handoffs.read().unwrap();
+            if processed.contains(mission_id) {
+                return Ok(());
+            }
+        }
+
         let lock_resource = format!("handoff:{}", mission_id);
 
-        // Wait for lock with a timeout to prevent deadlocks
+        // Wait for lock with a timeout to prevent deadlocks and apply backoff.
         let acquire_future = async {
+            let mut retries = 0;
             loop {
                 if self.lock.acquire_lock(&lock_resource, &self.node_id, 10).await.unwrap_or(false) {
                     break;
                 }
-                sleep(Duration::from_millis(50)).await;
+                retries += 1;
+                // Backoff: 50ms, 100ms, 150ms...
+                let sleep_ms = 50 * retries;
+                sleep(Duration::from_millis(sleep_ms)).await;
             }
         };
 
@@ -44,7 +64,7 @@ impl InteropProtocol {
             mission_id: mission_id.to_string(),
             tenant_id: tenant_id.to_string(),
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
-            state_snapshot_json: state_payload,
+            state_snapshot_json: state_payload.clone(),
         };
 
         let mut buf = Vec::new();
@@ -56,6 +76,11 @@ impl InteropProtocol {
         };
 
         let result = self.bus.publish(msg).await;
+
+        if result.is_ok() {
+            let mut processed = self.processed_handoffs.write().unwrap();
+            processed.insert(mission_id.to_string());
+        }
 
         let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
 
@@ -175,16 +200,18 @@ impl InteropProtocol {
 
         // Add internal retry for publishing to ensure dispatch survives partitions
         let mut retries = 0;
+        let mut delay_ms = 100;
         loop {
             match self.bus.publish(msg.clone()).await {
                 Ok(_) => break,
                 Err(e) => {
-                    if retries >= 3 {
+                    if retries >= 5 {
                         cancel();
                         return Err(format!("Failed to publish job dispatch after retries: {}", e));
                     }
                     retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(100 * retries)).await;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    delay_ms *= 2; // Exponential backoff
                 }
             }
         }
@@ -229,12 +256,14 @@ impl InteropProtocol {
                         tokio::spawn(async move {
                             // Retry mechanism to ensure ACK reaches the dispatcher
                             let mut retries = 0;
-                            while retries < 3 {
+                            let mut delay_ms = 50;
+                            while retries < 5 {
                                 if bus_clone.publish(ack_msg.clone()).await.is_ok() {
                                     break;
                                 }
                                 retries += 1;
-                                tokio::time::sleep(tokio::time::Duration::from_millis(50 * retries)).await;
+                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                                delay_ms *= 2; // Exponential backoff
                             }
                         });
                     }
@@ -311,5 +340,66 @@ mod tests {
         let is_acked = protocol_server.dispatch_job("job_1", "tenant_a", "do_work", vec![42], 500).await.unwrap();
 
         assert!(is_acked);
+    }
+
+    #[tokio::test]
+    async fn test_interop_handoff_idempotency_simulation() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let received_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let rx = received_count.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "system:state_handoff" {
+                rx.fetch_add(1, Ordering::SeqCst);
+            }
+        });
+
+        let _cancel = bus.subscribe("system:state_handoff".to_string(), handler).await.unwrap();
+
+        // Simulate identical payload handoffs to ensure we process gracefully
+        protocol.handoff("mission_1", "tenant_1", vec![1, 2, 3]).await.unwrap();
+        protocol.handoff("mission_1", "tenant_1", vec![1, 2, 3]).await.unwrap();
+
+        sleep(Duration::from_millis(100)).await;
+
+        // Thanks to idempotency, the message should only be published once.
+        // We ensure it survives without panic or locking forever, but also correctly prevents duplication.
+        assert_eq!(received_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn test_interop_dispatch_job_timeout() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+
+        let protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+
+        // server dispatches job but NO AGENT IS LISTENING
+        // We expect it to return false (timeout), but not fail the retry publish loop
+        let is_acked = protocol_server.dispatch_job("job_timeout", "tenant_a", "do_work", vec![42], 100).await.unwrap();
+
+        assert!(!is_acked);
+    }
+
+    #[tokio::test]
+    async fn test_interop_handoff_lock_deadlock_prevention() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let protocol1 = InteropProtocol::new(bus.clone(), lock.clone(), "node1".to_string());
+
+        // Acquire lock manually to simulate another process holding it
+        assert!(lock.acquire_lock("handoff:mission_locked", "node_other", 10).await.unwrap());
+
+        // This should timeout instead of deadlocking, because of our new timeout semantics
+        let result = protocol1.handoff("mission_locked", "tenant_1", vec![1, 2, 3]).await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Timeout waiting for lock");
+
+        // Release
+        let _ = lock.release_lock("handoff:mission_locked", "node_other").await;
     }
 }
