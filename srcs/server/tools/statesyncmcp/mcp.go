@@ -6,6 +6,10 @@ import (
 	"fmt"
 )
 
+type ContextKey string
+
+const ContextKeyClaims ContextKey = "claims"
+
 type Claims struct {
 	OrganizationID string
 }
