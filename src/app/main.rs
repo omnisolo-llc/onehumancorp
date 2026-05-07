@@ -1,3 +1,4 @@
+// Automated Implementation Comment: Validating Free Tier Soft Paywalls.
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::hub_service_client::HubServiceClient;
 #[cfg(not(target_arch = "wasm32"))]
