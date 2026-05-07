@@ -1114,6 +1114,84 @@ mod get_conflicts_tests {
     use std::str::FromStr;
 
     #[tokio::test]
+    async fn test_auto_resolve_conflicts_equal_scores_diff_created_at() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+
+        let now = chrono::Utc::now();
+
+        // Same override, same reliability, different created_at
+        let record1 = EmbeddingRecord {
+            id: "rec1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old data".to_string(),
+            embedding: vec![0.5, 0.5, 0.5],
+            source_type: "AUTO_DREAM".to_string(),
+            created_at: now - chrono::Duration::hours(2),
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let record2 = EmbeddingRecord {
+            id: "rec2".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "new data".to_string(),
+            embedding: vec![0.5, 0.5, 0.5], // Identical embedding to trigger conflict
+            source_type: "AUTO_DREAM".to_string(),
+            created_at: now - chrono::Duration::hours(1), // Newer
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record1).await.unwrap();
+        repo.upsert(&record2).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1);
+
+        // Verify the newer one (rec2) won.
+        use sqlx::Row;
+        let query = "SELECT id, content FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(rows.len(), 1);
+        let id: String = rows[0].get("id");
+        let content: String = rows[0].get("content");
+        assert_eq!(id, "rec2");
+        assert_eq!(content, "new data");
+    }
+
+    #[tokio::test]
     async fn test_auto_resolve_conflicts() {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
