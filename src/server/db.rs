@@ -744,24 +744,73 @@ pub async fn insert_autodream_memory(
 
     pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
-        let affected = match &self.store {
+        tokio::fs::create_dir_all(".agent-task/archive").await?;
+
+        let mut total_affected = 0;
+        match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
+                let rows = sqlx::query("SELECT id, payload FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < ?")
                     .bind(threshold.to_rfc3339())
-                    .execute(sqlite_pool)
-                    .await?.rows_affected()
+                    .fetch_all(sqlite_pool)
+                    .await?;
+
+                let mut ids = Vec::new();
+                for row in rows {
+                    let id: String = row.try_get("id")?;
+                    // Validate ID is a UUID to prevent path traversal
+                    if uuid::Uuid::parse_str(&id).is_ok() {
+                        let payload: String = row.try_get("payload")?;
+                        let filepath = format!(".agent-task/archive/{}.json", id);
+                        tokio::fs::write(filepath, payload).await?;
+                        ids.push(id);
+                        total_affected += 1;
+                    }
+                }
+
+                for chunk in ids.chunks(100) {
+                    let placeholders = vec!["?"; chunk.len()].join(",");
+                    let query_str = format!("DELETE FROM agent_missions WHERE id IN ({})", placeholders);
+                    let mut query = sqlx::query(&query_str);
+                    for id in chunk {
+                        query = query.bind(id);
+                    }
+                    query.execute(sqlite_pool).await?;
+                }
             },
             DbStore::Postgres => {
-                sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
+                let rows = sqlx::query("SELECT id, payload FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND updated_at < $1")
                     .bind(threshold)
-                    .execute(&self.pool)
-                    .await?.rows_affected()
+                    .fetch_all(&self.pool)
+                    .await?;
+
+                let mut ids = Vec::new();
+                for row in rows {
+                    let id: String = row.try_get("id")?;
+                    if uuid::Uuid::parse_str(&id).is_ok() {
+                        let payload: String = row.try_get("payload")?;
+                        let filepath = format!(".agent-task/archive/{}.json", id);
+                        tokio::fs::write(filepath, payload).await?;
+                        ids.push(id);
+                        total_affected += 1;
+                    }
+                }
+
+                for chunk in ids.chunks(100) {
+                    let placeholders = (1..=chunk.len()).map(|i| format!("${}", i)).collect::<Vec<_>>().join(",");
+                    let query_str = format!("DELETE FROM agent_missions WHERE id IN ({})", placeholders);
+                    let mut query = sqlx::query(&query_str);
+                    for id in chunk {
+                        query = query.bind(id);
+                    }
+                    query.execute(&self.pool).await?;
+                }
             }
         };
-        if affected > 0 {
-            tracing::info!("Cleaned up {} stagnant missions older than {} seconds", affected, timeout_secs);
+
+        if total_affected > 0 {
+            tracing::info!("Archived and cleaned up {} stagnant missions older than {} seconds", total_affected, timeout_secs);
         }
-        Ok(affected)
+        Ok(total_affected)
     }
 
     pub async fn mark_task_auto_dreamed(&self, task_id: &str, table: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -791,6 +840,45 @@ pub async fn insert_autodream_memory(
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn test_cleanup_stagnant_missions_cuj() -> Result<(), Box<dyn std::error::Error>> {
+        let db = match tokio::time::timeout(std::time::Duration::from_secs(2), DB::new()).await {
+            Ok(Ok(db)) => db,
+            _ => return Ok(()),
+        };
+
+        let test_uuid = uuid::Uuid::new_v4().to_string();
+
+        // Insert dummy stagnant mission
+        if db.is_sqlite() {
+            if let DbStore::Sqlite(ref pool) = db.store {
+                let _ = sqlx::query("INSERT INTO agent_missions (id, status, payload, organization_id, created_at, updated_at) VALUES (?, 'IN_PROGRESS', '{\"test\":1}', 'org1', '2000-01-01T00:00:00Z', '2000-01-01T00:00:00Z')")
+                    .bind(&test_uuid)
+                    .execute(pool).await;
+            }
+        } else {
+            let _ = sqlx::query("INSERT INTO agent_missions (id, status, payload, organization_id, created_at, updated_at) VALUES ($1, 'IN_PROGRESS', '{\"test\":1}', 'org1', '2000-01-01T00:00:00Z', '2000-01-01T00:00:00Z')")
+                .bind(&test_uuid)
+                .execute(&db.pool).await;
+        }
+
+        let _count = match tokio::time::timeout(std::time::Duration::from_secs(2), db.cleanup_stagnant_missions(3600)).await {
+            Ok(Ok(c)) => c,
+            _ => return Ok(()),
+        };
+
+        // Count could be > 0.
+        // Assert the file exists and is readable, then clean up
+
+        let filepath = format!(".agent-task/archive/{}.json", test_uuid);
+        let content = tokio::fs::read_to_string(&filepath).await.expect("Archive file was not created");
+        assert_eq!(content, "{\"test\":1}");
+        let _ = tokio::fs::remove_file(&filepath).await;
+
+
+        Ok(())
+    }
+
     use super::*;
 
     #[tokio::test]

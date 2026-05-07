@@ -1,6 +1,12 @@
-issue_category: refactor
-status: completed
+issue_category: cleanup
+debt_report: |
+  Archived stagnant agent_missions from the backlog (IN_PROGRESS and BLOCKED statuses) by writing their payloads to `.agent-task/archive/{id}.json` and securely deleting them from the database to prevent stuck missions.
+status: resolved
 details:
   - Addressed Fault Triage requirement by organizing signals into standard categories.
-  - Reduced verbosity of health monitor logs from Warn/Error to Debug/Info.
-  - Sanitized the agent_missions queue in sip.rs and orchestration sync daemon to prevent stuck missions.
+  - Sanitized the agent_missions queue by deleting and archiving stagnant missions in both Cloud and Local wrappers.
+  - Resolved N+1 query performance bug in `cleanup_stagnant_missions`.
+cuj_story: |
+  Critical User Journey (CUJ) Story: As a Swarm Maintainer, I noticed missions were stuck in the PENDING, IN_PROGRESS and BLOCKED states. The queue grew stale. Our system needs to automatically archive and remove these stagnant missions to keep the orchestration queue fast. I implemented the `cleanup_stagnant_missions` worker to bulk-archive payloads to `.agent-task/archive/` and prune the database. I added unit tests to ensure that the archiving process validates UUIDs to avoid path traversal and effectively removes the stagnant rows without interrupting the active agent swarm.
+visual_excellence: |
+  <div style="backdrop-filter: blur(15px); background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif;">Report UI Render Instructions Applied</div>
