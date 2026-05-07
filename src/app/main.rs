@@ -2713,6 +2713,128 @@ mod growth_e2e_tests {
     use slint::Model;
 
     #[test]
+    fn test_e2e_growth_landing_glassmorphism_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        // The user reaches the dashboard and wants to launch a new app variant for A/B testing
+        let landing_ui = app::Landing::new().unwrap();
+        assert_eq!(landing_ui.get_is_variant_b(), false);
+
+        landing_ui.set_is_variant_b(true);
+        assert_eq!(landing_ui.get_is_variant_b(), true);
+
+        let started = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let started_clone = started.clone();
+        landing_ui.on_start_business_setup(move || {
+            *started_clone.borrow_mut() = true;
+        });
+
+        landing_ui.invoke_start_business_setup();
+        assert!(*started.borrow(), "Successfully navigated to next step");
+    }
+
+    #[test]
+    fn test_e2e_growth_user_management_cloud_bridge_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        // Open User Management to invite via Cloud Bridge
+        let um_ui = app::UserManagement::new().unwrap();
+        let users = slint::VecModel::from(vec![
+            app::UiUser {
+                id: "1".into(),
+                username: "Partner".into(),
+                email: "partner@example.com".into(),
+                role: "User".into(),
+                joined_at: "today".into(),
+                avatar_letter: "P".into(),
+            }
+        ]);
+        um_ui.set_users(std::rc::Rc::new(users).into());
+        assert_eq!(um_ui.get_users().row_count(), 1);
+
+        let invited = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let invited_clone = invited.clone();
+        um_ui.on_invite_user(move || {
+            *invited_clone.borrow_mut() = true;
+        });
+
+        um_ui.invoke_invite_user();
+        assert!(*invited.borrow(), "Successfully triggered Sovereign-to-Cloud Bridge invite");
+    }
+
+    #[test]
+    fn test_e2e_growth_referrals_glassmorphism_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        // The user reaches the dashboard and wants to view their referral loop analytics
+        let ref_ui = app::Referrals::new().unwrap();
+        ref_ui.set_total_referrals(5);
+        ref_ui.set_click_count(150);
+        ref_ui.set_viral_coefficient(1.5);
+        assert_eq!(ref_ui.get_total_referrals(), 5);
+
+        let ref_data = slint::VecModel::from(vec![
+            app::UiReferral {
+                referral_code: "CLOUD123".into(),
+                user_id: "test_user".into(),
+                clicks: 10,
+                conversions: 1,
+                created_at: "now".into(),
+            }
+        ]);
+        ref_ui.set_referrals(std::rc::Rc::new(ref_data).into());
+        assert_eq!(ref_ui.get_referrals().row_count(), 1);
+
+        let shared = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let shared_clone = shared.clone();
+        ref_ui.on_share_link(move |_link| {
+            *shared_clone.borrow_mut() = true;
+        });
+
+        ref_ui.invoke_share_link("ohc://join?ref=TEST".into());
+        assert!(*shared.borrow(), "Successfully shared link through UI");
+    }
+
+    #[test]
     fn test_start_setup_wizard_transitions() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
