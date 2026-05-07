@@ -35,6 +35,16 @@ fi
 
 echo -e "${DIM}[1/2] Provisioning local standalone state boundaries...${RESET}"
 mkdir -p "${OHC_MEMORY_DIR}/auto/" "${OHC_MEMORY_DIR}/team/" "${OHC_STATUS_DIR}"
+chmod 700 "${OHC_RUNTIME_DIR}" "${OHC_MEMORY_DIR}" "${OHC_STATUS_DIR}" "${OHC_MEMORY_DIR}/auto/" "${OHC_MEMORY_DIR}/team/"
+
+if [ -z "$OHC_SQLITE_KEY" ]; then
+  KEY_FILE="${OHC_RUNTIME_DIR}/.sqlite_key"
+  if [ ! -f "$KEY_FILE" ]; then
+    openssl rand -hex 32 > "$KEY_FILE"
+    chmod 600 "$KEY_FILE"
+  fi
+  export OHC_SQLITE_KEY="$(cat "$KEY_FILE")"
+fi
 
 echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 # Launch the API Server (local persistence)
