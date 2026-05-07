@@ -71,6 +71,11 @@ export component Dashboard inherits Window {
     in-out property <bool> show_upgrade_prompt: false;
     in-out property <string> upgrade_prompt_message: "";
 
+    in-out property <bool> show_success_milestone: false;
+    in property <string> success_milestone_title: "";
+    in property <string> success_milestone_message: "";
+    callback dismiss_success_milestone();
+
     in-out property <bool> show_daily_briefing: false;
     in property <[string]> daily_briefing_content: [];
     callback dismiss_daily_briefing();
@@ -87,6 +92,22 @@ export component Dashboard inherits Window {
     VerticalBox {
         spacing: 20px;
         padding: 24px;
+
+        if (show_success_milestone) : GlassCard {
+            border-color: #10b981;
+            border-width: 1px;
+            background: rgba(16, 185, 129, 0.1);
+            VerticalBox {
+                padding: 16px;
+                spacing: 8px;
+                HorizontalBox {
+                    alignment: space-between;
+                    Text { text: success_milestone_title; font-size: 18px; font-weight: 700; color: white; font-family: "Outfit"; vertical-alignment: center; }
+                    Button { text: "✕"; width: 32px; height: 32px; clicked => { dismiss_success_milestone(); } }
+                }
+                Text { text: success_milestone_message; font-size: 14px; color: #cbd5e1; wrap: word-wrap; }
+            }
+        }
 
         // Header
         HorizontalBox {

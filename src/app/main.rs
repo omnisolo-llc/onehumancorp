@@ -1904,6 +1904,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+                let dashboard_milestone_handle = dashboard.as_weak();
+                dashboard.on_dismiss_success_milestone(move || {
+                    if let Some(ui) = dashboard_milestone_handle.upgrade() {
+                        ui.set_show_success_milestone(false);
+                    }
+                });
+
+                // Mock Success Milestone Notification
+                dashboard.set_show_success_milestone(true);
+                dashboard.set_success_milestone_title(slint::SharedString::from("🎉 Milestone Reached!"));
+                dashboard.set_success_milestone_message(slint::SharedString::from("🚀 Your store has 100 visitors today!"));
+
                 let my_plan_handle_clone_billing = my_plan_handle.clone();
                 dashboard.on_open_billing(move || {
                     if let Some(ui) = my_plan_handle_clone_billing.upgrade() {
@@ -6761,5 +6773,23 @@ mod e2e_login_to_dashboard_tests {
 
         dashboard_ui.invoke_action_share_store();
         assert!(*share_opened.borrow(), "Share should be opened from Dashboard Add action");
+    }
+}
+
+#[cfg(test)]
+mod milestone_tests {
+    use super::*;
+
+    #[test]
+    fn test_dashboard_success_milestone() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let dashboard = crate::app::Dashboard::new().unwrap();
+        dashboard.set_show_success_milestone(true);
+        dashboard.set_success_milestone_title("🎉 Milestone!".into());
+        assert_eq!(dashboard.get_show_success_milestone(), true);
+        let dashboard_weak = dashboard.as_weak();
+        dashboard.on_dismiss_success_milestone(move || { if let Some(ui) = dashboard_weak.upgrade() { ui.set_show_success_milestone(false); } });
+        dashboard.invoke_dismiss_success_milestone();
+        assert_eq!(dashboard.get_show_success_milestone(), false);
     }
 }
