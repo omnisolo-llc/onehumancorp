@@ -1,0 +1,97 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "grafana"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "content": "<style>\n.grafana-app {\n  font-family: 'Inter', sans-serif;\n}\nh1, h2, h3, h4, h5, h6 {\n  font-family: 'Outfit', sans-serif;\n}\n.panel-container {\n  background: rgba(255, 255, 255, 0.05) !important;\n  backdrop-filter: blur(20px) saturate(200%) !important;\n  -webkit-backdrop-filter: blur(20px) saturate(200%) !important;\n  border: 1px solid rgba(255, 255, 255, 0.1);\n  border-radius: 16px;\n  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);\n  animation: entrance 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;\n}\n@keyframes entrance {\n  from { opacity: 0; transform: translateY(10px); }\n  to { opacity: 1; transform: translateY(0); }\n}\n</style>\n<div style=\"text-align: center;\">\n  <h1>🛡️ Sentry Chaos Failure Report</h1>\n  <p>Hybrid Agentic OS - Cloud vs Standalone Degradation Validation</p>\n</div>",
+        "mode": "html"
+      },
+      "title": "",
+      "type": "text",
+      "transparent": true
+    },
+    {
+      "title": "API Latency Histogram (p50, p95, p99)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(ohc_api_latency_bucket[5m])) by (le))",
+          "legendFormat": "p99",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ohc_api_latency_bucket[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(ohc_api_latency_bucket[5m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "C"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "title": "Chaos Error Rates (Dropped Packets, Sync Lags)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "targets": [
+        {
+          "expr": "rate(ohc_chaos_errors_total[1m])",
+          "legendFormat": "Errors / sec",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["chaos", "sentry", "reliability"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Sentry: Chaos Engineering Reports",
+  "uid": "sentry_chaos_reports",
+  "version": 1
+}

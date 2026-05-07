@@ -975,3 +975,91 @@ mod chaos_tests {
         tracing::info!("Standalone chaos results: {} success, {} failed", success, failed);
     }
 }
+
+#[cfg(test)]
+mod task_service_comprehensive_tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::time::Duration;
+
+    struct TestMesh;
+    #[async_trait::async_trait]
+    impl crate::orchestration::mesh::TeammateMesh for TestMesh {
+        async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+        async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+        async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
+        async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+        async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+        async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+        async fn ping(&self) -> Result<(), String> { Ok(()) }
+        async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+        async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+    }
+
+    async fn setup_test_service() -> (Arc<crate::db::DB>, Arc<TaskDecompositionService>) {
+        let database_url = "sqlite::memory:";
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(5000))
+            .connect(database_url)
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
+        ).execute(&pool).await.unwrap();
+
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+        let mesh = std::sync::Arc::new(TestMesh);
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db.clone(), mesh));
+        (db, service)
+    }
+
+    #[tokio::test]
+    async fn test_comprehensive_task_lifecycle_and_idempotency() {
+        let (db, service) = setup_test_service().await;
+
+        // 1. Create Task
+        let task_id = "test_task_1";
+        if let crate::db::DbStore::Sqlite(pool) = &db.store {
+            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
+                .bind(task_id)
+                .execute(pool).await.unwrap();
+        }
+
+        // 2. Idempotent Claim Task
+        let claim1 = service.claim_task("agent_1").await.unwrap();
+        assert!(claim1.is_some());
+        let claimed_task = claim1.unwrap();
+        assert_eq!(claimed_task.id, task_id);
+
+        let claim2 = service.claim_task("agent_2").await.unwrap();
+        assert!(claim2.is_none()); // Already claimed
+
+        // 3. Update Status (Progress)
+        service.update_status(task_id, "IN_PROGRESS", "agent_1").await.unwrap();
+        let fetched_task = service.get_task(task_id).await.unwrap();
+        assert_eq!(fetched_task.status, "IN_PROGRESS");
+
+        // 4. Fail Task
+        service.fail_task(task_id, "agent_1", "Failed task").await.unwrap();
+        let fetched_task4 = service.get_task(task_id).await.unwrap();
+        assert_eq!(fetched_task4.status, "FAILED");
+
+        // Verify state transitions were recorded
+        if let crate::db::DbStore::Sqlite(pool) = &db.store {
+            let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM state_machine_transitions WHERE task_id = ?")
+                .bind(task_id)
+                .fetch_one(pool).await.unwrap();
+            assert_eq!(count, 2); // PENDING->IN_PROGRESS, IN_PROGRESS->FAILED
+        }
+    }
+}

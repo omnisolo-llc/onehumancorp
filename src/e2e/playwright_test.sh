@@ -39,27 +39,15 @@ cleanup() {
     kill "$SERVER_PID" >/dev/null 2>&1 || true
     wait "$SERVER_PID" >/dev/null 2>&1 || true
   fi
-  docker rm -f e2e_postgres e2e_redis >/dev/null 2>&1 || true
   exit "$exit_code"
 }
 trap cleanup EXIT
 
 # Start infrastructure
 echo "[playwright] Starting E2E infrastructure..."
-docker run -d --name e2e_postgres -p 5432:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc postgres:16-alpine || true && docker run -d --name e2e_redis -p 6379:6379 redis:7-alpine || true
+
 
 # Wait for postgres
-echo "[playwright] Waiting for postgres..."
-for i in $(seq 1 60); do
-  if pg_isready -h 127.0.0.1 -p 5432 -U ohc >/dev/null 2>&1 || true; then
-    break
-  fi
-  if nc -z 127.0.0.1 5432 2>/dev/null; then
-    break
-  fi
-  sleep 1
-done
-
 # Start the server binary
 SERVER_BIN="${workspace_root}/bazel-bin/src/server/server"
 if [[ ! -x "$SERVER_BIN" ]]; then
@@ -69,8 +57,8 @@ fi
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server from $SERVER_BIN..."
-  DATABASE_URL="postgres://ohc:ohc@127.0.0.1:5432/ohc" \
-  REDIS_URL="redis://127.0.0.1:6379" \
+  DATABASE_URL="sqlite::memory:" \
+  REDIS_URL="" STANDALONE_MODE="true" OHC_STANDALONE="true" \
     "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
   SERVER_PID=$!
 

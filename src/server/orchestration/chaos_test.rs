@@ -264,4 +264,127 @@ mod chaos_tests {
         // It must fallback safely returning an empty vector
         assert_eq!(tasks.len(), 0);
     }
+
+    #[tokio::test]
+    async fn test_cpu_memory_exhaustion_graceful_degradation() {
+        let database_url = "sqlite::memory:";
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(5000))
+            .connect(database_url)
+            .await
+            .unwrap();
+
+        // Setup tables
+        sqlx::query(
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
+            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
+        ).execute(&pool).await.unwrap();
+
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+        let mesh = std::sync::Arc::new(ChaosMesh);
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+
+        for i in 0..10 {
+            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
+                .bind(format!("task_cpu_{}", i))
+                .execute(&pool).await.unwrap();
+        }
+
+        // Spawn a background task to exhaust CPU via a spinloop that yields
+        let cpu_burner = tokio::spawn(async {
+            let start = std::time::Instant::now();
+            let mut x = 0.0_f64;
+            while start.elapsed() < std::time::Duration::from_millis(1500) {
+                // Do some floating point math to burn CPU
+                for _ in 0..1000 {
+                    x += 1.0;
+                    x = x.sin().cos().tan();
+                }
+                // MUST YIELD to prevent starving the Tokio runtime, as per ML-Resilience rules for chaos tests
+                tokio::task::yield_now().await;
+            }
+        });
+
+        // Spawn memory exhaust (just allocate and hold)
+        let mem_burner = tokio::spawn(async {
+            let mut large_vec = Vec::new();
+            for _ in 0..10 {
+                let chunk = vec![0u8; 1024 * 1024]; // 1MB chunks to safely simulate without OOM killing the test
+                large_vec.push(chunk);
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+        });
+
+        // While system is under load, try to claim a task
+        let start = std::time::Instant::now();
+        let res = service.claim_task("agent_survivor").await;
+        let elapsed = start.elapsed();
+
+        // Should gracefully degrade and not crash, despite the load. It may take longer.
+        assert!(res.is_ok());
+
+        let _ = cpu_burner.await;
+        let _ = mem_burner.await;
+    }
+
+    #[tokio::test]
+    async fn test_sql_sync_lag() {
+        // Simulate SQL sync lag between Cloud and Standalone
+        // This validates Parity Auditing: "Simulate SQL sync lag between Cloud and Standalone"
+
+        let database_url = "sqlite::memory:";
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(5000))
+            .connect(database_url)
+            .await
+            .unwrap();
+
+        // Setup tables
+        sqlx::query(
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+        ).execute(&pool).await.unwrap();
+
+        // Simulate cloud writing a task
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
+            .bind("task_sync_lag")
+            .execute(&pool).await.unwrap();
+
+        // Simulate standalone trying to claim it, but cloud also trying to update it, and standalone has lag
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+        let mesh = std::sync::Arc::new(ChaosMesh);
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+
+        // Simulate Standalone attempting to claim
+        let standalone_claim_future = service.claim_task("standalone_agent");
+
+        // Simulate Cloud updates it with a lag delay (Chaos)
+        let cloud_update_future = async {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            sqlx::query("UPDATE shared_tasks_decomposition SET status = 'COMPLETED' WHERE id = 'task_sync_lag'")
+                .execute(&pool).await.unwrap();
+        };
+
+        let (claim_res, _) = tokio::join!(standalone_claim_future, cloud_update_future);
+
+        // Standalone claim should either succeed (getting the PENDING task before cloud updated it)
+        // or safely fail/return None if it was completed. Either way, no panic and no corruption.
+        assert!(claim_res.is_ok());
+
+        // Verify state is consistent
+        let final_status: String = sqlx::query_scalar("SELECT status FROM shared_tasks_decomposition WHERE id = 'task_sync_lag'")
+            .fetch_one(&pool).await.unwrap();
+
+        // It could be IN_PROGRESS (if standalone got it) or COMPLETED (if cloud overwrote it).
+        // Real systems might have a conflict resolver, but we just want graceful failure/no crash.
+        assert!(final_status == "IN_PROGRESS" || final_status == "COMPLETED");
+    }
 }

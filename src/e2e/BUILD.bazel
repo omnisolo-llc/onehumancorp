@@ -15,8 +15,8 @@ sh_binary(
 )
 
 # Per-spec Playwright test targets.
-# Run all:   bazel test //src/e2e:playwright --test_tag_filters=-manual
-# Run one:   bazel test //src/e2e:playwright_app_spec_ts --test_tag_filters=-manual
-# These are tagged "manual" so `bazel test //...` won't run them (they need Docker).
+# Run all:   bazel test //src/e2e:playwright
+# Run one:   bazel test //src/e2e:playwright_app_spec_ts
+# These are tagged so `bazel test //...` won't run them (they need Docker).
 # define_playwright_tests()
 define_playwright_tests()
