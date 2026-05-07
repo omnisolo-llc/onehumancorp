@@ -31,8 +31,9 @@ impl ChatService for MyChatService {
         &self,
         request: Request<GetChatMessagesRequest>,
     ) -> Result<Response<GetChatMessagesResponse>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("default")).unwrap_or("default").to_string();
         let req = request.into_inner();
-        let messages = self.registry.chat_messages(&req.integration_id);
+        let messages = self.registry.chat_messages(&tenant_id, &req.integration_id);
         Ok(Response::new(GetChatMessagesResponse { messages }))
     }
 
@@ -40,9 +41,10 @@ impl ChatService for MyChatService {
         &self,
         request: Request<ChatSendRequest>,
     ) -> Result<Response<ChatMessage>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("default")).unwrap_or("default").to_string();
         let req = request.into_inner();
         
-        match self.registry.send_chat_message(&req.integration_id, &req.channel, &req.from_agent, &req.content, &req.thread_id) {
+        match self.registry.send_chat_message(&tenant_id, &req.integration_id, &req.channel, &req.from_agent, &req.content, &req.thread_id) {
             Ok(msg) => Ok(Response::new(msg)),
             Err(e) => Err(Status::internal(e)),
         }

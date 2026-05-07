@@ -45,6 +45,11 @@ impl TwilioProvider {
     pub async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
         self.client.send_sms(to, from, body).await
     }
+
+    pub async fn send_order_notification(&self, to: &str, from: &str, order_id: &str, total_amount: f64) -> Result<(), String> {
+        let body = format!("New order received! Order ID: {}. Total: ${:.2}. View details in your OHC dashboard.", order_id, total_amount);
+        self.send_sms(to, from, &body).await
+    }
 }
 
 #[cfg(test)]

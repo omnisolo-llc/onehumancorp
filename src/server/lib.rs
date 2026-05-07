@@ -64,6 +64,7 @@ use tokio::sync::mpsc;
 use std::sync::OnceLock;
 use std::sync::Arc;
 use hub::Hub;
+use crate::integrations::mercadopago::client::MercadoPagoClientWrapper;
 
 static TELEMETRY_CHAN: OnceLock<mpsc::Sender<Box<dyn FnOnce() + Send>>> = OnceLock::new();
 
@@ -242,10 +243,11 @@ impl HubService for MyHubService {
         let tenant_id = request.metadata().get("x-tenant-id")
             .map(|v| v.to_str().unwrap_or("default"))
             .unwrap_or("default").to_string();
-        let req = request.into_inner();
+        let region = request.metadata().get("x-region")
+            .map(|v| v.to_str().unwrap_or("US"))
+            .unwrap_or("US").to_string();
 
-        let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
-        let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+        let req = request.into_inner();
 
         let amount = match req.plan_id.as_str() {
             "Starter" => 9.0,
@@ -253,6 +255,26 @@ impl HubService for MyHubService {
             "Business" => 79.0,
             _ => 0.0
         };
+
+        // Use Mercado Pago for LATAM regions (MX, BR, AR, CL, CO)
+        let latam_regions = ["MX", "BR", "AR", "CL", "CO"];
+        if latam_regions.contains(&region.as_str()) {
+            tracing::info!("LATAM region detected ({}), using Mercado Pago for checkout", region);
+            let mp_key = std::env::var("MERCADO_PAGO_ACCESS_TOKEN").unwrap_or_else(|_| "TEST-TOKEN-123".to_string());
+            let mp_client = crate::integrations::mercadopago::client::RealMercadoPagoClient::new(mp_key);
+
+            // In a real implementation, we would call the Mercado Pago API to create a preference/checkout
+            let url = mp_client.create_payment(amount, &format!("OHC Plan: {}", req.plan_id), "payer@example.com").await
+                .map_err(|e| tonic::Status::internal(e))?;
+
+            return Ok(tonic::Response::new(crate::ohc::orchestration::SelectPlanResponse {
+                success: true,
+                checkout_url: url,
+            }));
+        }
+
+        let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+        let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
 
         let optimal_pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount);
         let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount);
@@ -1151,9 +1173,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
     competitor_audit_worker.start();
 
-    let ops_worker = crate::workers::department_workers::OperationsWorker::new(db.clone());
+    let integrations_registry = Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
+
+    let ops_worker = crate::workers::department_workers::OperationsWorker::new(db.clone(), integrations_registry.clone());
     ops_worker.start();
-    let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
+    let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone(), integrations_registry.clone());
     cs_worker.start();
 
     // Start Maintenance Worker

@@ -20,11 +20,12 @@ impl IntegrationService for MyIntegrationService {
         &self,
         request: Request<GetIntegrationsRequest>,
     ) -> Result<Response<GetIntegrationsResponse>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("default")).unwrap_or("default").to_string();
         let req = request.into_inner();
         let instances = if !req.category.is_empty() {
-            self.registry.instances_by_category(&req.category)
+            self.registry.instances_by_category(&tenant_id, &req.category)
         } else {
-            self.registry.instances()
+            self.registry.instances(&tenant_id)
         };
         Ok(Response::new(GetIntegrationsResponse { instances }))
     }
@@ -33,8 +34,9 @@ impl IntegrationService for MyIntegrationService {
         &self,
         request: Request<ConnectIntegrationRequest>,
     ) -> Result<Response<IntegrationInstance>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("default")).unwrap_or("default").to_string();
         let req = request.into_inner();
-        match self.registry.connect(&req.integration_id, &req.base_url, req.clone()) {
+        match self.registry.connect(&tenant_id, &req.integration_id, &req.base_url, req.clone()) {
             Ok(inst) => Ok(Response::new(inst)),
             Err(e) => Err(Status::invalid_argument(e)),
         }
@@ -44,8 +46,9 @@ impl IntegrationService for MyIntegrationService {
         &self,
         request: Request<DisconnectIntegrationRequest>,
     ) -> Result<Response<IntegrationInstance>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("default")).unwrap_or("default").to_string();
         let req = request.into_inner();
-        match self.registry.disconnect(&req.integration_id) {
+        match self.registry.disconnect(&tenant_id, &req.integration_id) {
             Ok(inst) => Ok(Response::new(inst)),
             Err(e) => Err(Status::not_found(e)),
         }
@@ -55,8 +58,9 @@ impl IntegrationService for MyIntegrationService {
         &self,
         request: Request<GetPullRequestsRequest>,
     ) -> Result<Response<GetPullRequestsResponse>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("default")).unwrap_or("default").to_string();
         let req = request.into_inner();
-        let pull_requests = self.registry.pull_requests(&req.integration_id);
+        let pull_requests = self.registry.pull_requests(&tenant_id, &req.integration_id);
         Ok(Response::new(GetPullRequestsResponse { pull_requests }))
     }
 
@@ -64,8 +68,9 @@ impl IntegrationService for MyIntegrationService {
         &self,
         request: Request<CreatePrRequest>,
     ) -> Result<Response<PullRequest>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("default")).unwrap_or("default").to_string();
         let req = request.into_inner();
-        match self.registry.create_pull_request(&req.integration_id, &req.repository, &req.title, &req.body, &req.source_branch, &req.target_branch, &req.created_by) {
+        match self.registry.create_pull_request(&tenant_id, &req.integration_id, &req.repository, &req.title, &req.body, &req.source_branch, &req.target_branch, &req.created_by) {
             Ok(pr) => Ok(Response::new(pr)),
             Err(e) => Err(Status::internal(e)),
         }
@@ -75,8 +80,9 @@ impl IntegrationService for MyIntegrationService {
         &self,
         request: Request<PrActionRequest>,
     ) -> Result<Response<PullRequest>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("default")).unwrap_or("default").to_string();
         let req = request.into_inner();
-        match self.registry.merge_pull_request(&req.pr_id) {
+        match self.registry.merge_pull_request(&tenant_id, &req.pr_id) {
             Ok(pr) => Ok(Response::new(pr)),
             Err(e) => Err(Status::not_found(e)),
         }
@@ -86,8 +92,9 @@ impl IntegrationService for MyIntegrationService {
         &self,
         request: Request<PrActionRequest>,
     ) -> Result<Response<PullRequest>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("default")).unwrap_or("default").to_string();
         let req = request.into_inner();
-        match self.registry.close_pull_request(&req.pr_id) {
+        match self.registry.close_pull_request(&tenant_id, &req.pr_id) {
             Ok(pr) => Ok(Response::new(pr)),
             Err(e) => Err(Status::not_found(e)),
         }
@@ -97,8 +104,9 @@ impl IntegrationService for MyIntegrationService {
         &self,
         request: Request<GetIssuesRequest>,
     ) -> Result<Response<GetIssuesResponse>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("default")).unwrap_or("default").to_string();
         let req = request.into_inner();
-        let issues = self.registry.issues(&req.integration_id);
+        let issues = self.registry.issues(&tenant_id, &req.integration_id);
         Ok(Response::new(GetIssuesResponse { issues }))
     }
 
@@ -106,8 +114,9 @@ impl IntegrationService for MyIntegrationService {
         &self,
         request: Request<CreateIssueRequest>,
     ) -> Result<Response<Issue>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("default")).unwrap_or("default").to_string();
         let req = request.into_inner();
-        match self.registry.create_issue(&req.integration_id, &req.project, &req.title, &req.description, &req.created_by, &req.priority, req.labels) {
+        match self.registry.create_issue(&tenant_id, &req.integration_id, &req.project, &req.title, &req.description, &req.created_by, &req.priority, req.labels) {
             Ok(issue) => Ok(Response::new(issue)),
             Err(e) => Err(Status::internal(e)),
         }
@@ -117,8 +126,9 @@ impl IntegrationService for MyIntegrationService {
         &self,
         request: Request<IssueStatusRequest>,
     ) -> Result<Response<Issue>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("default")).unwrap_or("default").to_string();
         let req = request.into_inner();
-        match self.registry.update_issue_status(&req.issue_id, &req.status) {
+        match self.registry.update_issue_status(&tenant_id, &req.issue_id, &req.status) {
             Ok(issue) => Ok(Response::new(issue)),
             Err(e) => Err(Status::not_found(e)),
         }
@@ -128,8 +138,9 @@ impl IntegrationService for MyIntegrationService {
         &self,
         request: Request<IssueAssignRequest>,
     ) -> Result<Response<Issue>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("default")).unwrap_or("default").to_string();
         let req = request.into_inner();
-        match self.registry.assign_issue(&req.issue_id, &req.assignee) {
+        match self.registry.assign_issue(&tenant_id, &req.issue_id, &req.assignee) {
             Ok(issue) => Ok(Response::new(issue)),
             Err(e) => Err(Status::not_found(e)),
         }
