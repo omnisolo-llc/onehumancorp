@@ -1,0 +1,138 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component Pos inherits Window {
+    preferred-width: 500px;
+    min-width: 375px;
+    height: 800px;
+    title: "Point of Sale";
+
+    // 0: Cart Building
+    // 1: Processing
+    // 2: Success/Receipt
+    in-out property <int> step: 0;
+
+    in-out property <string> custom_amount: "";
+    in-out property <string> cart_total: "0.00";
+
+    callback add_custom_amount(string);
+    callback tap_to_pay();
+    callback cancel_payment();
+    callback send_receipt(string); // "sms" or "email"
+    callback close();
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "In-Person Sale"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            Button { text: "Close"; clicked => { close(); } }
+        }
+
+        // Step 0: Cart Building
+        if (step == 0) : VerticalBox {
+            spacing: 16px;
+
+            GlassCard {
+                height: 120px;
+                background: rgba(255, 255, 255, 0.05);
+                VerticalBox {
+                    alignment: center;
+                    Text { text: "Total"; color: #94a3b8; font-family: "Inter"; font-size: 14px; horizontal-alignment: center; }
+                    Text { text: "$" + cart_total; color: white; font-family: "Outfit"; font-size: 48px; font-weight: 700; horizontal-alignment: center; }
+                }
+            }
+
+            Text { text: "Add Custom Amount"; color: white; font-size: 16px; font-weight: 700; }
+            HorizontalBox {
+                spacing: 8px;
+                LineEdit {
+                    text <=> custom_amount;
+                    placeholder-text: "0.00";
+                    input-type: decimal;
+                    height: 44px;
+                }
+                Button {
+                    text: "Add";
+                    height: 44px;
+                    clicked => {
+                        add_custom_amount(custom_amount);
+                        custom_amount = "";
+                    }
+                }
+            }
+
+            Rectangle {} // Spacer
+
+            GlassCard {
+                height: 60px;
+                background: cart_total != "0.00" ? rgba(168, 85, 247, 1.0) : rgba(100, 116, 139, 0.4);
+                VerticalBox {
+                    alignment: center;
+                    Text { text: "Tap to Pay (Stripe)"; color: white; font-family: "Inter"; font-size: 18px; font-weight: 700; horizontal-alignment: center; }
+                }
+                TouchArea {
+                    enabled: cart_total != "0.00";
+                    clicked => { tap_to_pay(); }
+                }
+            }
+        }
+
+        // Step 1: Processing
+        if (step == 1) : VerticalBox {
+            alignment: center;
+            spacing: 24px;
+
+            Text { text: "Present Card to Phone"; color: white; font-family: "Outfit"; font-size: 24px; font-weight: 700; horizontal-alignment: center; }
+            Text { text: "Processing $" + cart_total; color: #94a3b8; font-family: "Inter"; font-size: 16px; horizontal-alignment: center; }
+
+            // Simulating a processing animation
+            Rectangle {
+                width: 100px;
+                height: 100px;
+                border-radius: 50px;
+                border-width: 4px;
+                border-color: rgba(168, 85, 247, 0.5);
+                horizontal-stretch: 0;
+            }
+
+            Button {
+                text: "Cancel";
+                height: 44px;
+                clicked => { cancel_payment(); }
+            }
+        }
+
+        // Step 2: Success
+        if (step == 2) : VerticalBox {
+            alignment: center;
+            spacing: 24px;
+
+            Text { text: "Payment Successful!"; color: #10b981; font-family: "Outfit"; font-size: 24px; font-weight: 700; horizontal-alignment: center; }
+            Text { text: "Collected $" + cart_total; color: white; font-family: "Inter"; font-size: 16px; horizontal-alignment: center; }
+
+            VerticalBox {
+                spacing: 12px;
+                Button {
+                    text: "SMS Receipt";
+                    height: 44px;
+                    clicked => { send_receipt("sms"); close(); }
+                }
+                Button {
+                    text: "Email Receipt";
+                    height: 44px;
+                    clicked => { send_receipt("email"); close(); }
+                }
+                Button {
+                    text: "No Receipt (Done)";
+                    height: 44px;
+                    clicked => { close(); }
+                }
+            }
+        }
+    }
+}

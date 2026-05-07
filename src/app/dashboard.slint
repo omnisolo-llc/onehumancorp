@@ -67,6 +67,7 @@ export component Dashboard inherits Window {
     callback action_open_email_marketing();
     callback action_grow_business();
     callback action_mark_order_ready();
+    callback action_open_pos();
 
     in-out property <bool> show_upgrade_prompt: false;
     in-out property <string> upgrade_prompt_message: "";
@@ -251,6 +252,7 @@ export component Dashboard inherits Window {
             HorizontalBox {
                 spacing: 8px;
                 TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow Business"; height: 44px; clicked => { action_grow_business(); } } }
+                TooltipElement { tooltip_id: "pos"; Button { text: "Point of Sale"; height: 44px; clicked => { action_open_pos(); } } }
                 TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } } }
                 TooltipElement { tooltip_id: "email_marketing"; Button { text: "Email Marketing"; height: 44px; clicked => { action_open_email_marketing(); } } }
                 if (new_orders_count > 0) : Button {
