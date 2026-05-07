@@ -72,5 +72,73 @@ mod tests {
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
         let worker = MemoryConsolidationWorker::new(repo);
         assert_eq!(worker.poll_interval.as_secs(), 3600);
+}
+    #[tokio::test]
+    async fn test_worker_pipeline_execution() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+
+        // Safe database initialization without Err(_) => return
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse SQLite connection string");
+        let pool = SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .expect("Failed to connect to SQLite memory pool");
+
+        // Set up the schema manually for SQLite test
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create consolidated_memory table");
+
+        let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
+
+        // Insert a stale record that should be pruned
+        let stale_record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+            id: "stale_1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old data".to_string(),
+            embedding: vec![1.0],
+            source_type: "SESSION_DATA".to_string(),
+            created_at: Utc::now() - chrono::Duration::days(200),
+            last_referenced_at: Utc::now() - chrono::Duration::days(200),
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&stale_record).await.expect("Failed to upsert stale record");
+
+        let mut worker = MemoryConsolidationWorker::new(repo.clone());
+        worker.poll_interval = std::time::Duration::from_millis(10); // Fast interval for testing
+        worker.start();
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        use sqlx::Row;
+        // Verify the record was pruned
+        let query = "SELECT count(*) FROM consolidated_memory";
+        let row: (i64,) = sqlx::query_as(query)
+            .fetch_one(&pool)
+            .await
+            .expect("Failed to query consolidated_memory count");
+
+        assert_eq!(row.0, 0, "Stale record should be pruned by worker pipeline");
     }
 }
