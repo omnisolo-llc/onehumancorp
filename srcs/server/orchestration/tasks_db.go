@@ -54,9 +54,9 @@ func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string
 	}
 
 	query := `
-		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
+		SELECT id, tenant_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
 		FROM shared_tasks
-		WHERE status = 'PENDING' AND organization_id = $1
+		WHERE status = 'PENDING' AND tenant_id = $1
 		FOR UPDATE SKIP LOCKED
 		LIMIT 1
 	`
@@ -117,7 +117,7 @@ func (s *PostgresTaskStore) CreateTask(ctx context.Context, task *SharedTask) er
 	}
 
 	query := `
-		INSERT INTO shared_tasks (organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies)
+		INSERT INTO shared_tasks (tenant_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, created_at, updated_at
 	`
@@ -151,7 +151,7 @@ func (s *PostgresTaskStore) GetTask(ctx context.Context, id string) (*SharedTask
 	defer tx.Rollback()
 
     query := `
-        SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
+        SELECT id, tenant_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
         FROM shared_tasks
         WHERE id = $1
     `
@@ -213,9 +213,9 @@ func (s *PostgresTaskStore) GetTasksByOrganization(ctx context.Context, organiza
 	}
 
     query := `
-        SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
+        SELECT id, tenant_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
         FROM shared_tasks
-        WHERE organization_id = $1
+        WHERE tenant_id = $1
     `
     rows, err := tx.QueryContext(ctx, query, organizationID)
 	if err != nil {
@@ -273,9 +273,9 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 
 	// Find a pending task
 	query := `
-		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
+		SELECT id, tenant_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
 		FROM shared_tasks
-		WHERE status = 'PENDING' AND organization_id = ?
+		WHERE status = 'PENDING' AND tenant_id = ?
 		LIMIT 1
 	`
 	row := tx.QueryRowContext(ctx, query, organizationID)
@@ -344,7 +344,7 @@ func (s *SqliteTaskStore) CreateTask(ctx context.Context, task *SharedTask) erro
 
     // Generate UUID in Go for SQLite if it doesn't have gen_random_uuid()
 	query := `
-		INSERT INTO shared_tasks (id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at)
+		INSERT INTO shared_tasks (id, tenant_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 
@@ -385,7 +385,7 @@ func (s *SqliteTaskStore) CreateTask(ctx context.Context, task *SharedTask) erro
 
 func (s *SqliteTaskStore) GetTask(ctx context.Context, id string) (*SharedTask, error) {
     query := `
-        SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
+        SELECT id, tenant_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
         FROM shared_tasks
         WHERE id = ?
     `
@@ -433,9 +433,9 @@ func (s *SqliteTaskStore) UpdateTaskStatus(ctx context.Context, id string, statu
 
 func (s *SqliteTaskStore) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error) {
     query := `
-        SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
+        SELECT id, tenant_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
         FROM shared_tasks
-        WHERE organization_id = ?
+        WHERE tenant_id = ?
     `
     rows, err := s.db.QueryContext(ctx, query, organizationID)
 	if err != nil {

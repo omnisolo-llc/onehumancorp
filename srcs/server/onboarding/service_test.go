@@ -31,7 +31,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 		);
 		CREATE TABLE shared_tasks (
 			id TEXT PRIMARY KEY,
-			organization_id TEXT,
+			tenant_id TEXT,
 			title TEXT,
 			description TEXT,
 			status TEXT,

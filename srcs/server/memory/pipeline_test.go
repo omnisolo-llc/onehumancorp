@@ -19,8 +19,8 @@ func TestSweepCompletedTasks(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Mock sweep query
-	mock.ExpectQuery("SELECT id, organization_id, agent_id, payload FROM shared_tasks WHERE status = 'DONE'").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "agent_id", "payload"}).
+	mock.ExpectQuery("SELECT id, tenant_id, agent_id, payload FROM shared_tasks WHERE status = 'DONE'").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "tenant_id", "agent_id", "payload"}).
 			AddRow("task-1", "org-1", "agent-1", []byte("payload 1")))
 
 	// Mock upsert memory

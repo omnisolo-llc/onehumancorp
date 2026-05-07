@@ -24,9 +24,9 @@ func TestSearchSimilarMemories_Postgres(t *testing.T) {
 
 	expectedEmbedding := "[0.1,0.2,0.3]"
 
-	mock.ExpectQuery("SELECT id, organization_id, task_id, content FROM autodream_memories WHERE organization_id = \\$1 ORDER BY embedding <-> \\$2 LIMIT \\$3").
+	mock.ExpectQuery("SELECT id, tenant_id, task_id, content FROM autodream_memories WHERE tenant_id = \\$1 ORDER BY embedding <-> \\$2 LIMIT \\$3").
 		WithArgs("org-123", expectedEmbedding, 5).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "task_id", "content"}).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "tenant_id", "task_id", "content"}).
 			AddRow("mem-1", "org-123", "task-1", "result 1").
 			AddRow("mem-2", "org-123", nil, "result 2"))
 
@@ -54,14 +54,14 @@ func TestSearchSimilarMemories_SQLite(t *testing.T) {
 	assert.NoError(t, err)
 
 	mock.ExpectQuery(`
-			SELECT id, organization_id, task_id, content
+			SELECT id, tenant_id, task_id, content
 			FROM autodream_memories
-			WHERE organization_id = ? AND content LIKE ?
+			WHERE tenant_id = ? AND content LIKE ?
 			ORDER BY created_at DESC
 			LIMIT ?
 		`).
 		WithArgs("org-123", "%test query%", 5).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "task_id", "content"}).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "tenant_id", "task_id", "content"}).
 			AddRow("mem-1", "org-123", "task-1", "result 1"))
 
 	memories, err := daemon.SearchSimilarMemories(context.Background(), "test query", 5, "org-123")

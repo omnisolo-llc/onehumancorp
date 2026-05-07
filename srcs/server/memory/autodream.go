@@ -126,7 +126,7 @@ func (d *AutoDreamDaemon) processFile(ctx context.Context, path string) {
 	taskID := "system"
 
 	// Try extracting from content
-	orgRe := regexp.MustCompile("(?i)(?:tenant_id|organization_id):\\s*([a-zA-Z0-9_-]+)")
+	orgRe := regexp.MustCompile("(?i)(?:tenant_id|tenant_id):\\s*([a-zA-Z0-9_-]+)")
 	if matches := orgRe.FindStringSubmatch(content); len(matches) > 1 {
 		orgID = matches[1]
 	}
@@ -178,7 +178,7 @@ func (d *AutoDreamDaemon) upsertMemory(ctx context.Context, id string, orgID str
 	}
 
 	query := `
-		INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type)
+		INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT(id) DO UPDATE SET
 			content = excluded.content,

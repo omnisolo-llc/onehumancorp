@@ -22,7 +22,7 @@ func TestAutoDreamWorker(t *testing.T) {
 
 	// 1. Happy path file
 	testFile := filepath.Join(memDir, "memory1.yml")
-	content := `organization_id: "org1"
+	content := `tenant_id: "org1"
 task_id: "11111111-1111-1111-1111-111111111111"
 content: "sample memory"`
 	err = os.WriteFile(testFile, []byte(content), 0644)
@@ -45,7 +45,7 @@ content: "sample memory"`
 
 	// 5. TX failure simulating DB error
 	failDBFile := filepath.Join(memDir, "memory4.yml")
-	err = os.WriteFile(failDBFile, []byte(`organization_id: "org4"
+	err = os.WriteFile(failDBFile, []byte(`tenant_id: "org4"
 content: "db fail"`), 0644)
 	assert.NoError(t, err)
 
@@ -67,7 +67,7 @@ content: "db fail"`), 0644)
 
 	// write new file to process
 	testFile5 := filepath.Join(memDir, "memory5.yml")
-	err = os.WriteFile(testFile5, []byte("organization_id: org5\ncontent: sample5"), 0644)
+	err = os.WriteFile(testFile5, []byte("tenant_id: org5\ncontent: sample5"), 0644)
 	assert.NoError(t, err)
 	mock.ExpectExec("INSERT INTO autodream_memories").
 		WithArgs("org5", nil, "sample5", sqlmock.AnyArg()).
@@ -151,7 +151,7 @@ func TestAutoDreamWorker_StartDaemon(t *testing.T) {
 	memDir := t.TempDir()
 
 	testFile := filepath.Join(memDir, "memory1.yml")
-	content := `organization_id: "org1"
+	content := `tenant_id: "org1"
 task_id: "11111111-1111-1111-1111-111111111111"
 content: "sample memory"`
 	err = os.WriteFile(testFile, []byte(content), 0644)

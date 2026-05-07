@@ -14,7 +14,7 @@ import (
 )
 
 type Memory struct {
-	OrganizationID string `yaml:"organization_id"`
+	OrganizationID string `yaml:"tenant_id"`
 	TaskID         string `yaml:"task_id"`
 	Content        string `yaml:"content"`
 }
@@ -88,7 +88,7 @@ func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir 
 		vecStr := formatVector(embedding)
 
 		query := `
-			INSERT INTO autodream_memories (organization_id, task_id, content, embedding)
+			INSERT INTO autodream_memories (tenant_id, task_id, content, embedding)
 			VALUES ($1, $2, $3, $4)
 		`
 		var taskID interface{}

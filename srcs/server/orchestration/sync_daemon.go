@@ -163,7 +163,7 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 	defer localDB.Unlock()
 
 	query := `
-		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies
+		SELECT id, tenant_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies
 		FROM shared_tasks
 		WHERE status = 'CLOUD_ESCALATION'
 	`

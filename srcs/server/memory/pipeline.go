@@ -17,7 +17,7 @@ type Task struct {
 
 func (d *AutoDreamDaemon) SweepCompletedTasks(ctx context.Context) error {
 	query := `
-		SELECT id, organization_id, agent_id, payload
+		SELECT id, tenant_id, agent_id, payload
 		FROM shared_tasks
 		WHERE status = 'DONE'
 	`

@@ -22,7 +22,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
-			organization_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',

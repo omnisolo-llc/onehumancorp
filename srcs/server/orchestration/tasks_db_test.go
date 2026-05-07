@@ -20,7 +20,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
-			organization_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
@@ -163,9 +163,9 @@ func TestPostgresTaskStore_ClaimTask(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec("SET LOCAL app.current_tenant = \\$1").WithArgs("org-1").WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
+	mock.ExpectQuery("SELECT id, tenant_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
 		WithArgs("org-1").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "tenant_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
 			AddRow("uuid-1", "org-1", "Title", nil, "PENDING", nil, "P2", []byte(`{"k":"v"}`), nil, []byte("[]"), time.Now(), time.Now()))
 	mock.ExpectExec("UPDATE shared_tasks").
 		WithArgs("agent-x", "uuid-1").
@@ -188,9 +188,9 @@ func TestPostgresTaskStore_GetTask(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
+	mock.ExpectQuery("SELECT id, tenant_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
 		WithArgs("uuid-1").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "tenant_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
 			AddRow("uuid-1", "org-1", "Title", nil, "PENDING", nil, "P2", nil, nil, []byte("[]"), time.Now(), time.Now()))
 
 	mock.ExpectCommit()
@@ -227,7 +227,7 @@ func TestPostgresTaskStore_ClaimTask_NoTask(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec("SET LOCAL app.current_tenant = \\$1").WithArgs("org-1").WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
+	mock.ExpectQuery("SELECT id, tenant_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
 		WithArgs("org-1").
 		WillReturnError(sql.ErrNoRows)
 	mock.ExpectRollback()
@@ -246,7 +246,7 @@ func TestPostgresTaskStore_GetTask_NoTask(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
+	mock.ExpectQuery("SELECT id, tenant_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
 		WithArgs("uuid-none").
 		WillReturnError(sql.ErrNoRows)
 	mock.ExpectRollback()
@@ -348,7 +348,7 @@ func TestSqliteTaskStore_GetTask_ErrorParsing(t *testing.T) {
 	store := NewSqliteTaskStore(db)
 	ctx := context.Background()
 
-	_, err := db.Exec(`INSERT INTO shared_tasks (id, organization_id, title, created_at) VALUES ('bad-date', 'org-1', 'title', 'not-a-date')`)
+	_, err := db.Exec(`INSERT INTO shared_tasks (id, tenant_id, title, created_at) VALUES ('bad-date', 'org-1', 'title', 'not-a-date')`)
 	require.NoError(t, err)
 
     // We expect it to still return the task, but parsing of time might silently fail or fallback
@@ -431,7 +431,7 @@ func TestPostgresTaskStore_GetTasksByOrganization(t *testing.T) {
 	mock.ExpectExec("SELECT set_config").WithArgs(orgID).WillReturnResult(sqlmock.NewResult(1, 1))
 
 	rows := sqlmock.NewRows([]string{
-		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"id", "tenant_id", "title", "description", "status", "agent_id", "priority",
 		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
 	}).AddRow(
 		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
@@ -441,7 +441,7 @@ func TestPostgresTaskStore_GetTasksByOrganization(t *testing.T) {
 		`{"key":"value"}`, "plan-1", `["dep-1"]`, time.Now(), time.Now(),
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs(orgID).WillReturnRows(rows)
 	mock.ExpectCommit()
 
 	tasks, err := store.GetTasksByOrganization(context.Background(), orgID)
@@ -551,7 +551,7 @@ func TestPostgresTaskStore_GetTask_NotFound(t *testing.T) {
 	store := NewPostgresTaskStore(db)
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("task-1").WillReturnError(sql.ErrNoRows)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs("task-1").WillReturnError(sql.ErrNoRows)
 
 	_, err = store.GetTask(context.Background(), "task-1")
 	assert.Error(t, err)
@@ -581,14 +581,14 @@ func TestPostgresTaskStore_GetTask_CommitError(t *testing.T) {
 	mock.ExpectBegin()
 
 	rows := sqlmock.NewRows([]string{
-		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"id", "tenant_id", "title", "description", "status", "agent_id", "priority",
 		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
 	}).AddRow(
 		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
 		"{}", nil, "[]", time.Now(), time.Now(),
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("task-1").WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs("task-1").WillReturnRows(rows)
 	mock.ExpectCommit().WillReturnError(sql.ErrConnDone)
 
 	_, err = store.GetTask(context.Background(), "task-1")
@@ -605,14 +605,14 @@ func TestPostgresTaskStore_ClaimTask_CommitError(t *testing.T) {
 	mock.ExpectBegin()
 
 	rows := sqlmock.NewRows([]string{
-		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"id", "tenant_id", "title", "description", "status", "agent_id", "priority",
 		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
 	}).AddRow(
 		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
 		"{}", nil, "[]", time.Now(), time.Now(),
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs("org-1").WillReturnRows(rows)
 	mock.ExpectExec("UPDATE shared_tasks SET status").WithArgs("agent-1", "task-1").WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit().WillReturnError(sql.ErrConnDone)
 
@@ -633,14 +633,14 @@ func TestPostgresTaskStore_GetTasksByOrganization_CommitError(t *testing.T) {
 	mock.ExpectExec("SELECT set_config").WithArgs(orgID).WillReturnResult(sqlmock.NewResult(1, 1))
 
 	rows := sqlmock.NewRows([]string{
-		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"id", "tenant_id", "title", "description", "status", "agent_id", "priority",
 		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
 	}).AddRow(
 		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
 		"{}", nil, "[]", time.Now(), time.Now(),
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs(orgID).WillReturnRows(rows)
 	mock.ExpectCommit().WillReturnError(sql.ErrConnDone)
 
 	_, err = store.GetTasksByOrganization(context.Background(), orgID)
@@ -688,14 +688,14 @@ func TestSqliteTaskStore_ClaimTask_CommitError(t *testing.T) {
 	mock.ExpectBegin()
 
 	rows := sqlmock.NewRows([]string{
-		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"id", "tenant_id", "title", "description", "status", "agent_id", "priority",
 		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
 	}).AddRow(
 		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
 		"{}", nil, "[]", time.Now().Format(time.RFC3339), time.Now().Format(time.RFC3339),
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs("org-1").WillReturnRows(rows)
 	mock.ExpectExec("UPDATE shared_tasks").WithArgs("agent-1", "task-1").WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit().WillReturnError(sql.ErrConnDone)
 
@@ -712,7 +712,7 @@ func TestSqliteTaskStore_GetTasksByOrganization_QueryError(t *testing.T) {
 
 	orgID := "org-1"
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnError(sql.ErrConnDone)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs(orgID).WillReturnError(sql.ErrConnDone)
 
 	_, err = store.GetTasksByOrganization(context.Background(), orgID)
 	assert.Error(t, err)
@@ -728,12 +728,12 @@ func TestSqliteTaskStore_GetTasksByOrganization_ScanError(t *testing.T) {
 	orgID := "org-1"
 
 	rows := sqlmock.NewRows([]string{
-		"id", "organization_id",
+		"id", "tenant_id",
 	}).AddRow(
 		"task-1", "org-1", // Too few columns
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs(orgID).WillReturnRows(rows)
 
 	_, err = store.GetTasksByOrganization(context.Background(), orgID)
 	assert.Error(t, err)
@@ -750,7 +750,7 @@ func TestPostgresTaskStore_GetTasksByOrganization_QueryError(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec("SELECT set_config").WithArgs(orgID).WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnError(sql.ErrConnDone)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs(orgID).WillReturnError(sql.ErrConnDone)
 
 	_, err = store.GetTasksByOrganization(context.Background(), orgID)
 	assert.Error(t, err)
@@ -769,12 +769,12 @@ func TestPostgresTaskStore_GetTasksByOrganization_ScanError(t *testing.T) {
 	mock.ExpectExec("SELECT set_config").WithArgs(orgID).WillReturnResult(sqlmock.NewResult(1, 1))
 
 	rows := sqlmock.NewRows([]string{
-		"id", "organization_id",
+		"id", "tenant_id",
 	}).AddRow(
 		"task-1", "org-1", // Too few columns
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs(orgID).WillReturnRows(rows)
 
 	_, err = store.GetTasksByOrganization(context.Background(), orgID)
 	assert.Error(t, err)
@@ -818,14 +818,14 @@ func TestPostgresTaskStore_ClaimTask_UpdateError(t *testing.T) {
 	mock.ExpectBegin()
 
 	rows := sqlmock.NewRows([]string{
-		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"id", "tenant_id", "title", "description", "status", "agent_id", "priority",
 		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
 	}).AddRow(
 		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
 		"{}", nil, "[]", time.Now(), time.Now(),
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs("org-1").WillReturnRows(rows)
 	mock.ExpectExec("UPDATE shared_tasks SET status").WithArgs("agent-1", "task-1").WillReturnError(sql.ErrConnDone)
 
 	_, err = store.ClaimTask(context.Background(), "org-1", "agent-1")
@@ -842,14 +842,14 @@ func TestSqliteTaskStore_ClaimTask_UpdateError(t *testing.T) {
 	mock.ExpectBegin()
 
 	rows := sqlmock.NewRows([]string{
-		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"id", "tenant_id", "title", "description", "status", "agent_id", "priority",
 		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
 	}).AddRow(
 		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
 		"{}", nil, "[]", time.Now().Format(time.RFC3339), time.Now().Format(time.RFC3339),
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs("org-1").WillReturnRows(rows)
 	mock.ExpectExec("UPDATE shared_tasks").WithArgs("agent-1", "task-1").WillReturnError(sql.ErrConnDone)
 
 	_, err = store.ClaimTask(context.Background(), "org-1", "agent-1")
@@ -894,12 +894,12 @@ func TestSqliteTaskStore_ClaimTask_ScanError(t *testing.T) {
 	mock.ExpectBegin()
 
 	rows := sqlmock.NewRows([]string{
-		"id", "organization_id",
+		"id", "tenant_id",
 	}).AddRow(
 		"task-1", "org-1", // Too few columns
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("org-1").WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs("org-1").WillReturnRows(rows)
 
 	_, err = store.ClaimTask(context.Background(), "org-1", "agent-1")
 	assert.Error(t, err)
@@ -915,14 +915,14 @@ func TestSqliteTaskStore_GetTasksByOrganization_ParseDateError(t *testing.T) {
 	orgID := "org-1"
 
 	rows := sqlmock.NewRows([]string{
-		"id", "organization_id", "title", "description", "status", "agent_id", "priority",
+		"id", "tenant_id", "title", "description", "status", "agent_id", "priority",
 		"payload", "parent_plan_id", "dependencies", "created_at", "updated_at",
 	}).AddRow(
 		"task-1", "org-1", "title-1", "desc-1", "PENDING", nil, "P2",
 		"{}", nil, "[]", "invalid-date", "invalid-date",
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs(orgID).WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, tenant_id, title").WithArgs(orgID).WillReturnRows(rows)
 
 	tasks, err := store.GetTasksByOrganization(context.Background(), orgID)
 	require.NoError(t, err)
