@@ -74,6 +74,7 @@ export component Dashboard inherits Window { // milestones
     callback action_open_swarm_observability();
     callback action_mark_order_ready();
     callback action_open_kairos_orchestration();
+    callback action_manage_my_ai_team();
 
     in-out property <bool> show_upgrade_prompt: false;
     in-out property <string> upgrade_prompt_message: "";
@@ -395,6 +396,12 @@ export component Dashboard inherits Window { // milestones
                     Button { text: "+"; width: 44px; height: 44px; }
                 }
             }
+        }
+
+        Button {
+            text: "Manage my AI team";
+            height: 44px;
+            clicked => { action_manage_my_ai_team(); }
         }
     }
 }
