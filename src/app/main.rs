@@ -9,6 +9,13 @@ use ohc::orchestration::RegisterAgentRequest;
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::Agent;
 
+pub fn get_tooltip_text(id: &str) -> slint::SharedString {
+    static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+    let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
+    tooltips.get(id).cloned().unwrap_or_default().into()
+}
+
+
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
 fn client_spiffe_interceptor(mut req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
@@ -445,11 +452,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                 let _ = ui.show();
                                             }
                                         });
-                                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
-                                            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
-                                            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
-                                        });
+                                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| { crate::get_tooltip_text(id.as_str()) });
                                         let ai_help_chat_ui = app::AiHelpChat::new().unwrap();
                                         let ai_help_chat_handle = ai_help_chat_ui.as_weak();
                                         dashboard.on_open_ai_chat(move || {
@@ -630,11 +633,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let _ = ui.show();
                             }
                         });
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
-                            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
-                            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
-                        });
+                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| { crate::get_tooltip_text(id.as_str()) });
 
                                         let ai_help_chat_ui = app::AiHelpChat::new().unwrap();
                                         let ai_help_chat_handle = ai_help_chat_ui.as_weak();
@@ -2070,11 +2069,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
 
-                                dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-                    static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
-                    let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
-                    tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
-                });
+                                dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| { crate::get_tooltip_text(id.as_str()) });
 
                 let help_center_ui = app::HelpCenter::new().unwrap();
 
@@ -4652,11 +4647,7 @@ mod docs_tests {
 
 
         // Setup the tooltip text requester
-        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| {
-            static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
-            let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
-            tooltips.get(id.as_str()).cloned().unwrap_or_default().into()
-        });
+        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| { crate::get_tooltip_text(id.as_str()) });
 
         let tr = dashboard_ui.global::<app::TooltipRegistry>();
         tr.invoke_show_tooltip("ask_ai".into(), 10.0, 10.0);
