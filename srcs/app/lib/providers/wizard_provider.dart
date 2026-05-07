@@ -16,6 +16,8 @@ class WizardState {
   final String? productPrice;
   final String? domain;
   final int checklistProgress;
+  final String currency;
+  final bool isLive;
 
   WizardState({
     this.currentStep = 0,
@@ -32,6 +34,8 @@ class WizardState {
     this.productPrice,
     this.domain,
     this.checklistProgress = 0,
+    this.currency = 'USD',
+    this.isLive = false,
   });
 
   WizardState copyWith({
@@ -49,6 +53,8 @@ class WizardState {
     String? productPrice,
     String? domain,
     int? checklistProgress,
+    String? currency,
+    bool? isLive,
   }) {
     return WizardState(
       currentStep: currentStep ?? this.currentStep,
@@ -65,6 +71,8 @@ class WizardState {
       productPrice: productPrice ?? this.productPrice,
       domain: domain ?? this.domain,
       checklistProgress: checklistProgress ?? this.checklistProgress,
+      currency: currency ?? this.currency,
+      isLive: isLive ?? this.isLive,
     );
   }
 }
@@ -129,6 +137,10 @@ class WizardNotifier extends Notifier<WizardState> {
       productName: name ?? state.productName,
       productPrice: price ?? state.productPrice,
     );
+  }
+
+  void setLive(bool live) {
+    state = state.copyWith(isLive: live);
   }
 
   void setDomain(String domain) {
