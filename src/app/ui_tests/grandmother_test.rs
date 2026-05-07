@@ -304,6 +304,7 @@ fn test_dashboard_grandmother_ux_test_4() {
     assert!(*invoked.borrow(), "Help center invocation works");
 }
 
+
 #[test]
 fn test_dashboard_grandmother_ux_test_5() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -318,4 +319,95 @@ fn test_dashboard_grandmother_ux_test_5() {
 
     ui.invoke_open_video_tutorials();
     assert!(*invoked_video.borrow(), "Video tutorials action failed");
+}
+
+#[test]
+fn test_audit_cuj_1() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = crate::app::Login::new().unwrap();
+    ui.set_username("test_user".into());
+    ui.set_password("test_pass".into());
+
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_login(move |u, p| {
+        assert_eq!(u, "test_user");
+        assert_eq!(p, "test_pass");
+        *invoked_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_login("test_user".into(), "test_pass".into());
+    assert!(*invoked.borrow(), "Login callback should be invoked");
+}
+
+#[test]
+fn test_audit_cuj_2() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = crate::app::Login::new().unwrap();
+    ui.set_show_verification(true);
+
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_resend_verification(move |u| {
+        *invoked_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_resend_verification("test_user".into());
+    assert!(*invoked.borrow(), "Resend verification callback should be invoked");
+}
+
+#[test]
+fn test_audit_cuj_3() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = crate::app::Login::new().unwrap();
+
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_oauth_login(move |provider| {
+        assert_eq!(provider, "SSO");
+        *invoked_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_oauth_login("SSO".into());
+    assert!(*invoked.borrow(), "OAuth login callback should be invoked");
+}
+
+#[test]
+fn test_audit_cuj_4() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = crate::app::Login::new().unwrap();
+
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_open_settings(move || {
+        *invoked_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_open_settings();
+    assert!(*invoked.borrow(), "Open settings callback should be invoked");
+}
+
+#[test]
+fn test_audit_cuj_5() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = crate::app::Login::new().unwrap();
+
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_start_setup_wizard(move || {
+        *invoked_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_start_setup_wizard();
+    assert!(*invoked.borrow(), "Start setup wizard callback should be invoked");
 }
