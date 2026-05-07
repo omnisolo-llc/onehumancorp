@@ -11,6 +11,11 @@ class WizardState {
   final String? adminName;
   final String? adminEmail;
   final String? adminPassword;
+  final String? websiteTemplate;
+  final String? productName;
+  final String? productPrice;
+  final String? domain;
+  final int checklistProgress;
 
   WizardState({
     this.currentStep = 0,
@@ -22,6 +27,11 @@ class WizardState {
     this.adminName,
     this.adminEmail,
     this.adminPassword,
+    this.websiteTemplate,
+    this.productName,
+    this.productPrice,
+    this.domain,
+    this.checklistProgress = 0,
   });
 
   WizardState copyWith({
@@ -34,6 +44,11 @@ class WizardState {
     String? adminName,
     String? adminEmail,
     String? adminPassword,
+    String? websiteTemplate,
+    String? productName,
+    String? productPrice,
+    String? domain,
+    int? checklistProgress,
   }) {
     return WizardState(
       currentStep: currentStep ?? this.currentStep,
@@ -45,6 +60,11 @@ class WizardState {
       adminName: adminName ?? this.adminName,
       adminEmail: adminEmail ?? this.adminEmail,
       adminPassword: adminPassword ?? this.adminPassword,
+      websiteTemplate: websiteTemplate ?? this.websiteTemplate,
+      productName: productName ?? this.productName,
+      productPrice: productPrice ?? this.productPrice,
+      domain: domain ?? this.domain,
+      checklistProgress: checklistProgress ?? this.checklistProgress,
     );
   }
 }
@@ -58,7 +78,7 @@ class WizardNotifier extends Notifier<WizardState> {
   }
 
   void nextStep() {
-    if (state.currentStep < 6) {
+    if (state.currentStep < 10) {
       state = state.copyWith(currentStep: state.currentStep + 1);
     }
   }
@@ -99,6 +119,26 @@ class WizardNotifier extends Notifier<WizardState> {
     );
   }
 
+
+  void setWebsiteTemplate(String template) {
+    state = state.copyWith(websiteTemplate: template);
+  }
+
+  void updateProduct({String? name, String? price}) {
+    state = state.copyWith(
+      productName: name ?? state.productName,
+      productPrice: price ?? state.productPrice,
+    );
+  }
+
+  void setDomain(String domain) {
+    state = state.copyWith(domain: domain);
+  }
+
+  void updateChecklist(int progress) {
+    state = state.copyWith(checklistProgress: progress);
+  }
+
   Future<void> submitWizard() async {
     final data = {
       'companyName': state.companyName,
@@ -109,6 +149,10 @@ class WizardNotifier extends Notifier<WizardState> {
       'adminName': state.adminName,
       'adminEmail': state.adminEmail,
       'adminPassword': state.adminPassword,
+      'websiteTemplate': state.websiteTemplate,
+      'productName': state.productName,
+      'productPrice': state.productPrice,
+      'domain': state.domain,
     };
 
     await _apiService.submitBusinessData(data);

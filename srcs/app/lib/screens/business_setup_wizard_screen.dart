@@ -67,7 +67,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(wizardProvider);
 
-    if (state.currentStep == 6) {
+    if (state.currentStep == 10) {
       return const DashboardScreen();
     }
 
@@ -87,7 +87,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
 
   Widget _buildCurrentStep(int step, WizardState state) {
     switch (step) {
-      case 0:
+            case 0:
         return _buildWelcomeScreen();
       case 1:
         return _buildBusinessProfileScreen(state);
@@ -98,7 +98,15 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       case 4:
         return _buildAdministratorAccountScreen();
       case 5:
+        return _buildTemplateSelectionScreen(state);
+      case 6:
+        return _buildProductAddScreen(state);
+      case 7:
+        return _buildDomainGoLiveScreen(state);
+      case 8:
         return _buildReviewAndLaunchScreen(state);
+      case 9:
+        return _buildWelcomeChecklistScreen(state);
       default:
         return const SizedBox.shrink();
     }
@@ -409,6 +417,106 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
+
+  Widget _buildTemplateSelectionScreen(WizardState state) {
+    final templates = ['Modern', 'Classic', 'Playful'];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('Template Selection', style: TextStyle(fontFamily: 'Outfit', fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+        const SizedBox(height: 20),
+        Expanded(
+          child: ListView.builder(
+            itemCount: templates.length,
+            itemBuilder: (context, index) {
+              final template = templates[index];
+              final isSelected = state.websiteTemplate == template;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: GestureDetector(
+                  onTap: () {
+                    ref.read(wizardProvider.notifier).setWebsiteTemplate(template);
+                  },
+                  child: GlassContainer(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(template, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                          Icon(isSelected ? Icons.check_circle : Icons.radio_button_unchecked, color: isSelected ? const Color(0xFF22C55E) : Colors.white54),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
+  Widget _buildProductAddScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('First Product', style: TextStyle(fontFamily: 'Outfit', fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+        const SizedBox(height: 20),
+        GlassContainer(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              key: const Key('productNameField'),
+              onChanged: (v) => ref.read(wizardProvider.notifier).updateProduct(name: v),
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(labelText: 'Product Name', labelStyle: TextStyle(color: Colors.white70), border: InputBorder.none),
+            ),
+          ),
+        ),
+        const SizedBox(height: 15),
+        GlassContainer(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              key: const Key('productPriceField'),
+              onChanged: (v) => ref.read(wizardProvider.notifier).updateProduct(price: v),
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(labelText: 'Price', labelStyle: TextStyle(color: Colors.white70), border: InputBorder.none),
+            ),
+          ),
+        ),
+        const Spacer(),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
+  Widget _buildDomainGoLiveScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('Domain & Go-Live', style: TextStyle(fontFamily: 'Outfit', fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+        const SizedBox(height: 20),
+        GlassContainer(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              key: const Key('domainField'),
+              onChanged: (v) => ref.read(wizardProvider.notifier).setDomain(v),
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(labelText: 'Choose Domain', labelStyle: TextStyle(color: Colors.white70), border: InputBorder.none),
+            ),
+          ),
+        ),
+        const Spacer(),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
   Widget _buildReviewAndLaunchScreen(WizardState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -490,6 +598,40 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+
+  Widget _buildWelcomeChecklistScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('Welcome Checklist', style: TextStyle(fontFamily: 'Outfit', fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+        const SizedBox(height: 20),
+        GlassContainer(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('✅ Business live', style: TextStyle(color: Colors.white, fontSize: 16)),
+                const SizedBox(height: 10),
+                const Text('⬜ Add 3 more products', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                const SizedBox(height: 10),
+                const Text('⬜ Connect Instagram', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                const SizedBox(height: 10),
+                const Text('⬜ Share your link with a friend', style: TextStyle(color: Colors.white70, fontSize: 16)),
+              ],
+            ),
+          ),
+        ),
+        const Spacer(),
+        ElevatedButton(
+          onPressed: _nextStep,
+          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6B4EFF), padding: const EdgeInsets.symmetric(vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+          child: const Text('Go to Dashboard', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       ],
     );

@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/business_setup_wizard_screen.dart';
+import 'screens/login_screen.dart';
 import 'dart:async';
 
 void main() {
@@ -23,7 +24,7 @@ class OHCApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
       ),
-      home: const BusinessSetupWizardScreen(),
+      home: const LoginScreen(),
     );
   }
 }
