@@ -294,7 +294,9 @@ mod tests {
                            lower_line.contains("debug!") ||
                            lower_line.contains("tracing::") ||
                            lower_line.contains("println!") ||
-                           lower_line.contains("eprintln!")
+                           lower_line.contains("eprintln!") ||
+                           lower_line.contains("log.print") ||
+                           lower_line.contains("fmt.print")
                         {
                             if lower_line.contains("tenant_id") ||
                                lower_line.contains("organization_id") ||
@@ -422,6 +424,12 @@ fi"#;
     assert!(
         content.contains(expected_telemetry_check),
         "Local Sovereignty violation: ohc-standalone.sh does not properly strictly enforce OHC_TELEMETRY_ENABLED opt-in boundary."
+    );
+
+    let expected_permissions_check = r#"chmod 700 "${OHC_RUNTIME_DIR}""#;
+    assert!(
+        content.contains(expected_permissions_check),
+        "Local Sovereignty violation: ohc-standalone.sh does not properly enforce secure file permissions for OHC_RUNTIME_DIR."
     );
 }
 

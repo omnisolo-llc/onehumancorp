@@ -35,6 +35,9 @@ fi
 
 echo -e "${DIM}[1/2] Provisioning local standalone state boundaries...${RESET}"
 mkdir -p "${OHC_MEMORY_DIR}/auto/" "${OHC_MEMORY_DIR}/team/" "${OHC_STATUS_DIR}"
+chmod 700 "${OHC_RUNTIME_DIR}"
+chmod 700 "${OHC_MEMORY_DIR}"
+chmod 700 "${OHC_STATUS_DIR}"
 
 echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 
