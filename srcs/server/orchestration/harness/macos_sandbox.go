@@ -18,6 +18,7 @@ type SandboxAdapter interface {
 	WrapCommand(cmd string) (string, error)
 	UpdateConfig(policyJSON string) error
 	AnnotateError(err error, stdout string) string
+	Close() error
 }
 
 // SandboxPolicy defines access constraints
@@ -26,6 +27,7 @@ type SandboxPolicy struct {
 	DisabledPatterns []string `json:"disabled_patterns"`
 	ReadOnlyPaths    []string `json:"read_only_paths"`
 	BlockedDomains   []string `json:"blocked_domains"`
+	AllowedDomains   []string `json:"allowed_domains"`
 }
 
 // MacOSSandboxManager wraps command execution using sandbox-exec
@@ -96,6 +98,11 @@ func (m *MacOSSandboxManager) AnnotateError(err error, stdout string) string {
 		errStr = err.Error()
 	}
 	return fmt.Sprintf("SANDBOX_FAILURE: %v\nSTDOUT:\n%s", errStr, stdout)
+}
+
+// Close gracefully shuts down any resources held by the manager
+func (m *MacOSSandboxManager) Close() error {
+	return nil
 }
 
 func (m *MacOSSandboxManager) evaluate(cmd string) bool {
