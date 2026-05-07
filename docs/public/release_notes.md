@@ -1,5 +1,13 @@
 # release_notes.md
 
+## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🛠️ Maintainer: Prepared v0.4.30 Hybrid SemVer final mile release (#11314)
+
+### Privacy/Offline Improvements
+- 🛠️ Maintainer: Prepared v0.4.30+1 Standalone Semantic release (#11314)
+
 ## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
 
 ### Cloud Scaling Improvements
