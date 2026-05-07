@@ -1,3 +1,12 @@
+## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🗺️ Guide: [Welcome Checklist on Dashboard] (#11828)
+
+### Privacy/Offline Improvements
+- 🗺️ Guide: [Welcome Checklist on Dashboard] (#11828)
+
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 - Scaling (Cloud): update api routing to use axum 0.8 style path variables (#11553).
