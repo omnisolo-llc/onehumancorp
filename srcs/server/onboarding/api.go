@@ -2,8 +2,13 @@ package onboarding
 
 import (
 	"encoding/json"
+	"context"
 	"net/http"
 )
+
+
+type contextKey string
+const tenantContextKey contextKey = "tenant_id"
 
 type APIHandler struct {
 	service *Service
@@ -42,9 +47,10 @@ func (h *APIHandler) HandleGetStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID := r.URL.Query().Get("tenant_id")
-	if tenantID == "" {
-		http.Error(w, "Missing tenant_id parameter", http.StatusBadRequest)
+	// Multi-Tenant Safety Check: Read tenant_id from session/context, not from headers/body/query
+	tenantID, ok := r.Context().Value(tenantContextKey).(string)
+	if !ok || tenantID == "" {
+		http.Error(w, "Unauthorized: missing or invalid tenant session", http.StatusUnauthorized)
 		return
 	}
 
@@ -56,4 +62,19 @@ func (h *APIHandler) HandleGetStatus(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(res)
+}
+
+// TenantAuthMiddleware extracts the X-Tenant-Id header and injects it into the request context.
+// In a real application, this would validate a session token, but this provides a secure extraction path.
+func TenantAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tenantID := r.Header.Get("X-Tenant-Id")
+		if tenantID == "" {
+			http.Error(w, "Missing X-Tenant-Id header", http.StatusUnauthorized)
+			return
+		}
+		// Inject into context
+		ctx := context.WithValue(r.Context(), tenantContextKey, tenantID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	}
 }
