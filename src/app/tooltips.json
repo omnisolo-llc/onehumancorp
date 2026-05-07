@@ -5,11 +5,18 @@
   "messages": "Read and respond to customer messages.",
   "stats": "View your store's performance analytics.",
   "share": "Share your store link with customers.",
-  "ask_ai": "Ask the AI helper any question.",
+  "ask_ai": "Ask your helper to do things for you.",
   "advisory_hint": "Insights and suggestions for your business.",
   "quick_actions_hint": "These buttons are shortcuts to your most common daily tasks.",
   "api_docs_advanced": "Toggle to see detailed API endpoints for developers.",
   "api_test_button": "Run a live test against this endpoint.",
   "ai_chat_send": "Send your message to the AI Helper.",
-  "help_floating_button": "Open the Help Center."
+  "help_floating_button": "Open the Help Center.",
+  "menu": "Open the main menu.",
+  "api_docs": "Connect other software to your store.",
+  "grow_business": "Find ways to get more customers.",
+  "referrals": "Reward customers for sharing your store.",
+  "email_marketing": "Send emails to your customers.",
+  "social_posting": "Post updates to your social media.",
+  "kairos_orchestration": "Set up automatic tasks for your store."
 }
