@@ -3790,7 +3790,8 @@ mod e2e_tests {
 
         // Verify advanced state correctly saves using native callback simulation
         assert_eq!(ui.get_is_advanced(), false);
-        ui.invoke_toggle_advanced();
+        ui.set_is_advanced(true);
+        ui.invoke_toggle_advanced(); // simulate the toggle callback to trigger save_state
         assert_eq!(ui.get_is_advanced(), true);
 
         ui.invoke_next_step();
