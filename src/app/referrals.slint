@@ -1,4 +1,4 @@
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
 export struct UiReferral {
@@ -10,11 +10,11 @@ export struct UiReferral {
 }
 
 export component Referrals inherits Window {
-    width: 500px;
-    height: 600px;
+    width: 600px;
+    height: 800px;
     title: "Referral Dashboard";
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     in property <[UiReferral]> referrals;
     in property <string> my_referral_link: "ohc://join?ref=DEFAULT";
@@ -42,144 +42,126 @@ export component Referrals inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Referral Dashboard"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Referral Program"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
             Rectangle {}
             Button { 
                 text: "Refresh"; 
+                height: 40px;
                 clicked => { refresh(); }
             }
         }
 
-        GlassCard {
+        ScrollView {
             VerticalBox {
-                padding: 16px;
-                spacing: 10px;
-                Text { text: "Your Referral Link"; font-weight: 700; color: #1e293b; }
-                Text { text: my_referral_link; color: #64748b; font-size: 14px; }
-                HorizontalBox {
-                    Button {
-                        text: "Copy";
-                        primary: true;
-                        clicked => { copy_link(); }
-                    }
-                    Button {
-                        text: "Share";
-                        primary: true;
-                        clicked => { share_link(my_referral_link); }
-                    }
-                    Button {
-                        text: "New Link";
-                        clicked => { generate_new_link(); }
-                    }
-                    Button {
-                        text: "Copy Invite Message";
-                        primary: true;
-                        clicked => { send_invite_message(my_referral_link); }
-                    }
-                }
-                if (invite_copy_status != "") : Text {
-                    text: invite_copy_status;
-                    color: #10b981;
-                    font-size: 14px;
-                }
-                if (link_copy_status != "") : Text {
-                    text: link_copy_status;
-                    color: #10b981;
-                    font-size: 14px;
-                }
-            }
-        }
+                spacing: 20px;
 
-        GlassCard {
-            VerticalBox {
-                padding: 16px;
-                spacing: 10px;
-                Text { text: "Referral Statistics"; font-weight: 700; color: #1e293b; }
-                HorizontalBox {
-                    Text { text: "Total Referrals: " + total_referrals; color: #64748b; font-size: 14px; }
-                    Text { text: "Click Count: " + click_count; color: #64748b; font-size: 14px; }
-                    Text { text: "Conversion Rate: " + conversion_rate + "%"; color: #64748b; font-size: 14px; }
-                }
-                HorizontalBox {
-                    Text { text: "Reward Balance: " + reward_balance; color: #64748b; font-size: 14px; }
-                    Text { text: "Bonus Credit: " + bonus_credit; color: #64748b; font-size: 14px; }
-                }
-                HorizontalBox {
-                    Text { text: "Viral Coefficient: " + viral_coefficient; color: #64748b; font-size: 14px; }
-                    Text { text: "Download Count: " + download_count; color: #64748b; font-size: 14px; }
-                    Text { text: "Waitlist Position: " + waitlist_position; color: #64748b; font-size: 14px; }
-                }
-                HorizontalBox {
-                    Button {
-                        text: "History";
-                        clicked => { view_history(); }
-                    }
-                    Button {
-                        text: "Export";
-                        clicked => { export_data(); }
-                    }
-                }
-                Text { text: "Recent Activity"; font-weight: 700; color: #1e293b; }
-            }
-        }
+                GlassCard {
+                    VerticalBox {
+                        padding: 20px;
+                        spacing: 16px;
+                        Text { text: "🎁 Share the Love, Get Pro"; font-weight: 700; color: white; font-size: 18px; font-family: "Outfit"; }
+                        Text { text: "Invite a friend to OHC. When they start a business, you BOTH get 1 month of Pro for free!"; color: #94a3b8; font-size: 14px; font-family: "Inter"; wrap: word-wrap; }
 
-        GlassCard {
-            VerticalBox {
-                padding: 16px;
-                spacing: 10px;
-                Text { text: "Referral Program Admin"; font-weight: 700; color: #1e293b; }
-                Text { text: "Settings Configure"; font-weight: 700; color: #1e293b; }
-                HorizontalBox {
-                    Text { text: "Reward Amount:"; vertical-alignment: center; }
-                    TextInput { text: "25"; width: 100px; height: 32px; }
-                }
-                HorizontalBox {
-                    Text { text: "Program Enabled"; vertical-alignment: center; }
-                    Rectangle {
-                        width: 40px; height: 20px; border-radius: 10px; background: #a855f7;
-                        Rectangle { width: 16px; height: 16px; border-radius: 8px; background: white; x: 22px; y: 2px; }
-                    }
-                }
-                Text { text: "Leaderboard Rank: #1"; color: #64748b; font-size: 14px; }
-                Text { text: "Top Award: Platinum Level"; color: #64748b; font-size: 14px; }
-            }
-        }
-
-        VerticalBox {
-            spacing: 16px;
-            for r in referrals : Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    
-                    HorizontalBox {
-                        Text { text: "Ref: " + r.referral_code; font-weight: 700; color: #1e293b; }
-                        Rectangle {}
-                        Text { text: "👥"; font-size: 20px; }
-                    }
-                    
-                    Text { text: "User: " + r.user_id; color: #64748b; }
-                    
-                    HorizontalBox {
-                        alignment: space-around;
-                        VerticalBox {
-                            alignment: center;
-                            Text { text: r.clicks; font-size: 24px; font-weight: 700; color: #a855f7; }
-                            Text { text: "Clicks"; color: #64748b; font-size: 12px; }
+                        Rectangle {
+                            height: 44px;
+                            background: rgba(255, 255, 255, 0.05);
+                            border-radius: 8px;
+                            border-width: 1px;
+                            border-color: rgba(255, 255, 255, 0.1);
+                            HorizontalBox {
+                                padding-left: 12px;
+                                padding-right: 12px;
+                                Text { text: my_referral_link; color: #a855f7; vertical-alignment: center; font-family: "Inter"; font-size: 12px; }
+                                Rectangle {}
+                                Button {
+                                    text: "Copy";
+                                    height: 32px;
+                                    clicked => { copy_link(); }
+                                }
+                            }
                         }
-                        VerticalBox {
-                            alignment: center;
-                            Text { text: r.conversions; font-size: 24px; font-weight: 700; color: #a855f7; }
-                            Text { text: "Conversions"; color: #64748b; font-size: 12px; }
+
+                        HorizontalBox {
+                            spacing: 12px;
+                            Button {
+                                text: "📷 Share to Instagram";
+                                primary: true;
+                                height: 48px;
+                                clicked => { share_link(my_referral_link); }
+                            }
+                            Button {
+                                text: "💬 Copy Invite Message";
+                                height: 48px;
+                                clicked => { send_invite_message(my_referral_link); }
+                            }
+                        }
+
+                        if (invite_copy_status != "") : Text {
+                            text: invite_copy_status;
+                            color: #10b981;
+                            font-size: 14px;
+                            horizontal-alignment: center;
                         }
                     }
-                    
-                    Text { text: "Created: " + r.created_at; color: #64748b; font-size: 12px; }
+                }
+
+                GlassCard {
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 16px;
+                        Text { text: "Your Stats"; font-weight: 700; color: white; font-size: 18px; font-family: "Outfit"; }
+
+                        HorizontalBox {
+                            spacing: 12px;
+                            VerticalBox {
+                                alignment: center;
+                                Text { text: total_referrals; font-size: 24px; font-weight: 700; color: #a855f7; horizontal-alignment: center; font-family: "Outfit"; }
+                                Text { text: "Invites"; color: #94a3b8; font-size: 12px; horizontal-alignment: center; font-family: "Inter"; }
+                            }
+                            Rectangle { width: 1px; background: rgba(255, 255, 255, 0.1); height: 40px; }
+                            VerticalBox {
+                                alignment: center;
+                                Text { text: click_count; font-size: 24px; font-weight: 700; color: #06b6d4; horizontal-alignment: center; font-family: "Outfit"; }
+                                Text { text: "Clicks"; color: #94a3b8; font-size: 12px; horizontal-alignment: center; font-family: "Inter"; }
+                            }
+                            Rectangle { width: 1px; background: rgba(255, 255, 255, 0.1); height: 40px; }
+                            VerticalBox {
+                                alignment: center;
+                                Text { text: reward_balance; font-size: 24px; font-weight: 700; color: #10b981; horizontal-alignment: center; font-family: "Outfit"; }
+                                Text { text: "Earned"; color: #94a3b8; font-size: 12px; horizontal-alignment: center; font-family: "Inter"; }
+                            }
+                        }
+
+                        HorizontalBox {
+                            alignment: space-between;
+                            Button { text: "📜 View History"; clicked => { view_history(); } }
+                            Button { text: "📤 Export Data"; clicked => { export_data(); } }
+                        }
+                    }
+                }
+
+                Text { text: "Recent Referrals"; font-weight: 700; color: white; font-size: 18px; font-family: "Outfit"; }
+
+                for r in referrals : GlassCard {
+                    background: rgba(255, 255, 255, 0.03);
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+
+                        HorizontalBox {
+                            Text { text: "Code: " + r.referral_code; font-weight: 700; color: white; font-family: "Outfit"; }
+                            Rectangle {}
+                            Text { text: r.conversions > 0 ? "✅ Joined" : "⏳ Pending"; color: r.conversions > 0 ? #10b981 : #f59e0b; font-size: 12px; font-family: "Inter"; }
+                        }
+
+                        Text { text: "Referree ID: " + r.user_id; color: #94a3b8; font-size: 12px; font-family: "Inter"; }
+
+                        HorizontalBox {
+                            spacing: 20px;
+                            Text { text: "Clicks: " + r.clicks; color: #cbd5e1; font-size: 12px; font-family: "Inter"; }
+                            Text { text: "Joined: " + r.created_at; color: #cbd5e1; font-size: 12px; font-family: "Inter"; }
+                        }
+                    }
                 }
             }
         }
