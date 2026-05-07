@@ -49,4 +49,6 @@ spec:
     - protocol: TCP
       port: 6379
   - to:
-    - namespaceSelector: {}
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Release.Namespace }}

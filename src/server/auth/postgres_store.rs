@@ -313,9 +313,10 @@ impl UserRepository for PgUserRepository {
         Ok(())
     }
 
-    async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
+    async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
+        // Set bypass RLS context since revoked_tokens is global and has no organization_id
+        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
             r#"
@@ -339,9 +340,10 @@ impl UserRepository for PgUserRepository {
         Ok(())
     }
 
-    async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
+    async fn is_revoked(&self, jti: &str, _org_id: &str) -> Result<bool, String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
+        // Set bypass RLS context since revoked_tokens is global and has no organization_id
+        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP")
             .bind(jti)
