@@ -107,7 +107,7 @@ impl DB {
                 .extension("sqlite_vec");
 
             // Enforce SQLCipher for Standalone mode
-            if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" && !database_url.contains("test") {
+            if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
                 let key = if let Some(k) = database_url.split("key=").nth(1) {
                     k.split('&').next().unwrap_or("").to_string()
                 } else {
@@ -993,7 +993,7 @@ mod security_tests_final {
         let db_path = temp_dir.path().join("secure_test_dir/test.db");
         let database_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
-        temp_env::with_vars(vec![("DATABASE_URL", Some(&*database_url))], || {
+        temp_env::with_vars(vec![("DATABASE_URL", Some(&*database_url)), ("OHC_SQLITE_KEY", Some("dummy_key"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.

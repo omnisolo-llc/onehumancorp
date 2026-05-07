@@ -29,7 +29,18 @@ impl DashboardService for MyDashboardService {
         &self,
         request: Request<GetDashboardRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
+        let auth_info = request.extensions().get::<crate::auth::orchestration::AuthInfo>()
+            .cloned()
+            .ok_or_else(|| Status::unauthenticated("Missing authentication information"))?;
+
         let req = request.into_inner();
+
+        if crate::config::get().multitenant && req.organization_id.is_empty() {
+            return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+        }
+        if crate::config::get().multitenant && auth_info.org_id != "system" && auth_info.org_id != req.organization_id {
+            return Err(Status::permission_denied("You do not have permission to view this organization's dashboard."));
+        }
 
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
@@ -352,6 +363,9 @@ impl DashboardService for MyDashboardService {
         let req = request.into_inner();
         let org_id = req.organization_id;
 
+        if crate::config::get().multitenant && org_id.is_empty() {
+            return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+        }
         if auth_info.org_id != "system" && auth_info.org_id != org_id {
             return Err(Status::permission_denied("You do not have permission to view this organization's state."));
         }
