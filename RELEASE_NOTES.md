@@ -1,5 +1,19 @@
 ## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
 
+## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🎨 Canvas: Autonomous AI Background Operations (#11367)
+- Uses the `SKIP LOCKED` pattern in Postgres for reliable background polling.
+- Backend Workers: `OperationsWorker` and `CustomerSuccessWorker` now monitor the event mesh.
+- The Manager (Ops): Scans stock levels after every order; if inventory drops below 5, it drafts a "Restock Item" task.
+- The Ambassador (CS): Drafts responses to new customer messages and order processing updates.
+
+### Privacy/Offline Improvements
+- 🎨 Canvas: Autonomous AI Background Operations (#11367)
+- Draft & Approve UI: The Dashboard's "Needs Your Approval" section now identifies which Helper performed the action with a premium purple badge.
+
+
 ### Cloud Scaling Improvements
 - 🔗 Link: Implemented Teammate Mesh Communication Layer and Distributed Locks (#11313)
 
