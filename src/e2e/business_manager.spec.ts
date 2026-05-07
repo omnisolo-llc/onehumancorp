@@ -35,9 +35,18 @@ test.describe('Business Manager UI', () => {
     await expect(page.locator('text=$40.00')).toBeVisible();
     await expect(page.locator('text=$150.00')).toBeVisible();
 
-    // Edit/Archive buttons should exist
-    await expect(page.locator('button:has-text("Edit")').first()).toBeVisible();
-    await expect(page.locator('button:has-text("Archive")').first()).toBeVisible();
+    // Edit/Archive buttons should exist and have proper touch target size
+    const editBtn = page.locator('button:has-text("Edit")').first();
+    const archiveBtn = page.locator('button:has-text("Archive")').first();
+
+    await expect(editBtn).toBeVisible();
+    await expect(archiveBtn).toBeVisible();
+
+    const editBox = await editBtn.boundingBox();
+    expect(editBox?.height).toBeGreaterThanOrEqual(44);
+
+    const archiveBox = await archiveBtn.boundingBox();
+    expect(archiveBox?.height).toBeGreaterThanOrEqual(44);
   });
 
   test('should navigate to "Add Offering" view when "+ Add New Offering" is clicked', async ({ page }) => {
