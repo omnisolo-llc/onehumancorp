@@ -41,6 +41,7 @@ export component UnifiedInbox inherits Window {
     callback select_conversation(string);
     callback send_message(string);
     callback use_quick_reply(string);
+    callback request_ai_draft();
     callback back_to_list();
 
     HorizontalBox {
@@ -178,26 +179,50 @@ export component UnifiedInbox inherits Window {
                         }
                     }
 
-                    // Input Area
-                    Rectangle {
-                        height: 80px;
-                        background: white;
-                        border-color: #e2e8f0;
-                        border-width: 1px;
+                    // AI Draft Action & Input Area
+                    VerticalBox {
+                        spacing: 0px;
 
-                        HorizontalBox {
-                            padding: 16px;
-                            spacing: 12px;
-                            LineEdit {
-                                placeholder-text: "Type a message...";
-                                text <=> new_message;
+                        Rectangle {
+                            height: 40px;
+                            background: white;
+                            border-color: #e2e8f0;
+                            border-width: 1px;
+
+                            HorizontalBox {
+                                padding-left: 16px;
+                                padding-right: 16px;
+                                padding-top: 8px;
+                                padding-bottom: 8px;
+                                alignment: start;
+                                Button {
+                                    text: "✨ AI Draft";
+                                    clicked => { request_ai_draft(); }
+                                }
                             }
-                            Button {
-                                text: "Send";
-                                primary: true;
-                                clicked => {
-                                    send_message(new_message);
-                                    new_message = "";
+                        }
+
+                        // Input Area
+                        Rectangle {
+                            height: 80px;
+                            background: white;
+                            border-color: #e2e8f0;
+                            border-width: 1px;
+
+                            HorizontalBox {
+                                padding: 16px;
+                                spacing: 12px;
+                                LineEdit {
+                                    placeholder-text: "Type a message...";
+                                    text <=> new_message;
+                                }
+                                Button {
+                                    text: "Send";
+                                    primary: true;
+                                    clicked => {
+                                        send_message(new_message);
+                                        new_message = "";
+                                    }
                                 }
                             }
                         }
