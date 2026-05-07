@@ -51,7 +51,7 @@ func (w *AutoDreamWorker) handleDeadLetter(memoryDir, filePath string) {
 	_ = os.Rename(filePath, dlqPath)
 }
 
-func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir string) error {
+func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir string, metrics ...*WorkerMetrics) error {
 	entries, err := os.ReadDir(memoryDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -99,6 +99,10 @@ func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir 
 		_, err = w.db.ExecContext(ctx, query, mem.OrganizationID, taskID, mem.Content, vecStr)
 		if err != nil {
 			return fmt.Errorf("failed to insert memory: %w", err)
+		}
+
+		if len(metrics) > 0 && metrics[0] != nil && metrics[0].processed != nil {
+			metrics[0].processed.Add(ctx, 1)
 		}
 
 		_ = os.Remove(filePath)

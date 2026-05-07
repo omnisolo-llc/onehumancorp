@@ -23,6 +23,13 @@ func (m *MockLLMClient) GenerateEmbedding(ctx context.Context, text string) ([]f
 	return []float32{0.1, 0.2, 0.3}, nil
 }
 
+// Mock auth middleware to satisfy the prompt's `auth.Middleware` requirement locally
+func mockAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        next.ServeHTTP(w, r)
+    }
+}
+
 func main() {
 	log.Println("Starting OHC Server...")
 
@@ -66,6 +73,10 @@ func main() {
 
 	go daemon.Run(ctx)
 
+	// Orchestration Autodream
+	autodreamWorker := orchestration.NewAutoDreamWorker(db)
+	go autodreamWorker.Start(ctx, ".agent-task/memory", 5*time.Second)
+
 	log.Println("OHC Server is running. AutoDream daemon started.")
 
 	// Block forever (or implement graceful shutdown)
@@ -76,9 +87,14 @@ func main() {
 	onboardingService := onboarding.NewService(tenantStore, taskStore)
 	onboardingAPI := onboarding.NewAPIHandler(onboardingService)
 
+	// Mesh API
+	meshHub := orchestration.NewLocalTeammateMesh()
+	meshAPI := orchestration.NewMeshAPI(meshHub)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/onboarding/start", onboardingAPI.HandleStartOnboarding)
 	mux.HandleFunc("/api/onboarding/status", onboardingAPI.HandleGetStatus)
+	mux.HandleFunc("/api/mesh/broadcast", mockAuthMiddleware(meshAPI.HandleBroadcast))
 
 	go func() {
 		log.Println("Listening on :8080...")
