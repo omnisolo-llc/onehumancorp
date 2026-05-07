@@ -274,6 +274,14 @@ mod tests {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }
+                        if lower_line.contains("serde_json::to_string") && (lower_line.contains("telemetry") || lower_line.contains("event_log") || lower_line.contains("buffer_metric")) && !entry.path().display().to_string().contains("telemetry_test.rs") {
+                            if !lower_line.contains("redact") {
+                                let prev_line = if i > 0 { content.lines().nth(i-1).unwrap_or("").to_lowercase() } else { "".to_string() };
+                                if !prev_line.contains("redact") {
+                                    violations.push(format!("Missing PII redaction before serialization at {}:{}: {}", entry.path().display(), i + 1, line.trim()));
+                                }
+                            }
+                        }
                     }
                 }
             }
