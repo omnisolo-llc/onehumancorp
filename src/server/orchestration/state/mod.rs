@@ -1,5 +1,4 @@
-pub mod cloud;
-pub mod standalone;
+pub mod universal;
 #[cfg(test)]
 mod test;
 #[cfg(test)]
