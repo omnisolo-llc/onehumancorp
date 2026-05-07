@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
 use chrono::Utc;
+use crate::orchestration::departments::memory::pruning::prune_stale;
+use crate::orchestration::departments::memory::conflict::auto_resolve_conflicts;
 
 pub struct MemoryConsolidationWorker {
     pub repository: Arc<VectorRepository>,
@@ -26,10 +28,10 @@ impl MemoryConsolidationWorker {
             loop {
                 interval.tick().await;
                 let older_than = Utc::now() - chrono::Duration::days(prune_threshold_days);
-                if let Err(e) = repository.prune_stale(older_than).await {
+                if let Err(e) = prune_stale(repository.clone(), older_than).await {
                     tracing::error!("Failed to prune stale context: {}", e);
                 }
-                if let Err(e) = repository.auto_resolve_conflicts().await {
+                if let Err(e) = auto_resolve_conflicts(repository.clone()).await {
                     tracing::error!("Failed to resolve memory conflicts: {}", e);
                 }
             }
