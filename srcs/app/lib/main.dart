@@ -38,9 +38,9 @@ class GlassContainer extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withAlpha(25),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.2)),
+            border: Border.all(color: Colors.white.withAlpha(51)),
           ),
           padding: const EdgeInsets.all(20),
           child: child,
@@ -59,8 +59,7 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   int _step = 0;
-  String _category = '';
-  final _nameController = TextEditingController();
+  final _intentController = TextEditingController();
 
   void _nextStep() {
     setState(() {
@@ -87,72 +86,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildCurrentStep() {
     switch (_step) {
       case 0:
-        return _buildCategorySelection();
+        return _buildIntake();
       case 1:
-        return _buildNameInput();
-      case 2:
         return _buildLoadingScreen();
+      case 2:
+        return _buildReviewScreen();
       default:
         return const DashboardScreen();
     }
   }
 
-  Widget _buildCategorySelection() {
-    final categories = ['Bake', 'Teach', 'Fix', 'Sell', 'Other'];
+  Widget _buildIntake() {
     return SingleChildScrollView(
       child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'What do you do?',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 40),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          alignment: WrapAlignment.center,
-          children: categories.map((cat) =>
-            GestureDetector(
-              onTap: () {
-                setState(() => _category = cat);
-                _nextStep();
-              },
-              child: GlassContainer(
-                child: SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: Center(
-                    child: Text(
-                      cat,
-                      style: const TextStyle(fontSize: 18, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ),
-            )
-          ).toList(),
-        ),
-      ],
-      ),
-    );
-  }
-
-  Widget _buildNameInput() {
-    return SingleChildScrollView(
-      child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          "What's the name of your business?",
+          'What do you want to build today?',
           style: TextStyle(
             fontFamily: 'Outfit',
             fontSize: 32,
@@ -164,10 +115,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: 40),
         GlassContainer(
           child: TextField(
-            controller: _nameController,
+            controller: _intentController,
             style: const TextStyle(color: Colors.white),
+            maxLines: 3,
             decoration: const InputDecoration(
-              hintText: 'Enter business name...',
+              hintText: 'e.g., I sell vegan cakes...',
               hintStyle: TextStyle(color: Colors.white54),
               border: InputBorder.none,
             ),
@@ -176,7 +128,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: () {
-            if (_nameController.text.isNotEmpty) {
+            if (_intentController.text.isNotEmpty) {
               _nextStep();
               // Simulate AI loading
               Future.delayed(const Duration(seconds: 3), () {
@@ -193,7 +145,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               borderRadius: BorderRadius.circular(15),
             ),
           ),
-          child: const Text('Continue', style: TextStyle(fontSize: 18)),
+          child: const Text('Continue', style: TextStyle(fontSize: 18, color: Colors.white)),
         ),
       ],
       ),
@@ -201,27 +153,118 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildLoadingScreen() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
+    return Stack(
       children: [
-        const CircularProgressIndicator(color: Color(0xFF6B4EFF)),
-        const SizedBox(height: 40),
+        Positioned.fill(
+          child: Container(color: Colors.black.withAlpha(128)),
+        ),
+        Center(
+          child: GlassContainer(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: const [
+                CircularProgressIndicator(color: Color(0xFF6B4EFF)),
+                SizedBox(height: 40),
+                Text(
+                  'Designing storefront...',
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Writing policies...',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewScreen() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         const Text(
-          'Generating your store...',
+          'Review Your Business',
           style: TextStyle(
             fontFamily: 'Outfit',
-            fontSize: 24,
+            fontSize: 28,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
         const SizedBox(height: 20),
-        Text(
-          'Setting up AI departments for $_category...',
-          style: const TextStyle(color: Colors.white70),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildPreviewSection('Storefront Preview', 'Vegan Cakes Online'),
+                const SizedBox(height: 15),
+                _buildPreviewSection('Policies', 'Standard Terms & Conditions'),
+                const SizedBox(height: 15),
+                _buildPreviewSection('Initial Products', '3 items generated'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () {
+            _nextStep();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF22C55E),
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+          ),
+          child: const Text('Launch Business', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       ],
+    );
+  }
+
+  Widget _buildPreviewSection(String title, String subtitle) {
+    return GlassContainer(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+          InkWell(
+            onTap: () {},
+            child: const SizedBox(
+              width: 44,
+              height: 44,
+              child: Icon(Icons.edit, color: Colors.white54, size: 20),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -234,12 +277,12 @@ class DashboardScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 40),
+        const SizedBox(height: 20),
         const Text(
-          "You're live!",
+          "Dashboard",
           style: TextStyle(
             fontFamily: 'Outfit',
-            fontSize: 32,
+            fontSize: 28,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
@@ -250,12 +293,46 @@ class DashboardScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
               Text(
-                'Let\'s add your first item.',
-                style: TextStyle(fontSize: 18, color: Colors.white),
+                'Revenue',
+                style: TextStyle(fontSize: 14, color: Colors.white70),
+              ),
+              SizedBox(height: 5),
+              Text(
+                '\$0.00',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        GlassContainer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Pending Agent Approvals',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
               ),
               SizedBox(height: 10),
               Text(
-                'Your AI agents are ready to help.',
+                'No pending approvals.',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        GlassContainer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Recent Orders',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              SizedBox(height: 10),
+              Text(
+                'No orders yet.',
                 style: TextStyle(color: Colors.white70),
               ),
             ],
