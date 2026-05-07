@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export struct UiAiConfigProvider {
     id: string,
@@ -9,11 +10,11 @@ export struct UiAiConfigProvider {
 }
 
 export component AiConfig inherits Window {
-    width: 500px;
-    height: 600px;
+    width: 600px;
+    height: 700px;
     title: "AI Providers";
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     in property <[UiAiConfigProvider]> providers;
     in-out property <bool> is_advanced: false;
@@ -29,12 +30,12 @@ export component AiConfig inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "AI Providers"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "AI Brains"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
             HorizontalBox {
                 spacing: 8px;
                 alignment: end;
-                Text { text: "Advanced Mode"; color: #94a3b8; font-size: 14px; }
+                Text { text: "Expert Mode"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                 TouchArea {
                     width: 20px;
                     height: 20px;
@@ -45,45 +46,66 @@ export component AiConfig inherits Window {
                         border-radius: 4px;
                         border-color: #a855f7;
                         border-width: 1px;
-                        background: is_advanced ? #a855f7 : transparent;
+                        background: is_advanced ? #a855f7 : rgba(255, 255, 255, 0.1);
                         Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
                     }
                 }
             }
-            if (is_advanced) : Button {
-                text: "Add Provider"; 
-                clicked => { add_provider(); }
+            if (is_advanced) : GlassCard {
+                width: 140px;
+                height: 36px;
+                background: rgba(168, 85, 247, 0.8);
+                VerticalBox { alignment: center; Text { text: "+ Add Custom API"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { add_provider(); } }
             }
         }
 
+        Text { text: "Configure the intelligence that powers your team of helpers."; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+
         VerticalBox {
-            spacing: 10px;
+            spacing: 16px;
             
-            for p in providers : Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            for p in providers : GlassCard {
+                border-color: p.is_official ? #a855f7 : rgba(255, 255, 255, 0.1);
+                border-width: p.is_official ? 2px : 1px;
                 
                 VerticalBox {
                     padding: 16px;
-                    spacing: 8px;
+                    spacing: 12px;
+
                     HorizontalBox {
-                        Text { text: "🧠 " + p.name; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                        Text { text: "🧠 " + p.name; font-family: "Outfit"; font-size: 18px; font-weight: 700; color: white; vertical-alignment: center; }
                         Rectangle {}
-                        if (p.is_official) : Text { text: "Official"; color: #a855f7; horizontal-alignment: center; }
-                        Button { 
-                            text: "Edit"; 
-                            clicked => { edit_provider(p.id); }
+                        if (p.is_official) : Rectangle {
+                            background: rgba(168, 85, 247, 0.2);
+                            border-radius: 4px;
+                            padding: 4px;
+                            width: 80px;
+                            Text { text: "Official OHC"; font-family: "Inter"; font-size: 12px; color: #a855f7; horizontal-alignment: center; vertical-alignment: center; }
+                        }
+                        GlassCard {
+                            width: 80px;
+                            height: 32px;
+                            background: rgba(255, 255, 255, 0.1);
+                            VerticalBox { alignment: center; Text { text: is_advanced ? "Configure" : "View"; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; } }
+                            TouchArea { clicked => { edit_provider(p.id); } }
                         }
                     }
-                    if (is_advanced) : Text { text: p.base_url; color: #64748b; }
-                    if (is_advanced) : HorizontalBox {
-                        spacing: 5px;
-                        for model in p.models : Rectangle { 
-                            background: #e2e8f0; 
-                            border-radius: 4px; 
-                            HorizontalBox { padding: 4px; Text { text: model; color: #1e293b; } } 
+
+                    if (is_advanced) : VerticalBox {
+                        spacing: 8px;
+                        Text { text: "API Endpoint: " + p.base_url; font-family: "Inter"; font-size: 12px; color: #cbd5e1; }
+                        HorizontalBox {
+                            spacing: 8px;
+                            Text { text: "Models:"; font-family: "Inter"; font-size: 12px; color: #cbd5e1; vertical-alignment: center; }
+                            for model in p.models : Rectangle {
+                                background: rgba(255, 255, 255, 0.1);
+                                border-radius: 4px;
+                                HorizontalBox {
+                                    padding: 4px;
+                                    Text { text: model; font-family: "Inter"; font-size: 12px; color: white; }
+                                }
+                            }
                         }
                     }
                 }

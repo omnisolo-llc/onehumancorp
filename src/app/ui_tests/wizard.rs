@@ -535,3 +535,35 @@ fn test_e2e_wizard_instant_build_flow() {
     assert_eq!(ui.get_payment_pref(), "online");
     assert_eq!(ui.get_is_generating_instant_preview(), false);
 }
+
+// --- Fix Issue Wizard Tests ---
+
+#[test]
+fn fix_issue_wizard_state_progression() {
+    crate::ui_tests::init();
+    let ui = crate::app::Wizard::new().unwrap();
+
+    assert_eq!(ui.get_step(), 0);
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 1);
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 2);
+    ui.invoke_prev_step();
+    assert_eq!(ui.get_step(), 1);
+}
+
+#[test]
+fn fix_issue_wizard_resolve_issue_callback() {
+    crate::ui_tests::init();
+    let ui = crate::app::Wizard::new().unwrap();
+    let callback_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let cc_clone = callback_called.clone();
+
+    ui.on_resolve_issue(move || {
+        *cc_clone.borrow_mut() = true;
+    });
+
+    ui.set_step(2);
+    ui.invoke_resolve_issue();
+    assert!(*callback_called.borrow());
+}

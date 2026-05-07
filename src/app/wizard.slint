@@ -1,98 +1,154 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component Wizard inherits Window {
-    width: 600px;
-    height: 500px;
-    title: "Setup Wizard";
+    min-width: 375px;
+    preferred-width: 500px;
+    height: 600px;
+    title: "Fix Issue Wizard";
 
-    property <int> step: 0;
+    in-out property <int> step: 0;
 
-    background: #f8fafc;
+    in property <string> issue_title: "Agent Connectivity Error";
+    in property <string> issue_description: "Your Customer Support helper is having trouble connecting to the email service. Let's get this fixed so they can get back to work.";
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    callback next_step();
+    callback prev_step();
+    callback resolve_issue();
+
+    next_step => { step = step + 1; }
+    prev_step => { step = step - 1; }
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
 
-        Text { text: "Setup Wizard"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        HorizontalBox {
+            Text { text: "Fix this issue"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+        }
 
         HorizontalBox {
             spacing: 10px;
             alignment: center;
             
             Rectangle { 
-                background: step >= 0 ? #a855f7 : #e2e8f0; 
+                background: step >= 0 ? #ef4444 : rgba(255, 255, 255, 0.1);
                 border-radius: 12px; 
                 width: 24px; 
                 height: 24px; 
                 HorizontalBox {
                     padding: 2px;
-                    Text { text: "1"; color: white; horizontal-alignment: center; } 
+                    Text { text: "1"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: white; horizontal-alignment: center; }
                 }
             }
-            Text { text: "App"; color: step == 0 ? #1e293b : #64748b; }
+            Text { text: "Understand"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: step == 0 ? white : #94a3b8; }
             
             Rectangle { 
-                background: step >= 1 ? #a855f7 : #e2e8f0; 
+                background: step >= 1 ? #f59e0b : rgba(255, 255, 255, 0.1);
                 border-radius: 12px; 
                 width: 24px; 
                 height: 24px; 
                 HorizontalBox {
                     padding: 2px;
-                    Text { text: "2"; color: white; horizontal-alignment: center; } 
+                    Text { text: "2"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: white; horizontal-alignment: center; }
                 }
             }
-            Text { text: "AI Assistant"; color: step == 1 ? #1e293b : #64748b; }
+            Text { text: "Review"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: step == 1 ? white : #94a3b8; }
             
             Rectangle { 
-                background: step >= 2 ? #a855f7 : #e2e8f0; 
+                background: step >= 2 ? #10b981 : rgba(255, 255, 255, 0.1);
                 border-radius: 12px; 
                 width: 24px; 
                 height: 24px; 
                 HorizontalBox {
                     padding: 2px;
-                    Text { text: "3"; color: white; horizontal-alignment: center; } 
+                    Text { text: "3"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: white; horizontal-alignment: center; }
                 }
             }
-            Text { text: "Live"; color: step == 2 ? #1e293b : #64748b; }
+            Text { text: "Resolve"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: step == 2 ? white : #94a3b8; }
         }
 
+        // Step 0: Understand the problem
         if (step == 0) : VerticalBox {
-            spacing: 10px;
-            Text { text: "App Settings"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            LineEdit { placeholder-text: "Server Address";   }
-            LineEdit { placeholder-text: "Where to save your data";   }
+            spacing: 16px;
+            Text { text: "What happened?"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
+
+            GlassCard {
+                background: rgba(239, 68, 68, 0.1); // subtle red tint
+                border-color: rgba(239, 68, 68, 0.3);
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+                    Text { text: "⚠️ " + issue_title; font-family: "Inter"; font-size: 16px; font-weight: 700; color: #ef4444; }
+                    Text { text: issue_description; font-family: "Inter"; font-size: 14px; color: #cbd5e1; wrap: word-wrap; }
+                }
+            }
+
+            Text { text: "Don't worry, AI has prepared a fix for this. Proceed to the next step to review it."; font-family: "Inter"; font-size: 14px; color: #94a3b8; wrap: word-wrap; }
         }
 
+        // Step 1: Review proposed fix
         if (step == 1) : VerticalBox {
-            spacing: 10px;
-            Text { text: "AI Assistant"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            LineEdit { placeholder-text: "Secret Key"; }
-            LineEdit { placeholder-text: "Assistant Name";   }
+            spacing: 16px;
+            Text { text: "Proposed Solution"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
+
+            GlassCard {
+                background: rgba(245, 158, 11, 0.1); // subtle amber tint
+                border-color: rgba(245, 158, 11, 0.3);
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+                    Text { text: "🔧 Re-authenticate Email Integration"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: #f59e0b; }
+                    Text { text: "We need your permission to securely refresh the connection to your email provider. This takes one click and requires no technical knowledge."; font-family: "Inter"; font-size: 14px; color: #cbd5e1; wrap: word-wrap; }
+                }
+            }
         }
 
+        // Step 2: Resolve & Apply
         if (step == 2) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Live Updates"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            LineEdit { placeholder-text: "Live Updates Address";   }
+            spacing: 16px;
+            Text { text: "Apply Fix"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
+
+            GlassCard {
+                background: rgba(16, 185, 129, 0.1); // subtle green tint
+                border-color: rgba(16, 185, 129, 0.3);
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+                    Text { text: "✅ Ready to fix"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: #10b981; }
+                    Text { text: "Click the button below to securely apply the fix. Your helper will be back to work in seconds."; font-family: "Inter"; font-size: 14px; color: #cbd5e1; wrap: word-wrap; }
+                }
+            }
         }
 
-        Rectangle {} 
+        Rectangle {} // Spacer
 
         HorizontalBox {
-            if (step > 0) : Button {
-                text: "Back";
-                clicked => { step = step - 1; }
+            if (step > 0) : GlassCard {
+                width: 100px;
+                height: 44px;
+                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { prev_step(); } }
             }
-            Rectangle {} 
-            Button {
-                text: step == 2 ? "Save Configuration" : "Next";
-                clicked => {
-                    if (step < 2) {
-                        step = step + 1;
-                    } else {
-                        // Handle save
-                    }
-                }
+            if (step == 0) : Rectangle { width: 100px; } // spacer
+
+            Rectangle {} // Center spacer
+
+            if (step < 2) : GlassCard {
+                width: 120px;
+                height: 44px;
+                background: rgba(168, 85, 247, 0.8);
+                VerticalBox { alignment: center; Text { text: "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { next_step(); } }
+            }
+            if (step == 2) : GlassCard {
+                width: 180px;
+                height: 44px;
+                background: rgba(16, 185, 129, 0.8);
+                VerticalBox { alignment: center; Text { text: "Apply Fix ✓"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { resolve_issue(); } }
             }
         }
     }

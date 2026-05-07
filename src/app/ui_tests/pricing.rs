@@ -119,3 +119,33 @@ fn test_upgrade_prompt_visibility_clears() {
     ui.set_upgrade_prompt_message("".into());
     assert_eq!(ui.get_upgrade_prompt_message(), "");
 }
+
+// --- Pricing Wizard Tests ---
+
+#[test]
+fn pricing_wizard_state_progression() {
+    crate::ui_tests::init();
+    let ui = crate::app::Pricing::new().unwrap();
+
+    assert_eq!(ui.get_step(), 0);
+    // There are no internal next/prev step generic methods. We just set step manually to test layout rendering,
+    // and click "View Upgrade Plans" (step = 1).
+    ui.set_step(1);
+    assert_eq!(ui.get_step(), 1);
+}
+
+#[test]
+fn pricing_wizard_callbacks() {
+    crate::ui_tests::init();
+    let ui = crate::app::Pricing::new().unwrap();
+
+    let add_credits_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let acc_clone = add_credits_called.clone();
+
+    ui.on_add_credits(move || {
+        *acc_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_add_credits();
+    assert!(*add_credits_called.borrow());
+}
