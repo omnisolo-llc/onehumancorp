@@ -458,8 +458,14 @@ impl Agent {
                         Err(crate::types::ToolError::UserFixable(msg)) => {
                             return Err(format!("USER_FIXABLE:{}", msg));
                         }
-                        Err(e) => {
-                            return Err(e.to_string());
+                        Err(crate::types::ToolError::Fatal(msg)) => {
+                            return Err(format!("FATAL:{}", msg));
+                        }
+                        Err(crate::types::ToolError::Unexpected(msg)) => {
+                            return Err(format!("UNEXPECTED:{}", msg));
+                        }
+                        Err(crate::types::ToolError::HandoffRequested(target)) => {
+                            return Err(format!("HANDOFF:{}", target));
                         }
                     }
                 }
@@ -525,8 +531,14 @@ impl Agent {
                             Err(crate::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE:{}", msg));
                             }
-                            Err(e) => {
-                                return Err(e.to_string());
+                            Err(crate::types::ToolError::Fatal(msg)) => {
+                                return Err(format!("FATAL:{}", msg));
+                            }
+                            Err(crate::types::ToolError::Unexpected(msg)) => {
+                                return Err(format!("UNEXPECTED:{}", msg));
+                            }
+                            Err(crate::types::ToolError::HandoffRequested(target)) => {
+                                return Err(format!("HANDOFF:{}", target));
                             }
                         }
                     } else {
@@ -620,6 +632,20 @@ impl Agent {
                     let err_msg = format!("User intervention required: {}", msg);
                     _on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
                     return Err(err_msg.into());
+                }
+                if let Some(msg) = e.strip_prefix("FATAL:") {
+                    let err_msg = format!("Fatal tool error: {}", msg);
+                    _on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                    return Err(err_msg.into());
+                }
+                if let Some(msg) = e.strip_prefix("UNEXPECTED:") {
+                    let err_msg = format!("Unexpected tool error: {}", msg);
+                    _on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                    return Err(err_msg.into());
+                }
+                if let Some(target) = e.strip_prefix("HANDOFF:") {
+                    _on_event(AgentEvent::Handoff { target_agent: target.to_string() });
+                    return Ok(format!("Handoff requested to {}", target));
                 }
                 let err_msg = format!("LangGraph Error: {}", e);
                 _on_event(AgentEvent::TaskError { error: err_msg.clone() });
@@ -3629,6 +3655,8 @@ mod tests {
                     "llm_recoverable_tool" => Err(ToolError::LlmRecoverable("missing parameter X".to_string())),
                     "fatal_tool" => Err(ToolError::Fatal("system corrupted".to_string())),
                     "user_fixable_tool" => Err(ToolError::UserFixable("please login to proceed".to_string())),
+                    "unexpected_tool" => Err(ToolError::Unexpected("unexpected error".to_string())),
+                    "handoff_tool" => Err(ToolError::HandoffRequested("Finance".to_string())),
                     _ => Ok("success".to_string()),
                 }
             }
@@ -3805,6 +3833,50 @@ mod tests {
             }
         }
         assert!(found_event, "UserInterventionRequired event should be emitted");
+
+        // Test Unexpected
+        let client5 = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![crate::types::ToolCall { id: "call_5".to_string(), name: "unexpected_tool".to_string(), arguments: serde_json::json!({}) }],
+                    tool_results: vec![],
+                    response_id: None,
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: Some("mock-id".to_string()),
+            }]),
+        });
+        let tool_unexpected = Tool { name: "unexpected_tool".to_string(), description: "".to_string(), is_read_only: true, parameters: serde_json::json!({}), execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "unexpected_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }) };
+        let agent5 = Agent::new(client5, vec![tool_unexpected]);
+        let mut events5 = vec![];
+        let res5 = agent5.run(&cfg, "Start", &mut |e| events5.push(e)).await;
+        assert!(res5.is_err());
+        assert!(res5.unwrap_err().to_string().contains("unexpected error"));
+
+        // Test Handoff
+        let client6 = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![crate::types::ToolCall { id: "call_6".to_string(), name: "handoff_tool".to_string(), arguments: serde_json::json!({}) }],
+                    tool_results: vec![],
+                    response_id: None,
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: Some("mock-id".to_string()),
+            }]),
+        });
+        let tool_handoff = Tool { name: "handoff_tool".to_string(), description: "".to_string(), is_read_only: true, parameters: serde_json::json!({}), execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "handoff_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }) };
+        let agent6 = Agent::new(client6, vec![tool_handoff]);
+        let mut events6 = vec![];
+        let res6 = agent6.run(&cfg, "Start", &mut |e| events6.push(e)).await;
+        assert!(res6.is_ok());
+        assert!(res6.unwrap().contains("Handoff requested to Finance"));
     }
 }
 
