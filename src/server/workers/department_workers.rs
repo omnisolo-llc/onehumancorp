@@ -502,3 +502,69 @@ impl CustomerSuccessWorker {
         Ok(processed)
     }
 }
+
+pub struct PromoterWorker {
+    pub db: Arc<DB>,
+    pub poll_interval: Duration,
+    pub hub: Arc<crate::hub::Hub>,
+}
+
+impl PromoterWorker {
+    pub fn new(db: Arc<DB>, hub: Arc<crate::hub::Hub>) -> Self {
+        Self {
+            db,
+            poll_interval: Duration::from_secs(5),
+            hub,
+        }
+    }
+
+    pub fn start(&self) {
+        let db = self.db.clone();
+        let hub = self.hub.clone();
+        let mut promoter_rx = hub.subscribe_teammate_mesh("promoter_inbox".to_string());
+
+        tokio::spawn(async move {
+            while let Ok(event) = promoter_rx.recv().await {
+                if event.action == "OnboardingStarted" {
+                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
+                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                            let session_id = payload_json.get("session_id").and_then(|s| s.as_str()).unwrap_or("").to_string();
+                            let bio = payload_json.get("bio").and_then(|b| b.as_str()).unwrap_or("").to_string();
+
+                            if !session_id.is_empty() {
+                                let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
+
+                                let mut resolved_payload = serde_json::json!({});
+
+                                let reason_req = crate::ohc::orchestration::ReasonRequest {
+                                    prompt,
+                                    from_agent_id: "setup_wizard".to_string(),
+                                };
+
+                                if let Ok(mut client) = crate::ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+
+                                    if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                                        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&res.into_inner().content) {
+                                            resolved_payload = v;
+                                        }
+                                    }
+                                }
+
+                                let out_payload = serde_json::to_vec(&resolved_payload).unwrap_or_default();
+
+                                let out_event = crate::ohc::orchestration::TeammateMeshEvent {
+                                    agent_id: "promoter".to_string(),
+                                    action: "StorefrontGenerated".to_string(),
+                                    status: "completed".to_string(),
+                                    payload: out_payload,
+                                    msg_id: uuid::Uuid::new_v4().to_string(),
+                                };
+                                let _ = hub.publish_teammate_event(format!("onboarding_{}", session_id), out_event);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
