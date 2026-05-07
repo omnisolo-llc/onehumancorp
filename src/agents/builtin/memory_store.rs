@@ -317,14 +317,14 @@ impl VectorRepository {
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND (source_type LIKE 'TASK%' OR source_type = 'SESSION_SUMMARY' OR source_type = 'AUTO_DREAM' OR source_type = 'SESSION_DATA')")
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND (source_type LIKE 'TASK%' OR source_type = 'SESSION_SUMMARY' OR source_type = 'AUTO_DREAM' OR source_type = 'SESSION_DATA')")
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -1583,7 +1583,7 @@ mod get_conflicts_tests {
             agent_id: "agent1".to_string(),
             content: "hello world 2".to_string(),
             embedding: vec![3.0, 2.0, 1.0],
-            source_type: "TASK_DECOMPOSITION".to_string(), // Should be deleted
+            source_type: "TASK_SUMMARY".to_string(), // Should be deleted
             created_at: old_time,
             last_referenced_at: old_time,
             reference_count: 1,
