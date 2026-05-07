@@ -26,15 +26,18 @@ export component InteractiveWalkthrough inherits Window {
 
                 GlassCard {
                     width: 335px;
+                    border-width: 2px;
+                    border-color: #0ea5e9;
+                    border-radius: 8px;
 
                     VerticalBox {
                         padding: 20px;
                         spacing: 16px;
 
                         Text {
-                            text: current_step == 0 ? "Welcome to your store!" :
-                                  current_step == 1 ? "Add your first product" :
-                                  current_step == 2 ? "Set up payments" :
+                            text: current_step == 0 ? "Set up your store" :
+                                  current_step == 1 ? "Accept your first payment" :
+                                  current_step == 2 ? "Activate your AI Support Agent" :
                                   "You're all set!";
                             font-size: 20px;
                             font-family: "Outfit";
@@ -43,9 +46,9 @@ export component InteractiveWalkthrough inherits Window {
                         }
 
                         Text {
-                            text: current_step == 0 ? "Let's take a quick tour to get you set up." :
-                                  current_step == 1 ? "Click here to add photos and prices for what you sell." :
-                                  current_step == 2 ? "Connect your bank so you can get paid by customers." :
+                            text: current_step == 0 ? "Click here to add photos and prices for what you sell." :
+                                  current_step == 1 ? "Connect your bank so you can get paid by customers." :
+                                  current_step == 2 ? "Turn on your AI helper to automate customer support." :
                                   "Your store is ready. You can always find more help in the Help Center.";
                             color: #94a3b8;
                             font-family: "Inter";
