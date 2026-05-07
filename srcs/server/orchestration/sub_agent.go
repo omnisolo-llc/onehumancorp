@@ -3,6 +3,7 @@ package orchestration
 import (
 	"context"
 	"encoding/json"
+	"gopkg.in/yaml.v3"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -62,6 +63,7 @@ func (cb *CircuitBreaker) RecordSuccess() {
 // SubAgentSpawner defines the interface for spawning and monitoring sub-agents.
 type SubAgentSpawner interface {
 	Spawn(ctx context.Context, task *SharedTask) error
+	SpawnIsolated(ctx context.Context, job *Job) error
 	Monitor(ctx context.Context) error
 }
 
@@ -158,7 +160,7 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 		return err
 	}
 
-	statusFile := filepath.Join(statusDir, fmt.Sprintf("%s.json", task.ID))
+	// statusFile generated below
 
 	// Simulated heartbeat loop and potential transient failure
 	for i := 0; i < 3; i++ {
@@ -168,13 +170,15 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 		default:
 		}
 
+		statusFile := filepath.Join(statusDir, fmt.Sprintf("%d.yml", time.Now().Unix()))
+
 		statusData := map[string]interface{}{
 			"task_id":   task.ID,
 			"status":    "RUNNING",
 			"timestamp": time.Now().Unix(),
 			"progress":  fmt.Sprintf("%d/3", i+1),
 		}
-		statusBytes, _ := json.Marshal(statusData)
+		statusBytes, _ := yaml.Marshal(statusData)
 
 		// Ensure file write operations are idempotent and don't fail half-way (temp file -> rename).
 		tempFile := statusFile + ".tmp"
@@ -198,7 +202,8 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 		"status":    "COMPLETED",
 		"timestamp": time.Now().Unix(),
 	}
-	finalBytes, _ := json.Marshal(finalData)
+	finalBytes, _ := yaml.Marshal(finalData)
+	statusFile := filepath.Join(statusDir, fmt.Sprintf("%d.yml", time.Now().Unix()))
 	tempFile := statusFile + ".tmp"
 	_ = os.WriteFile(tempFile, finalBytes, 0644)
 	_ = os.Rename(tempFile, statusFile)
@@ -257,4 +262,17 @@ func (s *DefaultSubAgentSpawner) Monitor(ctx context.Context) error {
 	// In a real system, Monitor might clean up stale lock files or failed pods.
 	// We'll leave it as a simple placeholder loop.
 	return nil
+}
+
+type Job struct {
+	ID     string
+	TaskID string
+	Status string
+}
+
+func (s *DefaultSubAgentSpawner) SpawnIsolated(ctx context.Context, job *Job) error {
+	task := &SharedTask{
+		ID: job.TaskID,
+	}
+	return s.Spawn(ctx, task)
 }
