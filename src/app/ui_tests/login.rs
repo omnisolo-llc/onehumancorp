@@ -193,7 +193,7 @@ fn login_handles_advanced_options_to_app_settings() {
         *invoked_clone.borrow_mut() = true;
     });
     ui.invoke_open_settings();
-    assert!(*invoked.borrow(), "The Advanced Options button should invoke open_settings");
+    assert!(*invoked.borrow(), "The App Settings button should invoke open_settings");
 }
 
 #[test]
@@ -224,7 +224,7 @@ fn grandmother_test_login_advanced_options_callback_preservation() {
     });
     ui.invoke_open_settings();
     ui.invoke_open_settings();
-    assert_eq!(*counter.borrow(), 2, "Callback for Advanced Options should remain intact and fire multiple times.");
+    assert_eq!(*counter.borrow(), 2, "Callback for App Settings should remain intact and fire multiple times.");
 }
 
 #[test]
@@ -296,7 +296,7 @@ fn test_login_sso_button_text() {
 #[test]
 fn test_login_settings_button_text() {
     let ui = create();
-    assert_eq!(ui.get_settings_button_text(), "App Settings");
+    assert_eq!(ui.get_settings_button_text(), "⚙ App Settings");
 }
 
 #[test]
