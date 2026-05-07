@@ -164,13 +164,3 @@ kube-prometheus-stack:
         label: grafana_dashboard
         labelValue: "1"
 
-# Pushgateway for Prometheus metrics
-pushgateway:
-  enabled: true
-  resources:
-    requests:
-      cpu: "50m"
-      memory: "64Mi"
-    limits:
-      cpu: "200m"
-      memory: "512Mi"
