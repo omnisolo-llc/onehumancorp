@@ -31,6 +31,7 @@ type TaskStore interface {
 	UpdateTaskStatus(ctx context.Context, id string, status string) error
 	GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error)
 	PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error)
+	ReportMissionBlocker(ctx context.Context, id string, reason string) error
 }
 
 // PostgresTaskStore implementation
@@ -201,6 +202,12 @@ func (s *PostgresTaskStore) UpdateTaskStatus(ctx context.Context, id string, sta
 	return tx.Commit()
 }
 
+
+func (s *PostgresTaskStore) ReportMissionBlocker(ctx context.Context, id string, reason string) error {
+	query := `UPDATE agent_missions SET status = 'blocked', mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || E'\n' || $1 END, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+	_, err := s.db.ExecContext(ctx, query, reason, id)
+	return err
+}
 
 func (s *PostgresTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -578,6 +585,12 @@ func (s *SqliteTaskStore) GetTask(ctx context.Context, id string) (*SharedTask, 
 func (s *SqliteTaskStore) UpdateTaskStatus(ctx context.Context, id string, status string) error {
 	query := `UPDATE shared_tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
 	_, err := s.db.ExecContext(ctx, query, status, id)
+	return err
+}
+
+func (s *SqliteTaskStore) ReportMissionBlocker(ctx context.Context, id string, reason string) error {
+	query := `UPDATE agent_missions SET status = 'blocked', mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN ? ELSE mission_log || char(10) || ? END, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+	_, err := s.db.ExecContext(ctx, query, reason, reason, id)
 	return err
 }
 

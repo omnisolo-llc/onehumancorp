@@ -1,0 +1,13 @@
+--- srcs/server/tools/statesyncmcp/provider_test.go
++++ srcs/server/tools/statesyncmcp/provider_test.go
+@@ -35,6 +35,10 @@
+	return m.updateErr
+ }
+
++func (m *mockLocalDB) ReportMissionBlocker(ctx context.Context, id string, reason string) error {
++	return nil
++}
++
+ func (m *mockLocalDB) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*orchestration.SharedTask, error) {
+	return m.tasks, m.getErr
+ }

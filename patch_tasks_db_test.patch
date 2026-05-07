@@ -1,0 +1,21 @@
+--- srcs/server/orchestration/tasks_db_test.go
++++ srcs/server/orchestration/tasks_db_test.go
+@@ -230,6 +230,18 @@
+	assert.NoError(t, mock.ExpectationsWereMet())
+ }
+
++func TestPostgresTaskStore_ReportMissionBlocker(t *testing.T) {
++	db, mock, err := sqlmock.New()
++	assert.NoError(t, err)
++	defer db.Close()
++	store := NewPostgresTaskStore(db)
++	ctx := context.Background()
++
++	mock.ExpectExec("UPDATE agent_missions SET status = 'blocked'").WithArgs("reason", "uuid-1").WillReturnResult(sqlmock.NewResult(1, 1))
++	err = store.ReportMissionBlocker(ctx, "uuid-1", "reason")
++	assert.NoError(t, err)
++	assert.NoError(t, mock.ExpectationsWereMet())
++}
+
+ func TestPostgresTaskStore_ClaimTask_NoTask(t *testing.T) {
+	db, mock, err := sqlmock.New()

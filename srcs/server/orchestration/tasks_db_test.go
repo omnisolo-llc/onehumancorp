@@ -124,6 +124,31 @@ func TestSqliteTaskStore_UpdateTaskStatus(t *testing.T) {
 // however, sqlite testing is preferred for covering the logic since the SQL semantics are similar.
 // For full >90% coverage as requested, we will use a sqlmock library or we can increase sqlite coverage first.
 
+func TestPostgresTaskStore_ReportMissionBlocker(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+	store := NewPostgresTaskStore(db)
+	ctx := context.Background()
+
+	mock.ExpectExec("UPDATE agent_missions SET status = 'blocked'").WithArgs("reason", "uuid-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	err = store.ReportMissionBlocker(ctx, "uuid-1", "reason")
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSqliteTaskStore_ReportMissionBlocker(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	store := NewSqliteTaskStore(db)
+
+	// We only check if it executes without error because the test db may not have agent_missions.
+	// If the table doesn't exist, this will error, but let's just create it.
+	_, _ = db.Exec("CREATE TABLE IF NOT EXISTS agent_missions (id TEXT, status TEXT, mission_log TEXT, updated_at TIMESTAMP)")
+	_, _ = db.Exec("INSERT INTO agent_missions (id, status) VALUES ('task-x', 'PENDING')")
+	err := store.ReportMissionBlocker(context.Background(), "task-x", "blocked reason")
+	assert.NoError(t, err)
+}
 
 func TestPostgresTaskStore_CreateTask(t *testing.T) {
 	db, mock, err := sqlmock.New()

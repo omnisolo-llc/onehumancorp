@@ -1,0 +1,36 @@
+--- srcs/server/orchestration/tasks_db.go
++++ srcs/server/orchestration/tasks_db.go
+@@ -31,6 +31,7 @@
+	UpdateTaskStatus(ctx context.Context, id string, status string) error
+	GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error)
+	PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error)
++	ReportMissionBlocker(ctx context.Context, id string, reason string) error
+ }
+
+ // PostgresTaskStore implementation
+@@ -191,6 +192,12 @@
+	return err
+ }
+
++func (s *PostgresTaskStore) ReportMissionBlocker(ctx context.Context, id string, reason string) error {
++	query := `UPDATE agent_missions SET status = 'blocked', mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || E'\n' || $1 END, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
++	_, err := s.db.ExecContext(ctx, query, reason, id)
++	return err
++}
++
+ func (s *PostgresTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+@@ -582,6 +589,12 @@
+	return err
+ }
+
++func (s *SqliteTaskStore) ReportMissionBlocker(ctx context.Context, id string, reason string) error {
++	query := `UPDATE agent_missions SET status = 'blocked', mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN ? ELSE mission_log || char(10) || ? END, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
++	_, err := s.db.ExecContext(ctx, query, reason, reason, id)
++	return err
++}
++
+
+ func (s *SqliteTaskStore) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error) {
+     query := `

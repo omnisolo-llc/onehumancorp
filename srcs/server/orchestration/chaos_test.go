@@ -36,6 +36,13 @@ func (f *faultInjectingCloudDB) UpdateTaskStatus(ctx context.Context, id string,
 	return nil
 }
 
+func (f *faultInjectingCloudDB) ReportMissionBlocker(ctx context.Context, id string, reason string) error {
+	if f.fails {
+		return errors.New("simulated network failure")
+	}
+	return nil
+}
+
 func TestChaosSyncDaemonNetworkFailure(t *testing.T) {
 	localDB := setupSyncTestDB(t)
 	defer localDB.Close()

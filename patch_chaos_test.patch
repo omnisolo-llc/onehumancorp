@@ -1,0 +1,16 @@
+--- srcs/server/orchestration/chaos_test.go
++++ srcs/server/orchestration/chaos_test.go
+@@ -35,6 +35,13 @@
+	return nil
+ }
+
++func (f *faultInjectingCloudDB) ReportMissionBlocker(ctx context.Context, id string, reason string) error {
++	if f.fails {
++		return errors.New("simulated network failure")
++	}
++	return nil
++}
++
+ func TestChaosSyncDaemonNetworkFailure(t *testing.T) {
+	localDB := setupSyncTestDB(t)
+	defer localDB.Close()

@@ -1,0 +1,13 @@
+--- srcs/server/orchestration/sync_daemon_test.go
++++ srcs/server/orchestration/sync_daemon_test.go
+@@ -37,6 +37,10 @@
+	return m.TaskStore.UpdateTaskStatus(ctx, id, status)
+ }
+
++func (m *mockPostgresProvider) ReportMissionBlocker(ctx context.Context, id string, reason string) error {
++	return m.TaskStore.ReportMissionBlocker(ctx, id, reason)
++}
++
+ func (m *mockPostgresProvider) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error) {
+	return m.TaskStore.GetTasksByOrganization(ctx, organizationID)
+ }
