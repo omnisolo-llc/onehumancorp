@@ -79,7 +79,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/onboarding/start", onboardingAPI.HandleStartOnboarding)
-	mux.HandleFunc("/api/onboarding/status", onboardingAPI.HandleGetStatus)
+	mux.HandleFunc("/api/onboarding/status", onboarding.TenantAuthMiddleware(onboardingAPI.HandleGetStatus))
 
 	growthSvc := growth.NewGrowthService(db)
 	mux.HandleFunc("/api/growth/referrals/click", growthSvc.HandleReferralClick)
