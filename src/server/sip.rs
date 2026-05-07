@@ -376,17 +376,51 @@ mod tests {
 
     #[tokio::test]
     async fn test_handoff_mission_marks_blocked() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .max_connections(1)
-            .acquire_timeout(std::time::Duration::from_millis(10))
-            .connect_lazy("postgres://localhost/dummy")
-            .unwrap();
+        if let Ok(db_url) = std::env::var("DATABASE_URL") {
+            let pool = sqlx::postgres::PgPoolOptions::new()
+                .connect(&db_url)
+                .await
+                .unwrap();
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
 
-        let sip_db = SipDB::new(pool, "test_org".to_string());
+            // Clean up old state
+            sqlx::query("DELETE FROM agent_missions WHERE id = 'dummy_id'")
+                .execute(&pool)
+                .await
+                .unwrap();
 
-        let res = sip_db.handoff_mission("dummy_id", "Blocked by prompt instructions").await;
-        // Should error out gracefully with our dummy pool timeout instead of panicking
-        assert!(res.is_err());
+            // Insert mission
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, organization_id) VALUES ('dummy_id', 'PENDING', 'dummy payload', 'test_org')")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            sip_db.handoff_mission("dummy_id", "Blocked by prompt instructions").await.unwrap();
+
+            // Re-fetch and check
+            let row = sqlx::query("SELECT status, mission_log FROM agent_missions WHERE id = 'dummy_id' AND organization_id = 'test_org'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+            let status: String = row.get("status");
+            let log: String = row.get("mission_log");
+
+            assert_eq!(status, "blocked");
+            assert!(log.contains("Blocked by prompt instructions"));
+        } else {
+            let pool = sqlx::postgres::PgPoolOptions::new()
+                .max_connections(1)
+                .acquire_timeout(std::time::Duration::from_millis(10))
+                .connect_lazy("postgres://localhost/dummy")
+                .unwrap();
+
+            let sip_db = SipDB::new(pool, "test_org".to_string());
+
+            let res = sip_db.handoff_mission("dummy_id", "Blocked by prompt instructions").await;
+            // Should error out gracefully with our dummy pool timeout instead of panicking
+            assert!(res.is_err());
+        }
     }
 
     #[tokio::test]
