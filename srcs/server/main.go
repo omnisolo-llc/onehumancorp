@@ -81,7 +81,7 @@ func main() {
 	mux.HandleFunc("/api/onboarding/start", onboardingAPI.HandleStartOnboarding)
 	mux.HandleFunc("/api/onboarding/status", onboardingAPI.HandleGetStatus)
 
-	growthSvc := growth.NewGrowthService()
+	growthSvc := growth.NewGrowthService(db)
 	mux.HandleFunc("/api/growth/referrals/click", growthSvc.HandleReferralClick)
 	mux.HandleFunc("/api/growth/referrals/convert", growthSvc.HandleReferralConvert)
 	mux.HandleFunc("/api/growth/team-invites/accept", growthSvc.HandleTeamInviteAccept)
