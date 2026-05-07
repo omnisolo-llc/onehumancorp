@@ -1,6 +1,13 @@
 import { Button, VerticalBox, HorizontalBox, StandardTableView, LineEdit, TextEdit } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component SocialPosting inherits Window {
+    width: 500px;
+    height: 700px;
+    title: "Social Media Auto-Posting";
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
     in-out property <string> post_content: "";
     in-out property <bool> is_connected_instagram: false;
     in-out property <bool> is_connected_facebook: false;
@@ -12,39 +19,106 @@ export component SocialPosting inherits Window {
     callback approve_post();
 
     VerticalBox {
-        Text {
-            text: "Social Media Auto-Posting";
-            font-size: 24px;
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text {
+                text: "Social Media Auto-Posting";
+                font-size: 24px;
+                font-family: "Outfit";
+                font-weight: 700;
+                color: white;
+            }
+            Rectangle {}
         }
 
         HorizontalBox {
+            spacing: 12px;
             Button {
-                text: root.is_connected_instagram ? "Instagram Connected" : "Connect Instagram";
+                text: root.is_connected_instagram ? "📷 Instagram Connected" : "📷 Connect Instagram";
+                height: 44px;
                 clicked => { root.connect_instagram(); }
             }
             Button {
-                text: root.is_connected_facebook ? "Facebook Connected" : "Connect Facebook";
+                text: root.is_connected_facebook ? "📘 Facebook Connected" : "📘 Connect Facebook";
+                height: 44px;
                 clicked => { root.connect_facebook(); }
             }
         }
 
-        Button {
-            text: "Generate Post with AI";
-            clicked => { root.generate_post(); }
+        GlassCard {
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                Text { text: "Draft Your Post"; font-weight: 700; color: white; font-size: 18px; font-family: "Outfit"; }
+
+                TextEdit {
+                    text: root.post_content;
+                    height: 120px;
+                    edited(text) => { root.post_content = text; }
+                }
+
+                Button {
+                    text: "✨ Generate Post with AI";
+                    height: 44px;
+                    clicked => { root.generate_post(); }
+                }
+            }
         }
 
-        TextEdit {
-            text: root.post_content;
-            edited(text) => { root.post_content = text; }
+        Text { text: "Post Preview"; font-weight: 700; color: white; font-size: 18px; font-family: "Outfit"; }
+
+        // Post Preview Card
+        GlassCard {
+            border-color: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+
+                HorizontalBox {
+                    spacing: 8px;
+                    Rectangle {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 16px;
+                        background: #cbd5e1;
+                    }
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "Your Business"; font-size: 14px; font-weight: 700; color: white; }
+                    }
+                }
+
+                Rectangle {
+                    height: 150px;
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 4px;
+                    Text { text: "Post Image Placeholder"; color: #94a3b8; horizontal-alignment: center; vertical-alignment: center; }
+                }
+
+                Text {
+                    text: root.post_content == "" ? "Your post content will appear here..." : root.post_content;
+                    color: white;
+                    font-size: 14px;
+                    wrap: word-wrap;
+                }
+            }
         }
 
         HorizontalBox {
+            spacing: 12px;
             Button {
-                text: "Approve Post";
+                text: "✅ Approve & Post Now";
+                primary: true;
+                height: 48px;
                 clicked => { root.approve_post(); }
             }
             Button {
-                text: "Schedule Post";
+                text: "📅 Schedule";
+                height: 48px;
                 clicked => { root.schedule_post(); }
             }
         }
