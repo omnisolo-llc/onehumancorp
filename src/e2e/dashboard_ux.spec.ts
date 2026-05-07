@@ -36,7 +36,7 @@ test('should display Quick Actions on mobile', async ({ page }) => {
   await page.waitForURL('**/*');
 
   // Verify navigation actions
-  await expect(page.locator('text=Business Advisory')).toBeVisible();
+  await expect(page.locator('text=Store Tips')).toBeVisible();
 
   // Verify First-Time User Tour ? icon toggle
   const questionMarkBtn = page.locator('button:has-text("?")');
@@ -100,4 +100,70 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
   await expect(page.locator('button:has-text("Video Tutorials")')).toBeVisible();
   await expect(page.locator('button:has-text("App Tour")')).toBeVisible();
   await expect(page.locator('button:has-text("What\'s New")')).toBeVisible();
+});
+
+test.describe('Dashboard Flow Completeness UX', () => {
+  test('Grandmother test: complete critical journey starting from login', async ({ page }) => {
+    // Navigate to login page per constraints
+    await page.goto('/login');
+
+    // Fill in credentials and sign in
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
+
+    // Wait for Dashboard to load
+    await page.waitForURL('**/*');
+
+    await expect(page.locator('text=My Business').first()).toBeVisible();
+
+    const addProductBtn = page.locator('button:has-text("Add")').first();
+    await expect(addProductBtn).toBeVisible();
+
+    await expect(page).toHaveTitle(/OneHuman/);
+  });
+
+  test('Grandmother test: Check Orders from login', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL('**/*');
+
+    const ordersBtn = page.locator('button:has-text("Orders")').first();
+    await expect(ordersBtn).toBeVisible();
+  });
+
+  test('Grandmother test: Check Messages from login', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL('**/*');
+
+    const messagesBtn = page.locator('button:has-text("Chat")').first();
+    await expect(messagesBtn).toBeVisible();
+  });
+
+  test('Grandmother test: Check Analytics from login', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL('**/*');
+
+    const analyticsBtn = page.locator('button:has-text("Stats")').first();
+    await expect(analyticsBtn).toBeVisible();
+  });
+
+  test('Grandmother test: Share Store from login', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL('**/*');
+
+    const shareBtn = page.locator('button:has-text("Share")').first();
+    await expect(shareBtn).toBeVisible();
+  });
 });
