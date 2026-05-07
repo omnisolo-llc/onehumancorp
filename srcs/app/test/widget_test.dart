@@ -76,6 +76,11 @@ void main() {
 
     // 7. Dashboard Screen
     expect(find.text("Dashboard"), findsOneWidget);
+    expect(find.text("Welcome Checklist"), findsOneWidget);
+    expect(find.text("✅ Business live"), findsOneWidget);
+    expect(find.text("⬜ Add 3 more products"), findsOneWidget);
+    expect(find.text("⬜ Connect Instagram"), findsOneWidget);
+    expect(find.text("⬜ Share your link with a friend"), findsOneWidget);
     expect(find.text("Pending Agent Approvals"), findsOneWidget);
   });
 }
