@@ -141,3 +141,30 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
     ui.invoke_configure_integration("Zoom".into());
     assert_eq!(*called.borrow(), "Zoom");
 }
+
+#[test] fn integr_flow_configure_manychat() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("Manychat".into());
+    assert_eq!(*called.borrow(), "Manychat");
+}
+
+#[test] fn integr_flow_configure_calendly() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("Calendly".into());
+    assert_eq!(*called.borrow(), "Calendly");
+}
+
+#[test] fn integr_flow_configure_mailchimp() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("Mailchimp".into());
+    assert_eq!(*called.borrow(), "Mailchimp");
+}
