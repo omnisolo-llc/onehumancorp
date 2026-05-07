@@ -2508,7 +2508,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let mut count = g.borrow_mut();
                             *count = 100; // Simulated milestone reach
 
-                            ui.set_milestone_title("🚀 100 Visitors Today!".into());
+                            ui.set_milestone_title("🚀 Your store has 100 visitors today!".into());
                             ui.set_milestone_message("Your store is trending! Keep up the great work.".into());
                             ui.set_show_milestone(true);
                         });
@@ -2546,7 +2546,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     ui.set_milestone_message("You completed 3 orders!".into());
                                     ui.set_show_milestone(true);
                                 } else if *count == 10 {
-                                    ui.set_milestone_title("🎉 10th Order!".into());
+                                    ui.set_milestone_title("🎉 You just got your 10th order!".into());
                                     ui.set_milestone_message("Amazing! You've reached 10 orders.".into());
                                     ui.set_show_milestone(true);
                                 } else {
@@ -6036,11 +6036,11 @@ mod remaining_e2e_tests {
         dashboard_ui.invoke_dismiss_milestone();
         assert!(*milestone_dismissed.borrow(), "Milestone should be dismissed");
 
-        dashboard_ui.set_milestone_title("10th Order".into());
-        assert_eq!(dashboard_ui.get_milestone_title(), "10th Order");
+        dashboard_ui.set_milestone_title("🎉 You just got your 10th order!".into());
+        assert_eq!(dashboard_ui.get_milestone_title(), "🎉 You just got your 10th order!");
 
-        dashboard_ui.set_milestone_title("100 Visitors".into());
-        assert_eq!(dashboard_ui.get_milestone_title(), "100 Visitors");
+        dashboard_ui.set_milestone_title("🚀 Your store has 100 visitors today!".into());
+        assert_eq!(dashboard_ui.get_milestone_title(), "🚀 Your store has 100 visitors today!");
     }
 
     #[test]

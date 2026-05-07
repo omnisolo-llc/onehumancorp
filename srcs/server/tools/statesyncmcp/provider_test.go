@@ -35,6 +35,9 @@ func (m *mockLocalDB) GetTask(ctx context.Context, id string) (*orchestration.Sh
 	return m.getByIDRes, m.getByIDErr
 }
 
+func (m *mockLocalDB) PollDelegatedTasks(ctx context.Context, limit int) ([]*orchestration.SharedTask, error) {
+	return nil, nil
+}
 func (m *mockLocalDB) UpdateTaskStatus(ctx context.Context, id string, status string) error {
 	return m.updateErr
 }
