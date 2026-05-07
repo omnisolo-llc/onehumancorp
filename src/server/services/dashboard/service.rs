@@ -9,6 +9,7 @@ use std::sync::RwLock;
 use std::collections::HashMap;
 
 static PRODUCTS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::organization::Product>>>> = OnceLock::new();
+static ORDERS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::app::Order>>>> = OnceLock::new();
 
 
 pub struct MyDashboardService {
@@ -42,9 +43,9 @@ impl DashboardService for MyDashboardService {
         let org_id3 = req.organization_id.clone();
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings()),
-            tokio::task::spawn_blocking(move || {
+            tokio::task::spawn(async move { hub1.get_agents() }),
+            tokio::task::spawn(async move { hub2.get_meetings() }),
+            tokio::task::spawn(async move {
                 let cost_auditor = hub3.get_cost_auditor();
                 (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
             }),
@@ -113,6 +114,12 @@ impl DashboardService for MyDashboardService {
 
             tokio::task::spawn(async move {
                 let org_id = org_id2;
+                                let cache = ORDERS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+                if let Ok(guard) = cache.read() {
+                    if let Some(orders) = guard.get(&org_id) {
+                        return Ok::<_, String>(orders.clone());
+                    }
+                }
                 let q = "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
@@ -152,6 +159,10 @@ impl DashboardService for MyDashboardService {
                 }
 
 
+                                let cache = ORDERS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+                if let Ok(mut guard) = cache.write() {
+                    guard.insert(org_id, results.clone());
+                }
                 Ok::<_, String>(results)
             }),
 
@@ -248,12 +259,10 @@ impl DashboardService for MyDashboardService {
         let mut original_prompts_len = 0;
         let mut compressed_prompts_len = 0;
 
-        let all_hub_agents = self.hub.get_agents();
-        let org_agents: Vec<_> = all_hub_agents.iter().filter(|a| a.organization_id == req.organization_id || a.id.starts_with(&format!("{}-", req.organization_id))).collect();
+        let org_agents: Vec<_> = agents.iter().filter(|a| a.organization_id == req.organization_id || a.id.starts_with(&format!("{}-", req.organization_id))).collect();
 
         for agent in org_agents {
-            // Note: we fetch the agent system prompts here (this simulation fetches basic descriptive info or we assume generic size if absent)
-            let prompt = &agent.name; // In full architecture this is loaded from db/roles, but since the Agent structure doesn't have a direct 'system_prompt' field exposed here, we compress role/name as representative text.
+            let prompt = &agent.name;
             let orig_len = prompt.len();
             if orig_len > 0 {
                 original_prompts_len += orig_len;
