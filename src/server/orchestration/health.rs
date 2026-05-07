@@ -23,6 +23,15 @@ pub async fn run_health_monitor(
             tracing::debug!("HEALTH MONITOR: Active probe (ping) failed or timed out.");
         }
 
+        // Hybrid mode health check
+        if let Ok(health) = monitor_hub.check_health().await {
+            if let Some(ready) = health.get("hybrid_mode_ready").and_then(|v| v.as_bool()) {
+                if !ready {
+                    tracing::warn!("HEALTH MONITOR: Hybrid mode is degraded.");
+                }
+            }
+        }
+
         let mut to_fire_now: Vec<String> = Vec::new();
         match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.get_active_agents()).await {
             Ok(Ok(agents)) => {
