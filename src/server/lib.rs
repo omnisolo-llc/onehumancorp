@@ -1345,6 +1345,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
+        .route("/api/mesh/broadcast", axum::routing::post(api::mesh_handler::broadcast_v1_handler))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))

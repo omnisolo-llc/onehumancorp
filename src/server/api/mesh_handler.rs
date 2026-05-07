@@ -29,6 +29,53 @@ pub struct BroadcastRequest {
     pub message: MeshMessage,
 }
 
+#[derive(serde::Deserialize)]
+pub struct V1BroadcastRequest {
+    pub agent_id: String,
+    pub channel: String,
+    pub event_type: String,
+    pub data: serde_json::Value,
+}
+
+pub async fn broadcast_v1_handler(
+    State(transport): State<Arc<dyn MeshTransport>>,
+    body_bytes: axum::body::Bytes,
+) -> impl IntoResponse {
+    let payload_val: serde_json::Value = match serde_json::from_slice(&body_bytes) {
+        Ok(v) => v,
+        Err(_) => return (axum::http::StatusCode::BAD_REQUEST, axum::response::Json(serde_json::json!({ "error": "Invalid JSON payload" }))).into_response(),
+    };
+
+    if payload_val.get("action").is_some() || payload_val.get("status").is_some() {
+        return (axum::http::StatusCode::BAD_REQUEST, axum::response::Json(serde_json::json!({ "error": "Deprecated key found in payload" }))).into_response();
+    }
+
+    let payload: V1BroadcastRequest = match serde_json::from_value(payload_val) {
+        Ok(v) => v,
+        Err(_) => return (axum::http::StatusCode::BAD_REQUEST, axum::response::Json(serde_json::json!({ "error": "Missing required OHC-SIP field" }))).into_response(),
+    };
+
+    if payload.agent_id.is_empty() || payload.channel.is_empty() || payload.event_type.is_empty() || payload.data.is_null() {
+        return (axum::http::StatusCode::BAD_REQUEST, axum::response::Json(serde_json::json!({ "error": "OHC-SIP fields cannot be empty strings or null" }))).into_response();
+    }
+
+    let mesh_msg = MeshMessage {
+        agent_id: payload.agent_id,
+        action: payload.channel.clone(),
+        status: "ok".to_string(),
+        payload: payload.data.to_string().into_bytes(),
+        msg_id: uuid::Uuid::new_v4().to_string(),
+    };
+
+    match transport.publish(&payload.channel, mesh_msg).await {
+        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
+        Err(e) => {
+            let error_res = serde_json::json!({ "error": e.to_string() });
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
+        }
+    }
+}
+
 pub async fn broadcast_handler(
     State(transport): State<Arc<dyn MeshTransport>>,
     axum::Json(payload): axum::Json<BroadcastRequest>,
@@ -114,6 +161,7 @@ mod tests {
 
         let app = Router::new()
             .route("/api/v1/mesh/connect", get(mesh_ws_handler))
+            .route("/api/mesh/broadcast", axum::routing::post(broadcast_v1_handler))
             .route("/api/mesh/v2/broadcast", axum::routing::post(broadcast_handler))
             .with_state(transport);
 
@@ -172,5 +220,59 @@ mod tests {
             }
         }
         assert!(found, "Did not receive the srv_test message");
+    }
+
+    #[tokio::test]
+    async fn test_broadcast_v1_validation() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let app = Router::new()
+            .route("/api/mesh/broadcast", axum::routing::post(broadcast_v1_handler))
+            .with_state(transport);
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap(); });
+
+        let client = reqwest::Client::new();
+        let url = format!("http://{}/api/mesh/broadcast", addr);
+
+        // Valid payload
+        let valid_payload = serde_json::json!({
+            "agent_id": "123",
+            "channel": "mesh:tasks",
+            "event_type": "TASK",
+            "data": {"foo": "bar"}
+        });
+        let res = client.post(&url).json(&valid_payload).send().await.unwrap();
+        assert_eq!(res.status(), 200);
+
+        // Missing agent_id
+        let missing_payload = serde_json::json!({
+            "channel": "mesh:tasks",
+            "event_type": "TASK",
+            "data": {"foo": "bar"}
+        });
+        let res = client.post(&url).json(&missing_payload).send().await.unwrap();
+        assert_eq!(res.status(), 400); // 400 Bad Request explicit rejection
+
+        // Empty string payload
+        let empty_payload = serde_json::json!({
+            "agent_id": "",
+            "channel": "mesh:tasks",
+            "event_type": "TASK",
+            "data": {"foo": "bar"}
+        });
+        let res = client.post(&url).json(&empty_payload).send().await.unwrap();
+        assert_eq!(res.status(), 400); // Because our handler checks for is_empty()
+
+        // Deprecated keys
+        let deprecated_payload = serde_json::json!({
+            "agent_id": "123",
+            "channel": "mesh:tasks",
+            "event_type": "TASK",
+            "data": {"foo": "bar"},
+            "action": "do_something"
+        });
+        let res = client.post(&url).json(&deprecated_payload).send().await.unwrap();
+        assert_eq!(res.status(), 400);
     }
 }

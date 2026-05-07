@@ -229,6 +229,48 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
 
+                    CREATE TABLE IF NOT EXISTS kairos_shared_tasks (
+                        id TEXT PRIMARY KEY,
+                        parent_task_id TEXT,
+                        epic_id TEXT,
+                        organization_id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        assigned_agent_id TEXT,
+                        priority TEXT NOT NULL DEFAULT 'P2',
+                        payload TEXT,
+                        dependencies TEXT NOT NULL DEFAULT '[]',
+                        locked_until TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS kairos_state_transitions (
+                        id TEXT PRIMARY KEY,
+                        task_id TEXT NOT NULL,
+                        from_state TEXT NOT NULL,
+                        to_state TEXT NOT NULL,
+                        agent_id TEXT NOT NULL,
+                        reason TEXT,
+                        occurred_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS kairos_sub_agent_jobs (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL,
+                        parent_task_id TEXT NOT NULL,
+                        payload TEXT,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        worker_id TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS autodream_vector_memories (
+                        id TEXT PRIMARY KEY,
+                        task_id TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        embedding BLOB,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
                     CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
                         id VARCHAR PRIMARY KEY,
                         organization_id VARCHAR NOT NULL,
