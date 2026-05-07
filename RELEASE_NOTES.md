@@ -1,3 +1,9 @@
+## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
+
+- Scaling (Cloud): update api routing to use axum 0.8 style path variables (#11553).
+
+- Privacy/Offline (Standalone): No specific privacy/offline changes in this release.
+
 ## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
 
 - Scaling (Cloud): Refactored GrowthReferralWidget to use GlassCard for premium aesthetic (#11347).
