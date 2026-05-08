@@ -47,6 +47,11 @@
 
 # Release Notes
 
+## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
+
+- Scaling (Cloud): 🛡️ Sentinel: [Hybrid Security Fix] Redact PII (tenantID) in Rate Limit logs to ensure multi-tenant compliance.
+- Privacy/Offline (Standalone): 🛡️ Sentinel: [Hybrid Security Fix] Redact PII (tenantID) in Rate Limit logs to ensure local data sovereignty.
+
 ## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
 
 - Scaling (Cloud): Add dual-mode caching layer to dashboard service to optimize latency (#11871).

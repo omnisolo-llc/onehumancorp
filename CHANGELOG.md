@@ -1,5 +1,11 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
+### Cloud Scaling Improvements
+- 🛡️ Sentinel: [Hybrid Security Fix] Redact PII (tenantID) in Rate Limit logs to ensure multi-tenant compliance.
+### Privacy/Offline Improvements
+- 🛡️ Sentinel: [Hybrid Security Fix] Redact PII (tenantID) in Rate Limit logs to ensure local data sovereignty.
+
 ## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
 ### Cloud Scaling Improvements
 - Fix orchestration mesh tests that failed due to multiple declarations and invalid imports.
