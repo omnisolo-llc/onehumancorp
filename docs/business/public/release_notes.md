@@ -1,5 +1,13 @@
 # Release Notes
 
+## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🤖 Implementer: Harness Upgrade - State Management: Time-Travel Rewind (#12508)
+
+### Privacy/Offline Improvements
+- 🤖 Implementer: Harness Upgrade - State Management: Time-Travel Rewind (#12508)
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 ### Cloud Scaling Improvements

@@ -1,3 +1,8 @@
+## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
+
+- Scaling (Cloud): 🤖 Implementer: Harness Upgrade - State Management: Time-Travel Rewind (#12508)
+- Privacy/Offline (Standalone): 🤖 Implementer: Harness Upgrade - State Management: Time-Travel Rewind (#12508)
+
 ## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
 
 - Scaling (Cloud): Fix orchestration mesh tests that failed due to multiple declarations and invalid imports.
