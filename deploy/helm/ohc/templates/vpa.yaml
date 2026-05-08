@@ -1,4 +1,4 @@
-{{- if .Values.backend.vpa.enabled }}
+{{- if and .Values.backend.vpa.enabled .Values.legacyAutoscaling }}
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
@@ -14,7 +14,7 @@ spec:
     updateMode: "Off"
 {{- end }}
 ---
-{{- if .Values.ohcCore.vpa.enabled }}
+{{- if and .Values.ohcCore.vpa.enabled .Values.legacyAutoscaling }}
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
