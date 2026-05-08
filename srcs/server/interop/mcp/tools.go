@@ -89,12 +89,12 @@ func (t *WorkspaceSyncTool) Execute(ctx context.Context, path string, strategy s
 		"files":          files,
 	}
 
-	payloadBytes, err := jsonMarshal(payload)
+	stateBytes, err := jsonMarshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal payload: %w", err)
+		return fmt.Errorf("failed to marshal state: %w", err)
 	}
 
-	if err := t.Proxy.BufferIntegrationState(ctx, "hybrid_workspace_sync", payloadBytes); err != nil {
+	if err := t.Proxy.BufferIntegrationState(ctx, "hybrid_workspace_sync", stateBytes); err != nil {
 		return fmt.Errorf("failed to buffer state: %w", err)
 	}
 
