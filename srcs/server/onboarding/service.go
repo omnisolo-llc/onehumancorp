@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"onehumancorp/srcs/server/orchestration"
+	"onehumancorp/srcs/server/telemetry"
 )
 
 type OnboardingRequest struct {
@@ -54,7 +55,11 @@ func (s *Service) StartOnboarding(ctx context.Context, req OnboardingRequest) (*
 		{"Generate Standard Policies", "Legal agent to draft terms of service and privacy policies."},
 	}
 
-	payload, _ := json.Marshal(req)
+	reqBytes, _ := json.Marshal(req)
+	var payloadMap map[string]interface{}
+	json.Unmarshal(reqBytes, &payloadMap)
+
+	payload, _ := json.Marshal(telemetry.RedactInterfacePII(payloadMap))
 	rawPayload := json.RawMessage(payload)
 
 	var wg sync.WaitGroup

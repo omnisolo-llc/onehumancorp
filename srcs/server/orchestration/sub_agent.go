@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+	"onehumancorp/srcs/server/telemetry"
 )
 
 var ErrTokenBudgetExceeded = errors.New("token budget exceeded")
@@ -264,7 +265,7 @@ func (s *DefaultSubAgentSpawner) broadcastLifecycleEvent(ctx context.Context, ta
 		"event":   eventType,
 		"time":    time.Now().Unix(),
 	}
-	bytes, _ := json.Marshal(payload)
+	bytes, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 	// The problem description mentioned "mesh:tasks" channels
 	_ = s.mesh.Publish(ctx, "mesh:tasks", bytes)
 	_ = s.mesh.Publish(ctx, "mesh:coordination", bytes)

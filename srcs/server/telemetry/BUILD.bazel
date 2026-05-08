@@ -7,6 +7,7 @@ go_library(
         "harness_metrics.go",
         "local_buffer.go",
         "rag_sync_metrics.go",
+        "pii_redaction.go",
     ],
     importpath = "onehumancorp/srcs/server/telemetry",
     visibility = ["//visibility:public"],
@@ -22,6 +23,7 @@ go_test(
     srcs = [
         "harness_metrics_test.go",
         "local_buffer_test.go",
+        "pii_redaction_test.go",
     ],
     embed = [":telemetry"],
     deps = [
