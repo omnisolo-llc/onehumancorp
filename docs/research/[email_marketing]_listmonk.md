@@ -1,17 +1,20 @@
-# Scout: Tool Integration Research Q2
+## [Email Marketing] Issue Brief: Listmonk Integration for Self-Hosted Newsletters
 
-## 3. Email Marketing
-**Title**: Integrate Listmonk for Embedded, No-Jargon Email Campaigns
-**Problem Statement**: Priya the Boutique Owner wants to email her past customers when new stock arrives but finds Mailchimp confusing and expensive. She just wants to say "send this to everyone who bought last month."
+**Title**: Scout 🔍: Integrate Listmonk for Privacy-First Email Marketing
+**Problem Statement**:
+Small businesses need to send newsletters and promotional emails to their customer base, but commercial tools (Mailchimp, etc.) can become expensive as lists grow. Standalone OHC users also require a solution that keeps customer data entirely local and private.
 **Research Report**:
-- Listmonk is an open-source, self-hosted newsletter and mailing list manager.
-- It is lightweight (Go + PostgreSQL), aligning perfectly with the OHC backend stack.
-- Zero extra SaaS costs for OHC Standalone users; minimal scaling costs for Cloud.
-- Simplifies list management and supports template-based sending without complex drag-and-drop builders.
+- **Tool**: Listmonk
+- **Evaluation**: A fast, standalone, self-hosted newsletter and mailing list manager.
+- **Ease of Use**: The admin UI is clean, but initial setup (SMTP configuration) can be technical.
+- **Pricing**: Open-source and free. User pays only for their SMTP provider (e.g., AWS SES, SendGrid).
+- **Cloud vs. Standalone**: Perfect for Standalone (can be bundled). For Cloud, OHC would need to host a multi-tenant instance or run separate instances per tenant.
 **Design Doc**:
-- Customer Success ("The Ambassador") tags customers automatically (e.g., "bought-shoes").
-- Users type a plain-text prompt: "Draft an email about our new summer dresses."
-- AI generates the HTML, Listmonk handles the reliable batch delivery, bounce tracking, and open rate analytics.
-**Implementation Prompt**: Integrate Listmonk as the underlying email engine to allow users to trigger marketing emails to specific customer segments directly from the OHC dashboard.
+- Users manage their subscriber lists within OHC's CRM.
+- OHC syncs this list to Listmonk.
+- Users compose emails in OHC (or directly in Listmonk's UI if embedded).
+- Listmonk handles the high-throughput delivery via the configured SMTP server and tracks opens/clicks.
+**Implementation Prompt**:
+Integrate Listmonk as the default email marketing engine for Standalone OHC. Create a seamless sync between OHC's CRM contacts and Listmonk's subscriber lists. Provide a simplified UI within OHC for users to configure their SMTP settings and trigger campaigns.
 **Priority**: P2
-**Estimated Scope**: Medium
+**Estimated Scope**: Large

@@ -1,17 +1,20 @@
-# Scout: Tool Integration Research Q2
+## [Calendar] Issue Brief: Cal.com Integration for Seamless Scheduling
 
-## 2. Calendar & Scheduling
-**Title**: Integrate Cal.com for Zero-Config Booking & Calendar Sync
-**Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
+**Title**: Scout 🔍: Integrate Cal.com for Unified Booking and Scheduling
+**Problem Statement**:
+Service-based businesses (e.g., consultants, tutors) struggle with the back-and-forth of scheduling appointments. They need a simple, professional way for clients to book time that automatically syncs with their availability.
 **Research Report**:
-- Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box.
-- It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
-- Free tier available for individuals; great for our free tier users.
-- Alternative is building from scratch, which is error-prone.
+- **Tool**: Cal.com
+- **Evaluation**: An open-source alternative to Calendly. Highly customizable, supports multiple integrations, and is self-hostable.
+- **Ease of Use**: Very user-friendly. Users can create booking pages easily.
+- **Pricing**: Free core tier, reasonable pro features. Open-source version is free (requires hosting).
+- **Cloud vs. Standalone**: Excellent fit. Can use the hosted SaaS for Cloud, and the self-hosted version for Standalone deployments.
 **Design Doc**:
-- "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
-- Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.
-- When a customer books a slot on the OHC public page, Cal.com manages the calendar event and conflict resolution transparently.
-**Implementation Prompt**: Embed Cal.com's infrastructure so users can sync their personal calendars and provide a public booking widget on their storefront that prevents double-booking.
-**Priority**: P0
+- User connects their existing calendar (Google, Outlook) to Cal.com via OHC.
+- OHC generates a unique booking link for the user's services.
+- When a client books, Cal.com handles the calendar invite and conflict resolution.
+- OHC receives a webhook to log the booking in the CRM.
+**Implementation Prompt**:
+Integrate Cal.com into the OHC platform. Provide a UI for users to set their availability and generate booking links. Set up webhooks to capture booking events and sync them with the user's OHC CRM profile. Support embedding the booking widget on the user's OHC-generated storefront.
+**Priority**: P2
 **Estimated Scope**: Medium
