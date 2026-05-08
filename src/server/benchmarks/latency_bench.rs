@@ -55,20 +55,20 @@ pub async fn bench_dashboard_snapshot() {
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
     hub.open_meeting(meeting_id.clone(), vec!["test_agent".to_string()], "Agenda".to_string());
     for i in 0..50 {
-        let msg = crate::ohc::agent::AgentMessage {
+        let msg = crate::ohc::orchestration::Message {
             id: format!("msg-{}", i),
-            from_agent_id: "test_agent".to_string(),
-            to_agent_id: "all".to_string(),
-            message_type: "chat".to_string(),
+            from_agent: "test_agent".to_string(),
+            to_agent: "all".to_string(),
+            r#type: "chat".to_string(),
             content: "Hello world this is a test message".to_string(),
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: meeting_id.clone(),
         };
-        let _ = hub.clone().publish(ohc_builtin_agent::proto::hub::Message {
+        let _ = hub.clone().publish(crate::ohc::orchestration::Message {
             id: msg.id,
-            from_agent: msg.from_agent_id,
-            to_agent: msg.to_agent_id,
-            r#type: msg.message_type,
+            from_agent: msg.from_agent,
+            to_agent: msg.to_agent,
+            r#type: msg.r#type,
             content: msg.content,
             occurred_at_unix: msg.occurred_at_unix,
             meeting_id: msg.meeting_id,
