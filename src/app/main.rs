@@ -550,13 +550,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         let models = vec![
                                             app::ApiEndpoint {
                                                 method: "GET".into(),
-                                                path: "/v1/products".into(),
-                                                description: "Returns a list of all products in your store.".into(),
+                                                path: "Read Product List".into(),
+                                                description: "Product Data Access".into(),
                                             },
                                             app::ApiEndpoint {
                                                 method: "POST".into(),
-                                                path: "/v1/orders".into(),
-                                                description: "Creates a new order in your store.".into(),
+                                                path: "Create New Order".into(),
+                                                description: "Order Management".into(),
                                             },
                                         ];
                                         api_docs_ui.set_endpoints(slint::ModelRc::new(slint::VecModel::from(models)));
@@ -566,7 +566,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             let docs_handle = api_docs_ui.as_weak();
                                             move |path| {
                                                 if let Some(ui) = docs_handle.upgrade() {
-                                                    let resp = if path == "/v1/products" {
+                                                    let resp = if path == "Read Product List" {
                                                         "{\n  \"data\": [\n    { \"id\": \"prod_1\", \"name\": \"Premium Theme\" }\n  ]\n}"
                                                     } else {
                                                         "{\n  \"status\": \"success\",\n  \"order_id\": \"ord_123\"\n}"
@@ -2878,13 +2878,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let models = vec![
                     app::ApiEndpoint {
                         method: "GET".into(),
-                        path: "/v1/products".into(),
-                        description: "Returns a list of all products in your store.".into(),
+                        path: "Read Product List".into(),
+                        description: "Product Data Access".into(),
                     },
                     app::ApiEndpoint {
                         method: "POST".into(),
-                        path: "/v1/orders".into(),
-                        description: "Creates a new order in your store.".into(),
+                        path: "Create New Order".into(),
+                        description: "Order Management".into(),
                     },
                 ];
                 api_docs_ui.set_endpoints(slint::ModelRc::new(slint::VecModel::from(models)));
@@ -2894,7 +2894,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let docs_handle = api_docs_ui.as_weak();
                     move |path| {
                         if let Some(ui) = docs_handle.upgrade() {
-                            let resp = if path == "/v1/products" {
+                            let resp = if path == "Read Product List" {
                                 "{\n  \"data\": [\n    { \"id\": \"prod_1\", \"name\": \"Premium Theme\" }\n  ]\n}"
                             } else {
                                 "{\n  \"status\": \"success\",\n  \"order_id\": \"ord_123\"\n}"
