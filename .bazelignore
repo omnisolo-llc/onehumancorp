@@ -11,4 +11,3 @@ bazel-out
 bazel-testlogs
 .bazel-output-jetski
 srcs
-srcs
