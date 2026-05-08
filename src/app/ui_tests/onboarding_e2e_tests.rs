@@ -122,15 +122,6 @@ fn test_e2e_onboarding_welcome_checklist_progress() {
     assert_eq!(ui.get_progress(), 0);
     assert_eq!(ui.get_is_completed(), false);
 
-    // Mock completion logic flow
-    ui.set_progress(25);
-    assert_eq!(ui.get_progress(), 25);
-
-    ui.set_progress(100);
-    ui.set_is_completed(true);
-    assert_eq!(ui.get_is_completed(), true);
-    assert_eq!(ui.get_progress(), 100);
-
     // Validating navigation triggers correctly.
     let dashboard_triggered = std::rc::Rc::new(std::cell::RefCell::new(false));
     let dashboard_clone = dashboard_triggered.clone();

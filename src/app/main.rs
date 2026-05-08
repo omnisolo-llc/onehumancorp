@@ -234,15 +234,47 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
-    // Mock locale-based currency detection
-    let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-        "GBP"
-    } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-        "EUR"
-    } else {
-        "USD"
-    };
-    setup_wizard_ui.set_product_currency(detected_currency.into());
+    let sw_currency_weak = setup_wizard_ui.as_weak();
+    #[cfg(not(target_arch = "wasm32"))]
+    tokio::spawn(async move {
+        let mut currency = "USD".to_string();
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
+            req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+            if let Ok(resp) = client.get_wizard_state(req).await {
+                let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
+                if let Some(val) = inner.state.get("currency") {
+                    currency = val.clone();
+                }
+            }
+        }
+        slint::invoke_from_event_loop(move || {
+            if let Some(ui) = sw_currency_weak.upgrade() {
+                ui.set_product_currency(currency.into());
+            }
+        }).unwrap();
+    });
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_futures::spawn_local(async move {
+        let mut currency = "USD".to_string();
+        let window = web_sys::window().unwrap();
+        let loc = window.location();
+        let host = loc.host().unwrap_or_else(|_| "127.0.0.1:18789".to_string());
+        let proto = loc.protocol().unwrap_or_else(|_| "http:".to_string());
+        let url = format!("{}//{}/api/v1/wizard/state", proto, host);
+        if let Ok(resp) = reqwest::Client::new().get(&url).send().await {
+            if let Ok(state) = resp.json::<std::collections::HashMap<String, String>>().await {
+                if let Some(val) = state.get("currency") {
+                    currency = val.clone();
+                }
+            }
+        }
+        slint::invoke_from_event_loop(move || {
+            if let Some(ui) = sw_currency_weak.upgrade() {
+                ui.set_product_currency(currency.into());
+            }
+        }).unwrap();
+    });
 
     let setup_wizard_handle = setup_wizard_ui.as_weak();
     let sw_ui_weak = setup_wizard_handle.clone();
@@ -286,7 +318,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
             #[cfg(target_arch = "wasm32")]
             wasm_bindgen_futures::spawn_local(async move {
-                // HTTP call in WASM stubbed
+                let window = web_sys::window().unwrap();
+                let loc = window.location();
+                let host = loc.host().unwrap_or_else(|_| "127.0.0.1:18789".to_string());
+                let proto = loc.protocol().unwrap_or_else(|_| "http:".to_string());
+                let url = format!("{}//{}/api/v1/wizard/state", proto, host);
+
+                if let Err(e) = reqwest::Client::new()
+                    .post(&url)
+                    .json(&std::collections::HashMap::from([("is_advanced".to_string(), val.to_string())]))
+                    .send()
+                    .await {
+                    eprintln!("Failed to save state in WASM: {:?}", e);
+                }
             });
         }
     });
@@ -2797,15 +2841,47 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
-    // Mock locale-based currency detection
-    let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-        "GBP"
-    } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-        "EUR"
-    } else {
-        "USD"
-    };
-    setup_wizard_ui.set_product_currency(detected_currency.into());
+    let sw_currency_weak = setup_wizard_ui.as_weak();
+    #[cfg(not(target_arch = "wasm32"))]
+    tokio::spawn(async move {
+        let mut currency = "USD".to_string();
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
+            req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+            if let Ok(resp) = client.get_wizard_state(req).await {
+                let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
+                if let Some(val) = inner.state.get("currency") {
+                    currency = val.clone();
+                }
+            }
+        }
+        slint::invoke_from_event_loop(move || {
+            if let Some(ui) = sw_currency_weak.upgrade() {
+                ui.set_product_currency(currency.into());
+            }
+        }).unwrap();
+    });
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_futures::spawn_local(async move {
+        let mut currency = "USD".to_string();
+        let window = web_sys::window().unwrap();
+        let loc = window.location();
+        let host = loc.host().unwrap_or_else(|_| "127.0.0.1:18789".to_string());
+        let proto = loc.protocol().unwrap_or_else(|_| "http:".to_string());
+        let url = format!("{}//{}/api/v1/wizard/state", proto, host);
+        if let Ok(resp) = reqwest::Client::new().get(&url).send().await {
+            if let Ok(state) = resp.json::<std::collections::HashMap<String, String>>().await {
+                if let Some(val) = state.get("currency") {
+                    currency = val.clone();
+                }
+            }
+        }
+        slint::invoke_from_event_loop(move || {
+            if let Some(ui) = sw_currency_weak.upgrade() {
+                ui.set_product_currency(currency.into());
+            }
+        }).unwrap();
+    });
 
     let setup_wizard_handle = setup_wizard_ui.as_weak();
     let sw_ui_weak = setup_wizard_handle.clone();
@@ -2849,7 +2925,19 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
             });
             #[cfg(target_arch = "wasm32")]
             wasm_bindgen_futures::spawn_local(async move {
-                // HTTP call in WASM stubbed
+                let window = web_sys::window().unwrap();
+                let loc = window.location();
+                let host = loc.host().unwrap_or_else(|_| "127.0.0.1:18789".to_string());
+                let proto = loc.protocol().unwrap_or_else(|_| "http:".to_string());
+                let url = format!("{}//{}/api/v1/wizard/state", proto, host);
+
+                if let Err(e) = reqwest::Client::new()
+                    .post(&url)
+                    .json(&std::collections::HashMap::from([("is_advanced".to_string(), val.to_string())]))
+                    .send()
+                    .await {
+                    eprintln!("Failed to save state in WASM: {:?}", e);
+                }
             });
         }
     });
