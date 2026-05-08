@@ -10,7 +10,7 @@ ARTIFACTS_DIR="release"
 # Check for essential archives
 EXPECTED_ARCHIVES=(
     "app_tar.tar.gz"
-    "ohc-app-windows.zip"
+    "ohc-app-windows*.zip"
 )
 
 for arch in "${EXPECTED_ARCHIVES[@]}"; do

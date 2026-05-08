@@ -3,6 +3,8 @@ package orchestration
 import (
 	"context"
 	"sync"
+	"net/http"
+	"net/http/httptest"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -88,7 +90,12 @@ func TestLocalTeammateMesh_UnsubscribeOnContextDone(t *testing.T) {
 }
 
 func TestCentrifugeMesh_PublishSubscribe(t *testing.T) {
-	mesh := NewCentrifugeMesh()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	mesh := NewCentrifugeMesh(server.URL)
 
 	ctx := context.Background()
 	channel := "test_channel"
