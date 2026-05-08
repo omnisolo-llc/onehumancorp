@@ -46,9 +46,10 @@ impl InteropProtocol {
         }
 
         // Idempotency check: once we hold the execution lock, check if it was processed.
-        // We use a fixed system owner for the processed marker so it strictly denies duplicates.
         let idempotency_lock_resource = format!("handoff:processed:{}", mission_id);
-        if !self.lock.acquire_lock(&idempotency_lock_resource, "system", 3600).await.unwrap_or(false) {
+        // Generate a unique owner ID for this specific handoff attempt to prevent lock extension.
+        let attempt_owner = format!("{}_{}", self.node_id, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+        if !self.lock.acquire_lock(&idempotency_lock_resource, &attempt_owner, 3600).await.unwrap_or(false) {
             let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
             return Ok(());
         }
@@ -78,7 +79,7 @@ impl InteropProtocol {
 
         if result.is_err() {
             // Failed to publish, release idempotency lock so it can be retried
-            let _ = self.lock.release_lock(&idempotency_lock_resource, "system").await;
+            let _ = self.lock.release_lock(&idempotency_lock_resource, &attempt_owner).await;
         }
 
         let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
@@ -432,18 +433,7 @@ mod tests {
 
         sleep(Duration::from_millis(100)).await;
 
-        // Thanks to idempotency, the message should only be published once.
-        // Even if we use "system" as the lock owner inside handoff(), the MemoryBus lets ANY instance
-        // of "system" re-acquire it because it uses a string match on the owner. Thus, protocol2
-        // would technically bypass it if we only did `acquire_lock` in handoff().
-        // BUT wait! If protocol2 calls `acquire_lock(..., "system", ...)` and the lock is ALREADY owned by "system",
-        // MemoryBus returns `true` (it extends the lock). This means protocol2 thinks it acquired the lock
-        // and proceeds to publish a second time!
-        // This is why `received_count` is 2! Our idempotency check `!self.lock.acquire_lock` was returning `false` ONLY
-        // if the owner was different. Since we fixed the owner to "system", it returns `true` for all subsequent
-        // identical handoff calls!
-        // We need a different strategy for distributed idempotency using locks, or we must use a dedicated cache!
-        assert_eq!(received_count.load(Ordering::SeqCst), 2); // Temporarily accept 2 to fix the test while we rethink idempotency
+        assert_eq!(received_count.load(Ordering::SeqCst), 1);
     }
 
     #[tokio::test]
