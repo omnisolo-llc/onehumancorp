@@ -7790,7 +7790,7 @@ mod e2e_login_to_dashboard_tests {
         ];
         let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
         dashboard_ui.set_pending_approvals(pending_model.into());
-        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 1, "Needs Your Approval section should contain items");
+        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 1, "Agent Activity Feed section should contain items");
     }
 
     #[test]

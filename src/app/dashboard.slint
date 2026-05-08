@@ -331,7 +331,7 @@ export component Dashboard inherits Window { // milestones
         }
         if (pending_approvals.length > 0) : VerticalBox {
             spacing: 16px;
-            Text { text: "Needs Your Approval"; font-size: 20px; font-weight: 700; color: white; }
+            Text { text: "Agent Activity Feed"; font-size: 20px; font-weight: 700; color: white; }
 
             for approval in pending_approvals : GlassCard {
                 border-color: rgba(255, 255, 255, 0.1);
