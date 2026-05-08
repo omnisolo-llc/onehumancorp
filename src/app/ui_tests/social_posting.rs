@@ -90,3 +90,15 @@ fn test_post_content_update() {
     ui.set_post_content("Check out our new products!".into());
     assert_eq!(ui.get_post_content(), "Check out our new products!");
 }
+
+#[test]
+fn test_complex_post_content_update() {
+    let ui = create();
+    let complex_text = "🎉 Big Announcement! 🚀\n\nWe are excited to launch our new product line.\n\n#NewRelease #BusinessGrowth";
+    ui.set_post_content(complex_text.into());
+    assert_eq!(ui.get_post_content(), complex_text);
+
+    // Clear the content
+    ui.set_post_content("".into());
+    assert_eq!(ui.get_post_content(), "");
+}
