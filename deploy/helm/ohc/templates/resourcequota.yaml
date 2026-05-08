@@ -1,4 +1,4 @@
-{{- if .Values.backend.resourceQuota.enabled }}
+{{- if .Values.resourceQuota.enabled }}
 apiVersion: v1
 kind: ResourceQuota
 metadata:
@@ -7,11 +7,11 @@ metadata:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   hard:
-    requests.cpu: {{ .Values.backend.resourceQuota.requests.cpu | quote }}
-    requests.memory: {{ .Values.backend.resourceQuota.requests.memory | quote }}
-    requests.ephemeral-storage: {{ .Values.backend.resourceQuota.requests.ephemeralStorage | quote }}
-    limits.cpu: {{ .Values.backend.resourceQuota.limits.cpu | quote }}
-    limits.memory: {{ .Values.backend.resourceQuota.limits.memory | quote }}
-    limits.ephemeral-storage: {{ .Values.backend.resourceQuota.limits.ephemeralStorage | quote }}
-    pods: {{ .Values.backend.resourceQuota.limits.pods | quote }}
+    requests.cpu: {{ .Values.resourceQuota.requests.cpu | quote }}
+    requests.memory: {{ .Values.resourceQuota.requests.memory | quote }}
+    requests.ephemeral-storage: {{ .Values.resourceQuota.requests.ephemeralStorage | quote }}
+    limits.cpu: {{ .Values.resourceQuota.limits.cpu | quote }}
+    limits.memory: {{ .Values.resourceQuota.limits.memory | quote }}
+    limits.ephemeral-storage: {{ .Values.resourceQuota.limits.ephemeralStorage | quote }}
+    pods: {{ .Values.resourceQuota.limits.pods | quote }}
 {{- end }}
