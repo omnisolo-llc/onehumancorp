@@ -290,3 +290,30 @@ mod tests {
         assert_eq!(redacted_json["API_KEY"], "[REDACTED]");
     }
 }
+
+pub async fn record_storage_rw_cost(pool: &PgPool, organization_id: &str, operation: &str, size_bytes: i64) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_storage_rw_cost",
+        "counter",
+        size_bytes as f32,
+        serde_json::json!({
+            "organization_id": organization_id,
+            "operation": operation,
+        }),
+    )
+    .await
+}
+
+pub async fn record_email_send_cost(pool: &PgPool, organization_id: &str, count: i64) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_email_send_cost",
+        "counter",
+        count as f32,
+        serde_json::json!({
+            "organization_id": organization_id,
+        }),
+    )
+    .await
+}
