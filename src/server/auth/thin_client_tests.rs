@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod thin_client_auth_tests {
-    use crate::auth::{Store, User};
+    use crate::auth::Store;
     use chrono::Utc;
 
     #[tokio::test]
