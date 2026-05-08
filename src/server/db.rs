@@ -766,6 +766,41 @@ pub async fn insert_autodream_memory(
     }
 
 
+    pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), Box<dyn std::error::Error>> {
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query(
+                    "UPDATE agent_missions
+                     SET status = 'blocked',
+                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                         updated_at = CURRENT_TIMESTAMP
+                     WHERE id = $2"
+                )
+                .bind(blockers)
+                .bind(mission_id)
+                .execute(sqlite_pool)
+                .await?;
+            },
+            DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                set_org_context(&mut *tx, "system").await?;
+                sqlx::query(
+                    "UPDATE agent_missions
+                     SET status = 'blocked',
+                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                         updated_at = CURRENT_TIMESTAMP
+                     WHERE id = $2"
+                )
+                .bind(blockers)
+                .bind(mission_id)
+                .execute(&mut *tx)
+                .await?;
+                tx.commit().await?;
+            }
+        }
+        Ok(())
+    }
+
     pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
