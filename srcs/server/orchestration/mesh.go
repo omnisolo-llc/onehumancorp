@@ -19,14 +19,14 @@ type subscriber struct {
 // LocalTeammateMesh implements MeshHub for standalone operation using Go channels.
 type LocalTeammateMesh struct {
 	mu          sync.RWMutex
-	subscribers map[string][]subscriber
+	subscribers map[string]map[int]func(data []byte)
 	nextID      int
 }
 
 // NewLocalTeammateMesh creates a new LocalTeammateMesh.
 func NewLocalTeammateMesh() *LocalTeammateMesh {
 	return &LocalTeammateMesh{
-		subscribers: make(map[string][]subscriber),
+		subscribers: make(map[string]map[int]func(data []byte)),
 	}
 }
 
@@ -39,15 +39,17 @@ func (m *LocalTeammateMesh) Publish(ctx context.Context, channel string, data []
 		return nil
 	}
 	// Copy subs to avoid holding lock while dispatching
-	subsCopy := make([]subscriber, len(subs))
-	copy(subsCopy, subs)
+	subsCopy := make(map[int]func(data []byte), len(subs))
+	for k, v := range subs {
+		subsCopy[k] = v
+	}
 	m.mu.RUnlock()
 
 	dataCopy := make([]byte, len(data))
 	copy(dataCopy, data)
 
-	for _, sub := range subsCopy {
-		go sub.handler(dataCopy)
+	for _, handler := range subsCopy {
+		go handler(dataCopy)
 	}
 
 	return nil
@@ -58,20 +60,17 @@ func (m *LocalTeammateMesh) Subscribe(ctx context.Context, channel string, handl
 	m.mu.Lock()
 	id := m.nextID
 	m.nextID++
-	m.subscribers[channel] = append(m.subscribers[channel], subscriber{id: id, handler: handler})
+	if m.subscribers[channel] == nil {
+		m.subscribers[channel] = make(map[int]func(data []byte))
+	}
+	m.subscribers[channel][id] = handler
 	m.mu.Unlock()
 
 	go func() {
 		<-ctx.Done()
 		m.mu.Lock()
 		defer m.mu.Unlock()
-		subs := m.subscribers[channel]
-		for i, sub := range subs {
-			if sub.id == id {
-				m.subscribers[channel] = append(subs[:i], subs[i+1:]...)
-				break
-			}
-		}
+		delete(m.subscribers[channel], id)
 	}()
 
 	return nil
