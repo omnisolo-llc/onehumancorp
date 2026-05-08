@@ -33,8 +33,9 @@ impl IntegrationService for MyIntegrationService {
         &self,
         request: Request<ConnectIntegrationRequest>,
     ) -> Result<Response<IntegrationInstance>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("").to_string()).unwrap_or_else(|| "system".to_string());
         let req = request.into_inner();
-        match self.registry.connect(&req.integration_id, &req.base_url, req.clone()) {
+        match self.registry.connect(&req.integration_id, &req.base_url, req.clone(), &tenant_id) {
             Ok(inst) => Ok(Response::new(inst)),
             Err(e) => Err(Status::invalid_argument(e)),
         }

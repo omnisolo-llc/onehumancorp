@@ -12,3 +12,7 @@ pub mod stripe;
 pub mod twilio;
 pub mod mcp_gateway;
 pub mod mercadopago;
+pub mod ayrshare;
+pub mod cal_com;
+pub mod listmonk;
+pub mod easypost;

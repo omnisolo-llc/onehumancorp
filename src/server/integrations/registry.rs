@@ -17,6 +17,19 @@ pub struct IntegrationsRegistry {
     issues: RwLock<std::collections::HashMap<String, Vec<Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
+    ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
+    cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
+    listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
+    easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
+    mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
+    jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
+
+
+    ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
+    cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
+    listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
+    easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
+
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
 }
 
@@ -41,6 +54,19 @@ impl IntegrationsRegistry {
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+
+
+            ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
         }
     }
@@ -53,12 +79,13 @@ impl IntegrationsRegistry {
         Ok(())
     }
 
-    pub fn chat_messages(&self, integration_id: &str) -> Vec<ChatMessage> {
+    pub fn chat_messages(&self, integration_id: &str, tenant_id: &str) -> Vec<ChatMessage> {
         let msgs = self.messages.read().unwrap();
-        msgs.get(integration_id).cloned().unwrap_or_default()
+        let composite_key = format!("{}-{}", tenant_id, integration_id);
+        msgs.get(&composite_key).cloned().unwrap_or_default()
     }
 
-    pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, thread_id: &str) -> Result<ChatMessage, String> {
+    pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, thread_id: &str, tenant_id: &str) -> Result<ChatMessage, String> {
         let msg = ChatMessage {
             id: format!("msg-{}", Utc::now().timestamp()),
             channel: channel.to_string(),
@@ -69,11 +96,12 @@ impl IntegrationsRegistry {
         };
 
         let mut msgs = self.messages.write().unwrap();
-        msgs.entry(integration_id.to_string()).or_insert_with(Vec::new).push(msg.clone());
+        let composite_key = format!("{}-{}", tenant_id, integration_id);
+        msgs.entry(composite_key.clone()).or_insert_with(Vec::new).push(msg.clone());
 
         // Attempt real delivery
         let creds_map = self.credentials.read().unwrap();
-        if let Some(creds) = creds_map.get(integration_id) {
+        if let Some(creds) = creds_map.get(&composite_key) {
              let text = format!("[{}] {}", from_agent, content);
              match integration_id {
                  "telegram" => {
@@ -94,7 +122,7 @@ impl IntegrationsRegistry {
                          let text = content.to_string();
 
                          let clients = self.twilio_clients.read().unwrap();
-                         if let Some(client) = clients.get(integration_id) {
+                         if let Some(client) = clients.get(tenant_id) {
                              let client = client.clone();
                              tokio::spawn(async move {
                                  if let Err(e) = client.send_sms(&to, &from, &text).await {
@@ -122,28 +150,58 @@ impl IntegrationsRegistry {
         insts.values().filter(|i| i.category == category).cloned().collect()
     }
 
-    pub fn connect(&self, integration_id: &str, base_url: &str, creds: ConnectIntegrationRequest) -> Result<IntegrationInstance, String> {
-        let mut insts = self.instances.write().unwrap();
+    pub fn connect(&self, integration_id: &str, base_url: &str, creds: ConnectIntegrationRequest, tenant_id: &str) -> Result<IntegrationInstance, String> {
+        let tenant_key = tenant_id.to_string();
         let inst = IntegrationInstance {
             id: integration_id.to_string(),
             name: integration_id.to_string(),
-            category: "default".to_string(),
             status: "connected".to_string(),
-            base_url: base_url.to_string(),
+            connected_at_unix: Utc::now().timestamp(),
         };
-        insts.insert(integration_id.to_string(), inst.clone());
+
+        let mut insts = self.instances.write().unwrap();
+        let composite_key = format!("{}-{}", tenant_id, integration_id);
+        insts.insert(composite_key.clone(), inst.clone());
 
         let mut credentials = self.credentials.write().unwrap();
-        credentials.insert(integration_id.to_string(), IntegrationCredentials {
+        credentials.insert(composite_key.clone(), IntegrationCredentials {
+            base_url: base_url.to_string(),
             bot_token: creds.bot_token.clone(),
             chat_id: creds.chat_id.clone(),
             webhook_url: creds.webhook_url.clone(),
             api_token: creds.api_token.clone(),
-            from_phone: creds.from_phone.clone(),
         });
+
+        let tenant_key = tenant_id.to_string();
+        if integration_id == "ayrshare" {
+            let mut clients = self.ayrshare_clients.write().unwrap();
+            clients.insert(tenant_key.clone(), std::sync::Arc::new(crate::integrations::ayrshare::provider::AyrshareProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "cal_com" {
+            let mut clients = self.cal_com_clients.write().unwrap();
+            clients.insert(tenant_key.clone(), std::sync::Arc::new(crate::integrations::cal_com::provider::CalComProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "listmonk" {
+            let mut clients = self.listmonk_clients.write().unwrap();
+            let username = if creds.chat_id.is_empty() { "admin".to_string() } else { creds.chat_id.clone() };
+            let password = if creds.webhook_url.is_empty() { None } else { Some(creds.webhook_url.clone()) };
+            clients.insert(tenant_key.clone(), std::sync::Arc::new(crate::integrations::listmonk::provider::ListmonkProvider::new(base_url.to_string(), username, password)));
+        }
+        if integration_id == "easypost" {
+            let mut clients = self.easypost_clients.write().unwrap();
+            clients.insert(tenant_key.clone(), std::sync::Arc::new(crate::integrations::easypost::provider::EasyPostProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "mercadopago" {
+            let mut clients = self.mercadopago_clients.write().unwrap();
+            clients.insert(tenant_key.clone(), std::sync::Arc::new(crate::integrations::mercadopago::provider::MercadoPagoProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "jitsi" {
+            let mut clients = self.jitsi_clients.write().unwrap();
+            clients.insert(tenant_key.clone(), std::sync::Arc::new(crate::integrations::jitsi::provider::JitsiProvider::new(base_url.to_string())));
+        }
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
+            clients.insert(tenant_key.clone(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
         }
         if integration_id == "nats" {
             let base_url_clone = base_url.to_string();
@@ -306,9 +364,9 @@ mod tests {
             api_token: "test_token".to_string(),
             from_phone: "+1234567890".to_string(),
         };
-        registry.connect("twilio", "https://api.twilio.com", creds).unwrap();
+        registry.connect("twilio", "https://api.twilio.com", creds, "system").unwrap();
 
-        let msg = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1").unwrap();
+        let msg = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1", "system").unwrap();
         assert_eq!(msg.content, "Hello World");
 
     }

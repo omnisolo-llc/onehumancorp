@@ -40,5 +40,49 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     };
     catalog.push(twilio_provider);
 
+    // Ayrshare
+    let ayrshare_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "ayrshare".to_string(),
+            name: "Ayrshare Social Media".to_string(),
+            category: "social".to_string(),
+            base_url: "https://app.ayrshare.com".to_string(),
+        }
+    };
+    catalog.push(ayrshare_provider);
+
+    // Cal.com
+    let cal_com_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "cal_com".to_string(),
+            name: "Cal.com Scheduling".to_string(),
+            category: "calendar".to_string(),
+            base_url: "https://api.cal.com".to_string(),
+        }
+    };
+    catalog.push(cal_com_provider);
+
+    // Listmonk
+    let listmonk_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "listmonk".to_string(),
+            name: "Listmonk Email Marketing".to_string(),
+            category: "email".to_string(),
+            base_url: "http://localhost:9000".to_string(),
+        }
+    };
+    catalog.push(listmonk_provider);
+
+    // EasyPost
+    let easypost_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "easypost".to_string(),
+            name: "EasyPost Shipping".to_string(),
+            category: "shipping".to_string(),
+            base_url: "https://api.easypost.com".to_string(),
+        }
+    };
+    catalog.push(easypost_provider);
+
     catalog
 }
