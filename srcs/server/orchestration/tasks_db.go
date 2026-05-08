@@ -90,9 +90,15 @@ func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string
 		UPDATE shared_tasks
 		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
+		RETURNING id
 	`
-	_, err = tx.ExecContext(ctx, updateQuery, agentID, task.ID)
+	var returnedID string
+	err = tx.QueryRowContext(ctx, updateQuery, agentID, task.ID).Scan(&returnedID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			// Lost the race or something went wrong
+			return nil, errors.New("failed to claim task")
+		}
 		return nil, err
 	}
 
@@ -387,17 +393,17 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 		UPDATE shared_tasks
 		SET status = 'ASSIGNED', agent_id = ?, updated_at = CURRENT_TIMESTAMP
 		WHERE id = ? AND status = 'PENDING'
+		RETURNING id
 	`
-	res, err := tx.ExecContext(ctx, updateQuery, agentID, task.ID)
+	var returnedID string
+	err = tx.QueryRowContext(ctx, updateQuery, agentID, task.ID).Scan(&returnedID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			// Lost the race or something went wrong
+			return nil, errors.New("failed to claim task")
+		}
 		return nil, err
 	}
-
-    affected, err := res.RowsAffected()
-    if err != nil || affected == 0 {
-        // Lost the race or something went wrong
-        return nil, errors.New("failed to claim task")
-    }
 
 	if err := tx.Commit(); err != nil {
 		return nil, err
