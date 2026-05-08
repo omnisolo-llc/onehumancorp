@@ -175,6 +175,68 @@ impl GroupChatManager {
     }
 }
 
+/// The Orchestrator that manages a concurrent fan-out/fan-in flow of agents.
+pub struct ConcurrentChatManager {
+    pub agents: Vec<ChatAgent>,
+}
+
+impl ConcurrentChatManager {
+    pub fn new(agents: Vec<ChatAgent>) -> Self {
+        Self { agents }
+    }
+
+    /// Run the concurrent chat loop, broadcasting the initial task to all agents
+    /// and gathering their responses (fan-out/fan-in).
+    pub async fn run_concurrent(&self, initial_task: &str) -> Result<Vec<Message>, String> {
+        let mut transcript = Vec::new();
+        transcript.push(Message::user(format!("Admin: {}", initial_task)));
+
+        let mut futures = Vec::new();
+
+        for agent_cfg in &self.agents {
+            tracing::info!("Concurrent Step: {} is running...", agent_cfg.name);
+
+            let prompt_context = format!(
+                "You are participating in a concurrent workflow as {}.
+
+Your input task is:
+{}
+
+Provide your response.",
+                agent_cfg.name, initial_task
+            );
+
+            let mut run_cfg = agent_cfg.run_config.clone();
+            run_cfg.server_system_message =
+                format!("You are {}. {}", agent_cfg.name, agent_cfg.description);
+
+            let agent_name = agent_cfg.name.clone();
+            let agent_arc = agent_cfg.agent.clone();
+
+            futures.push(async move {
+                let mut on_event = |_| {};
+                let response_text = agent_arc
+                    .run(&run_cfg, &prompt_context, &mut on_event)
+                    .await
+                    .map_err(|e| format!("Agent {} failed: {}", agent_name, e))?;
+
+                Ok::<Message, String>(Message::assistant(format!("{}: {}", agent_name, response_text)))
+            });
+        }
+
+        let results = futures::future::join_all(futures).await;
+
+        for res in results {
+            match res {
+                Ok(msg) => transcript.push(msg),
+                Err(e) => return Err(e),
+            }
+        }
+
+        Ok(transcript)
+    }
+}
+
 /// The Orchestrator that manages a sequential flow of agents.
 pub struct SequentialChatManager {
     pub agents: Vec<ChatAgent>,
@@ -230,6 +292,49 @@ Provide your response, which will be passed to the next agent in the sequence.",
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_autogen_concurrent_chat() {
+        let agent1_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec!["I am Agent1. Concurrent Output 1".to_string()]),
+        });
+        let agent1 = Arc::new(Agent::new(agent1_llm, vec![]));
+
+        let agent2_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                "I am Agent2. Concurrent Output 2".to_string(),
+            ]),
+        });
+        let agent2 = Arc::new(Agent::new(agent2_llm, vec![]));
+
+        let cfg = AgentRunConfig::default();
+
+        let chat_agent1 = ChatAgent {
+            name: "Agent1".to_string(),
+            description: "First concurrent agent.".to_string(),
+            agent: agent1,
+            run_config: cfg.clone(),
+        };
+
+        let chat_agent2 = ChatAgent {
+            name: "Agent2".to_string(),
+            description: "Second concurrent agent.".to_string(),
+            agent: agent2,
+            run_config: cfg.clone(),
+        };
+
+        let manager = ConcurrentChatManager::new(vec![chat_agent1, chat_agent2]);
+
+        let result = manager.run_concurrent("Initial concurrent task").await;
+        assert!(result.is_ok());
+
+        let transcript = result.unwrap();
+
+        assert_eq!(transcript.len(), 3);
+        assert!(transcript[0].content.contains("Initial concurrent task"));
+        assert!(transcript[1].content.contains("Agent1: I am Agent1. Concurrent Output 1"));
+        assert!(transcript[2].content.contains("Agent2: I am Agent2. Concurrent Output 2"));
+    }
 
     #[tokio::test]
     async fn test_autogen_sequential_chat() {
