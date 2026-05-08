@@ -1,5 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { TooltipElement } from "tooltip_element.slint";
 
 export struct UiProduct {
     id: string,
@@ -20,6 +21,7 @@ export component BusinessManager inherits Window {
 
     in property <[UiProduct]> products;
 
+    in-out property <bool> show_offering_hint: false;
     in-out property <int> step: 0;
     in-out property <string> selected_type: "";
 
@@ -122,7 +124,21 @@ export component BusinessManager inherits Window {
         // Step 0: Select Type
         if (current_view == "add" && step == 0) : VerticalBox {
             spacing: 16px;
-            Text { text: "What are you offering?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+            HorizontalBox {
+                spacing: 8px;
+                alignment: start;
+                Text { text: "What are you offering?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; vertical-alignment: center; }
+                TooltipElement {
+                    tooltip_id: "offering_hint";
+                    Button {
+                        text: "?";
+                        width: 44px;
+                        height: 44px;
+                        clicked => { show_offering_hint = !show_offering_hint; }
+                    }
+                }
+            }
+            if (show_offering_hint) : Text { text: "This helps us set up your product with the right options (like shipping or scheduling)."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
 
             ScrollView {
                 VerticalBox {
