@@ -7,6 +7,7 @@ go_binary(
     deps = [
         "//srcs/server/memory:memory",
         "//srcs/server/onboarding:onboarding",
+        "//srcs/server/tiers:tiers",
         "//srcs/server/orchestration:orchestration",
         "//srcs/server/growth:growth",
         "//srcs/server/telemetry:telemetry",

@@ -14,6 +14,7 @@ import (
 	"onehumancorp/srcs/server/telemetry"
 	"onehumancorp/srcs/server/growth"
 	"onehumancorp/srcs/server/dashboard"
+	"onehumancorp/srcs/server/tiers"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -115,6 +116,10 @@ func main() {
 	mux.HandleFunc("/api/growth/referrals/click", growthSvc.HandleReferralClick)
 	mux.HandleFunc("/api/growth/referrals/convert", growthSvc.HandleReferralConvert)
 	mux.HandleFunc("/api/growth/team-invites/accept", growthSvc.HandleTeamInviteAccept)
+
+	tierSvc := tiers.NewTierService(db)
+	tierAPI := tiers.NewAPIHandler(tierSvc)
+	mux.HandleFunc("/api/tiers/check", tierAPI.HandleCheckLimit)
 
 	mux.HandleFunc("/api/dashboard/onboarding/metrics", dashboard.HandleOnboardingMetrics)
 
