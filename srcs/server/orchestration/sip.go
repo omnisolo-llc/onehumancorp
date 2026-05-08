@@ -9,6 +9,10 @@ import (
 	"path/filepath"
 )
 
+var (
+	sqliteLimiter = make(chan struct{}, 1)
+)
+
 type SIPDB struct {
 	db          *sql.DB
 	ContextRoot string
@@ -39,6 +43,16 @@ func (s *SIPDB) DelegateMission(ctx context.Context, mission *AgentMission) erro
 	}
 
 	mission.Payload = json.RawMessage(payloadStr)
+
+	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
+	if isStandalone {
+		select {
+		case sqliteLimiter <- struct{}{}:
+			defer func() { <-sqliteLimiter }()
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 
 	_, err := s.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ($1, $2, $3)", mission.ID, mission.Status, string(mission.Payload))
 	if err != nil {
