@@ -29,10 +29,10 @@ impl MemoryConsolidationWorker {
                 interval.tick().await;
                 let older_than = Utc::now() - chrono::Duration::days(prune_threshold_days);
                 if let Err(e) = prune_stale(repository.clone(), older_than).await {
-                    tracing::error!("Failed to prune stale context: {}", e);
+                    tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
                 }
                 if let Err(e) = auto_resolve_conflicts(repository.clone()).await {
-                    tracing::error!("Failed to resolve memory conflicts: {}", e);
+                    tracing::error!("Consolidation Worker: Failed to resolve memory conflicts: {}", e);
                 }
             }
         });
