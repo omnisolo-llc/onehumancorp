@@ -4,6 +4,8 @@ use chrono::Utc;
 use crate::orchestration::departments::memory::pruning::prune_stale;
 use crate::orchestration::departments::memory::conflict::auto_resolve_conflicts;
 
+/// MemoryConsolidationWorker is responsible for periodically pruning stale context
+/// and automatically resolving memory conflicts within the vector repository.
 pub struct MemoryConsolidationWorker {
     pub repository: Arc<VectorRepository>,
     pub poll_interval: std::time::Duration,
