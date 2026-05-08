@@ -16,7 +16,7 @@ spec:
     - namespaceSelector: {}
       podSelector:
         matchLabels:
-          app: {{ .Release.Name }}-frontend
+          app: {{ .Release.Name }}-ohc-core
     - namespaceSelector: {}
       podSelector:
         matchLabels:

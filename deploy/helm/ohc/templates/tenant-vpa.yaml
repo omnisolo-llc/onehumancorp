@@ -21,5 +21,5 @@ spec:
           memory: "1Gi"
         maxAllowed:
           cpu: "4000m"
-          memory: "8Gi"
+          memory: "4Gi"
 {{- end }}
