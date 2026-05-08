@@ -56,7 +56,7 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 	insertDataQuery := `
 	INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES
 	('mission-1', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
-	('mission-2', 'CLOUD_ESCALATION', '{"key": "value2"}', FALSE),
+	('mission-2', 'BURSTING', '{"key": "value2"}', FALSE),
 	('mission-3', 'COMPLETED', '{"key": "value3"}', FALSE),
 	('mission-4', 'CLOUD_ESCALATION', '{"key": "value4"}', TRUE);
 	`
@@ -81,7 +81,7 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 
 	expectedState := map[string]bool{
 		"mission-1": true,
-		"mission-2": true,
+		"mission-2": true, // BURSTING should be synced
 		"mission-3": false, // Status was COMPLETED, not synced
 		"mission-4": true,  // Already synced
 	}
