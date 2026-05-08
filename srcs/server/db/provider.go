@@ -1,6 +1,11 @@
 package db
 
 import "os"
+import "context"
+
+type Database interface {
+	Exec(ctx context.Context, query string, args ...interface{}) (interface{}, error)
+}
 
 type Provider struct{}
 

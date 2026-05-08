@@ -10,6 +10,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+type Telemetry interface {
+	IncrementCounter(name string, value int64, tags map[string]string)
+}
 
 func getDeploymentModeAttribute() attribute.KeyValue {
 	isStandalone := os.Getenv("OHC_STANDALONE") == "true" || os.Getenv("STANDALONE_MODE") == "true"

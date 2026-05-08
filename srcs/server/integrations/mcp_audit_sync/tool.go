@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	"ohc/server/db"
-	"ohc/server/telemetry"
+	"onehumancorp/srcs/server/db"
+	"onehumancorp/srcs/server/telemetry"
 	"time"
 )
 
