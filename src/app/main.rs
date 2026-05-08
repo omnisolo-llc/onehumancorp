@@ -3399,6 +3399,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             let admin_email = v.get("admin_email").and_then(|ae| ae.as_str()).unwrap_or("admin@ai-generated.test").to_string();
                                             let payment_pref = v.get("payment_pref").and_then(|pp| pp.as_str()).unwrap_or("online").to_string();
 
+                                            let mut kairos_client = client.clone();
+                                            let b_type_kairos = business_type.clone();
+                                            let c_name_kairos = company_name.clone();
+
+                                            tokio::spawn(async move {
+                                                let _ = kairos_client.publish_teammate_mesh_event(tonic::Request::new(ohc::orchestration::PublishTeammateMeshEventRequest {
+                                                    channel: "kairos_orchestrator".to_string(),
+                                                    event: Some(ohc::orchestration::TeammateMeshEvent {
+                                                        agent_id: "setup_wizard".to_string(),
+                                                        action: "TriggerKairos".to_string(),
+                                                        status: "pending".to_string(),
+                                                        payload: serde_json::to_vec(&serde_json::json!({
+                                                            "business_type": b_type_kairos,
+                                                            "company_name": c_name_kairos
+                                                        })).unwrap_or_default(),
+                                                        msg_id: uuid::Uuid::new_v4().to_string(),
+                                                    }),
+                                                })).await;
+                                            });
+
                                             slint::invoke_from_event_loop(move || {
                                                 if let Some(ui) = ui_handle.upgrade() {
                                                     ui.set_company_name(company_name.into());
