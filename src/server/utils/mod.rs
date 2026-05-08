@@ -5,3 +5,4 @@ pub mod json_minify;
 pub mod dialect;
 pub mod auth_utils;
 pub mod slug;
+pub mod cache;
