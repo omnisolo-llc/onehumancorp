@@ -703,14 +703,15 @@ mod tests {
     
     #[test]
     fn test_new_store_admin_user_created() {
-        // SAFETY: Test-only code setting environment variables
-        unsafe {
-            std::env::set_var("ADMIN_USERNAME", "testadmin");
-            std::env::set_var("ADMIN_PASSWORD", "secret99");
-            std::env::set_var("ADMIN_EMAIL", "testadmin@test.com");
-        }
-        
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        let s = temp_env::with_vars(
+            vec![
+                ("ADMIN_USERNAME", Some("testadmin")),
+                ("ADMIN_PASSWORD", Some("secret99")),
+                ("ADMIN_EMAIL", Some("testadmin@test.com")),
+                ("OHC_SQLITE_KEY", Some("dummy"))
+            ],
+            || Store::new()
+        );
         let users = s.list_users("");
         assert_eq!(users.len(), 1);
         assert_eq!(users[0].username, "testadmin");
@@ -718,7 +719,7 @@ mod tests {
 
     #[test]
     fn test_store_create_and_authenticate() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        let s = temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("dummy"))], || Store::new());
         let u = s.create_user("alice".to_string(), "alice@test.com".to_string(), "hunter2!".to_string(), vec![ROLE_VIEWER.to_string()], "".to_string()).unwrap();
         
         let got = s.authenticate("alice", "hunter2!", "").unwrap();
@@ -730,20 +731,20 @@ mod tests {
 
     #[test]
     fn test_store_duplicate_username() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        let s = temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("dummy"))], || Store::new());
         s.create_user("bob".to_string(), "bob@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).unwrap();
         assert!(s.create_user("bob".to_string(), "bob2@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).is_err());
     }
 
     #[test]
     fn test_store_short_password_rejected() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        let s = temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("dummy"))], || Store::new());
         assert!(s.create_user("short".to_string(), "short@test.com".to_string(), "abc".to_string(), vec![], "".to_string()).is_err());
     }
 
     #[test]
     fn test_store_update_and_delete_user() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        let s = temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("dummy"))], || Store::new());
         let u = s.create_user("charlie".to_string(), "c@test.com".to_string(), "p@ssw0rd".to_string(), vec![ROLE_VIEWER.to_string()], "".to_string()).unwrap();
         
         let new_email = "charlie2@test.com".to_string();
@@ -759,7 +760,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_jwt_round_trip() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        let s = temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("dummy"))], || Store::new());
         let u = s.create_user("jwt-user".to_string(), "jwt@test.com".to_string(), "jwtpass1".to_string(), vec![ROLE_OPERATOR.to_string()], "".to_string()).unwrap();
         
         let token = s.issue_token(&u).unwrap();
@@ -772,7 +773,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_jwt_empty_sub_jti() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        let s = temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("dummy"))], || Store::new());
         let u = s.create_user("empty-claims".to_string(), "empty@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).unwrap();
         let token = s.issue_token(&u).unwrap();
 
@@ -819,13 +820,13 @@ mod tests {
         // when OHC_SQLITE_KEY is present without altering environment variables dynamically
         // Note: setting environment variables in unit tests is unsafe in Rust
         // For regression testing we just check that the Store initialized with some secret
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        let s = temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("dummy"))], || Store::new());
         assert!(!s.secret.is_empty(), "Store secret should be initialized (either randomly or from env/file)");
     }
 
     #[tokio::test]
     async fn test_jwt_revoked_token() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        let s = temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("dummy"))], || Store::new());
         let u = s.create_user("revoke-me".to_string(), "revoke@test.com".to_string(), "revpass1".to_string(), vec![], "".to_string()).unwrap();
         let token = s.issue_token(&u).unwrap();
         
@@ -978,7 +979,7 @@ mod isolation_tests {
 
     #[test]
     fn test_auth_tenant_isolation_sys_org() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        let s = temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("dummy"))], || Store::new());
         // Create user in a specific organization
         let org_user = s.create_user(
             "tenant_user".to_string(),
@@ -1004,13 +1005,18 @@ mod isolation_tests {
 
     #[tokio::test]
     async fn test_multitenant_requires_org_id() {
-        // Using unsafe to modify environment for the test configuration scope
-        unsafe {
-            std::env::set_var("OHC_MULTITENANT", "true");
-            std::env::set_var("JWT_SECRET", "test_secret");
-        }
-        let s = Arc::new(Store::new());
-        let svc = AuthServiceServerImpl::new(s.clone());
+        let (s, svc) = temp_env::with_vars(
+            vec![
+                ("OHC_MULTITENANT", Some("true")),
+                ("JWT_SECRET", Some("test_secret")),
+                ("OHC_SQLITE_KEY", Some("dummy"))
+            ],
+            || {
+                let s = Arc::new(Store::new());
+                let svc = AuthServiceServerImpl::new(s.clone());
+                (s, svc)
+            }
+        );
 
         let req = tonic::Request::new(LoginRequest {
             username: "test".to_string(),

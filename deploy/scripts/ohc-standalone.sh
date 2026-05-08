@@ -39,8 +39,9 @@ chmod 700 "${OHC_RUNTIME_DIR}" "${OHC_MEMORY_DIR}" "${OHC_STATUS_DIR}" "${OHC_ME
 if [ -z "$OHC_SQLITE_KEY" ]; then
   KEY_FILE="${OHC_RUNTIME_DIR}/.sqlite_key"
   if [ ! -f "$KEY_FILE" ]; then
-    openssl rand -hex 32 > "$KEY_FILE"
+    touch "$KEY_FILE"
     chmod 600 "$KEY_FILE"
+    openssl rand -hex 32 > "$KEY_FILE"
   fi
   export OHC_SQLITE_KEY="$(cat "$KEY_FILE")"
 fi
