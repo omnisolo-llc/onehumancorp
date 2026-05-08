@@ -147,6 +147,17 @@ func (s *DefaultSubAgentSpawner) runSubAgent(ctx context.Context, task *SharedTa
 }
 
 func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTask) error {
+	resolver := NewHarnessResolver()
+
+	harness, err := resolver.Resolve("test-agent")
+
+	if err != nil {
+
+		return err
+
+	}
+
+	_, _ = harness.RunAttempt("ls")
 	// Check token budget BEFORE executing
 	if err := checkTokenBudget(task.OrganizationID); err != nil {
 		return err
