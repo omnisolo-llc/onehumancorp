@@ -53,6 +53,7 @@ pub mod services {
     pub mod scheduler;
     pub mod agent;
     pub mod autodream;
+    pub mod booking;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
