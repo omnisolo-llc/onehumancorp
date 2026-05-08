@@ -6,3 +6,5 @@ pub mod billing_webhook;
 pub mod billing_webhook_test;
 pub mod health;
 pub mod agents;
+#[cfg(test)]
+pub mod health_test;
