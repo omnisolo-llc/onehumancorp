@@ -1390,13 +1390,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     business_manager_ui.set_products(product_model_rc.clone().into());
 
     business_manager_ui.on_action_edit({
-        move |id| {
+        move |_id| {
 
         }
     });
 
     business_manager_ui.on_action_archive({
-        move |id| {
+        move |_id| {
 
         }
     });
