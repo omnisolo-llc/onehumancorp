@@ -936,6 +936,23 @@ impl HubService for MyHubService {
         }
     }
 
+    async fn fork_agent(
+        &self,
+        request: Request<ForkAgentRequest>,
+    ) -> Result<Response<ForkAgentResponse>, Status> {
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let req = request.into_inner();
+        if req.parent_agent_id.is_empty() {
+            return Err(Status::invalid_argument("parent_agent_id is required"));
+        }
+
+        match self.hub.clone().fork_agent(&req.parent_agent_id, &req.directive, &tenant_id).await {
+            Ok(child_id) => Ok(Response::new(ForkAgentResponse { child_agent_id: child_id })),
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
+
     async fn delegate_sub_task(
         &self,
         request: Request<SubTask>,

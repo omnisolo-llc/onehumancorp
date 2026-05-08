@@ -638,26 +638,57 @@ impl Hub {
         Ok(())
     }
 
-    pub fn fork_agent(self: std::sync::Arc<Self>, parent_id: &str, directive: &str) -> Result<String, String> {
-        let mut agents = self.agents.write().unwrap();
-        
-        let parent = agents.get(parent_id).ok_or_else(|| format!("parent agent not found: {}", parent_id))?.clone();
-        
-        let child_id = format!("{}-fork-{}", parent_id, uuid::Uuid::new_v4());
-        let child = Agent {
-            id: child_id.clone(),
-            name: format!("{} (Fork)", parent.name),
-            role: parent.role.clone(),
-            organization_id: parent.organization_id.clone(),
-            status: "IDLE".to_string(),
-            provider_type: parent.provider_type.clone(),
+
+    pub async fn fork_agent(self: std::sync::Arc<Self>, parent_id: &str, directive: &str, tenant_id: &str) -> Result<String, String> {
+        let (parent, child_id) = {
+            let mut agents = self.agents.write().unwrap();
+
+            let parent = agents.get(parent_id).ok_or_else(|| format!("parent agent not found: {}", parent_id))?.clone();
+
+            let org_id = if tenant_id.is_empty() { "system" } else { tenant_id };
+            if parent.organization_id != org_id && org_id != "system" {
+                return Err("You do not have permission to fork this agent".to_string());
+            }
+
+            let child_id = format!("{}-fork-{}", parent_id, uuid::Uuid::new_v4());
+            let child = Agent {
+                id: child_id.clone(),
+                name: format!("{} (Fork)", parent.name),
+                role: parent.role.clone(),
+                organization_id: parent.organization_id.clone(),
+                status: "IDLE".to_string(),
+                provider_type: parent.provider_type.clone(),
+            };
+
+            agents.insert(child_id.clone(), child);
+            self.invalidate_agent_cache();
+            (parent, child_id)
         };
         
-        agents.insert(child_id.clone(), child);
-        self.invalidate_agent_cache();
-        drop(agents); // Release lock before calling publish!
+
+
+        let pool = self.pool.clone();
+        let parent_id_clone = parent_id.to_string();
         
-        // Copy history
+        let memory_result = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = $1 AND organization_id = $2").bind(parent_id_clone).bind(parent.organization_id.clone())
+            .fetch_optional(&pool)
+            .await;
+
+        if let Ok(Some(row)) = memory_result {
+            if let Some(content) = sqlx::Row::try_get::<Option<Vec<u8>>, _>(&row, "raw_content").unwrap_or(None) {
+                let child_id_db = child_id.clone();
+                let tenant_id_db = parent.organization_id.clone();
+                let now = chrono::Utc::now().naive_utc();
+
+                let _ = sqlx::query(
+                    "INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES ($1, $2, $3, $4)")
+                .bind(child_id_db)
+                .bind(tenant_id_db)
+                .bind(content)
+                .bind(now).execute(&pool).await;
+            }
+        }
+
         let history = {
             let inbox = self.inbox.read().unwrap();
             inbox.get(parent_id).cloned().unwrap_or_default()
@@ -667,21 +698,26 @@ impl Hub {
             let mut child_msg = msg.clone();
             child_msg.id = format!("msg-{}", uuid::Uuid::new_v4());
             child_msg.to_agent = child_id.clone();
-            self.clone().publish(child_msg)?;
+            self.clone().publish(child_msg).map_err(|e| format!("Publish history failed: {}", e))?;
         }
         
-        // Send directive
         let directive_msg = Message {
             id: format!("msg-{}", uuid::Uuid::new_v4()),
             from_agent: "SYSTEM".to_string(),
             to_agent: child_id.clone(),
             r#type: "TaskAssignment".to_string(),
             content: format!("<task-notification>\nDirective: {}\n</task-notification>", directive),
-            occurred_at_unix: Utc::now().timestamp(),
+            occurred_at_unix: chrono::Utc::now().timestamp(),
             meeting_id: String::new(),
         };
         
-        self.clone().publish(directive_msg)?;
+        self.clone().publish(directive_msg).map_err(|e| format!("Publish directive failed: {}", e))?;
+
+        let hub_clone = self.clone();
+        let child_id_clone = child_id.clone();
+        tokio::spawn(async move {
+            if let Err(e) = hub_clone.delegate_sub_task(&child_id_clone, "worker", "Inherited task", "fork_thread") { tracing::error!("Forking sub-agent task failed: {}", e); }
+        });
         
         Ok(child_id)
     }
@@ -954,5 +990,101 @@ mod tests {
         assert!(health.get("db_ping_ms").is_some());
         assert!(health.get("hybrid_mode_ready").is_some());
         assert!(health.get("local_to_cloud_sync_queue").is_some());
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use tokio::sync::mpsc;
+
+    #[tokio::test]
+    async fn test_fork_agent() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&db_url)
+            .unwrap();
+        let (tx, _) = mpsc::channel(100);
+        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+
+        hub.register_agent(Agent {
+            id: "parent_agent".to_string(),
+            name: "Parent".to_string(),
+            role: "Developer".to_string(),
+            organization_id: "org1".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "builtin".to_string(),
+        });
+
+        // Add some messages to the parent's inbox
+        hub.clone().publish(Message {
+            id: "msg1".to_string(),
+            from_agent: "user".to_string(),
+            to_agent: "parent_agent".to_string(),
+            r#type: "TextMessage".to_string(),
+            content: "Hello".to_string(),
+            occurred_at_unix: 0,
+            meeting_id: "".to_string(),
+        }).unwrap();
+
+        let res = hub.clone().fork_agent("parent_agent", "Do this new thing", "org1").await;
+        assert!(res.is_ok());
+
+        let child_id = res.unwrap();
+        assert!(child_id.starts_with("parent_agent-fork-"));
+
+        // Check if the child exists
+        let agents = hub.get_agents();
+        assert!(agents.iter().any(|a| a.id == child_id));
+
+        // Check if messages were copied
+        let inbox = hub.inbox.read().unwrap();
+        let child_messages = inbox.get(&child_id).unwrap();
+
+        // Should have the original message + the new directive
+        assert_eq!(child_messages.len(), 2);
+
+        let original_msg_copied = child_messages.iter().find(|m| m.content == "Hello");
+        assert!(original_msg_copied.is_some());
+
+        let directive_msg = child_messages.iter().find(|m| m.content.contains("Do this new thing"));
+        assert!(directive_msg.is_some());
+        assert!(directive_msg.unwrap().content.contains("<task-notification>"));
+    }
+
+    #[tokio::test]
+    async fn test_fork_agent_cross_tenant() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&db_url)
+            .unwrap();
+        let (tx, _) = mpsc::channel(100);
+        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+
+        hub.register_agent(Agent {
+            id: "parent_agent".to_string(),
+            name: "Parent".to_string(),
+            role: "Developer".to_string(),
+            organization_id: "org1".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "builtin".to_string(),
+        });
+
+        // Try to fork as org2
+        let res = hub.clone().fork_agent("parent_agent", "Do this new thing", "org2").await;
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "You do not have permission to fork this agent".to_string());
     }
 }

@@ -242,6 +242,7 @@ service HubService {
   rpc StreamMessages(StreamMessagesRequest) returns (stream Message);
   rpc Reason(ReasonRequest) returns (ReasonResponse);
   rpc DelegateSubTask(SubTask) returns (DelegateTaskResponse);
+  rpc ForkAgent(ForkAgentRequest) returns (ForkAgentResponse);
   rpc AdvertiseCapabilities(AgentCapabilities) returns (PublishMessageResponse);
   rpc DiscoverAgents(Query) returns (stream AgentCapabilities);
   rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
@@ -1641,4 +1642,13 @@ message DownloadInvoiceRequest {
 
 message DownloadInvoiceResponse {
   string pdf_url = 1;
+}
+
+message ForkAgentRequest {
+  string parent_agent_id = 1;
+  string directive = 2;
+}
+
+message ForkAgentResponse {
+  string child_agent_id = 1;
 }
