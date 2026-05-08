@@ -60,7 +60,9 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	assert.Len(t, tasks, 3)
 
 	// 3. Poll Status
-	statusResp, err := http.Get(ts.URL + "/api/onboarding/status?tenant_id=" + startRes.TenantID)
+	req, err := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
+	req.Header.Set("X-Tenant-ID", startRes.TenantID)
+	statusResp, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp.StatusCode)
 
@@ -78,7 +80,9 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	}
 
 	// 5. Poll Status Again
-	statusResp2, err := http.Get(ts.URL + "/api/onboarding/status?tenant_id=" + startRes.TenantID)
+	req2, err := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
+	req2.Header.Set("X-Tenant-ID", startRes.TenantID)
+	statusResp2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp2.StatusCode)
 

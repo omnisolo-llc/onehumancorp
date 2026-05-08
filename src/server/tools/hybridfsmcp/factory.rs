@@ -21,15 +21,12 @@ impl Default for FactoryConfig {
     }
 }
 
-pub fn create_fs_provider_with_config(config: &FactoryConfig, tenant_id: Option<String>) -> Arc<dyn FileSystemProvider> {
+pub fn create_fs_provider(tenant_id: Option<String>) -> Arc<dyn FileSystemProvider> {
+    let config = FactoryConfig::default();
     if config.is_multitenant && !config.is_standalone {
         let tenant = tenant_id.unwrap_or_else(|| "system".to_string());
         Arc::new(CloudFSProvider::new(tenant, PathBuf::from(&config.mount_point)))
     } else {
         Arc::new(LocalFSProvider::new(PathBuf::from(&config.workspace)))
     }
-}
-
-pub fn create_fs_provider(tenant_id: Option<String>) -> Arc<dyn FileSystemProvider> {
-    create_fs_provider_with_config(&FactoryConfig::default(), tenant_id)
 }

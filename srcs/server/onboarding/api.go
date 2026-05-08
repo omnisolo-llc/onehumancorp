@@ -42,9 +42,9 @@ func (h *APIHandler) HandleGetStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID := r.URL.Query().Get("tenant_id")
+	tenantID := r.Header.Get("X-Tenant-ID")
 	if tenantID == "" {
-		http.Error(w, "Missing tenant_id parameter", http.StatusBadRequest)
+		http.Error(w, "Missing X-Tenant-ID header", http.StatusUnauthorized)
 		return
 	}
 

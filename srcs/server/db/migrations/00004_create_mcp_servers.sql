@@ -15,5 +15,8 @@ CREATE TABLE IF NOT EXISTS mcp_servers (
 CREATE INDEX IF NOT EXISTS idx_mcp_servers_tenant ON mcp_servers(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_mcp_servers_user ON mcp_servers(user_id);
 
+ALTER TABLE mcp_servers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_mcp_servers ON mcp_servers USING (tenant_id = current_setting('app.current_tenant', true));
+
 -- +goose Down
 DROP TABLE IF EXISTS mcp_servers;
