@@ -149,7 +149,7 @@ export component Dashboard inherits Window { // milestones
                 spacing: 16px;
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Weekly Revenue"; value: todays_sales; value_color: #a855f7; }
+                    StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
                     StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
                 }
                 HorizontalBox {
@@ -166,7 +166,7 @@ export component Dashboard inherits Window { // milestones
             // Small Screen (List)
             if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
-                StatCard { label: "Weekly Revenue"; value: todays_sales; value_color: #a855f7; }
+                StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
                 HorizontalBox {
                     spacing: 16px;
                     StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
