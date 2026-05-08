@@ -41,34 +41,34 @@ fn test_login_submit_button_text_signin_not_loading() {
 fn test_login_sso_button_text_not_loading() {
     let ui = create();
     ui.set_loading(false);
-    assert_eq!(ui.get_sso_button_text(), "Use Google or Apple");
+    assert_eq!(ui.get_sso_button_text(), "Continue with Google/Apple");
 }
 
 #[test]
 fn test_login_echo_plain_language_google() {
     let ui = create();
     ui.set_loading(false);
-    assert_eq!(ui.get_sso_button_text(), "Use Google or Apple");
+    assert_eq!(ui.get_sso_button_text(), "Continue with Google/Apple");
 }
 
 #[test]
 fn test_login_echo_plain_language_settings() {
     let ui = create();
-    assert_eq!(ui.get_settings_button_text(), "Fix App Issues");
+    assert_eq!(ui.get_settings_button_text(), "⚙ App Settings");
 }
 
 #[test]
 fn test_login_echo_plain_language_toggle_signup() {
     let ui = create();
     ui.set_is_sign_up(false);
-    assert_eq!(ui.get_toggle_button_text(), "New here? Create an account");
+    assert_eq!(ui.get_toggle_button_text(), "Don't have an account? Sign Up");
 }
 
 #[test]
 fn test_login_echo_plain_language_toggle_signin() {
     let ui = create();
     ui.set_is_sign_up(true);
-    assert_eq!(ui.get_toggle_button_text(), "Have an account? Sign In");
+    assert_eq!(ui.get_toggle_button_text(), "Already have an account? Sign In");
 }
 
 #[test]
