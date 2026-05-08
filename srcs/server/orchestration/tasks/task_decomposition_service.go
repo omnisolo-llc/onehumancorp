@@ -11,9 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
-type SwarmTask struct {
+type SharedTaskDecomposition struct {
 	ID              string
-	MissionID       string
+	OrganizationID       string
+	Priority        string
 	ParentPlanID    *string
 	Dependencies    json.RawMessage
 	Title           string
@@ -36,9 +37,9 @@ type StateMachineTransition struct {
 }
 
 type TaskDecompositionService interface {
-	CreateTask(ctx context.Context, task *SwarmTask) error
-	GetTask(ctx context.Context, id string) (*SwarmTask, error)
-	ClaimTask(ctx context.Context, missionID string, agentID string) (*SwarmTask, error)
+	CreateTask(ctx context.Context, task *SharedTaskDecomposition) error
+	GetTask(ctx context.Context, id string) (*SharedTaskDecomposition, error)
+	ClaimTask(ctx context.Context, organizationID string, agentID string) (*SharedTaskDecomposition, error)
 	UpdateTaskStatus(ctx context.Context, id string, newStatus string, agentID string, reason string) error
 }
 
@@ -54,7 +55,7 @@ func NewDBTaskDecompositionService(db *sql.DB, isPgSQL bool) *DBTaskDecompositio
 	}
 }
 
-func (s *DBTaskDecompositionService) CreateTask(ctx context.Context, task *SwarmTask) error {
+func (s *DBTaskDecompositionService) CreateTask(ctx context.Context, task *SharedTaskDecomposition) error {
 	if task.ID == "" {
 		task.ID = uuid.New().String()
 	}
@@ -64,10 +65,13 @@ func (s *DBTaskDecompositionService) CreateTask(ctx context.Context, task *Swarm
 	if len(task.Dependencies) == 0 {
 		task.Dependencies = json.RawMessage("[]")
 	}
+	if task.Priority == "" {
+		task.Priority = "P2"
+	}
 
 	query := `
-		INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, dependencies, title, status, assigned_agent_id, payload, locked_until, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
+		INSERT INTO shared_tasks_decomposition (id, organization_id, parent_plan_id, dependencies, title, status, assigned_agent_id, payload, locked_until, priority, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
 	`
 	var parentPlanID sql.NullString
 	if task.ParentPlanID != nil {
@@ -84,7 +88,7 @@ func (s *DBTaskDecompositionService) CreateTask(ctx context.Context, task *Swarm
 
 	_, err := s.db.ExecContext(ctx, query,
 		task.ID,
-		task.MissionID,
+		task.OrganizationID,
 		parentPlanID,
 		[]byte(task.Dependencies),
 		task.Title,
@@ -92,19 +96,20 @@ func (s *DBTaskDecompositionService) CreateTask(ctx context.Context, task *Swarm
 		assignedAgentID,
 		payload,
 		task.LockedUntil,
+		task.Priority,
 	)
 	return err
 }
 
-func (s *DBTaskDecompositionService) GetTask(ctx context.Context, id string) (*SwarmTask, error) {
+func (s *DBTaskDecompositionService) GetTask(ctx context.Context, id string) (*SharedTaskDecomposition, error) {
 	query := `
-		SELECT id, mission_id, parent_plan_id, dependencies, title, status, assigned_agent_id, payload, locked_until, created_at
-		FROM swarm_tasks
+		SELECT id, organization_id, parent_plan_id, dependencies, title, status, assigned_agent_id, payload, locked_until, priority, created_at
+		FROM shared_tasks_decomposition
 		WHERE id = $1
 	`
 	row := s.db.QueryRowContext(ctx, query, id)
 
-	var task SwarmTask
+	var task SharedTaskDecomposition
 	var parentPlanID sql.NullString
 	var assignedAgentID sql.NullString
 	var payload []byte
@@ -113,7 +118,7 @@ func (s *DBTaskDecompositionService) GetTask(ctx context.Context, id string) (*S
 
 	err := row.Scan(
 		&task.ID,
-		&task.MissionID,
+		&task.OrganizationID,
 		&parentPlanID,
 		&deps,
 		&task.Title,
@@ -121,6 +126,7 @@ func (s *DBTaskDecompositionService) GetTask(ctx context.Context, id string) (*S
 		&assignedAgentID,
 		&payload,
 		&lockedUntil,
+		&task.Priority,
 		&task.CreatedAt,
 	)
 	if err != nil {
@@ -162,7 +168,7 @@ func (s *DBTaskDecompositionService) areDependenciesMet(ctx context.Context, tx 
 
 	for _, depID := range depIDs {
 		var status string
-		err := tx.QueryRowContext(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", depID).Scan(&status)
+		err := tx.QueryRowContext(ctx, "SELECT status FROM shared_tasks_decomposition WHERE id = $1", depID).Scan(&status)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return false, nil // Missing dependency
@@ -176,7 +182,7 @@ func (s *DBTaskDecompositionService) areDependenciesMet(ctx context.Context, tx 
 	return true, nil
 }
 
-func (s *DBTaskDecompositionService) ClaimTask(ctx context.Context, missionID string, agentID string) (*SwarmTask, error) {
+func (s *DBTaskDecompositionService) ClaimTask(ctx context.Context, organizationID string, agentID string) (*SharedTaskDecomposition, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -184,11 +190,11 @@ func (s *DBTaskDecompositionService) ClaimTask(ctx context.Context, missionID st
 	defer tx.Rollback()
 
 	// 1. Find all PENDING tasks for the mission.
-	query := "SELECT id, dependencies FROM swarm_tasks WHERE mission_id = $1 AND status = 'PENDING'"
+	query := "SELECT id, dependencies FROM shared_tasks_decomposition WHERE organization_id = $1 AND status = 'PENDING'"
 	if s.isPgSQL {
 		query += " FOR UPDATE SKIP LOCKED"
 	}
-	rows, err := tx.QueryContext(ctx, query, missionID)
+	rows, err := tx.QueryContext(ctx, query, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +240,7 @@ func (s *DBTaskDecompositionService) ClaimTask(ctx context.Context, missionID st
 	}
 
 	// 2. Claim it
-	updateQuery := "UPDATE swarm_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1 WHERE id = $2"
+	updateQuery := "UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = $1 WHERE id = $2"
 	_, err = tx.ExecContext(ctx, updateQuery, agentID, candidateID)
 	if err != nil {
 		return nil, err
@@ -244,7 +250,7 @@ func (s *DBTaskDecompositionService) ClaimTask(ctx context.Context, missionID st
 	transID := uuid.New().String()
 	transQuery := `
 		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason, occurred_at)
-		VALUES ($1, $2, 'swarm_task', 'PENDING', 'IN_PROGRESS', $3, 'Claimed by agent', CURRENT_TIMESTAMP)
+		VALUES ($1, $2, 'shared_tasks_decomposition', 'PENDING', 'IN_PROGRESS', $3, 'Claimed by agent', CURRENT_TIMESTAMP)
 	`
 	_, err = tx.ExecContext(ctx, transQuery, transID, candidateID, agentID)
 	if err != nil {
@@ -266,7 +272,7 @@ func (s *DBTaskDecompositionService) UpdateTaskStatus(ctx context.Context, id st
 	defer tx.Rollback()
 
 	var currentStatus string
-	err = tx.QueryRowContext(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", id).Scan(&currentStatus)
+	err = tx.QueryRowContext(ctx, "SELECT status FROM shared_tasks_decomposition WHERE id = $1", id).Scan(&currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("task not found")
@@ -278,7 +284,7 @@ func (s *DBTaskDecompositionService) UpdateTaskStatus(ctx context.Context, id st
 		return nil
 	}
 
-	updateQuery := "UPDATE swarm_tasks SET status = $1 WHERE id = $2"
+	updateQuery := "UPDATE shared_tasks_decomposition SET status = $1 WHERE id = $2"
 	_, err = tx.ExecContext(ctx, updateQuery, newStatus, id)
 	if err != nil {
 		return err
@@ -287,7 +293,7 @@ func (s *DBTaskDecompositionService) UpdateTaskStatus(ctx context.Context, id st
 	transID := uuid.New().String()
 	transQuery := `
 		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason, occurred_at)
-		VALUES ($1, $2, 'swarm_task', $3, $4, $5, $6, CURRENT_TIMESTAMP)
+		VALUES ($1, $2, 'shared_tasks_decomposition', $3, $4, $5, $6, CURRENT_TIMESTAMP)
 	`
 	_, err = tx.ExecContext(ctx, transQuery, transID, id, currentStatus, newStatus, agentID, reason)
 	if err != nil {

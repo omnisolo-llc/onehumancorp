@@ -19,9 +19,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 	db.SetMaxOpenConns(1)
 
 	_, err = db.Exec(`
-		CREATE TABLE swarm_tasks (
+		CREATE TABLE shared_tasks_decomposition (
 			id TEXT PRIMARY KEY,
-			mission_id TEXT NOT NULL,
+			organization_id TEXT NOT NULL,
 			parent_plan_id TEXT,
 			dependencies TEXT NOT NULL DEFAULT '[]',
 			title TEXT NOT NULL,
@@ -29,6 +29,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			assigned_agent_id TEXT,
 			payload BLOB,
 			locked_until DATETIME,
+			priority TEXT NOT NULL DEFAULT 'P2',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 
@@ -57,8 +58,8 @@ func TestTaskDecompositionService_CreateAndGetTask(t *testing.T) {
 	svc := NewDBTaskDecompositionService(db, false)
 	ctx := context.Background()
 
-	task := &SwarmTask{
-		MissionID: "mission-1",
+	task := &SharedTaskDecomposition{
+		OrganizationID: "mission-1",
 		Title:     "Test Task",
 	}
 
@@ -92,18 +93,18 @@ func TestTaskDecompositionService_ClaimTask(t *testing.T) {
 	ctx := context.Background()
 
 	// Task 1
-	task1 := &SwarmTask{
+	task1 := &SharedTaskDecomposition{
 		ID:        uuid.New().String(),
-		MissionID: "mission-1",
+		OrganizationID: "mission-1",
 		Title:     "Task 1",
 	}
 	_ = svc.CreateTask(ctx, task1)
 
 	// Task 2 depends on Task 1
 	deps, _ := json.Marshal([]string{task1.ID})
-	task2 := &SwarmTask{
+	task2 := &SharedTaskDecomposition{
 		ID:           uuid.New().String(),
-		MissionID:    "mission-1",
+		OrganizationID:    "mission-1",
 		Title:        "Task 2",
 		Dependencies: deps,
 	}
@@ -161,8 +162,8 @@ func TestTaskDecompositionService_UpdateTaskStatus(t *testing.T) {
 	svc := NewDBTaskDecompositionService(db, false)
 	ctx := context.Background()
 
-	task := &SwarmTask{
-		MissionID: "m1",
+	task := &SharedTaskDecomposition{
+		OrganizationID: "m1",
 		Title:     "T1",
 	}
 	_ = svc.CreateTask(ctx, task)
@@ -202,8 +203,8 @@ func TestTaskDecompositionService_Errors(t *testing.T) {
 	}
 
 	// Invalid dependencies format
-	task := &SwarmTask{
-		MissionID:    "m1",
+	task := &SharedTaskDecomposition{
+		OrganizationID:    "m1",
 		Title:        "T1",
 		Dependencies: json.RawMessage("invalid-json"),
 	}
@@ -228,8 +229,8 @@ func TestTaskDecompositionService_PgSQL(t *testing.T) {
 	svc := NewDBTaskDecompositionService(db, true) // isPgSQL = true
 	ctx := context.Background()
 
-	task := &SwarmTask{
-		MissionID: "m1",
+	task := &SharedTaskDecomposition{
+		OrganizationID: "m1",
 		Title:     "T1",
 	}
 	_ = svc.CreateTask(ctx, task)
@@ -255,8 +256,8 @@ func TestTaskDecompositionService_FullCoverage(t *testing.T) {
 	payload := json.RawMessage(`{"key":"value"}`)
 	lockedUntil := time.Now().Add(time.Hour)
 
-	task := &SwarmTask{
-		MissionID:       "m-full",
+	task := &SharedTaskDecomposition{
+		OrganizationID:       "m-full",
 		ParentPlanID:    &parentID,
 		Title:           "Full Task",
 		AssignedAgentID: &agentID,
@@ -294,8 +295,8 @@ func TestTaskDecompositionService_FullCoverage(t *testing.T) {
 
 	// Unmarshal dependencies with missing dependency
 	deps, _ := json.Marshal([]string{"non-existent-dep"})
-	taskWithMissingDep := &SwarmTask{
-		MissionID:    "m-missing-dep",
+	taskWithMissingDep := &SharedTaskDecomposition{
+		OrganizationID:    "m-missing-dep",
 		Title:        "T-Missing-Dep",
 		Dependencies: deps,
 	}
@@ -317,7 +318,7 @@ func TestTaskDecompositionService_MoreCoverage(t *testing.T) {
 	svc := NewDBTaskDecompositionService(db, false)
 	ctx := context.Background()
 
-	_ = svc.CreateTask(ctx, &SwarmTask{MissionID: "x"})
+	_ = svc.CreateTask(ctx, &SharedTaskDecomposition{OrganizationID: "x"})
 
 	// Now close DB to cause failure
 	db.Close()
@@ -333,8 +334,8 @@ func TestTaskDecompositionService_DepsError(t *testing.T) {
 	svc := NewDBTaskDecompositionService(db, false)
 	ctx := context.Background()
 
-	_ = svc.CreateTask(ctx, &SwarmTask{
-		MissionID: "m2",
+	_ = svc.CreateTask(ctx, &SharedTaskDecomposition{
+		OrganizationID: "m2",
 		Dependencies: json.RawMessage("invalid"),
 	})
 	_, _ = svc.ClaimTask(ctx, "m2", "agent")
@@ -346,8 +347,8 @@ func TestTaskDecompositionService_MoreCoverage3(t *testing.T) {
 	ctx := context.Background()
 
 	// Create task
-	task := &SwarmTask{
-		MissionID: "m-tx",
+	task := &SharedTaskDecomposition{
+		OrganizationID: "m-tx",
 		Title: "tx error",
 	}
 	_ = svc.CreateTask(ctx, task)
@@ -371,8 +372,8 @@ func TestTaskDecompositionService_DepsMissingRow(t *testing.T) {
 	svc := NewDBTaskDecompositionService(db, false)
 	ctx := context.Background()
 
-	_ = svc.CreateTask(ctx, &SwarmTask{
-		MissionID: "m2",
+	_ = svc.CreateTask(ctx, &SharedTaskDecomposition{
+		OrganizationID: "m2",
 		Dependencies: json.RawMessage(`["not-found"]`),
 	})
 	claimed, err := svc.ClaimTask(ctx, "m2", "agent")
@@ -390,7 +391,7 @@ func TestTaskDecompositionService_MoreUpdates(t *testing.T) {
 	svc := NewDBTaskDecompositionService(db, false)
 	ctx := context.Background()
 
-	task := &SwarmTask{MissionID: "m3"}
+	task := &SharedTaskDecomposition{OrganizationID: "m3"}
 	_ = svc.CreateTask(ctx, task)
 
 	db.Close()
@@ -404,11 +405,11 @@ func TestTaskDecompositionService_DepsScanErr(t *testing.T) {
 	svc := NewDBTaskDecompositionService(db, false)
 	ctx := context.Background()
 
-	task1 := &SwarmTask{MissionID: "m4", Title: "t1"}
+	task1 := &SharedTaskDecomposition{OrganizationID: "m4", Title: "t1"}
 	_ = svc.CreateTask(ctx, task1)
 
 	deps, _ := json.Marshal([]string{task1.ID})
-	task2 := &SwarmTask{MissionID: "m4", Title: "t2", Dependencies: deps}
+	task2 := &SharedTaskDecomposition{OrganizationID: "m4", Title: "t2", Dependencies: deps}
 	_ = svc.CreateTask(ctx, task2)
 
 	db.Close()
@@ -421,7 +422,7 @@ func TestTaskDecompositionService_MoreErrs(t *testing.T) {
 	svc := NewDBTaskDecompositionService(db, false)
 	ctx := context.Background()
 
-	task := &SwarmTask{MissionID: "m5", Title: "t"}
+	task := &SharedTaskDecomposition{OrganizationID: "m5", Title: "t"}
 	_ = svc.CreateTask(ctx, task)
 
 	db.Close()

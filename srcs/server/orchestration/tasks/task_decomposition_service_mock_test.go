@@ -24,7 +24,7 @@ func TestTaskDecompositionService_RowsErrWithMock(t *testing.T) {
 		AddRow("task-1", "[]").
 		RowError(0, errors.New("rows error"))
 
-	mock.ExpectQuery("^SELECT id, dependencies FROM swarm_tasks WHERE mission_id = \\$1 AND status = 'PENDING'$").
+	mock.ExpectQuery("^SELECT id, dependencies FROM shared_tasks_decomposition WHERE organization_id = \\$1 AND status = 'PENDING'$").
 		WithArgs("m-rows-err").
 		WillReturnRows(rows)
 	mock.ExpectRollback()
@@ -54,11 +54,11 @@ func TestTaskDecompositionService_QueryErrorDeps(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "dependencies"}).
 		AddRow("task-1", deps)
 
-	mock.ExpectQuery("^SELECT id, dependencies FROM swarm_tasks WHERE mission_id = \\$1 AND status = 'PENDING'$").
+	mock.ExpectQuery("^SELECT id, dependencies FROM shared_tasks_decomposition WHERE organization_id = \\$1 AND status = 'PENDING'$").
 		WithArgs("m-deps-err").
 		WillReturnRows(rows)
 
-	mock.ExpectQuery("^SELECT status FROM swarm_tasks WHERE id = \\$1$").
+	mock.ExpectQuery("^SELECT status FROM shared_tasks_decomposition WHERE id = \\$1$").
 		WithArgs("dep-1").
 		WillReturnError(errors.New("db err"))
 
@@ -87,11 +87,11 @@ func TestTaskDecompositionService_CommitError(t *testing.T) {
 	mock.ExpectBegin()
 	rows := sqlmock.NewRows([]string{"id", "dependencies"}).AddRow("task-1", "[]")
 
-	mock.ExpectQuery("^SELECT id, dependencies FROM swarm_tasks WHERE mission_id = \\$1 AND status = 'PENDING'$").
+	mock.ExpectQuery("^SELECT id, dependencies FROM shared_tasks_decomposition WHERE organization_id = \\$1 AND status = 'PENDING'$").
 		WithArgs("m-commit-err").
 		WillReturnRows(rows)
 
-	mock.ExpectExec("^UPDATE swarm_tasks SET status = 'IN_PROGRESS', assigned_agent_id = \\$1 WHERE id = \\$2$").
+	mock.ExpectExec("^UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = \\$1 WHERE id = \\$2$").
 		WithArgs("agent", "task-1").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -121,11 +121,11 @@ func TestTaskDecompositionService_UpdateExecErr(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("^SELECT status FROM swarm_tasks WHERE id = \\$1$").
+	mock.ExpectQuery("^SELECT status FROM shared_tasks_decomposition WHERE id = \\$1$").
 		WithArgs("task-1").
 		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
 
-	mock.ExpectExec("^UPDATE swarm_tasks SET status = \\$1 WHERE id = \\$2$").
+	mock.ExpectExec("^UPDATE shared_tasks_decomposition SET status = \\$1 WHERE id = \\$2$").
 		WithArgs("COMPLETED", "task-1").
 		WillReturnError(errors.New("update err"))
 
@@ -154,11 +154,11 @@ func TestTaskDecompositionService_ClaimUpdateExecErr(t *testing.T) {
 	mock.ExpectBegin()
 	rows := sqlmock.NewRows([]string{"id", "dependencies"}).AddRow("task-1", "[]")
 
-	mock.ExpectQuery("^SELECT id, dependencies FROM swarm_tasks WHERE mission_id = \\$1 AND status = 'PENDING'$").
+	mock.ExpectQuery("^SELECT id, dependencies FROM shared_tasks_decomposition WHERE organization_id = \\$1 AND status = 'PENDING'$").
 		WithArgs("m-claim-upd").
 		WillReturnRows(rows)
 
-	mock.ExpectExec("^UPDATE swarm_tasks SET status = 'IN_PROGRESS', assigned_agent_id = \\$1 WHERE id = \\$2$").
+	mock.ExpectExec("^UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = \\$1 WHERE id = \\$2$").
 		WithArgs("agent", "task-1").
 		WillReturnError(errors.New("claim update err"))
 
@@ -187,11 +187,11 @@ func TestTaskDecompositionService_ClaimInsertErr(t *testing.T) {
 	mock.ExpectBegin()
 	rows := sqlmock.NewRows([]string{"id", "dependencies"}).AddRow("task-1", "[]")
 
-	mock.ExpectQuery("^SELECT id, dependencies FROM swarm_tasks WHERE mission_id = \\$1 AND status = 'PENDING'$").
+	mock.ExpectQuery("^SELECT id, dependencies FROM shared_tasks_decomposition WHERE organization_id = \\$1 AND status = 'PENDING'$").
 		WithArgs("m-claim-ins").
 		WillReturnRows(rows)
 
-	mock.ExpectExec("^UPDATE swarm_tasks SET status = 'IN_PROGRESS', assigned_agent_id = \\$1 WHERE id = \\$2$").
+	mock.ExpectExec("^UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = \\$1 WHERE id = \\$2$").
 		WithArgs("agent", "task-1").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -224,7 +224,7 @@ func TestTaskDecompositionService_RowsScanErr(t *testing.T) {
 	// Mismatched column count causes scan error
 	rows := sqlmock.NewRows([]string{"id"}).AddRow("task-1")
 
-	mock.ExpectQuery("^SELECT id, dependencies FROM swarm_tasks WHERE mission_id = \\$1 AND status = 'PENDING'$").
+	mock.ExpectQuery("^SELECT id, dependencies FROM shared_tasks_decomposition WHERE organization_id = \\$1 AND status = 'PENDING'$").
 		WithArgs("m-claim-scan").
 		WillReturnRows(rows)
 
