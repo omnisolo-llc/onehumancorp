@@ -12,7 +12,12 @@ import (
 	"onehumancorp/srcs/server/lib/storage"
 )
 
-func NewBlobProxy(ctx context.Context) (storage.BlobProvider, error) {
+type BlobProvider interface {
+	WriteBlob(ctx context.Context, path string, data []byte) error
+	ReadBlob(ctx context.Context, path string) ([]byte, error)
+}
+
+func NewBlobProxy(ctx context.Context) (BlobProvider, error) {
 	start := time.Now()
 	defer func() { telemetry.RecordHarnessInitLatency(ctx, time.Since(start).Seconds()) }()
 	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
@@ -21,7 +26,7 @@ func NewBlobProxy(ctx context.Context) (storage.BlobProvider, error) {
 	if isMultitenant && !isStandalone {
 		bucket := os.Getenv("OHC_S3_BUCKET")
 		if bucket == "" {
-			return nil, fmt.Errorf("OHC_S3_BUCKET must be set when OHC_MULTITENANT is true")
+			bucket = "ohc-multi-tenant-blobs"
 		}
 
 		cfg, err := config.LoadDefaultConfig(ctx)
@@ -35,7 +40,7 @@ func NewBlobProxy(ctx context.Context) (storage.BlobProvider, error) {
 
 	rootDir := os.Getenv("OHC_LOCAL_STORAGE_ROOT")
 	if rootDir == "" {
-		rootDir = "./.local_storage"
+		rootDir = "/var/tmp/ohc/blobs"
 	}
 
 	provider, err := storage.NewLocalBlobProvider(rootDir)
