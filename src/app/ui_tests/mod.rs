@@ -47,6 +47,7 @@ pub mod agent_config;
 pub mod daily_briefing;
 pub mod business_manager_ux;
 pub mod analytics_charts;
+pub mod echo_ux_fixes;
 
 pub fn init() {
     #[cfg(not(target_arch = "wasm32"))]

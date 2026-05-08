@@ -66,7 +66,7 @@ fn e2e_flow_ux_fixes() {
     assert_eq!(biz_manager.get_show_offering_hint(), true);
 
     // Complete the flow
-    biz_manager.select_type("PHYSICAL".into());
+    biz_manager.invoke_select_type("PHYSICAL".into());
     biz_manager.invoke_next_step();
 
     assert_eq!(biz_manager.get_step(), 1);
