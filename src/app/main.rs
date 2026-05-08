@@ -234,16 +234,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
-    // Mock locale-based currency detection
-    let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-        "GBP"
-    } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-        "EUR"
-    } else {
-        "USD"
-    };
-    setup_wizard_ui.set_product_currency(detected_currency.into());
-
     let setup_wizard_handle = setup_wizard_ui.as_weak();
     let sw_ui_weak = setup_wizard_handle.clone();
     add_advanced_listener(Box::new(move |val| {
@@ -286,8 +276,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
             #[cfg(target_arch = "wasm32")]
             wasm_bindgen_futures::spawn_local(async move {
-                // HTTP call in WASM stubbed
+                let window = web_sys::window().unwrap();
+                let mut opts = web_sys::RequestInit::new();
+                opts.set_method("POST");
+                opts.set_mode(web_sys::RequestMode::Cors);
+                let json_body = serde_json::to_string(&state).unwrap();
+                opts.set_body(&JsValue::from_str(&json_body));
+                let request = web_sys::Request::new_with_str_and_init("/api/v1/dashboard/update_onboarding_state", &opts).unwrap();
+                request.headers().set("Content-Type", "application/json").unwrap();
+                let _ = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request)).await;
             });
+        }
+    });
+
+    let welcome_checklist_ui = app::WelcomeChecklist::new()?;
+    let welcome_checklist_handle = welcome_checklist_ui.as_weak();
+    setup_welcome_checklist_routing(&welcome_checklist_ui);
+
+    setup_wizard_ui.on_show_welcome_checklist({
+        let wc_handle = welcome_checklist_handle.clone();
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
+            }
+            if let Some(ui) = wc_handle.upgrade() {
+                let _ = ui.show();
+            }
         }
     });
 
@@ -1555,6 +1570,73 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let welcome_checklist_handle = welcome_checklist_ui.as_weak();
     setup_welcome_checklist_routing(&welcome_checklist_ui);
 
+    // Fetch initial onboarding state
+    let wc_ui_weak = welcome_checklist_handle.clone();
+    tokio::spawn(async move {
+        use ohc::api::v1::dashboard_service_client::DashboardServiceClient;
+        use ohc::api::v1::GetOnboardingStateRequest;
+        let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+        if let Ok(mut client) = DashboardServiceClient::connect(hub_url).await {
+            let req = tonic::Request::new(GetOnboardingStateRequest {
+                organization_id: std::env::var("OHC_BOOTSTRAP_ORG_ID").unwrap_or_else(|_| "default".to_string()),
+            });
+            if let Ok(resp) = client.get_onboarding_state(req).await {
+                if let Some(state) = resp.into_inner().state {
+                    if let Ok(v) = serde_json::from_str::<serde_json::Value>(&state.state_json) {
+                        let t1 = v.get("task1_done").and_then(|t| t.as_bool()).unwrap_or(true);
+                        let t2 = v.get("task2_done").and_then(|t| t.as_bool()).unwrap_or(false);
+                        let t3 = v.get("task3_done").and_then(|t| t.as_bool()).unwrap_or(false);
+                        let t4 = v.get("task4_done").and_then(|t| t.as_bool()).unwrap_or(false);
+
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = wc_ui_weak.upgrade() {
+                                ui.set_task1_done(t1);
+                                ui.set_task2_done(t2);
+                                ui.set_task3_done(t3);
+                                ui.set_task4_done(t4);
+                                let mut prog = 0;
+                                if t1 { prog += 25; }
+                                if t2 { prog += 25; }
+                                if t3 { prog += 25; }
+                                if t4 { prog += 25; }
+                                ui.set_progress(prog);
+                                ui.set_is_completed(prog == 100);
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    });
+
+    welcome_checklist_ui.on_save_progress({
+        move |t1, t2, t3, t4| {
+            tokio::spawn(async move {
+                use ohc::api::v1::dashboard_service_client::DashboardServiceClient;
+                use ohc::api::v1::{UpdateOnboardingStateRequest, OnboardingState};
+                let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+                if let Ok(mut client) = DashboardServiceClient::connect(hub_url).await {
+                    let state_json = serde_json::json!({
+                        "task1_done": t1,
+                        "task2_done": t2,
+                        "task3_done": t3,
+                        "task4_done": t4
+                    }).to_string();
+
+                    let req = tonic::Request::new(UpdateOnboardingStateRequest {
+                        state: Some(OnboardingState {
+                            organization_id: std::env::var("OHC_BOOTSTRAP_ORG_ID").unwrap_or_else(|_| "default".to_string()),
+                            user_id: "".to_string(),
+                            current_step: 100, // Checklist
+                            state_json,
+                        }),
+                    });
+                    let _ = client.update_onboarding_state(req).await;
+                }
+            });
+        }
+    });
+
     setup_wizard_ui.on_show_welcome_checklist({
         let wc_handle = welcome_checklist_handle.clone();
         let ui_handle = setup_wizard_handle.clone();
@@ -2797,16 +2879,6 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
-    // Mock locale-based currency detection
-    let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-        "GBP"
-    } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-        "EUR"
-    } else {
-        "USD"
-    };
-    setup_wizard_ui.set_product_currency(detected_currency.into());
-
     let setup_wizard_handle = setup_wizard_ui.as_weak();
     let sw_ui_weak = setup_wizard_handle.clone();
     add_advanced_listener(Box::new(move |val| {
@@ -2849,8 +2921,33 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
             });
             #[cfg(target_arch = "wasm32")]
             wasm_bindgen_futures::spawn_local(async move {
-                // HTTP call in WASM stubbed
+                let window = web_sys::window().unwrap();
+                let mut opts = web_sys::RequestInit::new();
+                opts.set_method("POST");
+                opts.set_mode(web_sys::RequestMode::Cors);
+                let json_body = serde_json::to_string(&state).unwrap();
+                opts.set_body(&JsValue::from_str(&json_body));
+                let request = web_sys::Request::new_with_str_and_init("/api/v1/dashboard/update_onboarding_state", &opts).unwrap();
+                request.headers().set("Content-Type", "application/json").unwrap();
+                let _ = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request)).await;
             });
+        }
+    });
+
+    let welcome_checklist_ui = app::WelcomeChecklist::new()?;
+    let welcome_checklist_handle = welcome_checklist_ui.as_weak();
+    setup_welcome_checklist_routing(&welcome_checklist_ui);
+
+    setup_wizard_ui.on_show_welcome_checklist({
+        let wc_handle = welcome_checklist_handle.clone();
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
+            }
+            if let Some(ui) = wc_handle.upgrade() {
+                let _ = ui.show();
+            }
         }
     });
 
@@ -2897,15 +2994,6 @@ mod growth_e2e_tests {
         let login_ui_handle = login_ui.as_weak();
 
         let setup_wizard_ui = app::SetupWizard::new().unwrap();
-
-        let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-            "GBP"
-        } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-            "EUR"
-        } else {
-            "USD"
-        };
-        setup_wizard_ui.set_product_currency(detected_currency.into());
 
         let setup_wizard_handle = setup_wizard_ui.as_weak();
 

@@ -13,11 +13,12 @@ export component WelcomeChecklist inherits Window {
     callback go_to_add_products();
     callback go_to_connect_instagram();
     callback go_to_share_link();
+    callback save_progress(bool, bool, bool, bool);
 
-    property <bool> task1_done: true;
-    property <bool> task2_done: false;
-    property <bool> task3_done: false;
-    property <bool> task4_done: false;
+    in-out property <bool> task1_done: true;
+    in-out property <bool> task2_done: false;
+    in-out property <bool> task3_done: false;
+    in-out property <bool> task4_done: false;
 
     in-out property <int> progress: 0;
     in-out property <bool> is_completed: false;
@@ -50,49 +51,77 @@ export component WelcomeChecklist inherits Window {
 
                 HorizontalBox {
                     spacing: 10px;
+                    alignment: start;
                     CheckBox {
+                        min-width: 44px;
+                        min-height: 44px;
                         checked: task1_done;
-                        toggled => { task1_done = self.checked; root.progress = (task1_done?25:0) + (task2_done?25:0) + (task3_done?25:0) + (task4_done?25:0); root.is_completed = task1_done && task2_done && task3_done && task4_done; }
+                        toggled => { task1_done = self.checked; root.progress = (task1_done?25:0) + (task2_done?25:0) + (task3_done?25:0) + (task4_done?25:0); root.is_completed = task1_done && task2_done && task3_done && task4_done; root.save_progress(task1_done, task2_done, task3_done, task4_done); }
                     }
-                    Text { text: "Business live"; color: white; font-family: "Inter"; }
+                    TouchArea {
+                        width: 100%;
+                        min-height: 44px;
+                        VerticalBox {
+                            alignment: center;
+                            Text { text: "Business live"; color: white; font-family: "Inter"; }
+                        }
+                    }
                 }
                 HorizontalBox {
                     spacing: 10px;
+                    alignment: start;
                     CheckBox {
+                        min-width: 44px;
+                        min-height: 44px;
                         checked: task2_done;
-                        toggled => { task2_done = self.checked; root.progress = (task1_done?25:0) + (task2_done?25:0) + (task3_done?25:0) + (task4_done?25:0); root.is_completed = task1_done && task2_done && task3_done && task4_done; }
+                        toggled => { task2_done = self.checked; root.progress = (task1_done?25:0) + (task2_done?25:0) + (task3_done?25:0) + (task4_done?25:0); root.is_completed = task1_done && task2_done && task3_done && task4_done; root.save_progress(task1_done, task2_done, task3_done, task4_done); }
                     }
                     TouchArea {
                         width: 100%;
-                        height: 100%;
+                        min-height: 44px;
                         clicked => { root.go_to_add_products(); }
-                        Text { text: "Add 3 more products"; color: white; font-family: "Inter"; }
+                        VerticalBox {
+                            alignment: center;
+                            Text { text: "Add 3 more products"; color: white; font-family: "Inter"; }
+                        }
                     }
                 }
                 HorizontalBox {
                     spacing: 10px;
+                    alignment: start;
                     CheckBox {
+                        min-width: 44px;
+                        min-height: 44px;
                         checked: task3_done;
-                        toggled => { task3_done = self.checked; root.progress = (task1_done?25:0) + (task2_done?25:0) + (task3_done?25:0) + (task4_done?25:0); root.is_completed = task1_done && task2_done && task3_done && task4_done; }
+                        toggled => { task3_done = self.checked; root.progress = (task1_done?25:0) + (task2_done?25:0) + (task3_done?25:0) + (task4_done?25:0); root.is_completed = task1_done && task2_done && task3_done && task4_done; root.save_progress(task1_done, task2_done, task3_done, task4_done); }
                     }
                     TouchArea {
                         width: 100%;
-                        height: 100%;
+                        min-height: 44px;
                         clicked => { root.go_to_connect_instagram(); }
-                        Text { text: "Connect Instagram"; color: white; font-family: "Inter"; }
+                        VerticalBox {
+                            alignment: center;
+                            Text { text: "Connect Instagram"; color: white; font-family: "Inter"; }
+                        }
                     }
                 }
                 HorizontalBox {
                     spacing: 10px;
+                    alignment: start;
                     CheckBox {
+                        min-width: 44px;
+                        min-height: 44px;
                         checked: task4_done;
-                        toggled => { task4_done = self.checked; root.progress = (task1_done?25:0) + (task2_done?25:0) + (task3_done?25:0) + (task4_done?25:0); root.is_completed = task1_done && task2_done && task3_done && task4_done; }
+                        toggled => { task4_done = self.checked; root.progress = (task1_done?25:0) + (task2_done?25:0) + (task3_done?25:0) + (task4_done?25:0); root.is_completed = task1_done && task2_done && task3_done && task4_done; root.save_progress(task1_done, task2_done, task3_done, task4_done); }
                     }
                     TouchArea {
                         width: 100%;
-                        height: 100%;
+                        min-height: 44px;
                         clicked => { root.go_to_share_link(); }
-                        Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; }
+                        VerticalBox {
+                            alignment: center;
+                            Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; }
+                        }
                     }
                 }
 

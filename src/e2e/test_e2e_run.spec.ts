@@ -29,7 +29,7 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
     // 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'My Awesome Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000); // Wait for mock gen
+    await expect(page.locator('text="AI is brainstorming... 🧠"')).toBeHidden({ timeout: 10000 });
     await page.click('button:has-text("Next")');
 
     // 3: Selling Categories -> 4
@@ -338,7 +338,7 @@ test('verify checklist connects instagram routing', async ({ page }) => {
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000);
+    await expect(page.locator('text="AI is brainstorming... 🧠"')).toBeHidden({ timeout: 10000 });
     await page.click('button:has-text("Next")');
     await page.check('text="Physical Products"');
     await page.click('button:has-text("Next")');
@@ -393,7 +393,7 @@ test('verify checklist share link routing', async ({ page }) => {
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000);
+    await expect(page.locator('text="AI is brainstorming... 🧠"')).toBeHidden({ timeout: 10000 });
     await page.click('button:has-text("Next")');
     await page.check('text="Physical Products"');
     await page.click('button:has-text("Next")');
@@ -448,7 +448,7 @@ test('verify checklist fully completed state', async ({ page }) => {
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000);
+    await expect(page.locator('text="AI is brainstorming... 🧠"')).toBeHidden({ timeout: 10000 });
     await page.click('button:has-text("Next")');
     await page.check('text="Physical Products"');
     await page.click('button:has-text("Next")');
@@ -486,6 +486,113 @@ test('verify checklist fully completed state', async ({ page }) => {
     await expect(page.locator('text=/Congratulations/i')).toBeVisible({ timeout: 5000 });
 });
 
+test('verify checklist persistence across reloads', async ({ page }) => {
+    // Navigate to the home page
+    await page.goto('/');
+
+    // Login
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
+
+    // Wait for the Dashboard
+    await expect(page.locator('text="Welcome"')).toBeVisible();
+
+    // Start setup wizard
+    await page.click('button:has-text("Start Setup")');
+
+    // Proceed to last step in wizard
+    await page.click('button:has-text("Next")');
+    await page.click('text="Online Store"');
+    await page.click('button:has-text("Next")');
+    await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
+    await page.click('button:has-text("Generate Description")');
+    await expect(page.locator('text="AI is brainstorming... 🧠"')).toBeHidden({ timeout: 10000 });
+    await page.click('button:has-text("Next")');
+    await page.check('text="Physical Products"');
+    await page.click('button:has-text("Next")');
+    await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
+    await page.fill('input[placeholder="0.00"]', '10');
+    await page.click('button:has-text("Next")');
+    await page.click('text="Online"');
+    await page.click('button:has-text("Next")');
+
+    // 9: Launch View
+    await expect(page.locator('text="Almost there"')).toBeVisible({ timeout: 5000 });
+
+    // We expect "Launch!" button. When clicked, it hits the `on_launch` handler in Rust.
+    await page.click('button:has-text("Launch!")');
+
+    // Verify it transitions away from launching after mock async backend setup
+    // And lands on the success step or dashboard
+    await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
+
+    if (await page.locator('text="Continue to Setup Checklist"').isVisible()) {
+        await page.click('button:has-text("Continue to Setup Checklist")');
+    } else {
+        await page.click('button:has-text("Go to Dashboard")');
+    }
+
+    // Verify Welcome Checklist shows up
+    await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
+
+    const checkboxes = page.locator('input[type="checkbox"]');
+    if (await checkboxes.count() > 0) {
+        await checkboxes.nth(1).check();
+        await expect(page.locator('text=/50%/i')).toBeVisible({ timeout: 5000 });
+    }
+
+    await page.reload();
+
+    // Login again
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
+
+    await expect(page.locator('text="Welcome"')).toBeVisible();
+
+    // Start setup wizard
+    await page.click('button:has-text("Start Setup")');
+
+    // Proceed to last step in wizard
+    await page.click('button:has-text("Next")');
+    await page.click('text="Online Store"');
+    await page.click('button:has-text("Next")');
+    await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
+    await page.click('button:has-text("Generate Description")');
+    await expect(page.locator('text="AI is brainstorming... 🧠"')).toBeHidden({ timeout: 10000 });
+    await page.click('button:has-text("Next")');
+    await page.check('text="Physical Products"');
+    await page.click('button:has-text("Next")');
+    await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
+    await page.fill('input[placeholder="0.00"]', '10');
+    await page.click('button:has-text("Next")');
+    await page.click('text="Online"');
+    await page.click('button:has-text("Next")');
+
+    // 9: Launch View
+    await expect(page.locator('text="Almost there"')).toBeVisible({ timeout: 5000 });
+
+    // We expect "Launch!" button. When clicked, it hits the `on_launch` handler in Rust.
+    await page.click('button:has-text("Launch!")');
+
+    // Verify it transitions away from launching after mock async backend setup
+    // And lands on the success step or dashboard
+    await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
+
+    if (await page.locator('text="Continue to Setup Checklist"').isVisible()) {
+        await page.click('button:has-text("Continue to Setup Checklist")');
+    } else {
+        await page.click('button:has-text("Go to Dashboard")');
+    }
+
+    // Verify Welcome Checklist shows up
+    await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
+
+    const newCheckboxes = page.locator('input[type="checkbox"]');
+    await expect(newCheckboxes.nth(1)).toBeChecked();
+});
+
 test('verify checklist completion progress', async ({ page }) => {
     // Navigate to the home page
     await page.goto('/');
@@ -507,7 +614,7 @@ test('verify checklist completion progress', async ({ page }) => {
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000);
+    await expect(page.locator('text="AI is brainstorming... 🧠"')).toBeHidden({ timeout: 10000 });
     await page.click('button:has-text("Next")');
     await page.check('text="Physical Products"');
     await page.click('button:has-text("Next")');

@@ -222,6 +222,7 @@ rust_shared_library(
     name = "app_web",
     srcs = ["main.rs"],
     crate_root = "main.rs",
+    compile_data = ["tooltips.json"],
     data = glob(["*.slint"]),
     edition = "2024",
     target_compatible_with = ["@platforms//cpu:wasm32"],
