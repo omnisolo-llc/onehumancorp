@@ -48,7 +48,9 @@ pub async fn bench_dashboard_snapshot() {
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect(&database_url).await.unwrap();
         crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
 
