@@ -170,7 +170,7 @@ func TestWorkspaceSyncTool_JSONMarshalError(t *testing.T) {
 	tool := NewWorkspaceSyncTool(proxy)
 
 	err := tool.Execute(context.Background(), tmpDir, "metadata_only")
-	if err == nil || err.Error() != "failed to marshal payload: mock marshal error" {
+	if err == nil || err.Error() != "failed to marshal state data: mock marshal error" {
 		t.Fatalf("expected json marshal error, got: %v", err)
 	}
 }
