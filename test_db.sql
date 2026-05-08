@@ -8,4 +8,8 @@ CREATE TABLE IF NOT EXISTS agent_missions (
     mission_log TEXT
 );
 
-INSERT INTO agent_missions (id, status, payload, mission_log) VALUES ('m_handoff', 'blocked', '{"task":"drain"}', 'I cannot finish an OHC product mission. Handover required.');
+INSERT INTO agent_missions (id, status, payload, mission_log) VALUES ('m_handoff', 'blocked', '{"task":"drain"}', 'I cannot finish an OHC product mission. Handover required.
+Blockers:
+- The user prompt provides only role and protocol definitions.
+- No specific issue, bug, feature request, or concrete task to implement was described.
+- As an Implementer, I require a defined mission to execute.');
