@@ -1359,35 +1359,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let business_manager_ui = app::BusinessManager::new().unwrap();
 
-    let dummy_products = vec![
-        app::UiProduct {
-            id: "prod_1".into(),
-            name: "Custom Vegan Cake".into(),
-            type_label: "Physical".into(),
-            price: "$40.00".into(),
-            inventory_count: 5,
-            is_out_of_stock: false,
-        },
-        app::UiProduct {
-            id: "prod_2".into(),
-            name: "Website Template".into(),
-            type_label: "Digital".into(),
-            price: "$19.00".into(),
-            inventory_count: 0,
-            is_out_of_stock: false,
-        },
-        app::UiProduct {
-            id: "prod_3".into(),
-            name: "Plumbing Repair".into(),
-            type_label: "Service".into(),
-            price: "$150.00".into(),
-            inventory_count: 0,
-            is_out_of_stock: true,
-        },
-    ];
-    let product_model = slint::VecModel::from(dummy_products);
-    let product_model_rc = std::rc::Rc::new(product_model);
-    business_manager_ui.set_products(product_model_rc.clone().into());
+    #[cfg(not(target_arch = "wasm32"))]
+    tokio::spawn({
+        let bm_handle = business_manager_ui.as_weak();
+        async move {
+            use ohc::api::v1::dashboard_service_client::DashboardServiceClient;
+            use ohc::api::v1::GetDashboardRequest;
+            let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+            if let Ok(mut client) = connect_with_interceptor(hub_url).await {
+                let req = tonic::Request::new(GetDashboardRequest {
+                    organization_id: std::env::var("OHC_BOOTSTRAP_ORG_ID").unwrap_or_else(|_| "default".to_string()),
+                    mobile_optimized: false,
+                });
+                if let Ok(resp) = client.get_dashboard(req).await {
+                    let snapshot = resp.into_inner();
+                    let ui_products: Vec<app::UiProduct> = snapshot.products.into_iter().map(|p| {
+                        app::UiProduct {
+                            id: p.id.into(),
+                            name: p.name.into(),
+                            type_label: "Product".into(),
+                            price: format!("${:.2}", p.price_cents as f64 / 100.0).into(),
+                            inventory_count: 0,
+                            is_out_of_stock: false,
+                        }
+                    }).collect();
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = bm_handle.upgrade() {
+                            ui.set_products(slint::ModelRc::new(slint::VecModel::from(ui_products)));
+                        }
+                    }).unwrap();
+                }
+            }
+        }
+    });
 
     business_manager_ui.on_action_edit({
         move |id| {
