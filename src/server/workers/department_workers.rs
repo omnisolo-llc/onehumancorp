@@ -200,6 +200,35 @@ impl OperationsWorker {
                         .execute(&db.pool)
                         .await
                         .map_err(|e| e.to_string())?;
+
+                    // Check for order milestones
+                    let order_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1::uuid")
+                        .bind(&tenant_id)
+                        .fetch_one(&db.pool)
+                        .await
+                        .unwrap_or(0);
+
+                    if order_count == 1 || order_count == 10 {
+                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else { "🎉 Milestone: 10th Order!" };
+                        let milestone_msg = if order_count == 1 {
+                            "Congratulations on your first sale! This is just the beginning of your journey."
+                        } else {
+                            "You've reached 10 orders! Your business is gaining serious momentum."
+                        };
+                        let milestone_id = Uuid::new_v4().to_string();
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES ($1, $2, $3, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', $4)
+                            "#
+                        )
+                        .bind(&milestone_id)
+                        .bind(&tenant_id)
+                        .bind(milestone_title)
+                        .bind(milestone_msg)
+                        .execute(&db.pool)
+                        .await;
+                    }
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     sqlx::query(
@@ -220,6 +249,35 @@ impl OperationsWorker {
                         .execute(sqlite_pool)
                         .await
                         .map_err(|e| e.to_string())?;
+
+                    // Check for order milestones (Sqlite)
+                    let order_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = ?")
+                        .bind(&tenant_id)
+                        .fetch_one(sqlite_pool)
+                        .await
+                        .unwrap_or(0);
+
+                    if order_count == 1 || order_count == 10 {
+                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else { "🎉 Milestone: 10th Order!" };
+                        let milestone_msg = if order_count == 1 {
+                            "Congratulations on your first sale! This is just the beginning of your journey."
+                        } else {
+                            "You've reached 10 orders! Your business is gaining serious momentum."
+                        };
+                        let milestone_id = Uuid::new_v4().to_string();
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES (?, ?, ?, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', ?)
+                            "#
+                        )
+                        .bind(&milestone_id)
+                        .bind(&tenant_id)
+                        .bind(milestone_title)
+                        .bind(milestone_msg)
+                        .execute(sqlite_pool)
+                        .await;
+                    }
                 }
             }
         }
@@ -522,6 +580,70 @@ impl PromoterWorker {
         let db = self.db.clone();
         let hub = self.hub.clone();
         let mut promoter_rx = hub.subscribe_teammate_mesh("promoter_inbox".to_string());
+        let mut product_rx = hub.subscribe_teammate_mesh("products_inbox".to_string());
+
+        // Handle product creation for social auto-posting
+        let db_social = db.clone();
+        tokio::spawn(async move {
+            while let Ok(event) = product_rx.recv().await {
+                if event.action == "ProductCreated" {
+                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
+                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                            let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("a new product");
+                            let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
+
+                            let prompt = format!("Generate a catchy and engaging social media post (Instagram/X) for our new product: '{}'. Include relevant hashtags and emojis. Be professional but exciting.", product_name);
+
+                            let mut drafted_post = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
+
+                            if let Ok(mut client) = crate::ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                                let reason_req = crate::ohc::orchestration::ReasonRequest {
+                                    prompt,
+                                    from_agent_id: "The Promoter".into(),
+                                };
+                                if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                                    drafted_post = res.into_inner().content;
+                                }
+                            }
+
+                            let task_id = Uuid::new_v4().to_string();
+                            let title = format!("Social Media Draft: {}", product_name);
+
+                            match &db_social.store {
+                                crate::db::DbStore::Postgres => {
+                                    let _ = sqlx::query(
+                                        r#"
+                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                        VALUES ($1, $2, $3, 'The Promoter drafted a social media post for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', $4)
+                                        "#
+                                    )
+                                    .bind(&task_id)
+                                    .bind(org_id)
+                                    .bind(&title)
+                                    .bind(&drafted_post)
+                                    .execute(&db_social.pool)
+                                    .await;
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let _ = sqlx::query(
+                                        r#"
+                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                        VALUES (?, ?, ?, 'The Promoter drafted a social media post for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', ?)
+                                        "#
+                                    )
+                                    .bind(&task_id)
+                                    .bind(org_id)
+                                    .bind(&title)
+                                    .bind(&drafted_post)
+                                    .execute(pool)
+                                    .await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
         tokio::spawn(async move {
             while let Ok(event) = promoter_rx.recv().await {
