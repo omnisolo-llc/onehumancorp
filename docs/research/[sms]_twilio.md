@@ -1,17 +1,25 @@
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Order Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
-**Research Report**:
-- **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
-**Design Doc**:
-- User goes to Settings and toggles "Send me SMS for new orders".
-- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
-- (Future: Customers can also receive SMS receipts).
-**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
-**Priority**: P2
-**Estimated Scope**: Medium
+**Title**: Integrate Twilio for OHC
+
+## Problem Statement
+My customers often don't check their emails. I need to send them appointment reminders and order updates via text message so they actually see them.
+
+## Research Report
+**Tool Evaluated:** Twilio
+
+**Findings:** Twilio is the industry standard for programmable SMS. It provides reliable global delivery, handles opt-outs automatically, and has extensive documentation. Registration for A2P 10DLC (US) can be a hurdle for small businesses but Twilio Trust Hub assists with this.
+
+**Pricing:** Pay-as-you-go, approx $0.0079 per SMS in the US + monthly phone number fee.
+
+**Cloud vs Standalone Mode:** Works in both modes via standard API calls.
+
+## Design Doc
+OHC will provision a Twilio subaccount and phone number for the business owner. Critical alerts (appointment reminders, order shipped) are sent as SMS via the Twilio API.
+
+## Implementation Prompt
+Implement a Twilio SMS integration that automatically sends appointment reminders and order confirmations to customers. The business owner should simply toggle 'Enable SMS Notifications' without managing Twilio accounts directly.
+
+## Priority
+P0
+
+## Estimated Scope
+Medium

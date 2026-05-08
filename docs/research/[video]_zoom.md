@@ -1,17 +1,25 @@
-## [Video] Zoom Integration
-**Title**: Integrate Zoom for Auto-Generated Meeting Links
-**Problem Statement**: Leo (Music Tutor) manually creates a Zoom link for every new lesson and emails it to the student. This is prone to error and looks unprofessional. He needs links to be generated automatically when a lesson is booked.
-**Research Report**:
-- **Tool**: Zoom
-- **Target Persona**: Leo (Music Tutor)
-- **Advantages**: Ubiquitous for online lessons. Strong API for meeting creation.
-- **Risks**: Zoom OAuth requires annual app review and compliance checks.
-- **Pricing**: Free tier (40-min limit). Pro starts at $15/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
-**Design Doc**:
-- User connects their Zoom account via the Sales dashboard.
-- When a customer books an online service (e.g., via Calendly or native booking), OHC calls the Zoom API to create a meeting.
-- The Zoom link is embedded in the automated calendar invite and confirmation email sent to the customer.
-**Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
-**Priority**: P1
-**Estimated Scope**: Medium
+**Title**: Integrate Zoom for OHC
+
+## Problem Statement
+When a client books an online consultation, I have to manually create a Zoom meeting and email them the link. It's tedious and error-prone.
+
+## Research Report
+**Tool Evaluated:** Zoom
+
+**Findings:** Zoom's API allows automatic meeting creation. Authentication requires OAuth 2.0 (Server-to-Server for internal apps, or standard OAuth for user-facing integrations). It's globally recognized and trusted by consumers.
+
+**Pricing:** API access requires a Pro account or higher (starts at $15.99/mo).
+
+**Cloud vs Standalone Mode:** Cloud utilizes standard OAuth. Standalone may require Server-to-Server OAuth configuration by the user.
+
+## Design Doc
+If a booked service is marked as 'Online', OHC calls the Zoom API to generate a unique meeting link using the owner's connected Zoom account. The link is automatically added to the calendar invite and confirmation email.
+
+## Implementation Prompt
+Create an integration where business owners can connect their Zoom account. When an online service is booked, automatically generate a unique Zoom meeting link and share it with both the owner and the customer.
+
+## Priority
+P2
+
+## Estimated Scope
+Medium

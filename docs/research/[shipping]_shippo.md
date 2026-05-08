@@ -1,18 +1,25 @@
-## [Shipping] Shippo Integration
-**Title**: Integrate Shippo for Automated Label Generation
-**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
-**Research Report**:
-- **Tool**: Shippo
-- **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
-- **Advantages**: Aggregates rates from USPS, UPS, FedEx, DHL. Simple API. No monthly fee for pay-as-you-go.
-- **Risks**: International shipping requires complex customs declarations which might be hard to automate fully for non-technical users.
-- **Pricing**: Free tier (pay per label + postage).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
-- The Operations agent shows the cheapest shipping option.
-- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
-- OHC automatically emails the customer the tracking number.
-**Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
-**Priority**: P1
-**Estimated Scope**: Large
+**Title**: Integrate Shippo for OHC
+
+## Problem Statement
+Calculating shipping costs and printing labels for my handmade products takes hours every week. I have to guess the shipping cost during checkout.
+
+## Research Report
+**Tool Evaluated:** Shippo
+
+**Findings:** Shippo provides a single API to access rates and print labels for 85+ global carriers (USPS, UPS, FedEx, DHL). It offers discounted rates and is tailored for SMBs and e-commerce platforms. The API handles address validation, rating, and tracking.
+
+**Pricing:** Free tier available (pay for postage only); Pro tier starts at $19/mo.
+
+**Cloud vs Standalone Mode:** Works seamlessly in both environments via standard REST API.
+
+## Design Doc
+When an order is placed in OHC, the order details are sent to Shippo to generate shipping rates. The owner can select a rate, generate a label in OHC, and OHC will email the tracking number to the customer.
+
+## Implementation Prompt
+Integrate Shippo to allow business owners to generate and print shipping labels directly from the OHC order management screen. Automatically calculate live shipping rates at customer checkout based on the store's origin address.
+
+## Priority
+P1
+
+## Estimated Scope
+Large
