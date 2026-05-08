@@ -137,7 +137,7 @@ fn test_stripe_link_generation() {
             msgs.push(crate::app::UiInboxMessage {
                 id: "msg-2".into(),
                 author_name: "Me".into(),
-                body: format!("Pay here: https://checkout.stripe.com/pay/dummy {}", amount).into(),
+                body: format!("Pay here: https://checkout.stripe.com/pay/test {}", amount).into(),
                 is_me: true,
                 time: "Now".into(),
                 is_quote: false,
@@ -152,7 +152,7 @@ fn test_stripe_link_generation() {
 
     assert_eq!(ui.get_current_messages().row_count(), 2);
     let link_msg = ui.get_current_messages().row_data(1).unwrap();
-    assert!(link_msg.body.contains("https://checkout.stripe.com/pay/dummy"));
+    assert!(link_msg.body.contains("https://checkout.stripe.com/pay/test"));
 }
 
 #[test]
