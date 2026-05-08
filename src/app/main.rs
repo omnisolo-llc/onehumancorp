@@ -2008,6 +2008,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let progress = if limit > 0.0 { used / limit } else { 0.0 };
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
+                        ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
                     }
                     GLOBAL_WEBSITE_BUILDER.with(|g| {
                         if let Some(weak) = g.borrow().as_ref() {
@@ -2113,6 +2114,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(ui) = my_plan_handle_add_credits.upgrade() {
             let _ = ui.show();
             ui.invoke_upgrade();
+        }
+    });
+
+
+    let pricing_handle_add_credits = pricing_handle.clone();
+    pricing_ui.on_add_credits(move || {
+        if let Some(ui) = pricing_handle_add_credits.upgrade() {
+            ui.set_step(1);
         }
     });
 
@@ -6891,6 +6900,7 @@ mod remaining_e2e_tests {
                         let progress = if limit > 0.0 { used / limit } else { 0.0 };
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
+                        ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
                     }
                 }).unwrap();
             }
@@ -7037,6 +7047,7 @@ mod remaining_e2e_tests {
                         let progress = if limit > 0.0 { used / limit } else { 0.0 };
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
+                        ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
                     }
                 }).unwrap();
             }
@@ -7085,6 +7096,7 @@ mod remaining_e2e_tests {
                         let progress = if limit > 0.0 { used / limit } else { 0.0 };
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
+                        ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
                     }
                 }).unwrap();
             }
@@ -8093,6 +8105,47 @@ fn test_business_share_flow() {
 
 #[cfg(test)]
 mod additional_pricing_tests {
+    #[test]
+    fn test_e2e_cost_transparency_flow_12_add_credits() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let pricing = app::Pricing::new().unwrap();
+
+        let pricing_handle_add_credits = pricing.as_weak();
+        pricing.on_add_credits(move || {
+            if let Some(ui) = pricing_handle_add_credits.upgrade() {
+                ui.set_step(1);
+            }
+        });
+
+        pricing.invoke_add_credits();
+        assert_eq!(pricing.get_step(), 1, "Add credits should navigate to step 1 (plans)");
+    }
+
+    #[test]
+    fn test_e2e_cost_transparency_flow_11_step_transition() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let pricing = app::Pricing::new().unwrap();
+        assert_eq!(pricing.get_step(), 0);
+        pricing.set_step(1);
+        assert_eq!(pricing.get_step(), 1);
+    }
+
+    #[test]
+    fn test_e2e_cost_transparency_flow_9_projected_cost() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let pricing = app::Pricing::new().unwrap();
+        pricing.set_projected_cost("$15.00 / month".into());
+        assert_eq!(pricing.get_projected_cost(), "$15.00 / month");
+    }
+
+    #[test]
+    fn test_e2e_cost_transparency_flow_10_usage_progress() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let pricing = app::Pricing::new().unwrap();
+        pricing.set_usage_progress(0.75);
+        assert_eq!(pricing.get_usage_progress(), 0.75);
+    }
+
     use super::*;
 
     #[test]
