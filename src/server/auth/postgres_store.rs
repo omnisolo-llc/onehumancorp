@@ -1,3 +1,4 @@
+use crate::crypto::{encrypt_deterministic, decrypt_deterministic};
 use async_trait::async_trait;
 use sqlx::PgPool;
 use crate::auth::{User, UserRepository};
@@ -19,7 +20,10 @@ impl PgUserRepository {
 
 #[async_trait]
 impl UserRepository for PgUserRepository {
-    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
+    async fn create_user(&self, mut user: User, org_id: &str) -> Result<(), String> {
+        if !crate::config::get().multitenant {
+            user.email = encrypt_deterministic(&user.email);
+        }
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
@@ -51,7 +55,7 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
-        let query = if !crate::config::get().multitenant && (org_id.is_empty() ) {
+        let query = if !crate::config::get().multitenant && org_id == "system" {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
         } else {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND organization_id = $2"
@@ -61,7 +65,7 @@ impl UserRepository for PgUserRepository {
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = if !crate::config::get().multitenant && (org_id.is_empty() ) {
+        let row = if !crate::config::get().multitenant && org_id == "system" {
             sqlx::query(query).bind(id).fetch_one(&mut *tx).await
         } else {
             sqlx::query(query).bind(id).bind(org_id).fetch_one(&mut *tx).await
@@ -74,7 +78,7 @@ impl UserRepository for PgUserRepository {
         Ok(User {
             id: row.get("id"),
             username: row.get("username"),
-            email: row.get("email"),
+            email: if !crate::config::get().multitenant { decrypt_deterministic(row.get("email")) } else { row.get("email") },
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
@@ -87,7 +91,7 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by username
-        let query = if !crate::config::get().multitenant && (org_id.is_empty() ) {
+        let query = if !crate::config::get().multitenant && org_id == "system" {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
         } else {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND organization_id = $2"
@@ -97,7 +101,7 @@ impl UserRepository for PgUserRepository {
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = if !crate::config::get().multitenant && (org_id.is_empty() ) {
+        let row = if !crate::config::get().multitenant && org_id == "system" {
             sqlx::query(query).bind(username).fetch_one(&mut *tx).await
         } else {
             sqlx::query(query).bind(username).bind(org_id).fetch_one(&mut *tx).await
@@ -109,7 +113,7 @@ impl UserRepository for PgUserRepository {
         Ok(User {
             id: row.get("id"),
             username: row.get("username"),
-            email: row.get("email"),
+            email: if !crate::config::get().multitenant { decrypt_deterministic(row.get("email")) } else { row.get("email") },
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
@@ -121,8 +125,13 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
+        let search_email = if !crate::config::get().multitenant {
+            encrypt_deterministic(email)
+        } else {
+            email.to_string()
+        };
         // Similar to get_by_id but query by email
-        let query = if !crate::config::get().multitenant && (org_id.is_empty() ) {
+        let query = if !crate::config::get().multitenant && org_id == "system" {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
         } else {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND organization_id = $2"
@@ -132,10 +141,10 @@ impl UserRepository for PgUserRepository {
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = if !crate::config::get().multitenant && (org_id.is_empty() ) {
-            sqlx::query(query).bind(email).fetch_one(&mut *tx).await
+        let row = if !crate::config::get().multitenant && org_id == "system" {
+            sqlx::query(query).bind(&search_email).fetch_one(&mut *tx).await
         } else {
-            sqlx::query(query).bind(email).bind(org_id).fetch_one(&mut *tx).await
+            sqlx::query(query).bind(&search_email).bind(org_id).fetch_one(&mut *tx).await
         }.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -144,7 +153,7 @@ impl UserRepository for PgUserRepository {
         Ok(User {
             id: row.get("id"),
             username: row.get("username"),
-            email: row.get("email"),
+            email: if !crate::config::get().multitenant { decrypt_deterministic(row.get("email")) } else { row.get("email") },
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
@@ -157,7 +166,7 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by oidc_subject
-        let query = if !crate::config::get().multitenant && (org_id.is_empty() ) {
+        let query = if !crate::config::get().multitenant && org_id == "system" {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
         } else {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND organization_id = $2"
@@ -167,7 +176,7 @@ impl UserRepository for PgUserRepository {
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = if !crate::config::get().multitenant && (org_id.is_empty() ) {
+        let row = if !crate::config::get().multitenant && org_id == "system" {
             sqlx::query(query).bind(sub).fetch_one(&mut *tx).await
         } else {
             sqlx::query(query).bind(sub).bind(org_id).fetch_one(&mut *tx).await
@@ -179,7 +188,7 @@ impl UserRepository for PgUserRepository {
         Ok(User {
             id: row.get("id"),
             username: row.get("username"),
-            email: row.get("email"),
+            email: if !crate::config::get().multitenant { decrypt_deterministic(row.get("email")) } else { row.get("email") },
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
@@ -191,7 +200,7 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
-        let query = if !crate::config::get().multitenant && (org_id.is_empty() ) {
+        let query = if !crate::config::get().multitenant && org_id == "system" {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
         } else {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE organization_id = $1 ORDER BY created_at"
@@ -201,7 +210,7 @@ impl UserRepository for PgUserRepository {
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let rows = if !crate::config::get().multitenant && (org_id.is_empty() ) {
+        let rows = if !crate::config::get().multitenant && org_id == "system" {
             sqlx::query(query).fetch_all(&mut *tx).await
         } else {
             sqlx::query(query).bind(org_id).fetch_all(&mut *tx).await
@@ -228,10 +237,13 @@ impl UserRepository for PgUserRepository {
         Ok(users)
     }
 
-    async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
+    async fn update_user(&self, mut user: User, org_id: &str) -> Result<(), String> {
+        if !crate::config::get().multitenant {
+            user.email = encrypt_deterministic(&user.email);
+        }
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
 
-        let query = if !crate::config::get().multitenant && (org_id.is_empty() ) {
+        let query = if !crate::config::get().multitenant && org_id == "system" {
             r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
             organization_id=$7, oidc_subject=$8, updated_at=$9
@@ -249,7 +261,7 @@ impl UserRepository for PgUserRepository {
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let res = if !crate::config::get().multitenant && (org_id.is_empty() ) {
+        let res = if !crate::config::get().multitenant && org_id == "system" {
             sqlx::query(query)
                 .bind(&user.id)
                 .bind(&user.username)
@@ -288,7 +300,7 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
-        let query = if !crate::config::get().multitenant && (org_id.is_empty() ) {
+        let query = if !crate::config::get().multitenant && org_id == "system" {
             "DELETE FROM users WHERE id = $1 RETURNING id"
         } else {
             "DELETE FROM users WHERE id = $1 AND organization_id = $2 RETURNING id"
@@ -298,7 +310,7 @@ impl UserRepository for PgUserRepository {
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let res = if !crate::config::get().multitenant && (org_id.is_empty() ) {
+        let res = if !crate::config::get().multitenant && org_id == "system" {
             sqlx::query(query).bind(id).fetch_optional(&mut *tx).await
         } else {
             sqlx::query(query).bind(id).bind(org_id).fetch_optional(&mut *tx).await
@@ -386,7 +398,7 @@ mod security_tests {
         // Cloud multitenant mode should NOT allow bypassing.
         let is_multitenant = true;
         let org_id = "system";
-        let should_bypass = !is_multitenant && (org_id.is_empty() );
+        let should_bypass = !is_multitenant && org_id == "system";
 
         // Ensure the condition strictly evaluates to false when multitenant is true.
         assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");

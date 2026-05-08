@@ -274,7 +274,8 @@ impl Store {
         let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
         let mut user_id_opt = by_name.get(&name_key).cloned();
 
-        if user_id_opt.is_none() && org_id.is_empty() {
+        let should_bypass = !crate::config::get().multitenant && org_id == "system";
+        if user_id_opt.is_none() && should_bypass {
             user_id_opt = by_name.get(&TenantKey { org_id: "".to_string(), key: username.to_string() }).cloned();
         }
 
@@ -285,8 +286,9 @@ impl Store {
             return Err("account disabled".to_string());
         }
 
+        let should_bypass = !crate::config::get().multitenant && org_id == "system";
         if let Some(ref user_org) = user.organization_id {
-            if !org_id.is_empty() && user_org != org_id {
+            if !should_bypass && user_org != org_id {
                 return Err("invalid credentials".to_string());
             }
         }
@@ -302,7 +304,8 @@ impl Store {
         let users = self.users.read().unwrap();
         let u = users.get(id)?;
         
-        if !org_id.is_empty() {
+        let should_bypass = !crate::config::get().multitenant && org_id == "system";
+        if !should_bypass {
             if let Some(ref user_org) = u.organization_id {
                 if user_org != org_id {
                     return None;
@@ -316,9 +319,10 @@ impl Store {
 
     pub fn list_users(&self, org_id: &str) -> Vec<User> {
         let users = self.users.read().unwrap();
+        let should_bypass = !crate::config::get().multitenant && org_id == "system";
         users.values()
             .filter(|u| {
-                org_id.is_empty() || u.organization_id.as_deref() == Some(org_id)
+                should_bypass || u.organization_id.as_deref() == Some(org_id)
             })
             .cloned()
             .collect()
@@ -330,7 +334,8 @@ impl Store {
 
         let u = users.get_mut(id).ok_or_else(|| "user not found".to_string())?;
 
-        if !org_id.is_empty() {
+        let should_bypass = !crate::config::get().multitenant && org_id == "system";
+        if !should_bypass {
              if u.organization_id.as_deref() != Some(org_id) {
                  return Err("user not found".to_string());
              }
@@ -370,7 +375,8 @@ impl Store {
 
         let u = users.get(id).ok_or_else(|| "user not found".to_string())?;
 
-        if !org_id.is_empty() {
+        let should_bypass = !crate::config::get().multitenant && org_id == "system";
+        if !should_bypass {
              if u.organization_id.as_deref() != Some(org_id) {
                  return Err("user not found".to_string());
              }
@@ -560,7 +566,7 @@ impl AuthService for AuthServiceServerImpl {
         let claims = self.store.validate_token(token).await
             .map_err(|e| Status::unauthenticated(e))?;
 
-        let user = self.store.get_user(&claims.sub, "")
+        let user = self.store.get_user(&claims.sub, &claims.organization_id.unwrap_or_default())
             .ok_or_else(|| Status::not_found("user not found"))?;
 
         Ok(Response::new(UserProto {
@@ -711,7 +717,7 @@ mod tests {
         }
         
         unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
-        let users = s.list_users("");
+        let users = s.list_users("system");
         assert_eq!(users.len(), 1);
         assert_eq!(users[0].username, "testadmin");
     }
@@ -754,7 +760,7 @@ mod tests {
         assert_eq!(updated.active, active);
         
         s.delete_user(&u.id, "").unwrap();
-        assert!(s.get_user(&u.id, "").is_none());
+        assert!(s.get_user(&u.id, "system").is_none());
     }
 
     #[tokio::test]
@@ -862,7 +868,7 @@ mod tests {
         let req = Request::new(LoginRequest {
             username: "admin".to_string(),
             password: "admin".to_string(),
-            organization_id: "".to_string(),
+            organization_id: "system".to_string(),
         });
         
         let resp = AuthServiceServerImpl::new(s).login(req).await.unwrap();
@@ -878,7 +884,7 @@ mod tests {
             email: "new@test.com".to_string(),
             password: "password123".to_string(),
             roles: vec![],
-            organization_id: "".to_string(),
+            organization_id: "system".to_string(),
         });
         
         let resp = AuthServiceServerImpl::new(s).register(req).await.unwrap();
@@ -890,7 +896,7 @@ mod tests {
     async fn test_auth_service_list_users() {
         let s = Arc::new(Store::new());
         let req = Request::new(ListUsersRequest {
-            organization_id: "".to_string(),
+            organization_id: "system".to_string(),
         });
         
         let resp = AuthServiceServerImpl::new(s).list_users(req).await.unwrap();
@@ -992,7 +998,7 @@ mod isolation_tests {
         assert!(s.get_user(&org_user.id, "org-1").is_some());
 
         // Querying with empty org_id should succeed (admin context)
-        assert!(s.get_user(&org_user.id, "").is_some());
+        assert!(s.get_user(&org_user.id, "system").is_some());
 
         // Querying with "sys" should fail because "sys" is no longer a bypass
         assert!(s.get_user(&org_user.id, "sys").is_none());
@@ -1015,7 +1021,7 @@ mod isolation_tests {
         let req = tonic::Request::new(LoginRequest {
             username: "test".to_string(),
             password: "password".to_string(),
-            organization_id: "".to_string(),
+            organization_id: "system".to_string(),
         });
 
         let res = svc.login(req).await;
