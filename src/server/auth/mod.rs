@@ -1025,3 +1025,4 @@ mod isolation_tests {
         }
     }
 }
+pub mod thin_client_tests;
