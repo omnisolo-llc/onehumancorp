@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/main.dart';
 
 // Helper function to quickly navigate to the inbox screen for tests that don't need the wizard flow
 Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.pumpWidget(const ProviderScope(child: OHCApp()));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 50));
+  for (int i = 0; i < 5; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 
   // 1. Welcome Screen
   await tester.tap(find.text('Get Started'));
@@ -32,24 +38,40 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 4. External Integrations Screen
+  // 4. Template Selection Screen
+  await tester.tap(find.text('Modern Minimal'));
+  await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 5. Deployment Preference Screen
+  // 5. First Product Screen
+  await tester.enterText(find.byKey(const Key('productNameField')), 'Awesome Widget');
+  await tester.enterText(find.byKey(const Key('productPriceField')), '99.99');
+  await tester.tap(find.text('Next'));
+  await tester.pump(const Duration(milliseconds: 500));
+
+  // 6. External Integrations Screen
+  await tester.tap(find.text('Next'));
+  await tester.pump(const Duration(milliseconds: 500));
+
+  // 7. Deployment Preference Screen
   await tester.tap(find.text('Cloud'));
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 6. Administrator Account Screen
+  // 8. Administrator Account Screen
   await tester.enterText(find.byKey(const Key('adminNameField')), 'John Doe');
   await tester.enterText(find.byKey(const Key('adminEmailField')), 'john@acme.com');
   await tester.enterText(find.byKey(const Key('adminPasswordField')), 'securePassword123');
   await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 6. Review & Launch Screen
+  // 9. Domain Go-Live Screen
+  await tester.tap(find.text('Next'));
+  await tester.pump(const Duration(milliseconds: 500));
+
+  // 10. Review & Launch Screen
   final launchBtn = find.text('Launch My AI Team');
   await tester.ensureVisible(launchBtn);
   await tester.pump(const Duration(milliseconds: 500));
@@ -75,7 +97,12 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 1)); // Navigator transition
 }
 
+
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('1. Unified Inbox Navigation E2E test', (WidgetTester tester) async {
     await navigateToInbox(tester);
     expect(find.text("Unified Inbox"), findsOneWidget);

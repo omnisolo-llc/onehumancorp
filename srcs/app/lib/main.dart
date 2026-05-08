@@ -121,19 +121,43 @@ class DashboardScreen extends StatelessWidget {
                 GlassContainer(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         "Welcome Checklist",
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
-                      SizedBox(height: 10),
-                      Text("✅ Business live", style: TextStyle(color: Colors.white)),
-                      SizedBox(height: 5),
-                      Text("⬜ Add 3 more products", style: TextStyle(color: Colors.white)),
-                      SizedBox(height: 5),
-                      Text("⬜ Connect Instagram", style: TextStyle(color: Colors.white)),
-                      SizedBox(height: 5),
-                      Text("⬜ Share your link with a friend", style: TextStyle(color: Colors.white)),
+                      const SizedBox(height: 10),
+                      const Text("✅ Business live", style: TextStyle(color: Colors.white)),
+                      const SizedBox(height: 5),
+                      InkWell(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening product flow...')));
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4.0),
+                          child: Text("⬜ Add 3 more products", style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      InkWell(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening integrations flow...')));
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4.0),
+                          child: Text("⬜ Connect Instagram", style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      InkWell(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied to clipboard!')));
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4.0),
+                          child: Text("⬜ Share your link with a friend", style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+                        ),
+                      ),
                     ],
                   ),
                 ),

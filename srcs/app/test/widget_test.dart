@@ -2,11 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('Business Setup Wizard E2E test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const ProviderScope(child: OHCApp()));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // Sometimes initialization via api_service takes a frame
+    for (int i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+    }
 
     // 1. Welcome Screen
     expect(find.text('Welcome to One Human Corp'), findsOneWidget);
@@ -42,12 +54,34 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    // 4. External Integrations Screen
+    // 4. Template Selection Screen
+    expect(find.text('Choose a Vibe'), findsOneWidget);
+    await tester.tap(find.text('Modern Minimal'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.text('Next'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 5. First Product Screen
+    expect(find.text('Add First Product'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('productNameField')), 'Awesome Widget');
+    await tester.enterText(find.byKey(const Key('productPriceField')), '99.99');
+
+    // Tap AI Write and wait for it
+    await tester.tap(find.text('AI Write'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(seconds: 1)); // Wait for generation
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.text('Next'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 6. External Integrations Screen
     expect(find.text('External Integrations'), findsOneWidget);
     await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    // 5. Deployment Preference Screen
+    // 7. Deployment Preference Screen
     expect(find.text('Deployment Preference'), findsOneWidget);
     await tester.tap(find.text('Cloud'));
     await tester.pump(const Duration(milliseconds: 500));
@@ -55,7 +89,7 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    // 6. Administrator Account Screen
+    // 8. Administrator Account Screen
     expect(find.text('Administrator Account'), findsOneWidget);
     await tester.enterText(find.byKey(const Key('adminNameField')), 'John Doe');
     await tester.enterText(find.byKey(const Key('adminEmailField')), 'john@acme.com');
@@ -64,7 +98,13 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    // 7. Review & Launch Screen
+    // 9. Domain Go-Live Screen
+    expect(find.text('Go Live!'), findsOneWidget);
+    expect(find.text('https://acmecorp.ohc.app'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 10. Review & Launch Screen
     expect(find.text('Review & Launch'), findsOneWidget);
     expect(find.text('Acme Corp'), findsOneWidget);
     expect(find.text('Technology'), findsOneWidget);

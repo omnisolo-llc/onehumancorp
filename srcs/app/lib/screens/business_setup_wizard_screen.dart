@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wizard_provider.dart';
 import '../main.dart'; // For GlassContainer
+import 'package:confetti/confetti.dart';
 import '../widgets/contextual_tooltip.dart';
 import '../widgets/walkthrough_overlay.dart';
 import 'help/help_center_screen.dart';
@@ -25,7 +26,11 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   final _adminNameController = TextEditingController();
   final _adminEmailController = TextEditingController();
   final _adminPasswordController = TextEditingController();
+  final _productNameController = TextEditingController();
+  final _productPriceController = TextEditingController();
+  final _productDescController = TextEditingController();
 
+  late ConfettiController _confettiController;
   late AnimationController _heroAnimationController;
   late Animation<double> _heroAnimation;
 
@@ -54,16 +59,21 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
       CurvedAnimation(parent: _pulseAnimationController, curve: Curves.easeInOut),
     );
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
   }
 
   @override
   void dispose() {
     _heroAnimationController.dispose();
     _pulseAnimationController.dispose();
+    _confettiController.dispose();
     _companyNameController.dispose();
     _adminNameController.dispose();
     _adminEmailController.dispose();
     _adminPasswordController.dispose();
+    _productNameController.dispose();
+    _productPriceController.dispose();
+    _productDescController.dispose();
     super.dispose();
   }
 
@@ -79,7 +89,14 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(wizardProvider);
 
-    if (state.currentStep == 7) {
+    if (state.isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0F172A),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (state.currentStep == 10) {
       return const DashboardScreen();
     }
 
@@ -120,16 +137,215 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       case 2:
         return _buildGoalSelectionScreen(state);
       case 3:
-        return _buildExternalIntegrationsScreen();
+        return _buildTemplateSelectionScreen(state);
       case 4:
-        return _buildDeploymentPreferenceScreen(state);
+        return _buildFirstProductScreen(state);
       case 5:
-        return _buildAdministratorAccountScreen();
+        return _buildExternalIntegrationsScreen();
       case 6:
+        return _buildDeploymentPreferenceScreen(state);
+      case 7:
+        return _buildAdministratorAccountScreen();
+      case 8:
+        return _buildDomainGoLiveScreen(state);
+      case 9:
         return _buildReviewAndLaunchScreen(state);
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  Widget _buildTemplateSelectionScreen(WizardState state) {
+    final templates = [
+      {'id': 'modern', 'name': 'Modern Minimal'},
+      {'id': 'bold', 'name': 'Bold & Playful'},
+      {'id': 'classic', 'name': 'Classic Elegant'}
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Choose a Vibe',
+          style: TextStyle(fontFamily: 'Outfit', fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Select a starting template for your storefront.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        const SizedBox(height: 20),
+        Expanded(
+          child: ListView.builder(
+            itemCount: templates.length,
+            itemBuilder: (context, index) {
+              final template = templates[index];
+              final isSelected = state.selectedTemplate == template['id'];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: GestureDetector(
+                  onTap: () {
+                    ref.read(wizardProvider.notifier).setTemplate(template['id']!);
+                  },
+                  child: GlassContainer(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(template['name']!, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                            Icon(isSelected ? Icons.check_circle : Icons.radio_button_unchecked, color: isSelected ? const Color(0xFF22C55E) : Colors.white54),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: Colors.white10,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(child: Text('Mini-preview for ${state.companyName ?? 'your business'}', style: const TextStyle(color: Colors.white54, fontSize: 12))),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
+  Widget _buildFirstProductScreen(WizardState state) {
+    if (_productNameController.text.isEmpty && state.productName != null) {
+      _productNameController.text = state.productName!;
+    }
+    if (_productPriceController.text.isEmpty && state.productPrice != null) {
+      _productPriceController.text = state.productPrice!;
+    }
+    if (_productDescController.text.isEmpty && state.productDescription != null && state.productDescription != "Generating...") {
+      _productDescController.text = state.productDescription!;
+    } else if (state.productDescription == "Generating...") {
+      _productDescController.text = state.productDescription!;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Add First Product',
+          style: TextStyle(fontFamily: 'Outfit', fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        const SizedBox(height: 10),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                GlassContainer(
+                  child: TextField(
+                    key: const Key('productNameField'),
+                    controller: _productNameController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Product/Service Name', labelStyle: TextStyle(color: Colors.white70), border: InputBorder.none),
+                    onChanged: (value) {
+                      ref.read(wizardProvider.notifier).updateProduct(name: value);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+                GlassContainer(
+                  child: TextField(
+                    key: const Key('productPriceField'),
+                    controller: _productPriceController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Price (\$)', labelStyle: TextStyle(color: Colors.white70), border: InputBorder.none),
+                    onChanged: (value) {
+                      ref.read(wizardProvider.notifier).updateProduct(price: value);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          ref.read(wizardProvider.notifier).generateAiDescription();
+                        },
+                        icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                        label: const Text('AI Write', style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6B4EFF).withOpacity(0.5)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                GlassContainer(
+                  child: TextField(
+                    key: const Key('productDescField'),
+                    controller: _productDescController,
+                    maxLines: 2,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Description', labelStyle: TextStyle(color: Colors.white70), border: InputBorder.none),
+                    onChanged: (value) {
+                      ref.read(wizardProvider.notifier).updateProduct(description: value);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
+  Widget _buildDomainGoLiveScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Go Live!',
+          style: TextStyle(fontFamily: 'Outfit', fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        const SizedBox(height: 20),
+        GlassContainer(
+          child: Column(
+            children: [
+              const Text('Your store is ready to publish at:', style: TextStyle(color: Colors.white70)),
+              const SizedBox(height: 10),
+              Text('https://${state.subdomain ?? 'mybusiness.ohc.app'}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      _confettiController.play();
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF22C55E), padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)),
+                    child: const Text('Publish Store', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                  ConfettiWidget(
+                    confettiController: _confettiController,
+                    blastDirectionality: BlastDirectionality.explosive,
+                    shouldLoop: false,
+                    colors: const [Colors.green, Colors.blue, Colors.pink, Colors.orange, Colors.purple],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        _buildNavigationButtons(),
+      ],
+    );
   }
 
   Widget _buildWelcomeScreen() {

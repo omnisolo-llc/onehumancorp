@@ -2,10 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/screens/business_setup_wizard_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('BusinessSetupWizardScreen Environment Tests', () {
     Future<void> navigateToStep4(WidgetTester tester) async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      for (int i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
       // 1. Welcome Screen
       await tester.tap(find.text('Get Started'));
       await tester.pump(const Duration(milliseconds: 500));
@@ -15,6 +25,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       // 3. Goal Selection Screen
+      await tester.tap(find.text('Next'));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // 4. Template Selection Screen
+      await tester.tap(find.text('Next'));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // 5. First Product Screen
       await tester.tap(find.text('Next'));
       await tester.pump(const Duration(milliseconds: 500));
     }
