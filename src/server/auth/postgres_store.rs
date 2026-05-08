@@ -319,7 +319,7 @@ impl UserRepository for PgUserRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO revoked_tokens (jti, expires_at) VALUES ($1, $2)
+            INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, current_setting('app.current_tenant', true))
             ON CONFLICT (jti) DO NOTHING
             "#
         )
