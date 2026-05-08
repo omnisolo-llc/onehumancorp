@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+	"gopkg.in/yaml.v3"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
@@ -85,13 +86,13 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 	assert.True(t, foundCompleted)
 
 	// Check heartbeat file
-	statusFile := filepath.Join(".agent-task", "status", "test-task-standalone-1.json")
+	statusFile := filepath.Join(".agent-task", "status", "test-task-standalone-1.yml")
 	_, err = os.Stat(statusFile)
 	assert.NoError(t, err)
 
 	bytes, _ := os.ReadFile(statusFile)
 	var finalData map[string]interface{}
-	_ = json.Unmarshal(bytes, &finalData)
+	_ = yaml.Unmarshal(bytes, &finalData)
 	assert.Equal(t, "COMPLETED", finalData["status"])
 }
 

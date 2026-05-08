@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class InboxMessage {
   final String platform;
@@ -14,6 +16,16 @@ class InboxMessage {
     required this.time,
     required this.isMe,
   });
+
+  factory InboxMessage.fromJson(Map<String, dynamic> json) {
+    return InboxMessage(
+      platform: json['platform'],
+      sender: json['sender'],
+      message: json['message'],
+      time: json['time'],
+      isMe: json['isMe'] ?? false,
+    );
+  }
 }
 
 class InboxState {
@@ -43,36 +55,40 @@ class InboxState {
 class InboxNotifier extends StateNotifier<InboxState> {
   InboxNotifier() : super(InboxState());
 
-  void connectInstagram() {
-    state = state.copyWith(
-      instagramConnected: true,
-      messages: [
-        ...state.messages,
-        InboxMessage(
-          platform: "Instagram",
-          sender: "maya_bakes",
-          message: "Do you do vegan cakes?",
-          time: "2m ago",
-          isMe: false,
-        )
-      ],
-    );
+  Future<void> connectInstagram() async {
+    try {
+      final response = await http.get(Uri.parse('http://localhost:8080/api/v1/inbox/instagram'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final newMessages = data.map((m) => InboxMessage.fromJson(m)).toList();
+        state = state.copyWith(
+          instagramConnected: true,
+          messages: [...state.messages, ...newMessages],
+        );
+      } else {
+        state = state.copyWith(instagramConnected: true);
+      }
+    } catch (_) {
+      state = state.copyWith(instagramConnected: true);
+    }
   }
 
-  void connectWhatsApp() {
-    state = state.copyWith(
-      whatsappConnected: true,
-      messages: [
-        ...state.messages,
-        InboxMessage(
-          platform: "WhatsApp",
-          sender: "+1 (555) 123-4567",
-          message: "Can I order 5 cupcakes for tomorrow?",
-          time: "1m ago",
-          isMe: false,
-        )
-      ],
-    );
+  Future<void> connectWhatsApp() async {
+    try {
+      final response = await http.get(Uri.parse('http://localhost:8080/api/v1/inbox/whatsapp'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final newMessages = data.map((m) => InboxMessage.fromJson(m)).toList();
+        state = state.copyWith(
+          whatsappConnected: true,
+          messages: [...state.messages, ...newMessages],
+        );
+      } else {
+        state = state.copyWith(whatsappConnected: true);
+      }
+    } catch (_) {
+      state = state.copyWith(whatsappConnected: true);
+    }
   }
 
   void sendReply(String replyText) {

@@ -6,7 +6,6 @@ import (
 	"gopkg.in/yaml.v3"
 	"errors"
 	"fmt"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
@@ -170,7 +169,7 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 		default:
 		}
 
-		statusFile := filepath.Join(statusDir, fmt.Sprintf("%d.yml", time.Now().Unix()))
+		statusFile := filepath.Join(statusDir, task.ID + ".yml")
 
 		statusData := map[string]interface{}{
 			"task_id":   task.ID,
@@ -185,10 +184,6 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 		_ = os.WriteFile(tempFile, statusBytes, 0644)
 		_ = os.Rename(tempFile, statusFile)
 
-		// Simulate transient failure randomly (10% chance)
-		if rand.Float32() < 0.10 {
-			return fmt.Errorf("transient sub-agent failure")
-		}
 
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -203,7 +198,7 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 		"timestamp": time.Now().Unix(),
 	}
 	finalBytes, _ := yaml.Marshal(finalData)
-	statusFile := filepath.Join(statusDir, fmt.Sprintf("%d.yml", time.Now().Unix()))
+	statusFile := filepath.Join(statusDir, task.ID + ".yml")
 	tempFile := statusFile + ".tmp"
 	_ = os.WriteFile(tempFile, finalBytes, 0644)
 	_ = os.Rename(tempFile, statusFile)
