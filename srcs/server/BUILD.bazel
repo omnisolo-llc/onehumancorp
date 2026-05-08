@@ -10,6 +10,7 @@ go_binary(
         "//srcs/server/orchestration:orchestration",
         "//srcs/server/growth:growth",
         "//srcs/server/telemetry:telemetry",
+        "//srcs/server/api/mesh:mesh",
         "//srcs/server/dashboard:dashboard",
     ],
 )
