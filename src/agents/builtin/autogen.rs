@@ -227,6 +227,97 @@ Provide your response, which will be passed to the next agent in the sequence.",
     }
 }
 
+
+
+/// The Orchestrator that manages a concurrent flow of agents (fan-out/fan-in).
+pub struct ConcurrentChatManager {
+    pub agents: Vec<ChatAgent>,
+    pub synthesizer: Option<ChatAgent>,
+}
+
+impl ConcurrentChatManager {
+    pub fn new(agents: Vec<ChatAgent>, synthesizer: Option<ChatAgent>) -> Self {
+        Self { agents, synthesizer }
+    }
+
+    /// Run the concurrent chat loop, fanning out the input to all agents, then fanning in to the synthesizer if present.
+    pub async fn run_concurrent(&self, initial_task: &str) -> Result<Vec<Message>, String> {
+        let mut transcript = Vec::new();
+        transcript.push(Message::user(format!("Admin: {}", initial_task)));
+
+        let mut futures = Vec::new();
+
+        for agent_cfg in &self.agents {
+            let prompt_context = format!(
+                "You are participating in a concurrent workflow as {}.
+
+Your input task/context is:
+{}
+
+Provide your response.",
+                agent_cfg.name, initial_task
+            );
+
+            let mut run_cfg = agent_cfg.run_config.clone();
+            run_cfg.server_system_message =
+                format!("You are {}. {}", agent_cfg.name, agent_cfg.description);
+            let agent = agent_cfg.agent.clone();
+            let name = agent_cfg.name.clone();
+
+            futures.push(async move {
+                let mut on_event = |_| {};
+                let response_text = agent
+                    .run(&run_cfg, &prompt_context, &mut on_event)
+                    .await
+                    .map_err(|e| format!("Agent {} failed: {}", name, e))?;
+                Ok::<String, String>(format!("{}: {}", name, response_text))
+            });
+        }
+
+        let results = futures::future::join_all(futures).await;
+        let mut combined_responses = String::new();
+
+        for (i, res) in results.into_iter().enumerate() {
+            let text = res?;
+            combined_responses.push_str(&text);
+            combined_responses.push_str("\n\n");
+            transcript.push(Message::assistant(text));
+        }
+
+        if let Some(synth) = &self.synthesizer {
+            tracing::info!("Fan-in Step: {} is running...", synth.name);
+
+            let prompt_context = format!(
+                "You are participating in a concurrent workflow as the synthesizer.
+
+The initial task was:
+{}
+
+The concurrent workers have provided the following outputs:
+{}
+
+Please synthesize these outputs into a final cohesive response.",
+                initial_task, combined_responses
+            );
+
+            let mut run_cfg = synth.run_config.clone();
+            run_cfg.server_system_message =
+                format!("You are {}. {}", synth.name, synth.description);
+
+            let mut on_event = |_| {};
+            let response_text = synth
+                .agent
+                .run(&run_cfg, &prompt_context, &mut on_event)
+                .await
+                .map_err(|e| format!("Synthesizer {} failed: {}", synth.name, e))?;
+
+            let formatted_response = format!("{}: {}", synth.name, response_text);
+            transcript.push(Message::assistant(formatted_response.clone()));
+        }
+
+        Ok(transcript)
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -362,5 +453,61 @@ mod tests {
         assert!(transcript[2]
             .content
             .contains("Agent2: I am Agent2. Everything looks good. TERMINATE"));
+    }
+
+    #[tokio::test]
+    async fn test_autogen_concurrent_chat() {
+        let agent1_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec!["Output from Agent1".to_string()]),
+        });
+        let agent1 = Arc::new(Agent::new(agent1_llm, vec![]));
+
+        let agent2_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec!["Output from Agent2".to_string()]),
+        });
+        let agent2 = Arc::new(Agent::new(agent2_llm, vec![]));
+
+        let synth_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec!["Synthesized final response".to_string()]),
+        });
+        let synth_agent = Arc::new(Agent::new(synth_llm, vec![]));
+
+        let cfg = AgentRunConfig::default();
+
+        let chat_agent1 = ChatAgent {
+            name: "Agent1".to_string(),
+            description: "Concurrent worker 1.".to_string(),
+            agent: agent1,
+            run_config: cfg.clone(),
+        };
+
+        let chat_agent2 = ChatAgent {
+            name: "Agent2".to_string(),
+            description: "Concurrent worker 2.".to_string(),
+            agent: agent2,
+            run_config: cfg.clone(),
+        };
+
+        let chat_synth = ChatAgent {
+            name: "Synthesizer".to_string(),
+            description: "Aggregates the concurrent outputs.".to_string(),
+            agent: synth_agent,
+            run_config: cfg.clone(),
+        };
+
+        let manager = ConcurrentChatManager::new(vec![chat_agent1, chat_agent2], Some(chat_synth));
+
+        let result = manager.run_concurrent("Initial concurrent task").await;
+        assert!(result.is_ok());
+
+        let transcript = result.unwrap();
+
+        // 1 user msg, 2 worker msgs, 1 synth msg = 4
+        assert_eq!(transcript.len(), 4);
+        assert!(transcript[0].content.contains("Initial concurrent task"));
+        // futures::future::join_all preserves order of inputs
+        assert!(transcript[1].content.contains("Agent1: Output from Agent1"));
+        assert!(transcript[2].content.contains("Agent2: Output from Agent2"));
+        assert!(transcript[3].content.contains("Synthesizer: Synthesized final response"));
     }
 }
