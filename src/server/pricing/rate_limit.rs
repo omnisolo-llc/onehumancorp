@@ -20,8 +20,8 @@ impl PlanTier {
 
     pub fn agent_action_limit(&self) -> Option<u32> {
         match self {
-            PlanTier::Free => Some(20),
-            PlanTier::Starter => Some(200),
+            PlanTier::Free => Some(100),
+            PlanTier::Starter => Some(1000),
             PlanTier::Pro | PlanTier::Business => None,
         }
     }
@@ -303,8 +303,8 @@ mod tests {
         assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
         assert_eq!(PlanTier::Business.monthly_action_limit(), None);
 
-        assert_eq!(PlanTier::Free.agent_action_limit(), Some(20));
-        assert_eq!(PlanTier::Starter.agent_action_limit(), Some(200));
+        assert_eq!(PlanTier::Free.agent_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.agent_action_limit(), Some(1000));
 
         assert_eq!(PlanTier::Free.storage_limit_mb(), Some(500));
         assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5000));
