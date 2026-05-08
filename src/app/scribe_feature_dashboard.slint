@@ -23,7 +23,7 @@ export component ScribeFeatureDashboard inherits Window {
             spacing: 24px;
 
             Text {
-                text: "Documentation Features (Scribe)";
+                text: "Help and Guides";
                 font-size: 28px;
                 font-weight: 700;
                 color: white;
@@ -80,7 +80,7 @@ export component ScribeFeatureDashboard inherits Window {
                     GlassCard {
                         VerticalBox {
                             padding: 16px; spacing: 12px;
-                            Text { text: "6. API Documentation"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "6. Custom Integrations"; font-size: 18px; font-weight: 700; color: white; }
                             Text { text: "For advanced users to connect custom software."; color: #cbd5e1; wrap: word-wrap; }
                             Button { text: "View API Docs"; clicked => { root.open_api_docs(); } }
                         }
@@ -89,7 +89,7 @@ export component ScribeFeatureDashboard inherits Window {
                     GlassCard {
                         VerticalBox {
                             padding: 16px; spacing: 12px;
-                            Text { text: "7. Release Notes"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "7. What's New"; font-size: 18px; font-weight: 700; color: white; }
                             Text { text: "What's new in OHC."; color: #cbd5e1; wrap: word-wrap; }
                             Button { text: "View Release Notes"; clicked => { root.open_release_notes(); } }
                         }

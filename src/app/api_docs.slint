@@ -39,7 +39,7 @@ export component ApiDocs inherits Window {
             }
 
             Text {
-                text: "Connect other tools to your store. This is an advanced feature for software developers. If you are not a developer, you don't need to use this page.";
+                text: "Connect other software to your store. This is for advanced users only. You do not need this to run your store.";
                 color: #ef4444; // red warning
                 wrap: word-wrap;
             }
@@ -47,7 +47,7 @@ export component ApiDocs inherits Window {
             TooltipElement {
                 tooltip_id: "api_docs_advanced";
                 CheckBox {
-                    text: "Show Advanced Developer Documentation";
+                    text: "Show Advanced Options";
                     checked <=> is_advanced;
                 }
             }
