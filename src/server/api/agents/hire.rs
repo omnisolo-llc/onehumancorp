@@ -44,7 +44,7 @@ async fn hire_handler(
         None => "system".to_string(),
     };
 
-    let (mut parts, body) = req.into_parts();
+    let (parts, body) = req.into_parts();
     let req2 = axum::extract::Request::from_parts(parts, body);
 
     let payload: HireAgentRequest = match axum::extract::Json::<HireAgentRequest>::from_request(req2, &()).await {
