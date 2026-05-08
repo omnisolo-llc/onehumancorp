@@ -349,7 +349,6 @@ impl AgentServiceImpl {
             max_task_tokens: 0,
             confidence_threshold,
             enable_acon_context_strategy: false,
-            enable_harness_thickness_optimization: false,
             enable_llmcompiler_plan_and_execute: false,
             enable_observation_masking: true,
             observation_masking_threshold: 3,
@@ -368,7 +367,6 @@ impl AgentServiceImpl {
             enable_visual_verification: false,
             visual_verification_command: String::new(),
             enable_state_checkpointing: false,
-            enable_git_checkpointing: false,
             state_scratchpad_path: None,
             workspace_path: None,
             thread_id: None,
@@ -385,12 +383,12 @@ impl AgentServiceImpl {
         let progress_file = format!(".ralph_progress_{}.json", task_id);
         let llm = self.resolve_llm(&req.llm_provider, &req.model, &req.llm_endpoint);
         let run_cfg = self.build_run_config(&req, &req.department, &llm).await;
-        
+
         let todos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox = Arc::new(RwLock::new(Mailbox::default()));
         let observation_store = Arc::new(dashmap::DashMap::new());
-        
+
         let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None, observation_store.clone());
         let mut unarc_agent = Agent::new(llm, tools);
         unarc_agent.observation_store = observation_store;
@@ -402,7 +400,7 @@ impl AgentServiceImpl {
             unarc_agent = unarc_agent.with_memory_store(store.clone());
         }
         let agent = Arc::new(unarc_agent);
-        
+
         let ralph = crate::ralph_loop::RalphLoop::new(agent, run_cfg, &progress_file);
         if let Err(e) = ralph.run(&req.task).await {
             tracing::error!("Ralph Loop error: {}", e);
@@ -439,7 +437,7 @@ impl AgentService for AgentServiceImpl {
         let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
-        
+
         // Inject memory accessor if using Anthropic3TierMemoryStore
         let anthropic_memory = self.anthropic_memory.clone();
         let accessor = if let Some(mem) = &anthropic_memory {
@@ -615,7 +613,6 @@ impl AgentService for AgentServiceImpl {
                 max_task_tokens: 0,
                 confidence_threshold: 0.0,
                 enable_acon_context_strategy: false,
-            enable_harness_thickness_optimization: false,
             enable_llmcompiler_plan_and_execute: false,
                 enable_observation_masking: true,
                 observation_masking_threshold: 3,
@@ -634,7 +631,6 @@ impl AgentService for AgentServiceImpl {
                 enable_visual_verification: false,
                 visual_verification_command: String::new(),
                 enable_state_checkpointing: false,
-                enable_git_checkpointing: false,
                 state_scratchpad_path: None,
                 workspace_path: None,
                 thread_id: None,
