@@ -3,13 +3,13 @@
   "add_product": "Add a new product or service to your store.",
   "view_orders": "View and manage your recent orders.",
   "messages": "Read and respond to customer messages.",
-  "stats": "View your store's performance analytics.",
+  "stats": "See how many people are visiting your store and buying things.",
   "share": "Share your store link with customers.",
   "ask_ai": "Ask your helper to do things for you.",
-  "advisory_hint": "Insights and suggestions for your business.",
+  "advisory_hint": "Get smart tips on how to improve your sales.",
   "quick_actions_hint": "These buttons are shortcuts to your most common daily tasks.",
-  "api_docs_advanced": "Toggle to see detailed API endpoints for developers.",
-  "api_test_button": "Run a live test against this endpoint.",
+  "api_docs_advanced": "Show technical details for developers. If you are not a developer, you can ignore this.",
+  "api_test_button": "Send a test request to see how the software responds. This is for testing custom code.",
   "ai_chat_send": "Send your message to the AI Helper.",
   "help_floating_button": "Open the Help Center.",
   "menu": "Open the main menu.",
@@ -18,5 +18,7 @@
   "referrals": "Reward customers for sharing your store.",
   "email_marketing": "Send emails to your customers.",
   "social_posting": "Post updates to your social media.",
-  "kairos_orchestration": "Set up automatic tasks for your store."
+  "kairos_orchestration": "Let AI run complex tasks in the background. This saves you time on daily operations.",
+  "video_tutorials": "Watch short videos to learn how to use the app. They are all under 90 seconds.",
+  "release_notes": "See what new features we just added to the app."
 }
