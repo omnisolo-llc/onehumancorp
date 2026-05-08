@@ -1,5 +1,14 @@
 # Release Notes
 
+
+## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 💰 Miser: Fix Free tier storage limit UI for multi-tenant users (#12285)
+
+### Privacy/Offline Improvements
+- 💰 Miser: Ensure Free tier storage limits are accurately displayed for offline local instances (#12285)
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 ### Cloud Scaling Improvements

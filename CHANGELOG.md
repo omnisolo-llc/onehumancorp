@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
+### Cloud Scaling Improvements
+- 💰 Miser: Fix Free tier storage limit UI for multi-tenant users (#12285)
+
+### Privacy/Offline Improvements
+- 💰 Miser: Ensure Free tier storage limits are accurately displayed for offline local instances (#12285)
+
+
 ## v0.4.35 (Cloud) / v0.4.35+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🔨 Forge: Sub-Agent Orchestration Queue Test Fixes (#12202)

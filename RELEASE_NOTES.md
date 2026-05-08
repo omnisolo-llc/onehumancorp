@@ -1,3 +1,9 @@
+## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
+
+- Scaling (Cloud): Fix Free tier storage limit UI for multi-tenant users (#12285).
+
+- Privacy/Offline (Standalone): Ensure Free tier storage limits are accurately displayed for offline local instances (#12285).
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 - Scaling (Cloud): update api routing to use axum 0.8 style path variables (#11553).
