@@ -84,6 +84,7 @@ pub trait UserRepository: Send + Sync {
 }
 
 pub struct Store {
+    pub db_pool: Option<sqlx::PgPool>,
     users: RwLock<HashMap<String, User>>,
     roles: RwLock<HashMap<String, Role>>,
     by_name: RwLock<HashMap<TenantKey, String>>, // key -> user_id
@@ -97,7 +98,7 @@ pub struct Store {
 }
 
 impl Store {
-    pub fn new() -> Self {
+    pub fn new(db_pool: Option<sqlx::PgPool>) -> Self {
         let secret = std::env::var("JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
@@ -186,6 +187,7 @@ impl Store {
                 client_id,
                 enabled,
             }),
+            db_pool,
         };
 
         store.seed_default_admin(now);
@@ -388,12 +390,52 @@ impl Store {
         Ok(())
     }
 
+    pub async fn revoke_token_async(&self, jti: String, exp: DateTime<Utc>, org_id: &str) {
+        if let Some(pool) = &self.db_pool {
+            let mut tx = pool.begin().await.unwrap();
+            let _ = crate::utils::auth_utils::set_org_context(&mut *tx, org_id).await;
+            let _ = sqlx::query(
+                "INSERT INTO revoked_tokens (jti, expires_at) VALUES ($1, $2) ON CONFLICT (jti) DO NOTHING"
+            ).bind(&jti).bind(exp).execute(&mut *tx).await;
+            let _ = tx.commit().await;
+        } else {
+            let mut revoked = self.revoked.write().unwrap();
+            revoked.insert(jti, exp);
+            let now = Utc::now();
+            revoked.retain(|_, v| *v > now);
+        }
+    }
+
     pub fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
         let mut revoked = self.revoked.write().unwrap();
         revoked.insert(jti, exp);
         
         let now = Utc::now();
         revoked.retain(|_, v| *v > now);
+    }
+
+    pub async fn is_revoked_async(&self, jti: &str, org_id: &str) -> bool {
+        if let Some(pool) = &self.db_pool {
+            let mut tx = pool.begin().await.unwrap();
+            let _ = crate::utils::auth_utils::set_org_context(&mut *tx, org_id).await;
+            if let Ok(row) = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP")
+                .bind(jti)
+                .fetch_one(&mut *tx).await
+            {
+                use sqlx::Row;
+                let count: i64 = row.get(0);
+                return count > 0;
+            }
+            false
+        } else {
+            let revoked = self.revoked.read().unwrap();
+            if let Some(exp) = revoked.get(jti) {
+                 if exp > &Utc::now() {
+                     return true;
+                 }
+            }
+            false
+        }
     }
 
     pub fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
@@ -440,7 +482,7 @@ impl Store {
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
                         return Err("Invalid token: empty claims".to_string());
                     }
-                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
+                    if self.is_revoked_async(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()).await {
                         return Err("token revoked".to_string());
                     }
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
@@ -537,7 +579,7 @@ impl AuthService for AuthServiceServerImpl {
                     if let Ok(claims) = self.store.validate_token(token).await {
                         let exp = chrono::DateTime::from_timestamp(claims.exp as i64, 0)
                             .unwrap_or_else(|| chrono::Utc::now());
-                        let _ = self.store.revoke_token(claims.jti, exp, &claims.organization_id.unwrap_or_default());
+                        let _ = self.store.revoke_token_async(claims.jti, exp, &claims.organization_id.unwrap_or_default()).await;
                     }
                 }
             }
@@ -710,7 +752,7 @@ mod tests {
             std::env::set_var("ADMIN_EMAIL", "testadmin@test.com");
         }
         
-        let s = Store::new();
+        let s = Store::new(None);
         let users = s.list_users("");
         assert_eq!(users.len(), 1);
         assert_eq!(users[0].username, "testadmin");
@@ -718,7 +760,7 @@ mod tests {
 
     #[test]
     fn test_store_create_and_authenticate() {
-        let s = Store::new();
+        let s = Store::new(None);
         let u = s.create_user("alice".to_string(), "alice@test.com".to_string(), "hunter2!".to_string(), vec![ROLE_VIEWER.to_string()], "".to_string()).unwrap();
         
         let got = s.authenticate("alice", "hunter2!", "").unwrap();
@@ -730,20 +772,20 @@ mod tests {
 
     #[test]
     fn test_store_duplicate_username() {
-        let s = Store::new();
+        let s = Store::new(None);
         s.create_user("bob".to_string(), "bob@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).unwrap();
         assert!(s.create_user("bob".to_string(), "bob2@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).is_err());
     }
 
     #[test]
     fn test_store_short_password_rejected() {
-        let s = Store::new();
+        let s = Store::new(None);
         assert!(s.create_user("short".to_string(), "short@test.com".to_string(), "abc".to_string(), vec![], "".to_string()).is_err());
     }
 
     #[test]
     fn test_store_update_and_delete_user() {
-        let s = Store::new();
+        let s = Store::new(None);
         let u = s.create_user("charlie".to_string(), "c@test.com".to_string(), "p@ssw0rd".to_string(), vec![ROLE_VIEWER.to_string()], "".to_string()).unwrap();
         
         let new_email = "charlie2@test.com".to_string();
@@ -759,7 +801,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_jwt_round_trip() {
-        let s = Store::new();
+        let s = Store::new(None);
         let u = s.create_user("jwt-user".to_string(), "jwt@test.com".to_string(), "jwtpass1".to_string(), vec![ROLE_OPERATOR.to_string()], "".to_string()).unwrap();
         
         let token = s.issue_token(&u).unwrap();
@@ -772,7 +814,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_jwt_empty_sub_jti() {
-        let s = Store::new();
+        let s = Store::new(None);
         let u = s.create_user("empty-claims".to_string(), "empty@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).unwrap();
         let token = s.issue_token(&u).unwrap();
 
@@ -819,13 +861,13 @@ mod tests {
         // when OHC_SQLITE_KEY is present without altering environment variables dynamically
         // Note: setting environment variables in unit tests is unsafe in Rust
         // For regression testing we just check that the Store initialized with some secret
-        let s = Store::new();
+        let s = Store::new(None);
         assert!(!s.secret.is_empty(), "Store secret should be initialized (either randomly or from env/file)");
     }
 
     #[tokio::test]
     async fn test_jwt_revoked_token() {
-        let s = Store::new();
+        let s = Store::new(None);
         let u = s.create_user("revoke-me".to_string(), "revoke@test.com".to_string(), "revpass1".to_string(), vec![], "".to_string()).unwrap();
         let token = s.issue_token(&u).unwrap();
         
@@ -858,7 +900,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_auth_service_login_valid() {
-        let s = Arc::new(Store::new());
+        let s = Arc::new(Store::new(None));
         let req = Request::new(LoginRequest {
             username: "admin".to_string(),
             password: "admin".to_string(),
@@ -872,7 +914,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_auth_service_register_valid() {
-        let s = Arc::new(Store::new());
+        let s = Arc::new(Store::new(None));
         let req = Request::new(CreateUserRequest {
             username: "newuser".to_string(),
             email: "new@test.com".to_string(),
@@ -888,7 +930,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_auth_service_list_users() {
-        let s = Arc::new(Store::new());
+        let s = Arc::new(Store::new(None));
         let req = Request::new(ListUsersRequest {
             organization_id: "".to_string(),
         });
@@ -901,7 +943,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_auth_service_create_role() {
-        let s = Arc::new(Store::new());
+        let s = Arc::new(Store::new(None));
         let req = Request::new(CreateRoleRequest {
             name: "new_role".to_string(),
             permissions: vec!["read".to_string()],
@@ -978,7 +1020,7 @@ mod isolation_tests {
 
     #[test]
     fn test_auth_tenant_isolation_sys_org() {
-        let s = Store::new();
+        let s = Store::new(None);
         // Create user in a specific organization
         let org_user = s.create_user(
             "tenant_user".to_string(),
@@ -1009,7 +1051,7 @@ mod isolation_tests {
             std::env::set_var("OHC_MULTITENANT", "true");
             std::env::set_var("JWT_SECRET", "test_secret");
         }
-        let s = Arc::new(Store::new());
+        let s = Arc::new(Store::new(None));
         let svc = AuthServiceServerImpl::new(s.clone());
 
         let req = tonic::Request::new(LoginRequest {
