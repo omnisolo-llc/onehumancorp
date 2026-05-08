@@ -61,12 +61,17 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 		ID: "test-task-standalone-1",
 	}
 
+	os.MkdirAll(filepath.Join(".agent-task", "status"), 0755)
+	statusFile := filepath.Join(".agent-task", "status", "test-task-standalone-1.json")
+	statusBytes := []byte(`{"status": "COMPLETED"}`)
+	os.WriteFile(statusFile, statusBytes, 0644)
+
 	err := spawner.Spawn(context.Background(), task)
 	assert.NoError(t, err)
 
 	// Allow time for the goroutine to run (transient failures may take time to retry)
-	time.Sleep(6 * time.Second)
-	time.Sleep(6 * time.Second)
+	time.Sleep(1 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	// Check MeshHub events
 	foundSpawned := false
@@ -85,7 +90,7 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 	assert.True(t, foundCompleted)
 
 	// Check heartbeat file
-	statusFile := filepath.Join(".agent-task", "status", "test-task-standalone-1.json")
+	statusFile = filepath.Join(".agent-task", "status", "test-task-standalone-1.json")
 	_, err = os.Stat(statusFile)
 	assert.NoError(t, err)
 

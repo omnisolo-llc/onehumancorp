@@ -34,8 +34,8 @@ test.describe('Free Tier & Upgrade Funnel', () => {
 
     await page.goto('/agents');
 
-    // Click "Hire Agent"
-    const hireBtn = page.locator('button:has-text("Hire Agent")').first();
+    // Click "Hire Helper"
+    const hireBtn = page.locator('button:has-text("Hire Helper")').first();
     await expect(hireBtn).toBeVisible();
     await hireBtn.click();
 
@@ -52,8 +52,8 @@ test.describe('Free Tier & Upgrade Funnel', () => {
 
     await page.goto('/agents');
 
-    // Click "Hire Agent"
-    const hireBtn = page.locator('button:has-text("Hire Agent")').first();
+    // Click "Hire Helper"
+    const hireBtn = page.locator('button:has-text("Hire Helper")').first();
     await expect(hireBtn).toBeVisible();
     await hireBtn.click();
 
@@ -74,8 +74,8 @@ test.describe('Free Tier & Upgrade Funnel', () => {
 
     await page.goto('/agents');
 
-    // Click "Hire Agent"
-    const hireBtn = page.locator('button:has-text("Hire Agent")').first();
+    // Click "Hire Helper"
+    const hireBtn = page.locator('button:has-text("Hire Helper")').first();
     await expect(hireBtn).toBeVisible();
     await hireBtn.click();
 
