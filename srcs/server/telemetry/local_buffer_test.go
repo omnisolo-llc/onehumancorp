@@ -144,6 +144,7 @@ func TestTelemetrySyncEngine_SyncPendingMetrics_Failure(t *testing.T) {
 }
 
 func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
+	t.Parallel()
 	db := setupTestDB(t)
 	defer db.Close()
 
