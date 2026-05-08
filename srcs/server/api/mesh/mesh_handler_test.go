@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"onehumancorp/srcs/server/orchestration"
@@ -86,4 +87,64 @@ func TestMeshHandler_Capabilities(t *testing.T) {
 
 	require.Len(t, agents, 1)
 	assert.Equal(t, agent.ID, agents[0].ID)
+}
+
+func TestMeshHandler_Publish(t *testing.T) {
+	mesh := orchestration.NewLocalTeammateMesh()
+	handler := NewMeshHandler(mesh)
+
+	var receivedData []byte
+	ch := make(chan struct{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := mesh.Subscribe(ctx, "test-channel", func(data []byte) {
+		receivedData = data
+		close(ch)
+	})
+	require.NoError(t, err)
+
+	body := []byte(`{"message": "hello"}`)
+	req, err := http.NewRequest("POST", "/api/mesh/publish?channel=test-channel", bytes.NewBuffer(body))
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+	handler.Publish(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	select {
+	case <-ch:
+		assert.Equal(t, string(body), string(receivedData))
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for message")
+	}
+}
+
+func TestMeshHandler_Subscribe(t *testing.T) {
+	mesh := orchestration.NewLocalTeammateMesh()
+	handler := NewMeshHandler(mesh)
+
+	server := httptest.NewServer(http.HandlerFunc(handler.Subscribe))
+	defer server.Close()
+
+	wsURL := "ws" + server.URL[4:] + "?channel=test-channel"
+
+	// Connect via websocket
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	// Publish to the mesh
+	ctx := context.Background()
+	body := []byte(`{"message": "hello from mesh"}`)
+	err = mesh.Publish(ctx, "test-channel", body)
+	require.NoError(t, err)
+
+	// Read from websocket
+	_ = conn.SetReadDeadline(time.Now().Add(time.Second * 5))
+	_, message, err := conn.ReadMessage()
+	require.NoError(t, err)
+	assert.Equal(t, string(body), string(message))
 }
