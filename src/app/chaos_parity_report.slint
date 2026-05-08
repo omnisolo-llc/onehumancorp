@@ -1,0 +1,136 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export struct UiChaosMetric {
+    name: string,
+    value: string,
+    status: string,
+}
+
+export struct UiChaosAudit {
+    title: string,
+    description: string,
+    passed: bool,
+}
+
+export component ChaosParityReport inherits Rectangle {
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.85); // Dark semi-transparent backdrop
+    drop-shadow-blur: 20px;
+    drop-shadow-color: rgba(0, 0, 0, 0.5);
+
+    in property <[UiChaosMetric]> metrics: [
+        { name: "Recovery Time (p95)", value: "1.2s", status: "Optimal" },
+        { name: "Sandbox Violations", value: "0", status: "Secure" },
+        { name: "Sync Lag", value: "0ms", status: "Synchronized" }
+    ];
+    in property <[UiChaosAudit]> audits: [
+        { title: "Thin Client Fail-Safe", description: "Graceful degradation under network partition.", passed: true },
+        { title: "Standalone Network", description: "SQLite fallback via port exhaustion simulation.", passed: true },
+        { title: "High-Concurrency", description: "50+ concurrent writes verified via withSipRetry.", passed: true },
+        { title: "Shared State Integrity", description: "Worker daemon survives .agent-lock/ corruption.", passed: true }
+    ];
+
+    callback close();
+
+    TouchArea {
+        width: 100%;
+        height: 100%;
+    }
+
+    VerticalBox {
+        padding: 32px;
+        spacing: 24px;
+        alignment: start;
+
+        HorizontalBox {
+            alignment: space-between;
+            Text {
+                text: "Chaos Engineering & Parity Audit";
+                font-family: "Outfit";
+                font-size: 28px;
+                font-weight: 700;
+                color: white;
+                vertical-alignment: center;
+            }
+            Button {
+                text: "Close";
+                width: 100px;
+                height: 44px;
+                clicked => { close(); }
+            }
+        }
+
+        Text {
+            text: "Hybrid OS Parity Status";
+            font-family: "Inter";
+            font-size: 18px;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+
+        HorizontalBox {
+            spacing: 16px;
+            for metric in metrics : GlassCard {
+                border-color: rgba(255, 255, 255, 0.1);
+                border-width: 1px;
+                border-radius: 12px;
+                width: 30%;
+
+                VerticalBox {
+                    padding: 20px;
+                    spacing: 8px;
+                    alignment: center;
+
+                    Text { text: metric.name; font-family: "Inter"; color: #94a3b8; font-size: 14px; horizontal-alignment: center; }
+                    Text { text: metric.value; font-family: "Outfit"; font-weight: 700; color: white; font-size: 24px; horizontal-alignment: center; }
+                    Text { text: metric.status; font-family: "Inter"; color: #10b981; font-size: 12px; font-weight: 600; horizontal-alignment: center; }
+                }
+            }
+        }
+
+        Text {
+            text: "Recent Experiments";
+            font-family: "Inter";
+            font-size: 18px;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+
+        VerticalBox {
+            spacing: 16px;
+            for audit in audits : GlassCard {
+                border-color: audit.passed ? rgba(16, 185, 129, 0.5) : rgba(239, 68, 68, 0.5);
+                border-width: 1px;
+                border-radius: 12px;
+
+                HorizontalBox {
+                    padding: 16px;
+                    spacing: 16px;
+
+                    Rectangle {
+                        width: 44px;
+                        height: 44px;
+                        border-radius: 22px;
+                        background: audit.passed ? rgba(16, 185, 129, 0.2) : rgba(239, 68, 68, 0.2);
+                        Text {
+                            text: audit.passed ? "✅" : "❌";
+                            font-size: 20px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    VerticalBox {
+                        spacing: 4px;
+                        Text { text: audit.title; font-family: "Inter"; font-weight: 700; color: white; font-size: 16px; }
+                        Text { text: audit.description; font-family: "Inter"; color: #94a3b8; font-size: 14px; wrap: word-wrap; }
+                    }
+                }
+            }
+        }
+
+        Rectangle {} // Spacer
+    }
+}

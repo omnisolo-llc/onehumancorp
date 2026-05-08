@@ -7,6 +7,7 @@ import { StatCard } from "stat_card.slint";
 import { UpgradePrompt } from "./upgrade_prompt.slint";
 import { DailyBriefing } from "daily_briefing.slint";
 import { SwarmObservabilityPanel, SwarmActivity, SwarmAgentStatus } from "swarm_observability_panel.slint";
+import { ChaosParityReport } from "chaos_parity_report.slint";
 
 export struct UiPendingApproval {
     task_id: string,
@@ -71,6 +72,7 @@ export component Dashboard inherits Window { // milestones
     callback action_open_social_posting();
     callback action_grow_business();
     callback action_open_swarm_observability();
+    callback action_open_chaos_report();
     callback action_mark_order_ready();
     callback action_open_kairos_orchestration();
 
@@ -85,6 +87,7 @@ export component Dashboard inherits Window { // milestones
     in-out property <bool> show_advisory_hint: false;
     in-out property <bool> show_menu: false;
     in-out property <bool> show_swarm_observability: false;
+    in-out property <bool> show_chaos_report: false;
     in property <[SwarmActivity]> swarm_activities;
     in property <[SwarmAgentStatus]> swarm_agent_statuses;
 
@@ -318,6 +321,7 @@ export component Dashboard inherits Window { // milestones
                     spacing: 8px;
                     TooltipElement { tooltip_id: "social_posting"; Button { text: "Social"; height: 44px; clicked => { action_open_social_posting(); } } }
                     TooltipElement { tooltip_id: "kairos_orchestration"; Button { text: "Automations"; height: 44px; clicked => { action_open_kairos_orchestration(); } } }
+                    Button { text: "Chaos Report"; height: 44px; clicked => { action_open_chaos_report(); } }
                     if (new_orders_count > 0) : Button {
                         text: "Ready Order";
                         height: 44px;
@@ -451,6 +455,15 @@ export component Dashboard inherits Window { // milestones
             activities: swarm_activities;
             agent_statuses: swarm_agent_statuses;
             close => { show_swarm_observability = false; }
+        }
+    }
+
+    if (show_chaos_report) : Rectangle {
+        width: parent.width;
+        height: parent.height;
+        z: 100;
+        ChaosParityReport {
+            close => { show_chaos_report = false; }
         }
     }
 

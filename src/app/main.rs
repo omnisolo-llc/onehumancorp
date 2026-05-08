@@ -2072,6 +2072,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+                let dashboard_handle_chaos = dashboard.as_weak();
+                dashboard.on_action_open_chaos_report(move || {
+                    if let Some(d) = dashboard_handle_chaos.upgrade() {
+                        d.set_show_chaos_report(true);
+                    }
+                });
+
                 let unified_inbox_handle_select = unified_inbox_ui.as_weak();
                 unified_inbox_ui.on_select_conversation(move |id| {
                     if let Some(ui) = unified_inbox_handle_select.upgrade() {
