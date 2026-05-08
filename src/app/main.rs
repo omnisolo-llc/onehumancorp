@@ -1570,6 +1570,63 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    business_manager_ui.on_generate_description({
+        let ui_weak = business_manager_ui.as_weak();
+        move || {
+            let ui_handle = ui_weak.clone();
+            if let Some(ui) = ui_handle.upgrade() {
+                let name = ui.get_product_name().to_string();
+                tokio::spawn(async move {
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let prompt = format!("Write a short, engaging one-sentence product description for {}.", name);
+                        let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                            prompt,
+                            from_agent_id: "business_manager".into(),
+                        });
+                        if let Ok(resp) = client.reason(request).await {
+                            let desc = resp.into_inner().content;
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_handle.upgrade() {
+                                    ui.set_product_description(desc.into());
+                                }
+                            }).unwrap();
+                        }
+                    }
+                });
+            }
+        }
+    });
+
+    business_manager_ui.on_upload_photo({
+        let ui_weak = business_manager_ui.as_weak();
+        move || {
+            let ui_handle = ui_weak.clone();
+            if let Some(ui) = ui_handle.upgrade() {
+                tokio::spawn(async move {
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                            prompt: "Simulate vision API response: Generate a product title, description, and tags from this photo".into(),
+                            from_agent_id: "business_manager".into(),
+                        });
+                        if let Ok(resp) = client.reason(request).await {
+                            let content = resp.into_inner().content;
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_handle.upgrade() {
+                                    // Normally we would parse JSON, for now we will just populate using logic
+                                    ui.set_product_name("AI Generated Product from Photo".into());
+                                    ui.set_product_description(content.into());
+                                }
+                            }).unwrap();
+                        }
+                    }
+                });
+            }
+        }
+    });
+
+
+
+
     let business_manager_handle = business_manager_ui.as_weak();
     Box::leak(Box::new(business_manager_ui));
 

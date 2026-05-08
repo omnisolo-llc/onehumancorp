@@ -105,3 +105,29 @@ fn test_business_manager_ux_submit() {
 
     assert!(*submitted.borrow(), "Submit action should be triggered");
 }
+
+#[test]
+fn test_business_manager_ai_description_and_photo() {
+    let app = create();
+    app.set_current_view("add".into());
+    app.set_step(1);
+    app.set_product_name("Organic Coffee Beans".into());
+
+    let generated = Rc::new(RefCell::new(false));
+    let generated_clone = generated.clone();
+    app.on_generate_description(move || {
+        *generated_clone.borrow_mut() = true;
+    });
+
+    app.invoke_generate_description();
+    assert!(*generated.borrow(), "Generate description action should be triggered");
+
+    let photo_uploaded = Rc::new(RefCell::new(false));
+    let photo_uploaded_clone = photo_uploaded.clone();
+    app.on_upload_photo(move || {
+        *photo_uploaded_clone.borrow_mut() = true;
+    });
+
+    app.invoke_upload_photo();
+    assert!(*photo_uploaded.borrow(), "Upload photo action should be triggered");
+}
