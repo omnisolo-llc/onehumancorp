@@ -5,10 +5,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	"onehumancorp/srcs/server/db"
-	"onehumancorp/srcs/server/telemetry"
 	"time"
 )
+
+type Database interface {
+	Exec(ctx context.Context, sql string, arguments ...interface{}) (interface{}, error)
+	Query(ctx context.Context, sql string, args ...interface{}) (interface{}, error)
+	QueryRow(ctx context.Context, sql string, args ...interface{}) interface{}
+	Begin(ctx context.Context) (interface{}, error)
+	Close()
+}
+
+type Telemetry interface {
+	IncrementCounter(name string, value int64, tags map[string]string)
+	SetGauge(name string, value float64, tags map[string]string)
+	RecordHistogram(name string, value float64, tags map[string]string)
+}
 
 type AuditSyncPayload struct {
 	TenantID  string `json:"tenant_id"`
@@ -21,11 +33,11 @@ type AuditSyncPayload struct {
 }
 
 type AuditSyncTool struct {
-	DB        db.Database
-	Telemetry telemetry.Telemetry
+	DB        Database
+	Telemetry Telemetry
 }
 
-func NewAuditSyncTool(db db.Database, tele telemetry.Telemetry) *AuditSyncTool {
+func NewAuditSyncTool(db Database, tele Telemetry) *AuditSyncTool {
 	return &AuditSyncTool{
 		DB:        db,
 		Telemetry: tele,
