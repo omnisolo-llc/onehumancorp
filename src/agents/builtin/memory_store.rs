@@ -110,6 +110,10 @@ impl VectorRepository {
         Ok(())
     }
 
+    pub async fn cross_department_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+        self.semantic_search(tenant_id, query_embedding, limit).await
+    }
+
     pub async fn semantic_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
         let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
 
@@ -1987,6 +1991,75 @@ mod anthropic_memory_tests {
 
         let results3 = store.retrieve("nonexistent", 5).await.unwrap();
         assert_eq!(results3.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_cross_department_search() {
+        use std::str::FromStr;
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = super::VectorRepository::new_sqlite(pool.clone());
+
+        let cs_record = EmbeddingRecord {
+            id: "cs_1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "customer_success".to_string(),
+            content: "Customer is unhappy with the vegan cake orders delay.".to_string(),
+            embedding: vec![0.5, 0.5, 0.5],
+            source_type: "CS_TICKET".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 80,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let advisory_record = EmbeddingRecord {
+            id: "advisory_1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "business_advisory".to_string(),
+            content: "Vegan cakes are highly profitable but production is slow.".to_string(),
+            embedding: vec![0.6, 0.4, 0.5],
+            source_type: "ADVISORY_REPORT".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 90,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&cs_record).await.unwrap();
+        repo.upsert(&advisory_record).await.unwrap();
+
+        let results = repo.cross_department_search("org1", &[0.5, 0.5, 0.5], 10).await.unwrap();
+
+        // Testing the fallback behavior if vec_distance_cosine doesn't exist
+        // or just the generic semantic search logic. We just make sure it returns something.
+        assert!(!results.is_empty());
+        assert_eq!(results[0].tenant_id, "org1");
     }
 
     #[tokio::test]
