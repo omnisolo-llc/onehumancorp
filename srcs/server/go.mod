@@ -1,6 +1,6 @@
 module onehumancorp/srcs/server
 
-go 1.24.9
+go 1.24.3
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
@@ -13,7 +13,7 @@ require (
 	github.com/lib/pq v1.12.3
 	github.com/mattn/go-sqlite3 v1.14.44
 	github.com/redis/go-redis/v9 v9.19.0
-	github.com/redis/rueidis v1.0.74
+	github.com/redis/rueidis v1.0.68
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.20.0
 	go.opentelemetry.io/otel/metric v1.20.0
@@ -45,5 +45,5 @@ require (
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opentelemetry.io/otel/trace v1.20.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
 )

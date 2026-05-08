@@ -37,7 +37,6 @@ func NewMeshHandler(transport orchestration.MeshTransport) *MeshHandler {
 	return &MeshHandler{transport: transport}
 }
 
-// MeshBroadcastRequest matches OHC-SIP compliance standards
 type MeshBroadcastRequest struct {
 	AgentID   string          `json:"agent_id"`
 	Channel   string          `json:"channel"`

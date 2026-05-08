@@ -10,21 +10,18 @@ type memorySubscriber struct {
 	handler func(data []byte)
 }
 
-// MemoryMeshTransport implements MeshTransport for standalone operation using Go channels.
 type MemoryMeshTransport struct {
 	mu          sync.RWMutex
 	subscribers map[string][]memorySubscriber
 	nextID      int
 }
 
-// NewMemoryMeshTransport creates a new MemoryMeshTransport.
 func NewMemoryMeshTransport() *MemoryMeshTransport {
 	return &MemoryMeshTransport{
 		subscribers: make(map[string][]memorySubscriber),
 	}
 }
 
-// Publish sends data to all subscribers of the given channel concurrently.
 func (m *MemoryMeshTransport) Publish(ctx context.Context, channel string, data []byte) error {
 	m.mu.RLock()
 	subs, ok := m.subscribers[channel]
@@ -46,7 +43,6 @@ func (m *MemoryMeshTransport) Publish(ctx context.Context, channel string, data 
 	return nil
 }
 
-// Subscribe registers a handler for the given channel. Unsubscribes when ctx is done.
 func (m *MemoryMeshTransport) Subscribe(ctx context.Context, channel string, handler func(data []byte)) error {
 	m.mu.Lock()
 	id := m.nextID
