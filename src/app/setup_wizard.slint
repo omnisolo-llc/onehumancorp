@@ -22,6 +22,7 @@ export component SetupWizard inherits Window {
     in-out property <bool> sell_services: false;
     in-out property <bool> sell_food: false;
     in-out property <bool> sell_subscriptions: false;
+    in-out property <bool> sell_portfolios: false;
 
     // Payments
     in-out property <string> payment_pref: "";
@@ -79,6 +80,7 @@ export component SetupWizard inherits Window {
     callback toggle_sell_services();
     callback toggle_sell_food();
     callback toggle_sell_subscriptions();
+    callback toggle_sell_portfolios();
     callback select_payment_pref(string);
     callback select_template(string);
     callback show_welcome_checklist();
@@ -93,6 +95,7 @@ export component SetupWizard inherits Window {
     toggle_sell_services => { sell_services = !sell_services; save_state(); }
     toggle_sell_food => { sell_food = !sell_food; save_state(); }
     toggle_sell_subscriptions => { sell_subscriptions = !sell_subscriptions; save_state(); }
+    toggle_sell_portfolios => { sell_portfolios = !sell_portfolios; save_state(); }
     select_payment_pref(p) => { payment_pref = p; save_state(); }
     select_template(t) => { website_template = t; save_state(); }
     select_domain(d) => { domain_choice = d; save_state(); }
@@ -318,6 +321,12 @@ export component SetupWizard inherits Window {
                     background: sell_subscriptions ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "🔁 Subscriptions"; font-family: "Inter"; font-size: 16px; color: white; } }
                     TouchArea { clicked => { toggle_sell_subscriptions(); } }
+                }
+                if (business_type == "Creative / Portfolio" || business_type == "Other") : GlassCard {
+                    height: 50px;
+                    background: sell_portfolios ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "🖼️ Portfolios / Galleries"; font-family: "Inter"; font-size: 16px; color: white; } }
+                    TouchArea { clicked => { toggle_sell_portfolios(); } }
                 }
             }
 
