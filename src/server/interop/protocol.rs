@@ -729,4 +729,133 @@ mod tests {
         assert!(result.unwrap_err().contains("Failed to publish job status update after retries"));
     }
 
+    #[tokio::test]
+    async fn test_interop_health_timeout() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let protocol = InteropProtocol::new(bus.clone(), lock.clone(), "node_timeout".to_string());
+
+        // Do not set up a listener to acknowledge the ping
+        let is_healthy = protocol.check_health(50).await.unwrap();
+
+        assert!(!is_healthy);
+    }
+
+    #[tokio::test]
+    async fn test_interop_listen_for_state_handoff_malformed() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let protocol = InteropProtocol::new(bus.clone(), lock.clone(), "node1".to_string());
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let handler = Box::new(move |_msg: proto::StateHandoff| {
+            rx.store(true, Ordering::SeqCst);
+        });
+
+        let _cancel = protocol.listen_for_state_handoff(handler).await.unwrap();
+
+        // Send a malformed message
+        let msg = Message {
+            topic: "system:state_handoff".to_string(),
+            payload: vec![255, 255, 255], // Invalid protobuf
+        };
+        bus.publish(msg).await.unwrap();
+
+        sleep(Duration::from_millis(50)).await;
+
+        // Handler should not have been called
+        assert!(!received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_listen_for_pings_malformed() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+
+        let protocol_listener = InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string());
+        let _cancel = protocol_listener.listen_for_pings().await.unwrap();
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let ack_topic = format!("system:health_ack:sender_node");
+        let handler = Box::new(move |_msg: Message| {
+            rx.store(true, Ordering::SeqCst);
+        });
+        let _cancel_ack = bus.subscribe(ack_topic, handler).await.unwrap();
+
+        // Send a malformed ping
+        let msg = Message {
+            topic: "system:health_ping".to_string(),
+            payload: vec![255, 255, 255], // Invalid protobuf
+        };
+        bus.publish(msg).await.unwrap();
+
+        sleep(Duration::from_millis(50)).await;
+
+        // No ack should have been sent
+        assert!(!received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_listen_for_jobs_malformed() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+
+        let protocol_listener = InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string());
+        let _cancel = protocol_listener.listen_for_jobs("tenant_x").await.unwrap();
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let ack_topic = format!("system:job_ack:job_123");
+        let handler = Box::new(move |_msg: Message| {
+            rx.store(true, Ordering::SeqCst);
+        });
+        let _cancel_ack = bus.subscribe(ack_topic, handler).await.unwrap();
+
+        // Send a malformed job dispatch
+        let msg = Message {
+            topic: "system:job_dispatch:tenant_x".to_string(),
+            payload: vec![255, 255, 255], // Invalid protobuf
+        };
+        bus.publish(msg).await.unwrap();
+
+        sleep(Duration::from_millis(50)).await;
+
+        // No ack should have been sent
+        assert!(!received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_listen_for_job_status_malformed() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+
+        let protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let handler = Box::new(move |_update: proto::JobStatusUpdate| {
+            rx.store(true, Ordering::SeqCst);
+        });
+
+        let _cancel = protocol_server.listen_for_job_status("job_status_123", handler).await.unwrap();
+
+        // Send a malformed job status
+        let msg = Message {
+            topic: "system:job_status:job_status_123".to_string(),
+            payload: vec![255, 255, 255], // Invalid protobuf
+        };
+        bus.publish(msg).await.unwrap();
+
+        sleep(Duration::from_millis(50)).await;
+
+        // Handler should not have been called
+        assert!(!received.load(Ordering::SeqCst));
+    }
+
 }
