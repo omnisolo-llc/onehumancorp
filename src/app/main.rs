@@ -2906,7 +2906,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
 
-    let agent_hire_ui = app::AgentConfig::new()?;
+    let agent_hire_ui = app::AgentHire::new()?;
     let fix_agent_ui = app::FixAgent::new()?;
     let upgrade_ui = app::Upgrade::new()?;
     let billing_ui = app::Billing::new()?;
@@ -2998,7 +2998,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     let agents_ui_handle = agents_ui.as_weak();
-    let agent_hire_handle = agent_hire_ui.as_weak();
+    let _agent_hire_handle = agent_hire_ui.as_weak();
+    agent_hire_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    agent_hire_ui.on_toggle_advanced({
+        let ui_handle = agent_hire_ui.as_weak();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+            }
+        }
+    });
 
     agents_ui.on_hire_agent(move || {
         let agents_ui_handle_inner = agents_ui_handle.clone();
