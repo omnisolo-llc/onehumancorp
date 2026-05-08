@@ -1,9 +1,18 @@
 package onboarding
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 )
+
+type Claims struct {
+	TenantID string
+}
+
+type ContextKey string
+
+const claimsKey ContextKey = "claims"
 
 type APIHandler struct {
 	service *Service
@@ -36,19 +45,34 @@ func (h *APIHandler) HandleStartOnboarding(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(res)
 }
 
+func (h *APIHandler) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		token := authHeader[7:]
+		// For the scope of this demo/test, we assume the token is the tenant ID.
+		claims := &Claims{TenantID: token}
+		ctx := context.WithValue(r.Context(), claimsKey, claims)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	}
+}
+
 func (h *APIHandler) HandleGetStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	tenantID := r.URL.Query().Get("tenant_id")
-	if tenantID == "" {
-		http.Error(w, "Missing tenant_id parameter", http.StatusBadRequest)
+	claims, ok := r.Context().Value(claimsKey).(*Claims)
+	if !ok || claims == nil || claims.TenantID == "" {
+		http.Error(w, "Missing claims in context", http.StatusUnauthorized)
 		return
 	}
 
-	res, err := h.service.GetOnboardingStatus(r.Context(), tenantID)
+	res, err := h.service.GetOnboardingStatus(r.Context(), claims.TenantID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
