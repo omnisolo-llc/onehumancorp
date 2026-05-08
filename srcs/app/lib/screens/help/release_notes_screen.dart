@@ -22,6 +22,11 @@ class ReleaseNotesScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                _buildReleaseCard('v0.4.38', 'May 2026', [
+                  'Enhanced PgPoolOptions to correctly execute DISCARD ALL preventing tenant configuration leakage across pooled connections.',
+                  'Hardened local standalone encryption key generation sequence against TOCTOU vulnerabilities and improved fail-closed permission error handling.',
+                ]),
+                const SizedBox(height: 20),
                 _buildReleaseCard('v0.4.37', 'May 2026', [
                   'Interop Mesh Comprehensive Test Coverage to improve distributed lock resilience.',
                   'Ensured graceful interop mesh protocol handling for malformed offline mesh payloads.',

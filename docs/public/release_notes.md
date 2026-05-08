@@ -1,5 +1,13 @@
 # release_notes.md
 
+## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🛡️ Sentinel: Enhanced PgPoolOptions to correctly execute DISCARD ALL preventing tenant configuration leakage across pooled connections. Added organization_id enforcement in multitenant thin client auth.
+
+### Privacy/Offline Improvements
+- 🛡️ Sentinel: Hardened local standalone encryption key generation sequence against TOCTOU vulnerabilities and improved fail-closed permission error handling.
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 ### Cloud Scaling Improvements
