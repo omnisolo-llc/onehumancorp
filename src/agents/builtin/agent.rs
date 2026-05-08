@@ -154,6 +154,38 @@ impl AgentProgress {
 // 3. Developer Instructions
 // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
 // 5. Conversation History (happens at run loop)
+
+pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> String {
+    let mut current_dir = start_dir.to_path_buf();
+    let mut contents = Vec::new();
+    let mut max_depth = 50;
+
+    loop {
+        let agent_file = current_dir.join("AGENTS.md");
+        if agent_file.exists() && agent_file.is_file() {
+            if let Ok(content) = tokio::fs::read_to_string(&agent_file).await {
+                contents.push(content);
+            }
+        }
+
+        if !current_dir.pop() || max_depth == 0 {
+            break;
+        }
+        max_depth -= 1;
+    }
+
+    // Order: more deeply-nested files take precedence
+    let mut combined = String::new();
+    for (i, content) in contents.iter().enumerate() {
+        if i > 0 {
+            combined.push_str("\n\n---\n\n");
+        }
+        combined.push_str(content);
+    }
+
+    combined
+}
+
 pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
     let mut end_idx = 32768;
     if cfg.user_instructions.len() > 32768 {
@@ -914,6 +946,28 @@ impl Agent {
         let session_tools = self_with_memory.tools.clone();
 
         let mut final_cfg = cfg.clone();
+
+        // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
+        if let Some(ref wp) = final_cfg.workspace_path {
+            let start_dir = std::path::Path::new(wp);
+            let cascading_md = load_cascading_agents_md(start_dir).await;
+            if !cascading_md.is_empty() {
+                if !final_cfg.user_instructions.is_empty() {
+                    final_cfg.user_instructions = format!("{}\n\n{}", cascading_md, final_cfg.user_instructions);
+                } else {
+                    final_cfg.user_instructions = cascading_md;
+                }
+            }
+        }
+
+        let mut end_idx = 32768;
+        if final_cfg.user_instructions.len() > 32768 {
+            while end_idx > 0 && !final_cfg.user_instructions.is_char_boundary(end_idx) {
+                end_idx -= 1;
+            }
+            final_cfg.user_instructions.truncate(end_idx);
+        }
+
         if final_cfg.enable_harness_thickness_optimization {
             let model_lower = final_cfg.model.to_lowercase();
             // Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
@@ -1975,6 +2029,40 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn test_cascading_agents_md() {
+        use tempfile::tempdir;
+        use tokio::fs;
+
+        let root_dir = tempdir().unwrap();
+        let sub_dir = root_dir.path().join("sub");
+        let deep_dir = sub_dir.join("deep");
+
+        fs::create_dir_all(&deep_dir).await.unwrap();
+
+        let root_md = root_dir.path().join("AGENTS.md");
+        let sub_md = sub_dir.join("AGENTS.md");
+        let deep_md = deep_dir.join("AGENTS.md");
+
+        fs::write(&root_md, "Root level instructions").await.unwrap();
+        fs::write(&sub_md, "Sub level instructions").await.unwrap();
+        fs::write(&deep_md, "Deep level instructions").await.unwrap();
+
+        let combined = crate::agent::load_cascading_agents_md(&deep_dir).await;
+
+        // Since it loops from deep to root, the deeper files are collected first.
+        // The results should be: Deep -> Sub -> Root.
+        assert!(combined.contains("Deep level instructions"));
+        assert!(combined.contains("Sub level instructions"));
+        assert!(combined.contains("Root level instructions"));
+
+        let parts: Vec<&str> = combined.split("\n\n---\n\n").collect();
+        assert_eq!(parts.len(), 3);
+        assert_eq!(parts[0], "Deep level instructions");
+        assert_eq!(parts[1], "Sub level instructions");
+        assert_eq!(parts[2], "Root level instructions");
+    }
+
 
     #[tokio::test]
     async fn test_harness_thickness_optimization() {
