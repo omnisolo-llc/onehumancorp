@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package ohc.orchestration;
+
+option go_package = "github.com/onehumancorp/mono/srcs/proto;pb";
+
+message MeshEvent {
+  string agent_id = 1;
+  string channel = 2;
+  string event_type = 3;
+  bytes payload = 4;
+}
+
+message AgentCapabilities {
+  string agent_id = 1;
+  repeated string supported_skills = 2;
+  int32 max_concurrent_tasks = 3;
+}

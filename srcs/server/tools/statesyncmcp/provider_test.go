@@ -19,8 +19,6 @@ type mockLocalDB struct {
 	updateErr  error
 }
 
-func (m *mockLocalDB) PollDelegatedTasks(ctx context.Context, limit int) ([]*orchestration.SharedTask, error) { return nil, nil }
-
 func (m *mockLocalDB) ClaimTask(ctx context.Context, organizationID string, agentID string) (*orchestration.SharedTask, error) {
 	return nil, nil
 }
@@ -35,10 +33,6 @@ func (m *mockLocalDB) GetTask(ctx context.Context, id string) (*orchestration.Sh
 
 func (m *mockLocalDB) UpdateTaskStatus(ctx context.Context, id string, status string) error {
 	return m.updateErr
-}
-
-func (m *mockLocalDB) PollDelegatedTasks(ctx context.Context, limit int) ([]*orchestration.SharedTask, error) {
-	return nil, nil
 }
 
 func (m *mockLocalDB) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*orchestration.SharedTask, error) {
@@ -73,7 +67,6 @@ func TestDefaultProvider_SyncUp(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Should sync all 3 using bulk
 	if count != 3 {
 		t.Errorf("expected 3 tasks synced, got %d", count)
 	}
