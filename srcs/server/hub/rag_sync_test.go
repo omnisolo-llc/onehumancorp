@@ -8,7 +8,6 @@ import (
 
 type mockRAGSyncService struct {
 	records []RAGSyncRecord
-	synced  map[string]bool
 }
 
 func (m *mockRAGSyncService) FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error) {
@@ -25,9 +24,8 @@ func (m *mockRAGSyncService) FetchPendingSyncs(ctx context.Context, limit int) (
 }
 
 func (m *mockRAGSyncService) MarkSynced(ctx context.Context, ids []string) error {
-	for _, id := range ids {
-		m.synced[id] = true
-		for i, r := range m.records {
+	for i, r := range m.records {
+		for _, id := range ids {
 			if r.ID == id {
 				m.records[i].SyncStatus = SyncStatusSynced
 				m.records[i].LastSyncAt = time.Now()
@@ -38,67 +36,67 @@ func (m *mockRAGSyncService) MarkSynced(ctx context.Context, ids []string) error
 }
 
 func (m *mockRAGSyncService) ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error {
-	// Simple mock: just add or update records
-	for _, nr := range records {
-		found := false
-		for i, er := range m.records {
-			if er.ID == nr.ID {
-				m.records[i] = nr
-				found = true
-				break
-			}
-		}
-		if !found {
-			m.records = append(m.records, nr)
-		}
-	}
+	m.records = append(m.records, records...)
 	return nil
 }
 
-func TestRAGSyncFlow(t *testing.T) {
-	mock := &mockRAGSyncService{
+func TestFetchPendingSyncs(t *testing.T) {
+	mockService := &mockRAGSyncService{
 		records: []RAGSyncRecord{
-			{ID: "1", Context: "test 1", SyncStatus: SyncStatusPending},
-			{ID: "2", Context: "test 2", SyncStatus: SyncStatusPending},
+			{ID: "1", SyncStatus: SyncStatusPending},
+			{ID: "2", SyncStatus: SyncStatusSynced},
+			{ID: "3", SyncStatus: SyncStatusPending},
 		},
-		synced: make(map[string]bool),
 	}
 
-	ctx := context.Background()
-
-	pending, err := mock.FetchPendingSyncs(ctx, 10)
+	pending, err := mockService.FetchPendingSyncs(context.Background(), 10)
 	if err != nil {
-		t.Fatalf("FetchPendingSyncs failed: %v", err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 
 	if len(pending) != 2 {
-		t.Errorf("Expected 2 pending records, got %d", len(pending))
+		t.Fatalf("expected 2 pending records, got %d", len(pending))
+	}
+}
+
+func TestMarkSynced(t *testing.T) {
+	mockService := &mockRAGSyncService{
+		records: []RAGSyncRecord{
+			{ID: "1", SyncStatus: SyncStatusPending},
+			{ID: "2", SyncStatus: SyncStatusPending},
+		},
 	}
 
-	ids := []string{"1", "2"}
-	err = mock.MarkSynced(ctx, ids)
+	err := mockService.MarkSynced(context.Background(), []string{"1"})
 	if err != nil {
-		t.Fatalf("MarkSynced failed: %v", err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if !mock.synced["1"] || !mock.synced["2"] {
-		t.Errorf("Records were not marked as synced")
+	if mockService.records[0].SyncStatus != SyncStatusSynced {
+		t.Fatalf("expected record 1 to be synced")
 	}
 
-	pendingAfter, _ := mock.FetchPendingSyncs(ctx, 10)
-	if len(pendingAfter) != 0 {
-		t.Errorf("Expected 0 pending records after MarkSynced, got %d", len(pendingAfter))
+	if mockService.records[1].SyncStatus != SyncStatusPending {
+		t.Fatalf("expected record 2 to be pending")
+	}
+}
+
+func TestProcessIncomingSync(t *testing.T) {
+	mockService := &mockRAGSyncService{
+		records: []RAGSyncRecord{},
 	}
 
-	newRecords := []RAGSyncRecord{
-		{ID: "3", Context: "test 3", SyncStatus: SyncStatusSynced},
+	recordsToSync := []RAGSyncRecord{
+		{ID: "1", SyncStatus: SyncStatusSynced},
+		{ID: "2", SyncStatus: SyncStatusSynced},
 	}
-	err = mock.ProcessIncomingSync(ctx, newRecords)
+
+	err := mockService.ProcessIncomingSync(context.Background(), recordsToSync)
 	if err != nil {
-		t.Fatalf("ProcessIncomingSync failed: %v", err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if len(mock.records) != 3 {
-		t.Errorf("Expected 3 total records, got %d", len(mock.records))
+	if len(mockService.records) != 2 {
+		t.Fatalf("expected 2 records to be processed, got %d", len(mockService.records))
 	}
 }
