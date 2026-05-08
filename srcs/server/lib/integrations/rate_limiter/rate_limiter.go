@@ -15,8 +15,20 @@ type RateLimitInfo struct {
 	UserMessage        string
 }
 
+type RateLimiterProvider interface {
+	RequestTokens(ctx context.Context, bucket string, amount int) (bool, error)
+	GetRateLimitStatus(ctx context.Context, bucket string) (RateLimitInfo, error)
+}
+
 type RateLimiterManager struct {
+	provider RateLimiterProvider
+}
+
+type cloudRateLimiter struct {
 	redisClient *redis.Client
+}
+
+type standaloneRateLimiter struct {
 	localBuckets map[string]*localBucket
 	mu           sync.Mutex
 }
@@ -28,15 +40,21 @@ type localBucket struct {
 }
 
 func NewRateLimiterManager(redisURL string) *RateLimiterManager {
-	var client *redis.Client
-	if redisURL != "" {
-		opt, _ := redis.ParseURL(redisURL)
-		client = redis.NewClient(opt)
+	if os.Getenv("OHC_MULTITENANT") == "true" {
+		var client *redis.Client
+		if redisURL != "" {
+			opt, _ := redis.ParseURL(redisURL)
+			client = redis.NewClient(opt)
+		}
+		return &RateLimiterManager{
+			provider: &cloudRateLimiter{redisClient: client},
+		}
 	}
 
 	return &RateLimiterManager{
-		redisClient:  client,
-		localBuckets: make(map[string]*localBucket),
+		provider: &standaloneRateLimiter{
+			localBuckets: make(map[string]*localBucket),
+		},
 	}
 }
 
@@ -54,70 +72,42 @@ func (m *RateLimiterManager) CallTool(ctx context.Context, toolName string, args
 }
 
 func (m *RateLimiterManager) RequestTokens(ctx context.Context, bucket string, amount int) (bool, error) {
-	if os.Getenv("OHC_MULTITENANT") == "true" {
-		return m.requestTokensCloud(ctx, bucket, amount)
-	}
-	return m.requestTokensStandalone(ctx, bucket, amount)
+	return m.provider.RequestTokens(ctx, bucket, amount)
 }
 
 func (m *RateLimiterManager) GetRateLimitStatus(ctx context.Context, bucket string) (RateLimitInfo, error) {
-	if os.Getenv("OHC_MULTITENANT") == "true" {
-		return m.getRateLimitStatusCloud(ctx, bucket)
-	}
-	return m.getRateLimitStatusStandalone(ctx, bucket)
+	return m.provider.GetRateLimitStatus(ctx, bucket)
 }
 
-func (m *RateLimiterManager) requestTokensCloud(ctx context.Context, bucket string, amount int) (bool, error) {
-	if m.redisClient == nil {
+func (c *cloudRateLimiter) RequestTokens(ctx context.Context, bucket string, amount int) (bool, error) {
+	if c.redisClient == nil {
 		return true, nil // Soft fail if Redis isn't configured
 	}
 
 	monthKey := time.Now().Format("2006-01")
 	key := fmt.Sprintf("rate_limit:%s:%s", bucket, monthKey)
 
-	val, err := m.redisClient.IncrBy(ctx, key, int64(amount)).Result()
+	val, err := c.redisClient.IncrBy(ctx, key, int64(amount)).Result()
 	if err != nil {
 		return false, err
 	}
 
 	if val == int64(amount) {
-		m.redisClient.Expire(ctx, key, 60*24*time.Hour)
+		c.redisClient.Expire(ctx, key, 60*24*time.Hour)
 	}
 
 	return true, nil
 }
 
-func (m *RateLimiterManager) requestTokensStandalone(ctx context.Context, bucket string, amount int) (bool, error) {
-	m.mu.Lock()
-	lb, exists := m.localBuckets[bucket]
-	monthKey := time.Now().Format("2006-01")
-
-	if !exists || lb.monthKey != monthKey {
-		lb = &localBucket{
-			actionsUsed: 0,
-			monthKey: monthKey,
-		}
-		m.localBuckets[bucket] = lb
-	}
-	m.mu.Unlock()
-
-	lb.mu.Lock()
-	defer lb.mu.Unlock()
-
-	lb.actionsUsed += amount
-
-	return true, nil
-}
-
-func (m *RateLimiterManager) getRateLimitStatusCloud(ctx context.Context, bucket string) (RateLimitInfo, error) {
-	if m.redisClient == nil {
+func (c *cloudRateLimiter) GetRateLimitStatus(ctx context.Context, bucket string) (RateLimitInfo, error) {
+	if c.redisClient == nil {
 		return RateLimitInfo{IsAllowed: true, SoftLimitReached: false}, nil
 	}
 
 	monthKey := time.Now().Format("2006-01")
 	key := fmt.Sprintf("rate_limit:%s:%s", bucket, monthKey)
 
-	val, err := m.redisClient.Get(ctx, key).Int()
+	val, err := c.redisClient.Get(ctx, key).Int()
 
 	if err == redis.Nil {
 		return RateLimitInfo{IsAllowed: true, SoftLimitReached: false}, nil
@@ -135,10 +125,32 @@ func (m *RateLimiterManager) getRateLimitStatusCloud(ctx context.Context, bucket
 	}, nil
 }
 
-func (m *RateLimiterManager) getRateLimitStatusStandalone(ctx context.Context, bucket string) (RateLimitInfo, error) {
-	m.mu.Lock()
-	lb, exists := m.localBuckets[bucket]
-	m.mu.Unlock()
+func (s *standaloneRateLimiter) RequestTokens(ctx context.Context, bucket string, amount int) (bool, error) {
+	s.mu.Lock()
+	lb, exists := s.localBuckets[bucket]
+	monthKey := time.Now().Format("2006-01")
+
+	if !exists || lb.monthKey != monthKey {
+		lb = &localBucket{
+			actionsUsed: 0,
+			monthKey: monthKey,
+		}
+		s.localBuckets[bucket] = lb
+	}
+	s.mu.Unlock()
+
+	lb.mu.Lock()
+	defer lb.mu.Unlock()
+
+	lb.actionsUsed += amount
+
+	return true, nil
+}
+
+func (s *standaloneRateLimiter) GetRateLimitStatus(ctx context.Context, bucket string) (RateLimitInfo, error) {
+	s.mu.Lock()
+	lb, exists := s.localBuckets[bucket]
+	s.mu.Unlock()
 
 	if !exists {
 		return RateLimitInfo{IsAllowed: true, SoftLimitReached: false}, nil

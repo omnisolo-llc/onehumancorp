@@ -1,15 +1,13 @@
 package orchestration
 
 import (
+	"time"
 	"context"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
-	"net/http"
-	"net/http/httptest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

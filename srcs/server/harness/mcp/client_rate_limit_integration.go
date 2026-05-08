@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"context"
-	"fmt"
 	"onehumancorp/srcs/server/integrations/mcp/harness"
 )
 
@@ -14,7 +13,7 @@ func (cm *ClientManager) CallToolWithRateLimit(ctx context.Context, serverID str
 	if err == nil && status.SoftLimitReached {
 		// Just log or propagate the soft limit warning somehow.
 		// Since we don't want hard errors, we won't return an error here.
-		fmt.Printf("Rate limit warning for tenant %s: %s\n", tenantID, status.UserMessage)
+		// Multi-Tenant Safety Check: Ensure we don't log tenant_id
 	}
 
 	// 2. Actually execute the tool
