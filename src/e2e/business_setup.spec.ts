@@ -222,7 +222,7 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Next →');
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
   });
 
   test('should show welcome checklist after successful launch', async ({ page }) => {
@@ -247,7 +247,7 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Next →');
 
     // Launch the business
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
 
     // Wait for the success state/confetti
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
@@ -396,8 +396,8 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text=Next →');
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -424,8 +424,8 @@ test.describe('Business Setup Wizard Validation', () => {
 
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -452,8 +452,8 @@ test.describe('Business Setup Wizard Validation', () => {
 
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -482,8 +482,8 @@ test.describe('Business Setup Wizard Validation', () => {
     // Based on the UI, domain_choice is set to "custom"
     await page.click('text=Next →');
 
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -510,8 +510,8 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -563,7 +563,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.click('text=Next →');
 
     // Review and launch
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -600,7 +600,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -634,7 +634,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.fill('input[placeholder="target.ohc.app"]', "priya.com");
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -668,7 +668,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -701,7 +701,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 });
@@ -736,7 +736,7 @@ test.describe('E2E Onboarding Persona Journeys - Portfolio', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 });
