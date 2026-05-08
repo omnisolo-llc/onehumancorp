@@ -1053,7 +1053,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -1127,7 +1127,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -1203,7 +1203,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -1352,7 +1352,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -1465,7 +1465,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -1542,7 +1542,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -1622,7 +1622,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -1678,7 +1678,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -1749,7 +1749,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -1842,7 +1842,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -1913,7 +1913,7 @@ mod get_conflicts_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -1995,7 +1995,7 @@ mod anthropic_memory_tests {
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -2071,7 +2071,7 @@ mod anthropic_memory_tests {
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(

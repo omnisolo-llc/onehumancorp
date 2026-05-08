@@ -35,7 +35,7 @@ mod pruning_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -53,7 +53,7 @@ mod pruning_tests {
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
             );"
-        ).execute(&pool).await;
+        ).execute(&pool).await.expect("Failed to create table");
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
         let now = chrono::Utc::now();
@@ -142,7 +142,7 @@ mod pruning_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -160,7 +160,7 @@ mod pruning_tests {
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
             );"
-        ).execute(&pool).await;
+        ).execute(&pool).await.expect("Failed to create table");
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
         let now = chrono::Utc::now();
@@ -216,7 +216,7 @@ mod pruning_tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
-            Err(_) => return,
+            Err(_) => panic!("Failed to connect to sqlite memory database"),
         };
 
         let _ = sqlx::query(
@@ -234,7 +234,7 @@ mod pruning_tests {
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
             );"
-        ).execute(&pool).await;
+        ).execute(&pool).await.expect("Failed to create table");
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
         let now = chrono::Utc::now();
