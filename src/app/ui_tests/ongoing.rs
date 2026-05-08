@@ -135,3 +135,123 @@ fn create_u_verify_progress() {
     ui.set_progress(21);
     assert_eq!(ui.get_progress(), 21);
 }
+
+#[test]
+fn test_e2e_fix_agent_full_journey() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
+
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(*login_successful.borrow(), "User login should be successful");
+
+    let agents_ui = app::Agents::new().unwrap();
+    let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let fix_agent_opened_clone = fix_agent_opened.clone();
+
+    agents_ui.on_fix_agent(move |id| {
+        assert_eq!(id, "agent_1");
+        *fix_agent_opened_clone.borrow_mut() = true;
+    });
+
+    agents_ui.invoke_fix_agent("agent_1".into());
+    assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
+
+    let fix_agent_ui = app::FixAgent::new().unwrap();
+    assert_eq!(fix_agent_ui.get_step(), 0);
+
+    // Advance to step 1
+    fix_agent_ui.set_step(1);
+
+    let apply_fix_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let apply_fix_called_clone = apply_fix_called.clone();
+    fix_agent_ui.on_apply_fix(move || {
+        *apply_fix_called_clone.borrow_mut() = true;
+    });
+
+    fix_agent_ui.invoke_apply_fix();
+    assert!(*apply_fix_called.borrow(), "Apply fix should be called");
+
+    // Advance to step 2
+    fix_agent_ui.set_step(2);
+
+    let return_to_agents_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let return_to_agents_called_clone = return_to_agents_called.clone();
+    fix_agent_ui.on_return_to_agents(move || {
+        *return_to_agents_called_clone.borrow_mut() = true;
+    });
+
+    fix_agent_ui.invoke_return_to_agents();
+    assert!(*return_to_agents_called.borrow(), "Return to agents should be called");
+}
+
+#[test]
+fn test_e2e_grow_business_full_journey() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
+
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(*login_successful.borrow(), "User login should be successful");
+
+    let dashboard_ui = app::Dashboard::new().unwrap();
+    let grow_business_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let grow_business_opened_clone = grow_business_opened.clone();
+
+    dashboard_ui.on_action_grow_business(move || {
+        *grow_business_opened_clone.borrow_mut() = true;
+    });
+
+    dashboard_ui.invoke_action_grow_business();
+    assert!(*grow_business_opened.borrow(), "Grow Business should be opened from Dashboard");
+
+    let ui = app::GrowBusiness::new().unwrap();
+
+    let execute_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let execute_success_clone = execute_success.clone();
+
+    ui.on_save_state(|| {});
+
+    ui.on_execute(move |strategy, _kpi| {
+        assert_eq!(strategy, "Add 5 more products");
+        *execute_success_clone.borrow_mut() = true;
+    });
+
+    assert_eq!(ui.get_step(), 0);
+    assert_eq!(ui.get_is_advanced(), false);
+
+    ui.invoke_toggle_advanced();
+    assert_eq!(ui.get_is_advanced(), true);
+
+    ui.invoke_select_strategy("Add 5 more products".into());
+    ui.invoke_next_step();
+
+    assert_eq!(ui.get_step(), 1);
+
+    ui.set_kpi_target("20%".into());
+    ui.invoke_execute(ui.get_selected_strategy(), ui.get_kpi_target());
+    ui.invoke_next_step();
+
+    assert_eq!(ui.get_step(), 2);
+    assert_eq!(ui.get_selected_strategy(), "Add 5 more products");
+
+    ui.invoke_return_to_dashboard();
+    assert_eq!(ui.get_step(), 0);
+    assert_eq!(ui.get_selected_strategy(), "");
+}
