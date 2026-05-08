@@ -567,3 +567,24 @@ fn fix_issue_wizard_resolve_issue_callback() {
     ui.invoke_resolve_issue();
     assert!(*callback_called.borrow());
 }
+
+#[test]
+fn test_wizard_state_progression() {
+    crate::ui_tests::init();
+    let wizard = app::Wizard::new().unwrap();
+
+    // Initial state
+    assert_eq!(wizard.get_step(), 0);
+
+    // Move to step 1
+    wizard.invoke_next_step();
+    assert_eq!(wizard.get_step(), 1);
+
+    // Move to step 2
+    wizard.invoke_next_step();
+    assert_eq!(wizard.get_step(), 2);
+
+    // Move back to step 1
+    wizard.invoke_prev_step();
+    assert_eq!(wizard.get_step(), 1);
+}
