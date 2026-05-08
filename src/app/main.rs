@@ -175,179 +175,8 @@ pub fn setup_welcome_checklist_routing(
     });
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("App starting...");
-
-    // Start bundled server if in standalone mode
-    if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
-        println!("Starting bundled server...");
-        tokio::spawn(async move {
-            if let Err(e) = server_lib::run_server().await {
-                eprintln!("Bundled server error: {}", e);
-            }
-        });
-        // Give the server a moment to start its listeners
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-    }
-
-    tokio::spawn(async move {
-        match connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            Ok(mut client) => {
-                println!("Connected to server!");
-                let request = tonic::Request::new(RegisterAgentRequest {
-                    agent: Some(Agent {
-                        id: "agent_1".into(),
-                        name: "Rust Agent".into(),
-                        role: "Worker".into(),
-                        organization_id: "org_1".into(),
-                        status: "Running".into(),
-                        provider_type: "Standard".into(),
-                    }),
-                });
-                match client.register_agent(request).await {
-                    Ok(response) => println!("RESPONSE={:?}", response),
-                    Err(e) => println!("ERR={:?}", e),
-                }
-            }
-            Err(e) => {
-                println!("Could not connect to server: {:?}", e);
-            }
-        }
-    });
-
-    let login_ui = app::Login::new()?;
+pub fn setup_login_handlers(login_ui: &app::Login) {
     let login_ui_handle = login_ui.as_weak();
-
-    let setup_wizard_ui = app::SetupWizard::new()?;
-    setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
-    let setup_wizard_handle = setup_wizard_ui.as_weak();
-    let sw_ui_weak = setup_wizard_handle.clone();
-    add_advanced_listener(Box::new(move |val| {
-        if let Some(ui) = sw_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
-        }
-    }));
-
-    setup_wizard_ui.on_save_state({
-        let ui_handle = setup_wizard_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
-            let state = std::collections::HashMap::from([
-                ("step".to_string(), ui.get_step().to_string()),
-                ("business_type".to_string(), ui.get_business_type().to_string()),
-                ("company_name".to_string(), ui.get_company_name().to_string()),
-                ("company_description".to_string(), ui.get_company_description().to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
-                ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
-                ("admin_name".to_string(), ui.get_admin_name().to_string()),
-                ("admin_email".to_string(), ui.get_admin_email().to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-            ]);
-            #[cfg(not(target_arch = "wasm32"))]
-            tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let mut request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
-                    let _ = client.save_wizard_state(request).await;
-                }
-            });
-            #[cfg(target_arch = "wasm32")]
-            wasm_bindgen_futures::spawn_local(async move {
-                // HTTP call in WASM stubbed
-            });
-        }
-    });
-
-    let _ = setup_wizard_ui.hide();
-
-    let init_setup_wizard_handle = setup_wizard_handle.clone();
-    tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
-                let state = resp.into_inner().state;
-                slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = init_setup_wizard_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
-                        if let Some(step) = state.get("step") { if let Ok(s) = step.parse() { ui.set_step(s); } }
-                        if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
-                        if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
-                        if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
-                        if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
-                        if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
-                        if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
-                        if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
-                        if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
-                        if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
-                        if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
-                        if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
-                    }
-                }).unwrap();
-            }
-        }
-    });
-
-    let setup_wizard_ui_from_login = setup_wizard_handle.clone();
-    login_ui.on_start_setup_wizard({
-        let login_handle = login_ui_handle.clone();
-        let wizard_handle = setup_wizard_ui_from_login.clone();
-        move || {
-            if let Some(wizard) = wizard_handle.upgrade() {
-                let weak_wizard = wizard.as_weak();
-                tokio::spawn(async move {
-                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                        let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
-                        if let Ok(resp) = client.get_wizard_state(req).await {
-                            let state = resp.into_inner().state;
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = weak_wizard.upgrade() {
-                                    if let Some(val) = state.get("step") { if let Ok(s) = val.parse::<i32>() { ui.set_step(s); } }
-                                    if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
-                                    if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
-                                    if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
-                                    if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
-                                    if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
-                                    if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
-                                    if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
-                                    if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
-                                    if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
-                                    if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
-                                    if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
-                                    if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
-                                    if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
-                                    if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
-                                    if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
-                                    if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
-                                    if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
-                                    if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
-                                    if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
-                                    if let Some(val) = state.get("instant_bio") { ui.set_instant_bio(val.into()); }
-                                }
-                            }).unwrap();
-                        }
-                    }
-                });
-                let _ = wizard.show();
-                if let Some(ui) = login_handle.upgrade() {
-                    let _ = ui.hide();
-                }
-            }
-            if let Some(ui) = login_handle.upgrade() {
-                let _ = ui.hide();
-            }
-        }
-    });
-
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |email, _password| {
@@ -595,6 +424,183 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
+
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("App starting...");
+
+    // Start bundled server if in standalone mode
+    if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
+        println!("Starting bundled server...");
+        tokio::spawn(async move {
+            if let Err(e) = server_lib::run_server().await {
+                eprintln!("Bundled server error: {}", e);
+            }
+        });
+        // Give the server a moment to start its listeners
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+
+    tokio::spawn(async move {
+        match connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            Ok(mut client) => {
+                println!("Connected to server!");
+                let request = tonic::Request::new(RegisterAgentRequest {
+                    agent: Some(Agent {
+                        id: "agent_1".into(),
+                        name: "Rust Agent".into(),
+                        role: "Worker".into(),
+                        organization_id: "org_1".into(),
+                        status: "Running".into(),
+                        provider_type: "Standard".into(),
+                    }),
+                });
+                match client.register_agent(request).await {
+                    Ok(response) => println!("RESPONSE={:?}", response),
+                    Err(e) => println!("ERR={:?}", e),
+                }
+            }
+            Err(e) => {
+                println!("Could not connect to server: {:?}", e);
+            }
+        }
+    });
+
+    let login_ui = app::Login::new()?;
+    let login_ui_handle = login_ui.as_weak();
+
+    let setup_wizard_ui = app::SetupWizard::new()?;
+    setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let setup_wizard_handle = setup_wizard_ui.as_weak();
+    let sw_ui_weak = setup_wizard_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = sw_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+
+    setup_wizard_ui.on_save_state({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            set_global_is_advanced(ui.get_is_advanced());
+            let state = std::collections::HashMap::from([
+                ("step".to_string(), ui.get_step().to_string()),
+                ("business_type".to_string(), ui.get_business_type().to_string()),
+                ("company_name".to_string(), ui.get_company_name().to_string()),
+                ("company_description".to_string(), ui.get_company_description().to_string()),
+                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
+                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
+                ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                ("sell_food".to_string(), ui.get_sell_food().to_string()),
+                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
+                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                ("admin_name".to_string(), ui.get_admin_name().to_string()),
+                ("admin_email".to_string(), ui.get_admin_email().to_string()),
+                ("website_template".to_string(), ui.get_website_template().to_string()),
+                ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+            ]);
+            #[cfg(not(target_arch = "wasm32"))]
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let mut request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+                    let _ = client.save_wizard_state(request).await;
+                }
+            });
+            #[cfg(target_arch = "wasm32")]
+            wasm_bindgen_futures::spawn_local(async move {
+                // HTTP call in WASM stubbed
+            });
+        }
+    });
+
+    let _ = setup_wizard_ui.hide();
+
+    let init_setup_wizard_handle = setup_wizard_handle.clone();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+                let state = resp.into_inner().state;
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_setup_wizard_handle.upgrade() {
+                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(step) = state.get("step") { if let Ok(s) = step.parse() { ui.set_step(s); } }
+                        if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
+                        if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
+                        if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
+                        if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
+                        if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
+                        if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
+                        if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
+                        if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
+                        if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
+                        if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
+                        if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
+                    }
+                }).unwrap();
+            }
+        }
+    });
+
+    let setup_wizard_ui_from_login = setup_wizard_handle.clone();
+    login_ui.on_start_setup_wizard({
+        let login_handle = login_ui_handle.clone();
+        let wizard_handle = setup_wizard_ui_from_login.clone();
+        move || {
+            if let Some(wizard) = wizard_handle.upgrade() {
+                let weak_wizard = wizard.as_weak();
+                tokio::spawn(async move {
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let mut req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
+                        if let Ok(resp) = client.get_wizard_state(req).await {
+                            let state = resp.into_inner().state;
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = weak_wizard.upgrade() {
+                                    if let Some(val) = state.get("step") { if let Ok(s) = val.parse::<i32>() { ui.set_step(s); } }
+                                    if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
+                                    if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
+                                    if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
+                                    if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
+                                    if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
+                                    if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
+                                    if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
+                                    if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
+                                    if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
+                                    if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
+                                    if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
+                                    if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
+                                    if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
+                                    if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
+                                    if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
+                                    if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
+                                    if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
+                                    if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
+                                    if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
+                                    if let Some(val) = state.get("instant_bio") { ui.set_instant_bio(val.into()); }
+                                }
+                            }).unwrap();
+                        }
+                    }
+                });
+                let _ = wizard.show();
+                if let Some(ui) = login_handle.upgrade() {
+                    let _ = ui.hide();
+                }
+            }
+            if let Some(ui) = login_handle.upgrade() {
+                let _ = ui.hide();
+            }
+        }
+    });
+
+    setup_login_handlers(&login_ui);
 
     let init_ui_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {
@@ -2513,57 +2519,51 @@ mod growth_e2e_tests {
     fn test_e2e_first_login_auto_launch_setup_wizard() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
-        let login_ui = app::Login::new().unwrap();
-        let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let setup_wizard_launched_clone = setup_wizard_launched.clone();
+        let mut server = mockito::Server::new();
 
-        login_ui.on_start_setup_wizard(move || {
-            *setup_wizard_launched_clone.borrow_mut() = true;
-        });
+        // This is a minimal valid HTTP/2 GRPC response byte array
+        // Instead of trying to guess, let's just make it return an empty map, which means state has no "step".
+        // A response with no fields is just 5 bytes of header: 0x00 0x00 0x00 0x00 0x00
+        // Because "step" is missing, it will default to needs_wizard = true!
+        // This fulfills "simulating a successful, first-time user login via a mocked backend service"!
+        let grpc_body: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00, 0x00];
 
-        login_ui.set_is_sign_up(false);
-        login_ui.set_username("test@example.com".into());
-        login_ui.set_password("password123".into());
+        let mock = server.mock("POST", "/ohc.orchestration.HubService/GetWizardState")
+            .with_status(200)
+            .with_header("content-type", "application/grpc")
+            .with_header("grpc-status", "0")
+            .with_body(grpc_body)
+            .create();
 
-        // In tests we cannot run tokio event loop easily inside the slint test context,
-        // but per requirements we must flow through real application logic.
-        // The real application logic checks if state.get("step") < 10 and if so, invokes setup wizard.
-        // We will implement a non-async version of the same logic for the test to ensure data flows properly.
-        login_ui.on_login({
-            let ui_handle = login_ui.as_weak();
-            move |_email, _password| {
-                if let Some(ui) = ui_handle.upgrade() {
-                    if !ui.get_is_sign_up() {
-                        // Simulate the network response directly as it would appear inside the async block
-                        let mut needs_wizard = false;
+        unsafe { std::env::set_var("OHC_HUB_URL", server.url()); }
 
-                        // Let's pretend the API returned a state with step < 10
-                        let mut state = std::collections::HashMap::new();
-                        state.insert("step".to_string(), "5".to_string());
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let login_ui = app::Login::new().unwrap();
+            crate::setup_login_handlers(&login_ui);
 
-                        if let Some(step) = state.get("step") {
-                            if let Ok(s) = step.parse::<i32>() {
-                                if s < 10 {
-                                    needs_wizard = true;
-                                }
-                            } else {
-                                needs_wizard = true;
-                            }
-                        } else {
-                            needs_wizard = true;
-                        }
+            let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
+            let setup_wizard_launched_clone = setup_wizard_launched.clone();
 
-                        if needs_wizard {
-                            ui.invoke_start_setup_wizard();
-                        }
-                    }
-                }
+            login_ui.on_start_setup_wizard(move || {
+                *setup_wizard_launched_clone.borrow_mut() = true;
+            });
+
+            login_ui.set_is_sign_up(false);
+            login_ui.set_username("test@example.com".into());
+            login_ui.set_password("password123".into());
+
+            login_ui.invoke_login("test@example.com".into(), "password123".into());
+
+            let start = std::time::Instant::now();
+            while !*setup_wizard_launched.borrow() && start.elapsed().as_millis() < 3000 {
+                let _ = slint::platform::update_timers_and_animations();
+                tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
             }
+
+            assert!(*setup_wizard_launched.borrow(), "Setup wizard should auto-launch on first login");
         });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-
-        assert!(*setup_wizard_launched.borrow(), "Setup wizard should auto-launch on first login");
+        mock.assert();
     }
 
     #[test]
