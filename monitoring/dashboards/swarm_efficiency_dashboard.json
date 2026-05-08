@@ -1,0 +1,43 @@
+{
+  "title": "Swarm Efficiency Dashboard",
+  "panels": [
+    {
+      "type": "text",
+      "title": "OHC Aesthetic Injector",
+      "options": {
+        "mode": "html",
+        "content": "<style>\n  .panel-container {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Token Burn Rate per Tenant (Cloud vs Standalone)",
+      "targets": [
+        {
+          "expr": "sum by (deployment_mode) (ohc_token_burn_rate_predicted_24h)",
+          "legendFormat": "{{deployment_mode}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Redis Lock Contention Rate",
+      "targets": [
+        {
+          "expr": "sum by (deployment_mode) (rate(ohc_redis_lock_contention_total[5m]))",
+          "legendFormat": "{{deployment_mode}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Dead Letter Queue Transitions",
+      "targets": [
+        {
+          "expr": "sum by (deployment_mode) (rate(ohc_mission_dead_letter_total[5m]))",
+          "legendFormat": "{{deployment_mode}}"
+        }
+      ]
+    }
+  ]
+}

@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "buffer_integration.go",
         "harness_metrics.go",
+        "metrics.go",
         "local_buffer.go",
     ],
     importpath = "onehumancorp/srcs/server/telemetry",
@@ -20,6 +21,7 @@ go_test(
     name = "telemetry_test",
     srcs = [
         "harness_metrics_test.go",
+        "metrics_test.go",
         "local_buffer_test.go",
     ],
     embed = [":telemetry"],

@@ -98,6 +98,10 @@ impl CloudStateManager {
         .await
         .map_err(|e| e.to_string())?;
 
+        if to_state == "FAILED" {
+            let _ = crate::telemetry::record_mission_dead_letter(&self.db.pool, &tenant_id_db, task_id).await;
+        }
+
         // 3. Record transition
         let trans_id = uuid::Uuid::new_v4().to_string();
         sqlx::query(
@@ -137,11 +141,22 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
     ) -> Result<(), String> {
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
 
+        let lock_start = std::time::Instant::now();
         let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30);
         let lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_future).await {
-            Ok(Ok(guard)) => guard,
-            Ok(Err(e)) => return Err(e),
-            Err(_) => return Err("Timeout acquiring lock".to_string()),
+            Ok(Ok(guard)) => {
+                let duration = lock_start.elapsed().as_secs_f64();
+                let _ = crate::telemetry::record_redis_lock_wait_duration(&self.db.pool, tenant_id, duration).await;
+                guard
+            },
+            Ok(Err(e)) => {
+                let _ = crate::telemetry::record_redis_lock_contention(&self.db.pool, tenant_id).await;
+                return Err(e);
+            },
+            Err(_) => {
+                let _ = crate::telemetry::record_redis_lock_contention(&self.db.pool, tenant_id).await;
+                return Err("Timeout acquiring lock".to_string());
+            }
         };
 
         // Will drop automatically when block exits
@@ -150,11 +165,20 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
 
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
         let lock_key = "ohc:lock:system:pull_tasks".to_string();
+        let lock_start = std::time::Instant::now();
         let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30);
         let _lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_future).await {
-            Ok(Ok(guard)) => guard,
-            Ok(Err(e)) => return Err(e),
+            Ok(Ok(guard)) => {
+                let duration = lock_start.elapsed().as_secs_f64();
+                let _ = crate::telemetry::record_redis_lock_wait_duration(&self.db.pool, "system", duration).await;
+                guard
+            },
+            Ok(Err(e)) => {
+                let _ = crate::telemetry::record_redis_lock_contention(&self.db.pool, "system").await;
+                return Err(e);
+            },
             Err(_) => {
+                let _ = crate::telemetry::record_redis_lock_contention(&self.db.pool, "system").await;
                 tracing::warn!("Lock timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
                 return Ok(vec![]);
             }

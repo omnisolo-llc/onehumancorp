@@ -290,3 +290,15 @@ mod tests {
         assert_eq!(redacted_json["API_KEY"], "[REDACTED]");
     }
 }
+
+pub async fn record_redis_lock_contention(pool: &PgPool, tenant_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_redis_lock_contention_total", "counter", 1.0, serde_json::json!({ "tenant_id": tenant_id })).await
+}
+
+pub async fn record_redis_lock_wait_duration(pool: &PgPool, tenant_id: &str, duration_secs: f64) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_redis_lock_wait_duration", "histogram", duration_secs as f32, serde_json::json!({ "tenant_id": tenant_id })).await
+}
+
+pub async fn record_mission_dead_letter(pool: &PgPool, tenant_id: &str, task_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_mission_dead_letter_total", "counter", 1.0, serde_json::json!({ "tenant_id": tenant_id, "task_id": task_id })).await
+}
