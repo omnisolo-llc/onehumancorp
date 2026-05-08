@@ -101,6 +101,15 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/onboarding/start", onboardingAPI.HandleStartOnboarding)
 	mux.HandleFunc("/api/onboarding/status", onboarding.TenantAuthMiddleware(onboardingAPI.HandleGetStatus))
+	mux.HandleFunc("/api/onboarding/state", onboarding.TenantAuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			onboardingAPI.HandleSaveState(w, r)
+		} else if r.Method == http.MethodGet {
+			onboardingAPI.HandleGetState(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
 
 	growthSvc := growth.NewGrowthService(db)
 	mux.HandleFunc("/api/growth/referrals/click", growthSvc.HandleReferralClick)
