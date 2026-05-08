@@ -323,6 +323,9 @@ impl VectorRepository {
         Ok(results)
     }
 
+    /// Prunes stale context to prevent unbounded memory growth.
+    /// It deletes records older than `older_than` where `owner_override = FALSE`,
+    /// `reference_count < 5`, and `source_type = 'TASK_SUMMARY'`.
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
@@ -372,6 +375,8 @@ impl VectorRepository {
         Ok(())
     }
 
+    /// Automatically detects and resolves conflicts based on semantic similarity.
+    /// It uses explicit owner override, reliability score, and recency to determine the winner.
     pub async fn auto_resolve_conflicts(&self) -> Result<usize, String> {
         let conflicts = self.get_conflicting_pairs().await?;
         let mut resolved_count = 0;
@@ -385,6 +390,7 @@ impl VectorRepository {
         Ok(resolved_count)
     }
 
+    /// Determines the winner of a memory conflict between two embedding records.
     pub fn determine_conflict_winner<'a>(a: &'a EmbeddingRecord, b: &'a EmbeddingRecord) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
         if a.owner_override != b.owner_override {
             if a.owner_override {
@@ -1051,6 +1057,7 @@ impl LongTermMemory for RedisMemoryStore {
 mod get_conflicts_tests {
     #[tokio::test]
     async fn test_auto_resolve_conflicts_with_override_new() {
+        // Migrated override test from standalone conflict.rs {
         use std::str::FromStr;
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
@@ -1204,6 +1211,7 @@ mod get_conflicts_tests {
 
     #[tokio::test]
     async fn test_auto_resolve_conflicts() {
+        // Migrated resolution test from standalone conflict.rs {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
@@ -1352,6 +1360,7 @@ mod get_conflicts_tests {
 
     #[tokio::test]
     async fn test_prune_stale_sqlite() {
+        // Migrated unit test from standalone pruning.rs {
         // Just mock the execution or write a very small unit test using sqlite memory database but to test the prune edge case
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
@@ -1466,6 +1475,7 @@ mod get_conflicts_tests {
 
     #[tokio::test]
     async fn test_auto_resolve_conflicts_fallback() {
+        // Migrated fallback test from standalone conflict.rs {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
@@ -2064,6 +2074,7 @@ mod anthropic_memory_tests {
 
     #[tokio::test]
     async fn test_prune_stale_retention() {
+        // Migrated retention test from standalone pruning.rs {
         use std::str::FromStr;
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
@@ -2140,6 +2151,7 @@ mod anthropic_memory_tests {
 
     #[tokio::test]
     async fn test_prune_stale_owner_override_coverage() {
+        // Migrated override test from standalone pruning.rs {
         use std::str::FromStr;
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
@@ -2227,6 +2239,7 @@ mod determine_conflict_winner_tests {
 
     #[test]
     fn test_winner_owner_override() {
+        // Migrated winner logic test from conflict.rs {
         let a = create_test_record("a", true, 50, 10);
         let b = create_test_record("b", false, 90, 5); // b has better score and is newer, but a has override
         let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
@@ -2240,6 +2253,7 @@ mod determine_conflict_winner_tests {
 
     #[test]
     fn test_winner_reliability_score() {
+        // Migrated score logic test from conflict.rs {
         let a = create_test_record("a", false, 80, 10);
         let b = create_test_record("b", false, 60, 5); // a has better score, b is newer
         let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);

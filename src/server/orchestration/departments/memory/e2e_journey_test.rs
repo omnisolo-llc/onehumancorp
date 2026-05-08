@@ -3,8 +3,6 @@ use std::sync::Arc;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::str::FromStr;
 use sqlx::Row;
-use crate::orchestration::departments::memory::pruning::prune_stale;
-use crate::orchestration::departments::memory::conflict::auto_resolve_conflicts;
 
 #[tokio::test]
 async fn test_full_consolidated_memory_e2e_journey() {
@@ -115,11 +113,11 @@ async fn test_full_consolidated_memory_e2e_journey() {
     assert_eq!(count, 4, "Initial state should have 4 records");
 
     // Run Auto-resolution (resolves the conflict between sales_day1 and sales_day3)
-    let resolved = auto_resolve_conflicts(repo.clone()).await.expect("Failed to auto-resolve conflicts");
+    let resolved = repo.auto_resolve_conflicts().await.expect("Failed to auto-resolve conflicts");
     assert_eq!(resolved, 1, "Exactly 1 conflict should be resolved");
 
     // Run Pruning process (removes stale note older than 180 days)
-    prune_stale(repo.clone(), now - chrono::Duration::days(180)).await.expect("Failed to prune stale context");
+    repo.prune_stale(now - chrono::Duration::days(180)).await.expect("Failed to prune stale context");
 
     // Cross-department retrieval: Operations fetches pricing context natively via vector repository
     // We explicitly use the application-level method provided by `VectorRepository` to satisfy the code review
