@@ -35,7 +35,7 @@ export component Dashboard inherits Window { // milestones
     in property <bool> is_loading: false;
     in-out property <bool> is_advanced: false;
 
-    // AutoDream Memory Pipeline Telemetry
+    // AI Assistant Memory Telemetry
     in property <string> telemetry_cache_hits: "84%";
     in property <string> telemetry_rag_latency: "120ms";
     in property <string> telemetry_chart_placeholder: "[ Dynamic Hybrid Correlation Chart ]";
@@ -86,6 +86,7 @@ export component Dashboard inherits Window { // milestones
 
     in-out property <bool> show_quick_actions_hint: false;
     in-out property <bool> show_advisory_hint: false;
+    in-out property <bool> show_team_hint: false;
     in-out property <bool> show_menu: false;
     in-out property <bool> show_swarm_observability: false;
     in property <[SwarmActivity]> swarm_activities;
@@ -106,7 +107,7 @@ export component Dashboard inherits Window { // milestones
             spacing: 16px;
             VerticalBox {
                 alignment: center;
-                Text { text: "My Business"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                Text { text: "My Store"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
                 if (is_loading) : Rectangle {
                     height: 12px;
                     width: 100px;
@@ -134,8 +135,8 @@ export component Dashboard inherits Window { // milestones
                 Button { text: "My Plan"; height: 44px; clicked => { open_my_plan(); show_menu = false; } }
                 TooltipElement { tooltip_id: "api_docs"; Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } } }
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
-                Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
-                Button { text: "Automate Work Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
+                Button { text: "How to use this app"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
+                Button { text: "How to automate work"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
             }
         }
@@ -222,7 +223,7 @@ export component Dashboard inherits Window { // milestones
                 spacing: 24px;
 
                 Text {
-                    text: "AutoDream Memory Pipeline";
+                    text: "AI Assistant Memory";
                     font-size: 20px;
                     font-family: "Outfit";
                     font-weight: 700;
@@ -279,7 +280,7 @@ export component Dashboard inherits Window { // milestones
             HorizontalBox {
                 alignment: start;
                 spacing: 8px;
-                Text { text: "Actionable Insights"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                Text { text: "Store Tips"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
                 TooltipElement { tooltip_id: "advisory_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_advisory_hint = !show_advisory_hint; } } }
             }
             if (show_advisory_hint) : Text { text: "The Advisor analyzes your store to suggest the best actions to take."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
@@ -303,7 +304,7 @@ export component Dashboard inherits Window { // milestones
         // Pending Orders/Bookings (Middle)
         VerticalBox {
             spacing: 12px;
-            Text { text: "Pending Orders/Bookings"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Text { text: "Orders to Fulfill"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
             if (new_orders_count > 0) : GlassCard {
                 border-color: #06b6d4;
                 border-width: 1px;
@@ -400,8 +401,17 @@ export component Dashboard inherits Window { // milestones
 
 
         // My Team
-        Text { text: "My Team"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
-        
+        VerticalBox {
+            spacing: 12px;
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "My Team"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+                TooltipElement { tooltip_id: "team_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_team_hint = !show_team_hint; } } }
+            }
+            if (show_team_hint) : Text { text: "Manage your AI team members here."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+        }
+
         VerticalBox {
             spacing: 10px;
             
