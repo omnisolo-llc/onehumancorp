@@ -5,7 +5,7 @@ test.describe('Wizard Refinement E2E', () => {
   test('Full Setup Wizard journey (Day One)', async ({ page }) => {
     await page.goto('/login');
     // Simulate navigation to Setup Wizard
-    await page.locator('button:has-text("Guided Setup")').first().click();
+    await page.locator('button:has-text("🚀 Start My Business")').first().click();
 
     // Step 1: Business Type
     await expect(page.locator('text=/What kind of business/i')).toBeVisible();
@@ -47,6 +47,52 @@ test.describe('Wizard Refinement E2E', () => {
     // Verify Success State
     await expect(page.locator('text=/Success! Your business is live/i')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('button:has-text("Copy Store Link")')).toBeVisible();
+  });
+
+
+  test('Zero to Live - Full Journey & Dashboard Verification', async ({ page }) => {
+    // 1. Onboarding
+    await page.goto('/login');
+    await page.locator('button:has-text("🚀 Start My Business")').first().click();
+
+    // Setup Wizard steps
+    await expect(page.locator('text=/What kind of business/i')).toBeVisible();
+    await page.locator('text=Online Store').first().click();
+    await page.fill('input[placeholder*="Maya\'s Cakes"]', 'My New Bakery');
+    await page.locator('button:has-text("Next")').click();
+    await page.locator('text=Physical products').first().click();
+    await page.locator('button:has-text("Next")').click();
+    await page.locator('text=Online only').first().click();
+    await page.fill('input[placeholder*="you@email.com"]', 'founder@bakery.test');
+    await page.locator('button:has-text("Next")').click();
+    await page.locator('text=Modern').first().click();
+    await page.fill('input[placeholder*="Birthday Cake"]', 'Signature Cake');
+    await page.locator('button:has-text("Next")').click();
+    await page.locator('text=Free OHC Domain').first().click();
+
+    // Review & Launch
+    await expect(page.locator('text=/Ready to launch/i')).toBeVisible();
+    const launchBtn = page.locator('button:has-text("Launch My Business")').first();
+    await launchBtn.click();
+
+    // Verify Success State
+    await expect(page.locator('text=/Success! Your business is live/i')).toBeVisible({ timeout: 10000 });
+
+    // Navigate to Dashboard
+    await page.goto('/');
+
+    // 2. Verify Dashboard Mobile-First Layout
+    // Check Top: Weekly Revenue + Actionable Insights
+    await expect(page.locator('text=Weekly Revenue')).toBeVisible();
+    await expect(page.locator('text=Actionable Insights')).toBeVisible();
+    await expect(page.locator('text=Want to run a promo?')).toBeVisible();
+
+    // Check Middle: Pending Orders/Bookings
+    await expect(page.locator('text=Pending Orders/Bookings')).toBeVisible();
+
+    // Check Bottom: Floating action buttons
+    await expect(page.locator('text="+"').first()).toBeVisible();
+    await expect(page.locator('text="✍️"').first()).toBeVisible();
   });
 
   test('AI Helper Configuration', async ({ page }) => {
@@ -120,7 +166,7 @@ test.describe('Wizard Refinement E2E', () => {
 
   test('Progressive Disclosure (Expert Mode) toggle', async ({ page }) => {
     await page.goto('/onboarding');
-    await page.locator('button:has-text("Guided Setup")').first().click();
+    await page.locator('button:has-text("🚀 Start My Business")').first().click();
 
     // Check Advanced toggle
     const advancedText = page.locator('text=Advanced Mode');

@@ -3283,8 +3283,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let onboarding_request = tonic::Request::new(ohc::orchestration::StartOnboardingRequest {
-                            business_type: req_business_type,
-                            company_name: req_company_name,
+                            business_type: req_business_type.clone(),
+                            company_name: req_company_name.clone(),
                             company_description: req_company_description,
                             payment_pref: req_payment_pref,
                             admin_email: req_admin_email,
@@ -3297,6 +3297,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             domain_choice: req_domain_choice,
                             price_type: req_price_type,
                         });
+
+
+
+
+
+                        // Trigger KAIROS Orchestrator
+                        let _ = client.publish_teammate_mesh_event(tonic::Request::new(ohc::orchestration::PublishTeammateMeshEventRequest {
+                            channel: "kairos_orchestrator".to_string(),
+                            event: Some(ohc::orchestration::TeammateMeshEvent {
+                                agent_id: "setup_wizard".to_string(),
+                                action: "TriggerKairos".to_string(),
+                                status: "pending".to_string(),
+                                payload: serde_json::to_vec(&serde_json::json!({
+                                    "business_type": req_business_type.clone(),
+                                    "company_name": req_company_name.clone()
+                                })).unwrap_or_default(),
+                                msg_id: uuid::Uuid::new_v4().to_string(),
+                            }),
+                        })).await;
 
                         let response: Result<tonic::Response<ohc::orchestration::StartOnboardingResponse>, tonic::Status> = client.start_onboarding(onboarding_request).await;
                         match response {
