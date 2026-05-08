@@ -296,6 +296,7 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
     volumes:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
+      - ./helm/ohc/dashboards:/etc/grafana/provisioning/dashboards
     depends_on:
       - prometheus
     deploy:
