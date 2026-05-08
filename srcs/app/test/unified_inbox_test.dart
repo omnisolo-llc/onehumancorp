@@ -52,16 +52,24 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.enterText(find.byKey(const Key('adminNameField')), 'John Doe');
   await tester.enterText(find.byKey(const Key('adminEmailField')), 'john@acme.com');
   await tester.enterText(find.byKey(const Key('adminPasswordField')), 'securePassword123');
-  await tester.tap(find.text('Next'));
+  await tester.tap(find.text('Next').last);
   await tester.pump(const Duration(milliseconds: 500));
 
   // 7. Template Selection Screen
   await tester.tap(find.text('Modern'));
   await tester.pump(const Duration(milliseconds: 100));
-  await tester.tap(find.text('Next'));
+  await tester.tap(find.text('Next').last);
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 6. Review & Launch Screen
+  // 8. Product Screen
+  await tester.tap(find.text('Next').last);
+  await tester.pump(const Duration(milliseconds: 500));
+
+  // 9. Domain Screen
+  await tester.tap(find.text('Next').last);
+  await tester.pump(const Duration(milliseconds: 500));
+
+  // 10. Review & Launch Screen
   final launchBtn = find.text('Launch My AI Team');
   await tester.ensureVisible(launchBtn);
   await tester.pump(const Duration(milliseconds: 500));
@@ -69,6 +77,10 @@ Future<void> navigateToInbox(WidgetTester tester) async {
 
   // Wait for pulse animation and API call
   await tester.pump(const Duration(seconds: 2));
+
+  // 11. Checklist Screen
+  await tester.tap(find.text('Go to Dashboard'));
+  await tester.pump(const Duration(milliseconds: 500));
 
   // Dashboard is visible now. Avoid pumpAndSettle due to pulse animation running.
   // Wait explicitly instead

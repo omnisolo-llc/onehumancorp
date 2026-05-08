@@ -35,7 +35,7 @@ void main() {
     await tester.tap(find.text('11-50').last);
     await tester.pump(const Duration(milliseconds: 500));
 
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Next').last);
     await tester.pump(const Duration(milliseconds: 500));
 
     // 3. Goal Selection Screen
@@ -45,12 +45,12 @@ void main() {
     await tester.tap(find.text('Support'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Next').last);
     await tester.pump(const Duration(milliseconds: 500));
 
     // 4. External Integrations Screen
     expect(find.text('External Integrations'), findsOneWidget);
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Next').last);
     await tester.pump(const Duration(milliseconds: 500));
 
     // 5. Deployment Preference Screen
@@ -58,7 +58,7 @@ void main() {
     await tester.tap(find.text('Cloud'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Next').last);
     await tester.pump(const Duration(milliseconds: 500));
 
     // 6. Administrator Account Screen
@@ -67,17 +67,27 @@ void main() {
     await tester.enterText(find.byKey(const Key('adminEmailField')), 'john@acme.com');
     await tester.enterText(find.byKey(const Key('adminPasswordField')), 'securePassword123');
 
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Next').last);
     await tester.pump(const Duration(milliseconds: 500));
 
     // 7. Template Selection Screen
     expect(find.text('Select a Template'), findsOneWidget);
     await tester.tap(find.text('Modern')); // Select Modern template
-    await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(find.text('Next'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.text('Next').last);
+    await tester.pump(const Duration(milliseconds: 1000));
+
+    // 8. Product Screen
+    expect(find.text('Add your first product or service'), findsOneWidget);
+    await tester.tap(find.text('Next').last);
     await tester.pump(const Duration(milliseconds: 500));
 
-    // 8. Review & Launch Screen
+    // 9. Domain Screen
+    expect(find.text('Choose a Domain'), findsOneWidget);
+    await tester.tap(find.text('Next').last);
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 10. Review & Launch Screen
     expect(find.text('Review & Launch'), findsOneWidget);
     expect(find.text('Acme Corp'), findsOneWidget);
     expect(find.text('Technology'), findsOneWidget);
@@ -93,9 +103,13 @@ void main() {
     // Wait for the simulated API call (2 seconds)
     await tester.pump(const Duration(seconds: 2));
     await tester.pump(const Duration(seconds: 1));
-    // await tester.pumpAndSettle();
 
-    // 11. Dashboard Screen
+    // 11. Checklist
+    expect(find.text("You\'re set up!"), findsOneWidget);
+    await tester.tap(find.text('Go to Dashboard'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 12. Dashboard Screen
     expect(find.text("Dashboard"), findsOneWidget);
     expect(find.text("Welcome Checklist"), findsOneWidget);
     expect(find.text("Business live"), findsOneWidget);
