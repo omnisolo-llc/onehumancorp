@@ -5,25 +5,111 @@ use chrono::Utc;
 use uuid::Uuid;
 
 pub async fn bench_queue_latency() {
-    tracing::info!("Benchmarking Latency...");
+    tracing::info!("Benchmarking AI Job Dispatch Latency...");
 
     tracing::info!("--- Cloud Mode (Postgres) ---");
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
     if database_url != "postgres://localhost/dummy" {
         let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect(&database_url).await;
 
         if let Ok(pg_pool) = pool_res {
             let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
-            bench_queue("Postgres", pg_queue).await;
+            bench_queue("AI Job Dispatch Latency Cloud Mode (Postgres)", pg_queue).await;
         }
     }
 
     tracing::info!("--- Standalone Mode (Memory) ---");
     let mem_queue = Arc::new(MemoryTaskQueue::new());
-    bench_queue("Memory", mem_queue).await;
+    bench_queue("AI Job Dispatch Latency Standalone Mode (Memory)", mem_queue).await;
+}
+
+pub async fn bench_db_query_time() {
+    tracing::info!("Benchmarking Database Query Time...");
+
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+    if database_url == "postgres://localhost/dummy" {
+        return;
+    }
+
+    let iterations = 1000;
+
+    // Cloud Mode (Postgres)
+    let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+    let mut pg_times = Vec::new();
+    for _ in 0..iterations {
+        let start = Instant::now();
+        let _ = sqlx::query("SELECT 1").execute(&pg_pool).await;
+        pg_times.push(start.elapsed().as_micros());
+    }
+    pg_times.sort();
+    println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[(iterations as f32 * 0.95) as usize], pg_times[(iterations as f32 * 0.99) as usize]);
+
+    // Standalone Mode (SQLite)
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let mut sqlite_times = Vec::new();
+    for _ in 0..iterations {
+        let start = Instant::now();
+        let _ = sqlx::query("SELECT 1").execute(&sqlite_pool).await;
+        sqlite_times.push(start.elapsed().as_micros());
+    }
+    sqlite_times.sort();
+    println!("Database Query Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us", sqlite_times[iterations / 2], sqlite_times[(iterations as f32 * 0.95) as usize], sqlite_times[(iterations as f32 * 0.99) as usize]);
+}
+
+pub async fn bench_api_response_time() {
+    tracing::info!("Benchmarking API Response Time...");
+
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+    if database_url == "postgres://localhost/dummy" {
+        return;
+    }
+    let iterations = 100;
+
+    let (tx, _rx) = tokio::sync::mpsc::channel(100);
+
+    // Cloud setup
+    let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+    let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
+    let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
+    let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
+
+    let mut cloud_times = Vec::new();
+    for _ in 0..iterations {
+        let req = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let mut request = tonic::Request::new(req);
+        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+        let start = Instant::now();
+        use crate::ohc::app::dashboard_service_server::DashboardService;
+        let _ = dashboard_service_cloud.get_dashboard(request).await;
+        cloud_times.push(start.elapsed().as_micros());
+    }
+    cloud_times.sort();
+    println!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[(iterations as f32 * 0.95) as usize], cloud_times[(iterations as f32 * 0.99) as usize]);
+
+    // Standalone setup
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
+
+    let db_standalone = crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlite_pool) };
+    let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
+    let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
+
+    let mut standalone_times = Vec::new();
+    for _ in 0..iterations {
+        let req = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let mut request = tonic::Request::new(req);
+        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+        let start = Instant::now();
+        use crate::ohc::app::dashboard_service_server::DashboardService;
+        let _ = dashboard_service_standalone.get_dashboard(request).await;
+        standalone_times.push(start.elapsed().as_micros());
+    }
+    standalone_times.sort();
+    println!("API Response Time Standalone Mode: p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[(iterations as f32 * 0.95) as usize], standalone_times[(iterations as f32 * 0.99) as usize]);
 }
 
 pub async fn bench_dashboard_snapshot() {
@@ -220,6 +306,16 @@ mod tests {
     #[tokio::test]
     async fn test_run_bench_queue_latency() {
         bench_queue_latency().await;
+    }
+
+    #[tokio::test]
+    async fn test_run_bench_db_query_time() {
+        bench_db_query_time().await;
+    }
+
+    #[tokio::test]
+    async fn test_run_bench_api_response_time() {
+        bench_api_response_time().await;
     }
 
     #[tokio::test]
