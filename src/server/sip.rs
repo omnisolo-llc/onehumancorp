@@ -180,7 +180,7 @@ impl SipDB {
                     None
                 };
                 let mut tx = self.pool.begin().await?;
-                crate::utils::auth_utils::set_org_context(&mut *tx, "system").await?;
+                crate::utils::auth_utils::set_system_context(&mut *tx).await?;
                 self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local).await?;
                 tx.commit().await?;
                 Ok::<(), sqlx::Error>(())
