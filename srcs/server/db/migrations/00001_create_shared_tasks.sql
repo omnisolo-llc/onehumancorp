@@ -1,6 +1,7 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS shared_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mission_id TEXT,
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,

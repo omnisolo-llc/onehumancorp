@@ -33,6 +33,16 @@ func setupTestDB(t *testing.T) *sql.DB {
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS task_dependencies (
+			task_id UUID NOT NULL,
+			depends_on_task_id UUID NOT NULL,
+			PRIMARY KEY (task_id, depends_on_task_id)
+		);
+	`)
+	require.NoError(t, err)
+
 	require.NoError(t, err)
 
 	return db
@@ -325,6 +335,11 @@ func TestPostgresTaskStore_CreateTask_WithPayloads(t *testing.T) {
 	mock.ExpectQuery("INSERT INTO shared_tasks").
 		WithArgs(task.OrganizationID, task.Title, task.Description, task.Status, task.AgentID, task.Priority, sqlmock.AnyArg(), task.ParentPlanID, sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).AddRow("uuid-123", time.Now(), time.Now()))
+
+	// Mock inserting dependencies
+	mock.ExpectExec("INSERT INTO task_dependencies \\(task_id, depends_on_task_id\\) VALUES \\(\\$1, \\$2\\) ON CONFLICT DO NOTHING").
+		WithArgs("uuid-123", "dep-1").
+		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	mock.ExpectCommit()
 	err = store.CreateTask(ctx, task)
