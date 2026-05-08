@@ -13,6 +13,8 @@ import (
 	"time"
 	"regexp"
 
+	"onehumancorp/srcs/server/telemetry"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -163,6 +165,7 @@ func (d *AutoDreamDaemon) processFile(ctx context.Context, path string) {
 }
 
 func (d *AutoDreamDaemon) upsertMemory(ctx context.Context, id string, orgID string, agentID string, taskID string, content string, embedding []byte) error {
+	defer func(start time.Time) { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "upsertMemory") }(time.Now())
 	tx, err := d.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err

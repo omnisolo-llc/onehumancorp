@@ -7,6 +7,7 @@ import (
 	"errors"
 	"sync"
 	"time"
+	"onehumancorp/srcs/server/telemetry"
 )
 
 type SharedTask struct {
@@ -43,6 +44,7 @@ func NewPostgresTaskStore(db *sql.DB) *PostgresTaskStore {
 }
 
 func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string, agentID string) (*SharedTask, error) {
+	defer func(start time.Time) { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "ClaimTask") }(time.Now())
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -107,6 +109,7 @@ func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string
 }
 
 func (s *PostgresTaskStore) CreateTask(ctx context.Context, task *SharedTask) error {
+	defer func(start time.Time) { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "CreateTask") }(time.Now())
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -145,6 +148,7 @@ func (s *PostgresTaskStore) CreateTask(ctx context.Context, task *SharedTask) er
 }
 
 func (s *PostgresTaskStore) GetTask(ctx context.Context, id string) (*SharedTask, error) {
+	defer func(start time.Time) { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "GetTask") }(time.Now())
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -187,6 +191,7 @@ func (s *PostgresTaskStore) GetTask(ctx context.Context, id string) (*SharedTask
 }
 
 func (s *PostgresTaskStore) UpdateTaskStatus(ctx context.Context, id string, status string) error {
+	defer func(start time.Time) { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "UpdateTaskStatus") }(time.Now())
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -203,6 +208,7 @@ func (s *PostgresTaskStore) UpdateTaskStatus(ctx context.Context, id string, sta
 
 
 func (s *PostgresTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error) {
+	defer func(start time.Time) { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "PollDelegatedTasks") }(time.Now())
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -273,6 +279,7 @@ func (s *PostgresTaskStore) PollDelegatedTasks(ctx context.Context, limit int) (
 }
 
 func (s *PostgresTaskStore) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error) {
+	defer func(start time.Time) { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "GetTasksByOrganization") }(time.Now())
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -333,6 +340,7 @@ func NewSqliteTaskStore(db *sql.DB) *SqliteTaskStore {
 }
 
 func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, agentID string) (*SharedTask, error) {
+	defer func(start time.Time) { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "ClaimTask") }(time.Now())
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -410,6 +418,7 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 }
 
 func (s *SqliteTaskStore) CreateTask(ctx context.Context, task *SharedTask) error {
+	defer func(start time.Time) { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "CreateTask") }(time.Now())
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -455,6 +464,7 @@ func (s *SqliteTaskStore) CreateTask(ctx context.Context, task *SharedTask) erro
 }
 
 func (s *SqliteTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error) {
+	defer func(start time.Time) { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "PollDelegatedTasks") }(time.Now())
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -535,6 +545,7 @@ func (s *SqliteTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]
 }
 
 func (s *SqliteTaskStore) GetTask(ctx context.Context, id string) (*SharedTask, error) {
+	defer func(start time.Time) { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "GetTask") }(time.Now())
     query := `
         SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
         FROM shared_tasks
@@ -576,6 +587,7 @@ func (s *SqliteTaskStore) GetTask(ctx context.Context, id string) (*SharedTask, 
 }
 
 func (s *SqliteTaskStore) UpdateTaskStatus(ctx context.Context, id string, status string) error {
+	defer func(start time.Time) { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "UpdateTaskStatus") }(time.Now())
 	query := `UPDATE shared_tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
 	_, err := s.db.ExecContext(ctx, query, status, id)
 	return err
@@ -583,6 +595,7 @@ func (s *SqliteTaskStore) UpdateTaskStatus(ctx context.Context, id string, statu
 
 
 func (s *SqliteTaskStore) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error) {
+	defer func(start time.Time) { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "GetTasksByOrganization") }(time.Now())
     query := `
         SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
         FROM shared_tasks

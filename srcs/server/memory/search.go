@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
 	"onehumancorp/srcs/server/db"
+	"onehumancorp/srcs/server/telemetry"
 )
 
 type Memory struct {
@@ -30,6 +32,9 @@ func (d *AutoDreamDaemon) SearchSimilarMemories(ctx context.Context, query strin
 
 	var queryStr string
 	var args []interface{}
+
+	start := time.Now()
+	defer func() { telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "SearchSimilarMemories") }()
 
 	if db.GlobalProvider.IsSQLite() {
 		// Fallback to text-based recency logic in SQLite Standalone mode
