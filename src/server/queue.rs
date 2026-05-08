@@ -1142,7 +1142,7 @@ mod tests {
         // Create an actual pool to hit a local database for integration testing.
         // During CI, we assume postgres is available at this URL.
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new()
+            let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
 
                 .connect_lazy(&db_url)
@@ -1192,7 +1192,7 @@ mod tests {
     #[tokio::test]
     async fn test_queue_manager_tenant_isolation() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .connect_lazy(&db_url)
                 .unwrap();
 
@@ -1278,7 +1278,7 @@ mod tests {
     #[tokio::test]
     async fn test_task_queue_service_fail_task() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
 
                 .connect_lazy(&db_url)
                 .unwrap();
@@ -1327,7 +1327,7 @@ mod tests {
     #[tokio::test]
     async fn test_task_queue_service_with_dependencies() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new()
+            let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
 
                 .connect_lazy(&db_url)
