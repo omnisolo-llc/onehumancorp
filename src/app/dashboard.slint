@@ -74,6 +74,7 @@ export component Dashboard inherits Window { // milestones
     callback action_open_swarm_observability();
     callback action_mark_order_ready();
     callback action_open_kairos_orchestration();
+    callback action_simulate_order();
     callback action_manage_my_ai_team();
 
     in-out property <bool> show_upgrade_prompt: false;
@@ -321,6 +322,7 @@ export component Dashboard inherits Window { // milestones
                     spacing: 8px;
                     TooltipElement { tooltip_id: "social_posting"; Button { text: "Social"; height: 44px; clicked => { action_open_social_posting(); } } }
                     TooltipElement { tooltip_id: "kairos_orchestration"; Button { text: "Automations"; height: 44px; clicked => { action_open_kairos_orchestration(); } } }
+                    Button { text: "Simulate Order"; height: 44px; clicked => { action_simulate_order(); } }
                     if (new_orders_count > 0) : Button {
                         text: "Ready Order";
                         height: 44px;
