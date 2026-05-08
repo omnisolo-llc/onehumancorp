@@ -1,6 +1,4 @@
 use tokio::sync::broadcast;
-#[allow(unused_imports)]
-use std::sync::Arc;
 use tokio::sync::Mutex;
 use async_trait::async_trait;
 
@@ -608,6 +606,7 @@ impl HealthMonitor {
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
     
 
     #[tokio::test]
@@ -899,6 +898,7 @@ mod tests_ipc {
 mod memory_bus_tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_memory_bus_publish_subscribe() {
