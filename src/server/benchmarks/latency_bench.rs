@@ -11,7 +11,7 @@ pub async fn bench_queue_latency() {
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
     if database_url != "postgres://localhost/dummy" {
-        let pool_res = sqlx::postgres::PgPoolOptions::new()
+        let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect(&database_url).await;
 
@@ -36,7 +36,7 @@ pub async fn bench_dashboard_snapshot() {
         return;
     }
 
-    let pool_res = sqlx::postgres::PgPoolOptions::new()
+    let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
         .connect(&database_url).await;
 
@@ -215,7 +215,7 @@ mod tests {
 
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if database_url != "postgres://localhost/dummy" {
-            if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await {
+            if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect(&database_url).await {
                 let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
                 bench_queue("Postgres_Stress", pg_queue).await;
             }
