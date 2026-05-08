@@ -282,7 +282,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let mut request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
-                    let _ = client.save_wizard_state(request).await;
+                    let _: Result<_, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
             #[cfg(target_arch = "wasm32")]
@@ -763,7 +763,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+                    let _: Result<_, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
         }
@@ -804,7 +804,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+                    let _: Result<_, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
         }
@@ -899,7 +899,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+                    let _: Result<_, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
         }
@@ -1014,7 +1014,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+                    let _: Result<_, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
         }
@@ -1206,7 +1206,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+                    let _: Result<_, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
         }
@@ -1266,7 +1266,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tokio::spawn(async move {
                 if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    let _ = client.save_wizard_state(request).await;
+                    let _: Result<_, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
         }
@@ -1756,7 +1756,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let resp: Result<tonic::Response<_>, tonic::Status> = client.get_cost_summary(req).await;
                 if let Ok(resp) = resp {
-                let summary = resp.into_inner();
+                let summary = resp.into_inner(); // Type inferred by Bazel
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = cost_dashboard_handle_fetch.upgrade() {
                         ui.set_total_spend(format!("${:.2}", summary.total_cost_usd).into());
@@ -1799,7 +1799,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let resp: Result<tonic::Response<_>, tonic::Status> = client.get_cost_summary(req).await;
                 if let Ok(resp) = resp {
-                    let summary = resp.into_inner();
+                    let summary = resp.into_inner(); // Type inferred by Bazel
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = cost_dashboard_handle_fetch.upgrade() {
                             ui.set_total_spend(format!("${:.2}", summary.total_cost_usd).into());
@@ -1916,7 +1916,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             if let Ok(resp) = client.get_cost_summary(req).await {
-                let summary = resp.into_inner();
+                let summary = resp.into_inner(); // Type inferred by Bazel
                 if let Some(ui) = cost_dashboard_handle_fetch.upgrade() {
                     ui.set_total_spend(format!("${:.2}", summary.total_cost_usd).into());
                     ui.set_total_tokens(format!("{}", summary.total_tokens).into());
@@ -1949,7 +1949,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Ok(token) = std::env::var("OHC_TOKEN") {
                     req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
                 }
-                let _ = client.select_plan(req).await;
+                let _: Result<_, tonic::Status> = client.select_plan(req).await;
             }
         }).unwrap();
     });
@@ -2613,7 +2613,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 tokio::spawn(async move {
                     if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                         let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                        let _ = client.save_wizard_state(request).await;
+                        let _: Result<_, tonic::Status> = client.save_wizard_state(request).await;
                     }
                 });
             }
@@ -2632,7 +2632,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 tokio::spawn(async move {
                     if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                         let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                        let _ = client.save_wizard_state(request).await;
+                        let _: Result<_, tonic::Status> = client.save_wizard_state(request).await;
                     }
                 });
             }
@@ -2651,7 +2651,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 tokio::spawn(async move {
                     if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                         let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                        let _ = client.save_wizard_state(request).await;
+                        let _: Result<_, tonic::Status> = client.save_wizard_state(request).await;
                     }
                 });
             }
@@ -3068,7 +3068,7 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
                 if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let mut request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
-                    let _ = client.save_wizard_state(request).await;
+                    let _: Result<_, tonic::Status> = client.save_wizard_state(request).await;
                 }
             });
             #[cfg(target_arch = "wasm32")]

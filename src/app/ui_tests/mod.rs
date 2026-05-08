@@ -92,3 +92,5 @@ pub mod docs_ux_test;
 pub mod scribe_tests;
 pub mod scribe_feature_dashboard_test;
 pub mod scribe_extra_tests;
+
+pub mod chaos_resilience;

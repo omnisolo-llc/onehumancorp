@@ -81,7 +81,7 @@ export component ApiDocs inherits Window {
                                 if (root.active_endpoint == ep.path && root.api_response != "") : Rectangle {
                                     background: #1e293b;
                                     border-radius: 4px;
-                                    padding: 8px;
+                                    /* dead padding removed */
                                     Text {
                                         text: root.api_response;
                                         color: #a7f3d0;
