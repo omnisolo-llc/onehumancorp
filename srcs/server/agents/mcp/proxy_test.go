@@ -31,7 +31,10 @@ func TestNewBlobProxy(t *testing.T) {
 
 		provider, err := mcp.NewBlobProxy(ctx)
 		require.NoError(t, err)
-		assert.IsType(t, &storage.LocalBlobProvider{}, provider)
+
+		telProv, ok := provider.(*mcp.TelemetryBlobProvider)
+		require.True(t, ok)
+		assert.IsType(t, &storage.LocalBlobProvider{}, telProv.Inner)
 	})
 
 	t.Run("Multitenant Mode with S3 Bucket", func(t *testing.T) {
@@ -42,7 +45,10 @@ func TestNewBlobProxy(t *testing.T) {
 
 		provider, err := mcp.NewBlobProxy(ctx)
 		require.NoError(t, err)
-		assert.IsType(t, &storage.S3BlobProvider{}, provider)
+
+		telProv, ok := provider.(*mcp.TelemetryBlobProvider)
+		require.True(t, ok)
+		assert.IsType(t, &storage.S3BlobProvider{}, telProv.Inner)
 	})
 
 	t.Run("Multitenant Mode Missing S3 Bucket defaults to ohc-multi-tenant-blobs", func(t *testing.T) {
@@ -52,7 +58,10 @@ func TestNewBlobProxy(t *testing.T) {
 
 		provider, err := mcp.NewBlobProxy(ctx)
 		require.NoError(t, err)
-		assert.IsType(t, &storage.S3BlobProvider{}, provider)
+
+		telProv, ok := provider.(*mcp.TelemetryBlobProvider)
+		require.True(t, ok)
+		assert.IsType(t, &storage.S3BlobProvider{}, telProv.Inner)
 	})
 
 	t.Run("Default to Local if Multitenant is false and Standalone is false", func(t *testing.T) {
@@ -60,7 +69,10 @@ func TestNewBlobProxy(t *testing.T) {
 
 		provider, err := mcp.NewBlobProxy(ctx)
 		require.NoError(t, err)
-		assert.IsType(t, &storage.LocalBlobProvider{}, provider)
+
+		telProv, ok := provider.(*mcp.TelemetryBlobProvider)
+		require.True(t, ok)
+		assert.IsType(t, &storage.LocalBlobProvider{}, telProv.Inner)
 	})
 
 	t.Run("Local mode empty OHC_LOCAL_STORAGE_ROOT defaults to /var/tmp/ohc/blobs", func(t *testing.T) {
@@ -69,7 +81,10 @@ func TestNewBlobProxy(t *testing.T) {
 
 		provider, err := mcp.NewBlobProxy(ctx)
 		require.NoError(t, err)
-		assert.IsType(t, &storage.LocalBlobProvider{}, provider)
+
+		telProv, ok := provider.(*mcp.TelemetryBlobProvider)
+		require.True(t, ok)
+		assert.IsType(t, &storage.LocalBlobProvider{}, telProv.Inner)
 	})
 
 	t.Run("Fail to load AWS config", func(t *testing.T) {
@@ -97,4 +112,21 @@ func TestNewBlobProxy(t *testing.T) {
 		require.Error(t, err)
 		assert.Nil(t, provider)
 	})
+}
+
+func TestTelemetryBlobProvider(t *testing.T) {
+	ctx := context.Background()
+
+	// Ensure Telemetry is enabled so emission actually occurs
+	os.Setenv("OHC_STANDALONE", "false")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	provider, err := mcp.NewBlobProxy(ctx)
+	require.NoError(t, err)
+
+	err = provider.WriteBlob(ctx, "test.txt", []byte("hello"))
+	require.NoError(t, err)
+
+	_, err = provider.ReadBlob(ctx, "test.txt")
+	require.NoError(t, err)
 }

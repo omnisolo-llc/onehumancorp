@@ -17,6 +17,25 @@ type BlobProvider interface {
 	ReadBlob(ctx context.Context, path string) ([]byte, error)
 }
 
+// TelemetryBlobProvider wraps a BlobProvider to record metrics.
+type TelemetryBlobProvider struct {
+	Inner BlobProvider
+}
+
+func (t *TelemetryBlobProvider) WriteBlob(ctx context.Context, path string, data []byte) error {
+	start := time.Now()
+	err := t.Inner.WriteBlob(ctx, path, data)
+	telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "write")
+	return err
+}
+
+func (t *TelemetryBlobProvider) ReadBlob(ctx context.Context, path string) ([]byte, error) {
+	start := time.Now()
+	data, err := t.Inner.ReadBlob(ctx, path)
+	telemetry.RecordHarnessDbIOLatency(ctx, time.Since(start).Seconds(), "read")
+	return data, err
+}
+
 func NewBlobProxy(ctx context.Context) (BlobProvider, error) {
 	start := time.Now()
 	defer func() { telemetry.RecordHarnessInitLatency(ctx, time.Since(start).Seconds()) }()
@@ -35,7 +54,7 @@ func NewBlobProxy(ctx context.Context) (BlobProvider, error) {
 		}
 
 		client := s3.NewFromConfig(cfg)
-		return storage.NewS3BlobProvider(client, bucket), nil
+		return &TelemetryBlobProvider{Inner: storage.NewS3BlobProvider(client, bucket)}, nil
 	}
 
 	rootDir := os.Getenv("OHC_LOCAL_STORAGE_ROOT")
@@ -48,5 +67,5 @@ func NewBlobProxy(ctx context.Context) (BlobProvider, error) {
 		return nil, fmt.Errorf("failed to create local blob provider: %w", err)
 	}
 
-	return provider, nil
+	return &TelemetryBlobProvider{Inner: provider}, nil
 }
