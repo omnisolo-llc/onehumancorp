@@ -1,14 +1,16 @@
-{{- if dig "kube-prometheus-stack" "enabled" false .Values }}
+{{- if index .Values "kube-prometheus-stack" "enabled" }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ .Release.Name }}-backend-monitor
+  name: {{ include "ohc.fullname" . }}-backend
   labels:
-    release: {{ .Release.Name }}
+    {{- include "ohc.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-backend
+      app.kubernetes.io/name: {{ include "ohc.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: backend
   endpoints:
   - port: http
     path: /metrics
@@ -17,13 +19,15 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ .Release.Name }}-core-monitor
+  name: {{ include "ohc.fullname" . }}-core
   labels:
-    release: {{ .Release.Name }}
+    {{- include "ohc.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-ohc-core
+      app.kubernetes.io/name: {{ include "ohc.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: core
   endpoints:
   - port: http
     path: /metrics
@@ -32,13 +36,15 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ .Release.Name }}-powersync-monitor
+  name: {{ include "ohc.fullname" . }}-powersync
   labels:
-    release: {{ .Release.Name }}
+    {{- include "ohc.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-powersync
+      app.kubernetes.io/name: {{ include "ohc.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: powersync
   endpoints:
   - port: http
     path: /metrics
@@ -47,13 +53,15 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ .Release.Name }}-chatwoot-monitor
+  name: {{ include "ohc.fullname" . }}-chatwoot
   labels:
-    release: {{ .Release.Name }}
+    {{- include "ohc.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-chatwoot
+      app.kubernetes.io/name: {{ include "ohc.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: chatwoot
   endpoints:
   - port: http
     path: /metrics
