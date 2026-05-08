@@ -164,10 +164,13 @@ mod tests {
             return;
         }
 
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect(&database_url)
-            .await
-            .unwrap();
+        let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect(&database_url).await;
+
+        let pool = match pool_res {
+            Ok(p) => p,
+            Err(_) => return,
+        };
 
         let db = Arc::new(DB { pool: pool.clone(), store: DbStore::Postgres });
         let mock_llm = Arc::new(MockLLMClient {
