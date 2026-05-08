@@ -12,6 +12,10 @@ class WizardState {
   final String? adminName;
   final String? adminEmail;
   final String? adminPassword;
+  final String? productName;
+  final String? productDescription;
+  final String? productPrice;
+  final String? domainChoice;
 
   WizardState({
     this.currentStep = 0,
@@ -24,6 +28,10 @@ class WizardState {
     this.adminName,
     this.adminEmail,
     this.adminPassword,
+    this.productName,
+    this.productDescription,
+    this.productPrice,
+    this.domainChoice,
   });
 
   WizardState copyWith({
@@ -37,6 +45,10 @@ class WizardState {
     String? adminName,
     String? adminEmail,
     String? adminPassword,
+    String? productName,
+    String? productDescription,
+    String? productPrice,
+    String? domainChoice,
   }) {
     return WizardState(
       currentStep: currentStep ?? this.currentStep,
@@ -49,6 +61,10 @@ class WizardState {
       adminName: adminName ?? this.adminName,
       adminEmail: adminEmail ?? this.adminEmail,
       adminPassword: adminPassword ?? this.adminPassword,
+      productName: productName ?? this.productName,
+      productDescription: productDescription ?? this.productDescription,
+      productPrice: productPrice ?? this.productPrice,
+      domainChoice: domainChoice ?? this.domainChoice,
     );
   }
 }
@@ -62,7 +78,7 @@ class WizardNotifier extends Notifier<WizardState> {
   }
 
   void nextStep() {
-    if (state.currentStep < 8) {
+    if (state.currentStep < 11) {
       state = state.copyWith(currentStep: state.currentStep + 1);
     }
   }
@@ -107,6 +123,18 @@ class WizardNotifier extends Notifier<WizardState> {
     );
   }
 
+  void updateProductDetails({String? name, String? description, String? price}) {
+    state = state.copyWith(
+      productName: name ?? state.productName,
+      productDescription: description ?? state.productDescription,
+      productPrice: price ?? state.productPrice,
+    );
+  }
+
+  void setDomainChoice(String? domain) {
+    state = state.copyWith(domainChoice: domain);
+  }
+
   Future<void> submitWizard() async {
     final data = {
       'companyName': state.companyName,
@@ -118,6 +146,10 @@ class WizardNotifier extends Notifier<WizardState> {
       'adminName': state.adminName,
       'adminEmail': state.adminEmail,
       'adminPassword': state.adminPassword,
+      'productName': state.productName,
+      'productDescription': state.productDescription,
+      'productPrice': state.productPrice,
+      'domainChoice': state.domainChoice,
     };
 
     await _apiService.submitBusinessData(data);
