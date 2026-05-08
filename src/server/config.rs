@@ -121,27 +121,21 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
         use std::os::unix::fs::PermissionsExt;
 
         let db_path = "ohc-standalone.db";
-        match OpenOptions::new()
+        let _ = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
             .mode(0o600)
-            .open(db_path)
-        {
-            Ok(file) => {
-                if let Ok(metadata) = file.metadata() {
-                    let mut perms = metadata.permissions();
-                    if perms.mode() & 0o777 != 0o600 {
-                        perms.set_mode(0o600);
-                        if let Err(e) = file.set_permissions(perms) {
-                            tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
-                            std::process::exit(1); // Fail-closed
-                        }
-                    }
+            .open(db_path);
+
+        if let Ok(metadata) = std::fs::metadata(db_path) {
+            let mut perms = metadata.permissions();
+            if perms.mode() & 0o777 != 0o600 {
+                perms.set_mode(0o600);
+                if let Err(e) = std::fs::set_permissions(db_path, perms) {
+                    tracing::error!("Failed to securely update standalone database permissions: {}", e);
+                    std::process::exit(1);
                 }
-            }
-            Err(e) => {
-                panic!("Failed to securely create or open standalone database file with restricted permissions: {}", e);
             }
         }
     }
