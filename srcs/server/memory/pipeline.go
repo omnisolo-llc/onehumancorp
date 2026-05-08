@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
 	"time"
 )
+
+var pipelinePiiRegex = regexp.MustCompile(`\[PRIVATE:.*?\]`)
 
 type Task struct {
 	ID             string
@@ -40,7 +43,8 @@ func (d *AutoDreamDaemon) SweepCompletedTasks(ctx context.Context) error {
 	for _, task := range tasks {
 		content := string(task.Payload)
 
-		embedding, err := d.llmClient.GenerateEmbedding(ctx, content)
+		content_sanitized := pipelinePiiRegex.ReplaceAllString(content, "[REDACTED]")
+		embedding, err := d.llmClient.GenerateEmbedding(ctx, content_sanitized)
 		if err != nil {
 			log.Printf("Failed to generate embedding for task %s: %v", task.ID, err)
 			continue

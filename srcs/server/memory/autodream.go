@@ -9,13 +9,15 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
-	"regexp"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 )
+
+var autodreamPiiRegex = regexp.MustCompile(`\[PRIVATE:.*?\]`)
 
 // LLMClient represents a minimal interface for generating embeddings
 type LLMClient interface {
@@ -107,7 +109,8 @@ func (d *AutoDreamDaemon) processFile(ctx context.Context, path string) {
 	}
 
 	// Generate embedding
-	embedding, err := d.llmClient.GenerateEmbedding(ctx, content)
+	content_sanitized := autodreamPiiRegex.ReplaceAllString(content, "[REDACTED]")
+	embedding, err := d.llmClient.GenerateEmbedding(ctx, content_sanitized)
 	if err != nil {
 		log.Printf("Failed to generate embedding for %s: %v", path, err)
 		return

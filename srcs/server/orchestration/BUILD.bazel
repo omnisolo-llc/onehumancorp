@@ -20,6 +20,7 @@ go_test(
         "tasks_db_test.go",
         "state_machine_test.go",
         "state_machine_coverage_test.go",
+        "compliance_test.go",
     ],
     embed = [":orchestration"],
     deps = [
