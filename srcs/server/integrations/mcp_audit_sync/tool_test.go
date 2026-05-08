@@ -2,95 +2,71 @@ package mcp_audit_sync
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
-	"time"
 )
 
-// MockDB is a simple mock database for testing.
-type MockDB struct {
-	ExecFunc func(ctx context.Context, sql string, arguments ...interface{}) (interface{}, error)
-}
+type MockDB struct{}
 
 func (m *MockDB) Exec(ctx context.Context, sql string, arguments ...interface{}) (interface{}, error) {
-	if m.ExecFunc != nil {
-		return m.ExecFunc(ctx, sql, arguments...)
-	}
 	return nil, nil
 }
 
-func (m *MockDB) Query(ctx context.Context, sql string, args ...interface{}) (interface{}, error) {
-	return nil, nil
-}
+type MockTelemetry struct{}
 
-func (m *MockDB) QueryRow(ctx context.Context, sql string, args ...interface{}) interface{} {
-	return nil
-}
+func (m *MockTelemetry) IncrementCounter(name string, val int, labels map[string]string) {}
 
-func (m *MockDB) Begin(ctx context.Context) (interface{}, error) {
-	return nil, nil
-}
-
-func (m *MockDB) Close() {}
-
-// MockTelemetry is a simple mock telemetry for testing.
-type MockTelemetry struct {
-	IncrementCounterFunc func(name string, value int64, tags map[string]string)
-}
-
-func (m *MockTelemetry) IncrementCounter(name string, value int64, tags map[string]string) {
-	if m.IncrementCounterFunc != nil {
-		m.IncrementCounterFunc(name, value, tags)
-	}
-}
-func (m *MockTelemetry) SetGauge(name string, value float64, tags map[string]string) {}
-func (m *MockTelemetry) RecordHistogram(name string, value float64, tags map[string]string) {}
-
-func TestSyncAuditLogsToCloud_Success(t *testing.T) {
-	mockDB := &MockDB{
-		ExecFunc: func(ctx context.Context, sql string, arguments ...interface{}) (interface{}, error) {
-			return nil, nil
-		},
-	}
-
-	telemetryCalled := false
-	mockTele := &MockTelemetry{
-		IncrementCounterFunc: func(name string, value int64, tags map[string]string) {
-			telemetryCalled = true
-		},
-	}
-
+func TestSyncAuditLogsToCloud(t *testing.T) {
+	mockDB := &MockDB{}
+	mockTele := &MockTelemetry{}
 	tool := NewAuditSyncTool(mockDB, mockTele)
 
-	payload := `{"tenant_id": "t1", "agent_id": "a1", "action": "test", "resource": "res", "status": "ok", "metadata": "{}", "timestamp": 1234567890}`
-	err := tool.SyncAuditLogsToCloud(context.Background(), payload)
-
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
+	payload := AuditSyncPayload{
+		TenantID:  "tenant-1",
+		AgentID:   "agent-1",
+		Action:    "read",
+		Resource:  "doc-1",
+		Status:    "success",
+		Metadata:  "{}",
+		Timestamp: 1622548800,
 	}
+	payloadBytes, _ := json.Marshal(payload)
 
-	if !telemetryCalled {
-		t.Errorf("Expected telemetry to be called")
+	err := tool.SyncAuditLogsToCloud(context.Background(), string(payloadBytes))
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
 	}
 }
 
-func TestSyncAuditLogsToCloud_InvalidJSON(t *testing.T) {
-	tool := NewAuditSyncTool(&MockDB{}, nil)
+func TestSyncAuditLogsToCloud_InvalidPayload(t *testing.T) {
+	mockDB := &MockDB{}
+	mockTele := &MockTelemetry{}
+	tool := NewAuditSyncTool(mockDB, mockTele)
 
-	payload := `{invalid_json}`
-	err := tool.SyncAuditLogsToCloud(context.Background(), payload)
-
+	err := tool.SyncAuditLogsToCloud(context.Background(), "invalid json")
 	if err == nil {
-		t.Fatalf("Expected error for invalid JSON")
+		t.Errorf("Expected error for invalid json")
 	}
 }
 
 func TestSyncAuditLogsToCloud_MissingFields(t *testing.T) {
-	tool := NewAuditSyncTool(&MockDB{}, nil)
+	mockDB := &MockDB{}
+	mockTele := &MockTelemetry{}
+	tool := NewAuditSyncTool(mockDB, mockTele)
 
-	payload := `{"tenant_id": "t1"}` // Missing other required fields
-	err := tool.SyncAuditLogsToCloud(context.Background(), payload)
+	payload := AuditSyncPayload{
+		TenantID:  "", // Missing
+		AgentID:   "agent-1",
+		Action:    "read",
+		Resource:  "doc-1",
+		Status:    "success",
+		Metadata:  "{}",
+		Timestamp: 1622548800,
+	}
+	payloadBytes, _ := json.Marshal(payload)
 
+	err := tool.SyncAuditLogsToCloud(context.Background(), string(payloadBytes))
 	if err == nil {
-		t.Fatalf("Expected error for missing required fields")
+		t.Errorf("Expected error for missing fields")
 	}
 }
