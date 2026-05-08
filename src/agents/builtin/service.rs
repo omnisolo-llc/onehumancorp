@@ -338,6 +338,7 @@ impl AgentServiceImpl {
         AgentRunConfig {
             max_retries: 2,
             enable_single_agent_maximization: false,
+            enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             agent_id: self.agent_id.clone(),
             model,
@@ -609,6 +610,7 @@ impl AgentService for AgentServiceImpl {
             let run_cfg = AgentRunConfig {
                 max_retries: 2,
                 enable_single_agent_maximization: false,
+            enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
                 agent_id: self.agent_id.clone(),
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
