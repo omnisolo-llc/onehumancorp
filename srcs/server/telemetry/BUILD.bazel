@@ -27,6 +27,6 @@ go_test(
     ],
     embed = [":telemetry"],
     deps = [
-        "@com_github_mattn_go_sqlite3//:go_sqlite3",
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
     ],
 )
