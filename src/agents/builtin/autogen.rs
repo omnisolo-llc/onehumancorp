@@ -229,6 +229,120 @@ Provide your response, which will be passed to the next agent in the sequence.",
 
 
 
+use crate::tools::task::TaskStore;
+use crate::tools::magentic::magentic_tool;
+
+/// The Orchestrator that manages a "Magentic" flow of agents (a manager dynamically updating a task ledger).
+pub struct MagenticManager {
+    pub manager_agent: ChatAgent,
+    pub sub_agents: Vec<ChatAgent>,
+    pub task_store: Arc<RwLock<TaskStore>>,
+    pub max_rounds: usize,
+}
+
+impl MagenticManager {
+    pub fn new(manager_agent: ChatAgent, sub_agents: Vec<ChatAgent>, max_rounds: usize) -> Self {
+        Self {
+            manager_agent,
+            sub_agents,
+            task_store: Arc::new(RwLock::new(TaskStore::default())),
+            max_rounds,
+        }
+    }
+
+    pub async fn run_magentic(&self, initial_task: &str) -> Result<Vec<Message>, String> {
+        let mut transcript = Vec::new();
+        transcript.push(Message::user(initial_task.to_string()));
+
+        for round in 0..self.max_rounds {
+            let mut current_cfg = self.manager_agent.run_config.clone();
+            let mut allowed_tools = current_cfg.allowed_tools.unwrap_or_default();
+            allowed_tools.push("magentic".to_string());
+            current_cfg.allowed_tools = Some(allowed_tools);
+
+            let mut custom_tools = self.manager_agent.agent.tools.clone();
+            custom_tools.push(magentic_tool(self.task_store.clone()));
+
+            let mut run_agent = Agent::new(self.manager_agent.agent.llm.clone(), custom_tools);
+            run_agent.memory_store = self.manager_agent.agent.memory_store.clone();
+
+            let sys_msg = format!(
+                "You are participating in a magentic workflow as {}.\n\
+                You are the Manager. You must decompose the initial task and use the 'magentic' tool to add tasks to the ledger.\n\
+                Then, analyze the current ledger and decide which sub-agent should handle which pending task.\n\
+                Output your routing decision in the format: ROUTE_TO: <AgentName> TASK: <TaskID>.\n\
+                If all tasks are COMPLETE, output FINISHED.",
+                self.manager_agent.name
+            );
+
+            current_cfg.server_system_message = sys_msg;
+
+            let recent_history = transcript.iter().map(|m| {
+                format!("{}: {}", m.role, m.content)
+            }).collect::<Vec<_>>().join("\n\n");
+
+            let prompt = format!("Recent Transcript:\n{}\n\nYour turn.", recent_history);
+
+            let mut on_event = |_| {};
+            let response = run_agent.run(&current_cfg, &prompt, &mut on_event).await
+                .map_err(|e| format!("Manager Agent failed: {}", e))?;
+
+            transcript.push(Message::assistant(format!("{}: {}", self.manager_agent.name, response)));
+
+            if response.contains("FINISHED") {
+                break;
+            }
+
+            let mut routed_agent = None;
+            let mut routed_task = None;
+
+            for line in response.lines() {
+                if let Some(route_idx) = line.find("ROUTE_TO:") {
+                    if let Some(task_idx) = line.find("TASK:") {
+                        if route_idx < task_idx {
+                            let agent_part = line[route_idx + "ROUTE_TO:".len()..task_idx].trim().to_string();
+                            let task_part = line[task_idx + "TASK:".len()..].trim().to_string();
+                            routed_agent = Some(agent_part);
+                            routed_task = Some(task_part);
+                        }
+                    }
+                }
+            }
+
+            if let (Some(agent_name), Some(task_id)) = (routed_agent, routed_task) {
+                if let Some(agent) = self.sub_agents.iter().find(|a| a.name == agent_name) {
+                    let sub_sys_msg = format!(
+                        "You are participating in a magentic workflow as {}.\n\
+                        You have been assigned TASK: {}. \n\
+                        Perform the task and provide your result.",
+                        agent.name, task_id
+                    );
+
+                    let mut sub_cfg = agent.run_config.clone();
+                    sub_cfg.server_system_message = sub_sys_msg;
+
+                    let sub_prompt = format!("Recent Transcript:\n{}\n\nPlease complete TASK: {}.", recent_history, task_id);
+                    let sub_response = agent.agent.run(&sub_cfg, &sub_prompt, &mut on_event).await
+                        .map_err(|e| format!("SubAgent {} failed: {}", agent.name, e))?;
+
+                    transcript.push(Message::assistant(format!("{}: {}", agent.name, sub_response)));
+
+                    // Automatically update task status as complete
+                    let _ = magentic_tool(self.task_store.clone()).execute.execute(
+                        serde_json::json!({
+                            "action": "update",
+                            "id": task_id,
+                            "status": "complete"
+                        })
+                    ).await;
+                }
+            }
+        }
+
+        Ok(transcript)
+    }
+}
+
 /// The Orchestrator that manages a concurrent flow of agents (fan-out/fan-in).
 pub struct ConcurrentChatManager {
     pub agents: Vec<ChatAgent>,
@@ -509,5 +623,51 @@ mod tests {
         assert!(transcript[1].content.contains("Agent1: Output from Agent1"));
         assert!(transcript[2].content.contains("Agent2: Output from Agent2"));
         assert!(transcript[3].content.contains("Synthesizer: Synthesized final response"));
+    }
+
+    #[tokio::test]
+    async fn test_autogen_magentic_chat() {
+        // Manager outputs task addition, then routing, then finished.
+        let manager_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                "Added tasks. ROUTE_TO: Worker1 TASK: task-1".to_string(),
+                "FINISHED".to_string(),
+            ]),
+        });
+
+        let worker_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                "I have completed task-1.".to_string(),
+            ]),
+        });
+
+        let cfg = AgentRunConfig::default();
+
+        let manager_agent = ChatAgent {
+            name: "Manager".to_string(),
+            description: "Task Manager".to_string(),
+            agent: Arc::new(Agent::new(manager_llm, vec![])),
+            run_config: cfg.clone(),
+        };
+
+        let worker_agent = ChatAgent {
+            name: "Worker1".to_string(),
+            description: "Worker Subagent".to_string(),
+            agent: Arc::new(Agent::new(worker_llm, vec![])),
+            run_config: cfg.clone(),
+        };
+
+        let manager = MagenticManager::new(manager_agent, vec![worker_agent], 5);
+        let result = manager.run_magentic("Initialize project").await;
+
+        assert!(result.is_ok());
+        let transcript = result.unwrap();
+
+        assert!(transcript.len() >= 3);
+        assert!(transcript[0].content.contains("Initialize project"));
+        assert!(transcript[1].content.contains("ROUTE_TO: Worker1 TASK: task-1"));
+
+        let found = transcript.iter().any(|m| m.content.contains("I have completed task-1."));
+        assert!(found, "Transcript should contain the worker's completion message");
     }
 }

@@ -153,7 +153,7 @@ mod tests {
             temperature: 0.0,
         };
 
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClient>), req, 3).await.unwrap();
+        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
         assert_eq!(result.result, "success");
     }
 
@@ -175,7 +175,7 @@ mod tests {
             temperature: 0.0,
         };
 
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClient>), req, 3).await.unwrap();
+        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
         assert_eq!(result.result, "success after retry");
     }
 
