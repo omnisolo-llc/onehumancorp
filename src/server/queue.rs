@@ -57,7 +57,13 @@ impl MemoryTaskQueue {
 impl TaskQueue for MemoryTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         for job in jobs {
-            self.jobs.insert(job.id.clone(), job);
+            let role = job.agent_role.clone();
+            let id = job.id.clone();
+            self.jobs.insert(id.clone(), job);
+
+            let queue = self.role_queues.entry(role).or_insert_with(|| std::sync::Mutex::new(std::collections::VecDeque::new()));
+            let mut q = queue.lock().unwrap();
+            q.push_back(id);
         }
         Ok(())
     }
@@ -808,16 +814,16 @@ impl TaskQueue for SqliteTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        for job in jobs {
-            sqlx::query("INSERT INTO local_queue_jobs (id, tenant_id, task_id, role, payload) VALUES (?, ?, ?, ?, ?)")
-                .bind(job.id.clone())
-                .bind(job.tenant_id.clone())
-                .bind(job.parent_task_id.clone())
-                .bind(job.agent_role.clone())
-                .bind(job.payload.as_bytes())
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+        for chunk in jobs.chunks(100) {
+            let mut builder = sqlx::QueryBuilder::new("INSERT INTO local_queue_jobs (id, tenant_id, task_id, role, payload) ");
+            builder.push_values(chunk.into_iter(), |mut b, job| {
+                b.push_bind(job.id.clone())
+                 .push_bind(job.tenant_id.clone())
+                 .push_bind(job.parent_task_id.clone())
+                 .push_bind(job.agent_role.clone())
+                 .push_bind(job.payload.clone().into_bytes());
+            });
+            builder.build().execute(&mut *tx).await.map_err(|e| e.to_string())?;
         }
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
