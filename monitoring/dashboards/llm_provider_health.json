@@ -1,12 +1,11 @@
 {
-  "title": "Hybrid Database Metrics",
-  "uid": "database-metrics",
+  "title": "LLM Provider Health",
+  "uid": "llm-provider-health",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
-    "Database",
-    "OHC",
-    "Hybrid"
+    "LLM",
+    "OHC"
   ],
   "time": {
     "from": "now-1h",
@@ -15,7 +14,7 @@
   "panels": [
     {
       "type": "text",
-      "title": "OHC Aesthetics",
+      "title": "OHC Aesthetic Injector",
       "gridPos": {
         "h": 2,
         "w": 24,
@@ -24,13 +23,13 @@
       },
       "options": {
         "mode": "html",
-        "content": "<style>.panel-container { backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>\n<style>\n  .grafana-app {\n      backdrop-filter: blur(15px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
+        "content": "<style> * { font-family: 'Outfit', 'Inter', sans-serif; } .panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; } </style>"
       },
       "transparent": true
     },
     {
       "type": "timeseries",
-      "title": "Total QPS",
+      "title": "Total Requests by Provider",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -43,8 +42,8 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(db_client_operation_duration_seconds_count[5m])) by (db_type)",
-          "legendFormat": "{{db_type}}",
+          "expr": "sum(rate(llm_request_duration_seconds_count[5m])) by (provider)",
+          "legendFormat": "{{provider}}",
           "refId": "A"
         }
       ],
@@ -88,8 +87,8 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(db_client_operation_errors_total[5m])) by (db_type)",
-          "legendFormat": "{{db_type}}",
+          "expr": "sum(rate(llm_request_errors_total[5m])) by (provider)",
+          "legendFormat": "{{provider}}",
           "refId": "A"
         }
       ],
@@ -120,7 +119,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Total Query Latency",
+      "title": "API Response Latency",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -133,18 +132,18 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le, db_type))",
-          "legendFormat": "P50 {{db_type}}",
+          "expr": "histogram_quantile(0.50, sum(rate(llm_request_duration_seconds_bucket[5m])) by (le, provider))",
+          "legendFormat": "P50 {{provider}}",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.90, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le, db_type))",
-          "legendFormat": "P90 {{db_type}}",
+          "expr": "histogram_quantile(0.90, sum(rate(llm_request_duration_seconds_bucket[5m])) by (le, provider))",
+          "legendFormat": "P90 {{provider}}",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le, db_type))",
-          "legendFormat": "P99 {{db_type}}",
+          "expr": "histogram_quantile(0.99, sum(rate(llm_request_duration_seconds_bucket[5m])) by (le, provider))",
+          "legendFormat": "P99 {{provider}}",
           "refId": "C"
         }
       ],
@@ -176,7 +175,7 @@
     },
     {
       "type": "timeseries",
-      "title": "PostgreSQL SKIP LOCKED Rate",
+      "title": "Error Rate by Status",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -189,9 +188,14 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_postgres_skip_locked_total[5m]))",
-          "legendFormat": "Lock Contention",
+          "expr": "sum(rate(llm_request_errors_total{status=~\"4..\"}[5m])) by (provider)",
+          "legendFormat": "4xx {{provider}}",
           "refId": "A"
+        },
+        {
+          "expr": "sum(rate(llm_request_errors_total{status=~\"5..\"}[5m])) by (provider)",
+          "legendFormat": "5xx {{provider}}",
+          "refId": "B"
         }
       ],
       "transparent": true,
