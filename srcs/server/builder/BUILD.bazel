@@ -1,0 +1,27 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "builder",
+    srcs = [
+        "api.go",
+        "models.go",
+        "publish.go",
+        "store.go",
+    ],
+    importpath = "onehumancorp/srcs/server/builder",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "//srcs/server/memory",
+    ],
+)
+
+go_test(
+    name = "builder_test",
+    srcs = ["builder_test.go"],
+    embed = [":builder"],
+    deps = [
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
+        "//srcs/server/memory",
+    ],
+)
