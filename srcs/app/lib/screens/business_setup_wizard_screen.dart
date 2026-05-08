@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wizard_provider.dart';
-import '../main.dart'; // For GlassContainer
+import '../main.dart'; // For GlassContainer and DashboardScreen
 
 class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
   const BusinessSetupWizardScreen({super.key});
@@ -12,12 +12,6 @@ class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
 
 class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardScreen> with TickerProviderStateMixin {
   final _companyNameController = TextEditingController();
-  final _adminNameController = TextEditingController();
-  final _adminEmailController = TextEditingController();
-  final _adminPasswordController = TextEditingController();
-
-  late AnimationController _heroAnimationController;
-  late Animation<double> _heroAnimation;
 
   late AnimationController _pulseAnimationController;
   late Animation<double> _pulseAnimation;
@@ -25,15 +19,6 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   @override
   void initState() {
     super.initState();
-    _heroAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-
-    _heroAnimation = Tween<double>(begin: -10, end: 10).animate(
-      CurvedAnimation(parent: _heroAnimationController, curve: Curves.easeInOut),
-    );
-
     _pulseAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
@@ -46,12 +31,8 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
 
   @override
   void dispose() {
-    _heroAnimationController.dispose();
     _pulseAnimationController.dispose();
     _companyNameController.dispose();
-    _adminNameController.dispose();
-    _adminEmailController.dispose();
-    _adminPasswordController.dispose();
     super.dispose();
   }
 
@@ -67,7 +48,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(wizardProvider);
 
-    if (state.currentStep == 6) {
+    if (state.currentStep == 3) {
       return const DashboardScreen();
     }
 
@@ -75,7 +56,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       backgroundColor: const Color(0xFF0F172A),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
+          constraints: const BoxConstraints(maxWidth: 375), // Enforcing 375px mobile-first
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: _buildCurrentStep(state.currentStep, state),
@@ -88,364 +69,126 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget _buildCurrentStep(int step, WizardState state) {
     switch (step) {
       case 0:
-        return _buildWelcomeScreen();
+        return _buildCategoryScreen(state);
       case 1:
-        return _buildBusinessProfileScreen(state);
+        return _buildNameScreen(state);
       case 2:
-        return _buildGoalSelectionScreen(state);
-      case 3:
-        return _buildDeploymentPreferenceScreen(state);
-      case 4:
-        return _buildAdministratorAccountScreen();
-      case 5:
-        return _buildReviewAndLaunchScreen(state);
+        return _buildLoadingScreen(state);
       default:
         return const SizedBox.shrink();
     }
   }
 
-  Widget _buildWelcomeScreen() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AnimatedBuilder(
-          animation: _heroAnimation,
-          builder: (context, child) {
-            return Transform.translate(
-              offset: Offset(0, _heroAnimation.value),
-              child: child,
-            );
-          },
-          child: const Icon(Icons.rocket_launch, size: 80, color: Color(0xFF6B4EFF)),
-        ),
-        const SizedBox(height: 30),
-        const Text(
-          'Welcome to One Human Corp',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'Launch and run your small business from anywhere. Let\'s get your AI team configured.',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 16,
-            color: Colors.white70,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 40),
-        ElevatedButton(
-          onPressed: _nextStep,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6B4EFF),
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
-          ),
-          child: const Text('Get Started', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
-        ),
-      ],
-    );
-  }
+  Widget _buildCategoryScreen(WizardState state) {
+    final categories = [
+      {'icon': Icons.cake, 'label': 'Bake'},
+      {'icon': Icons.school, 'label': 'Teach'},
+      {'icon': Icons.build, 'label': 'Fix'},
+      {'icon': Icons.storefront, 'label': 'Sell'},
+      {'icon': Icons.more_horiz, 'label': 'Other'},
+    ];
 
-  Widget _buildBusinessProfileScreen(WizardState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text(
-          'Business Profile',
+          'What do you do?',
           style: TextStyle(
             fontFamily: 'Outfit',
             fontSize: 28,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
+          textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 30),
+        Expanded(
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 15,
+              mainAxisSpacing: 15,
+              childAspectRatio: 1.0,
+            ),
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              final cat = categories[index];
+              final isSelected = state.category == cat['label'];
+              return GestureDetector(
+                onTap: () {
+                  ref.read(wizardProvider.notifier).setCategory(cat['label'] as String);
+                  _nextStep(); // Auto-advance for frictionlessness
+                },
+                child: GlassContainer(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        cat['icon'] as IconData,
+                        size: 40,
+                        color: isSelected ? const Color(0xFF6B4EFF) : Colors.white70,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        cat['label'] as String,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 16,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? Colors.white : Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNameScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text(
+          'What\'s the name of your business?',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 30),
         GlassContainer(
           child: TextField(
             key: const Key('companyNameField'),
             controller: _companyNameController,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white, fontFamily: 'Inter', fontSize: 18),
             decoration: const InputDecoration(
-              labelText: 'Company Name',
-              labelStyle: TextStyle(color: Colors.white70),
+              hintText: 'e.g. Maya\'s Bakes',
+              hintStyle: TextStyle(color: Colors.white54),
               border: InputBorder.none,
             ),
             onChanged: (value) {
-              ref.read(wizardProvider.notifier).updateBusinessProfile(companyName: value);
+              ref.read(wizardProvider.notifier).setCompanyName(value);
+            },
+            onSubmitted: (_) async {
+              final currentState = ref.read(wizardProvider);
+              if (currentState.companyName != null && currentState.companyName!.isNotEmpty) {
+                 _nextStep();
+                 await ref.read(wizardProvider.notifier).submitWizard();
+              }
             },
           ),
         ),
-        const SizedBox(height: 15),
-        GlassContainer(
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              key: const Key('industryDropdown'),
-              value: state.industry,
-              isExpanded: true,
-              dropdownColor: const Color(0xFF1E293B),
-              style: const TextStyle(color: Colors.white),
-              hint: const Text('Industry', style: TextStyle(color: Colors.white70)),
-              items: ['Retail', 'Service', 'Technology', 'Food & Beverage', 'Other']
-                  .map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (newValue) {
-                ref.read(wizardProvider.notifier).updateBusinessProfile(industry: newValue);
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 15),
-        GlassContainer(
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              key: const Key('sizeDropdown'),
-              value: state.size,
-              isExpanded: true,
-              dropdownColor: const Color(0xFF1E293B),
-              style: const TextStyle(color: Colors.white),
-              hint: const Text('Size', style: TextStyle(color: Colors.white70)),
-              items: ['1-10', '11-50', '51-200', '201+']
-                  .map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (newValue) {
-                ref.read(wizardProvider.notifier).updateBusinessProfile(size: newValue);
-              },
-            ),
-          ),
-        ),
-        const Spacer(),
-        _buildNavigationButtons(),
-      ],
-    );
-  }
-
-  Widget _buildGoalSelectionScreen(WizardState state) {
-    final goals = ['Support', 'Build software', 'Marketing', 'Data', 'Custom'];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'What are your goals?',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: ListView.builder(
-            itemCount: goals.length,
-            itemBuilder: (context, index) {
-              final goal = goals[index];
-              final isSelected = state.goals.contains(goal);
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: GestureDetector(
-                  onTap: () {
-                    ref.read(wizardProvider.notifier).toggleGoal(goal);
-                  },
-                  child: GlassContainer(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          goal,
-                          style: const TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                        Icon(
-                          isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                          color: isSelected ? const Color(0xFF22C55E) : Colors.white54,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        _buildNavigationButtons(),
-      ],
-    );
-  }
-
-  Widget _buildDeploymentPreferenceScreen(WizardState state) {
-    final options = ['Cloud', 'Desktop', 'Mobile-only'];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Deployment Preference',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: ListView.builder(
-            itemCount: options.length,
-            itemBuilder: (context, index) {
-              final option = options[index];
-              final isSelected = state.deploymentPreference == option;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: GestureDetector(
-                  onTap: () {
-                    ref.read(wizardProvider.notifier).setDeploymentPreference(option);
-                  },
-                  child: GlassContainer(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          option,
-                          style: const TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                        Icon(
-                          isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                          color: isSelected ? const Color(0xFF6B4EFF) : Colors.white54,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        _buildNavigationButtons(),
-      ],
-    );
-  }
-
-  Widget _buildAdministratorAccountScreen() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Administrator Account',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 20),
-        GlassContainer(
-          child: TextField(
-            key: const Key('adminNameField'),
-            controller: _adminNameController,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              labelStyle: TextStyle(color: Colors.white70),
-              border: InputBorder.none,
-            ),
-            onChanged: (value) {
-              ref.read(wizardProvider.notifier).updateAdminAccount(name: value);
-            },
-          ),
-        ),
-        const SizedBox(height: 15),
-        GlassContainer(
-          child: TextField(
-            key: const Key('adminEmailField'),
-            controller: _adminEmailController,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              labelStyle: TextStyle(color: Colors.white70),
-              border: InputBorder.none,
-            ),
-            onChanged: (value) {
-              ref.read(wizardProvider.notifier).updateAdminAccount(email: value);
-            },
-          ),
-        ),
-        const SizedBox(height: 15),
-        GlassContainer(
-          child: TextField(
-            key: const Key('adminPasswordField'),
-            controller: _adminPasswordController,
-            obscureText: true,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              labelText: 'Password',
-              labelStyle: TextStyle(color: Colors.white70),
-              border: InputBorder.none,
-            ),
-            onChanged: (value) {
-              ref.read(wizardProvider.notifier).updateAdminAccount(password: value);
-            },
-          ),
-        ),
-        const Spacer(),
-        _buildNavigationButtons(),
-      ],
-    );
-  }
-
-  Widget _buildReviewAndLaunchScreen(WizardState state) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Review & Launch',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: SingleChildScrollView(
-            child: GlassContainer(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSummaryItem('Company Name', state.companyName ?? 'Not set'),
-                  const SizedBox(height: 10),
-                  _buildSummaryItem('Industry', state.industry ?? 'Not set'),
-                  const SizedBox(height: 10),
-                  _buildSummaryItem('Size', state.size ?? 'Not set'),
-                  const SizedBox(height: 10),
-                  _buildSummaryItem('Goals', state.goals.isEmpty ? 'None' : state.goals.join(', ')),
-                  const SizedBox(height: 10),
-                  _buildSummaryItem('Deployment', state.deploymentPreference ?? 'Not set'),
-                  const SizedBox(height: 10),
-                  _buildSummaryItem('Admin', state.adminName ?? 'Not set'),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 30),
         Row(
           children: [
             Expanded(
@@ -460,33 +203,28 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     borderRadius: BorderRadius.circular(15),
                   ),
                 ),
-                child: const Text('Back', style: TextStyle(fontSize: 18, color: Colors.white)),
+                child: const Text('Back', style: TextStyle(fontFamily: 'Inter', fontSize: 18, color: Colors.white)),
               ),
             ),
             const SizedBox(width: 15),
             Expanded(
               flex: 2,
-              child: AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: _pulseAnimation.value,
-                    child: child,
-                  );
-                },
-                child: ElevatedButton(
-                  onPressed: () async {
+              child: ElevatedButton(
+                onPressed: () async {
+                  final currentState = ref.read(wizardProvider);
+                  if (currentState.companyName != null && currentState.companyName!.isNotEmpty) {
+                    _nextStep();
                     await ref.read(wizardProvider.notifier).submitWizard();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF22C55E),
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6B4EFF),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
                   ),
-                  child: const Text('Launch My AI Team', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
+                child: const Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -495,55 +233,70 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
-  Widget _buildSummaryItem(String label, String value) {
+  Widget _buildLoadingScreen(WizardState state) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _pulseAnimation.value,
+              child: const Icon(Icons.auto_awesome, size: 80, color: Color(0xFF6B4EFF)),
+            );
+          },
         ),
-        Text(
-          value,
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNavigationButtons() {
-    return Row(
-      children: [
-        if (ref.read(wizardProvider).currentStep > 0) ...[
-          Expanded(
-            child: ElevatedButton(
-              onPressed: _prevStep,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                side: const BorderSide(color: Colors.white54),
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-              ),
-              child: const Text('Back', style: TextStyle(fontSize: 18, color: Colors.white)),
-            ),
+        const SizedBox(height: 30),
+        const Text(
+          'Generating your store...',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
-          const SizedBox(width: 15),
-        ],
-        Expanded(
-          child: ElevatedButton(
-            onPressed: _nextStep,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6B4EFF),
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-            ),
-            child: const Text('Next', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
+          textAlign: TextAlign.center,
         ),
+        const SizedBox(height: 20),
+        const Text(
+          'AI Agents are designing your site, configuring your inbox, and setting up your payments.',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            color: Colors.white70,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 40),
+        if (state.errorMessage != null)
+           Container(
+             padding: const EdgeInsets.all(15),
+             decoration: BoxDecoration(
+               color: Colors.red.withOpacity(0.2),
+               borderRadius: BorderRadius.circular(10),
+               border: Border.all(color: Colors.red),
+             ),
+             child: Column(
+               children: [
+                 Text(
+                   state.errorMessage!,
+                   style: const TextStyle(color: Colors.white, fontFamily: 'Inter'),
+                   textAlign: TextAlign.center,
+                 ),
+                 const SizedBox(height: 10),
+                 ElevatedButton(
+                   onPressed: () async {
+                     await ref.read(wizardProvider.notifier).submitWizard();
+                   },
+                   style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                   ),
+                   child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                 )
+               ]
+             )
+           )
       ],
     );
   }

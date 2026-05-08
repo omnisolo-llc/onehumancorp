@@ -7,57 +7,34 @@ import 'package:app/main.dart';
 Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.pumpWidget(const ProviderScope(child: OHCApp()));
 
-  // 1. Welcome Screen
-  await tester.tap(find.text('Get Started'));
-  await tester.pump(const Duration(milliseconds: 500));
+  // 1. Category Screen
+  await tester.tap(find.text('Bake'));
+  await tester.pump(const Duration(milliseconds: 500)); // Auto-advances
 
-  // 2. Business Profile Screen
-  await tester.enterText(find.byKey(const Key('companyNameField')), 'Acme Corp');
-  await tester.tap(find.byKey(const Key('industryDropdown')));
-  await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.text('Technology').last);
-  await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.byKey(const Key('sizeDropdown')));
-  await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.text('11-50').last);
-  await tester.pump(const Duration(milliseconds: 500));
+  // 2. Name Screen
+  await tester.enterText(find.byKey(const Key('companyNameField')), 'Maya\'s Bakes');
   await tester.tap(find.text('Next'));
-  await tester.pump(const Duration(milliseconds: 500));
 
-  // 3. Goal Selection Screen
-  await tester.tap(find.text('Build software'));
-  await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.text('Support'));
-  await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.text('Next'));
-  await tester.pump(const Duration(milliseconds: 500));
-
-  // 4. Deployment Preference Screen
-  await tester.tap(find.text('Cloud'));
-  await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.text('Next'));
-  await tester.pump(const Duration(milliseconds: 500));
-
-  // 5. Administrator Account Screen
-  await tester.enterText(find.byKey(const Key('adminNameField')), 'John Doe');
-  await tester.enterText(find.byKey(const Key('adminEmailField')), 'john@acme.com');
-  await tester.enterText(find.byKey(const Key('adminPasswordField')), 'securePassword123');
-  await tester.tap(find.text('Next'));
-  await tester.pump(const Duration(milliseconds: 500));
-
-  // 6. Review & Launch Screen
-  final launchBtn = find.text('Launch My AI Team');
-  await tester.ensureVisible(launchBtn);
-  await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(launchBtn);
+  // In Flutter tests, async state changes often need multiple pumps to propagate.
   await tester.pump();
+  await tester.pump();
+  await tester.pump();
+
+  // Wait for the simulated API call (2 seconds)
   await tester.pump(const Duration(seconds: 2));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 7. Dashboard Screen
-  await tester.ensureVisible(find.byKey(const Key('inboxBtn')));
+  // 4. Dashboard Screen
+  // In the minimal flow, Dashboard is currently shown on `currentStep == 3`.
+  // Let's first ensure we are on the dashboard by looking for a text that should be there.
+  await tester.ensureVisible(find.text("Welcome Checklist"));
   await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.byKey(const Key('inboxBtn')));
+
+  final inboxBtn = find.byKey(const Key('inboxBtn'));
+  expect(inboxBtn, findsOneWidget); // Make sure it exists before trying to scroll/tap
+  await tester.ensureVisible(inboxBtn);
+  await tester.pump(const Duration(milliseconds: 500));
+  await tester.tap(inboxBtn);
   await tester.pump(const Duration(milliseconds: 500));
   await tester.pump(const Duration(seconds: 1)); // Navigator transition
 }
