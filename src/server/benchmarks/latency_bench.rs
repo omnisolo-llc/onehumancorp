@@ -122,6 +122,8 @@ pub async fn bench_dashboard_snapshot() {
         assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
         assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop payload should contain transcripts");
     }
+
+    println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 }
 
 pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
@@ -202,6 +204,7 @@ mod tests {
         if db_url == "dummy" || !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await, Ok(Ok(_))) {
             return;
         }
+        println!("RUNNING BENCHMARK DASHBOARD SNAPSHOT");
         bench_dashboard_snapshot().await;
     }
 
