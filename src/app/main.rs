@@ -7032,6 +7032,48 @@ fn test_business_share_flow() {
         assert!(*submitted.borrow());
     }
 
+
+    #[test]
+    fn test_e2e_business_manager_add_11th_product() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let _main_app = app::AppWindow::new().unwrap();
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let manager_ui = app::BusinessManager::new().unwrap();
+        let manager_ui_handle = manager_ui.as_weak();
+
+        dashboard_ui.invoke_action_add_product();
+        manager_ui.invoke_select_type("PHYSICAL".into());
+        manager_ui.invoke_next_step();
+
+        manager_ui.set_product_name("11th Product".into());
+
+        manager_ui.on_submit(move |type_, name, desc, price, _dur, _sch| {
+            if let Some(ui) = manager_ui_handle.upgrade() {
+                ui.set_upgrade_prompt_message("You've reached your 10 product limit on the Free plan. Upgrade to Starter to add 90 more and unlock 2 new AI Teammates!".into());
+                ui.set_show_upgrade_prompt(true);
+            }
+        });
+
+        manager_ui.invoke_submit("PHYSICAL".into(), "11th Product".into(), "".into(), "".into(), "".into(), "".into());
+
+        assert_eq!(manager_ui.get_show_upgrade_prompt(), true);
+        assert_eq!(manager_ui.get_upgrade_prompt_message(), "You've reached your 10 product limit on the Free plan. Upgrade to Starter to add 90 more and unlock 2 new AI Teammates!");
+
+        let upgrade_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let upgrade_clone = upgrade_called.clone();
+        manager_ui.on_invoke_upgrade(move || {
+            *upgrade_clone.borrow_mut() = true;
+        });
+
+        manager_ui.invoke_invoke_upgrade();
+        assert!(*upgrade_called.borrow());
+    }
+
     #[test]
     fn test_e2e_business_manager_service() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -7076,6 +7118,72 @@ fn test_business_share_flow() {
         assert_eq!(manager_ui.get_step(), 1);
         manager_ui.invoke_prev_step();
         assert_eq!(manager_ui.get_step(), 0);
+    }
+
+
+    #[test]
+    fn test_e2e_business_manager_upgrade_prompt() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        // Assert defaults
+        assert_eq!(manager_ui.get_show_upgrade_prompt(), false);
+        assert_eq!(manager_ui.get_upgrade_prompt_message(), "");
+
+        // Set upgrade prompt visible
+        manager_ui.set_show_upgrade_prompt(true);
+        manager_ui.set_upgrade_prompt_message("You've reached your limit. Upgrade to Pro.".into());
+
+        assert_eq!(manager_ui.get_show_upgrade_prompt(), true);
+        assert_eq!(manager_ui.get_upgrade_prompt_message(), "You've reached your limit. Upgrade to Pro.");
+
+        let upgrade_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let upgrade_clone = upgrade_called.clone();
+        manager_ui.on_invoke_upgrade(move || {
+            *upgrade_clone.borrow_mut() = true;
+        });
+
+        manager_ui.invoke_invoke_upgrade();
+        assert!(*upgrade_called.borrow());
+    }
+
+
+    #[test]
+    fn test_e2e_dashboard_usage_ring() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        assert_eq!(dashboard_ui.get_ai_actions_used(), 85);
+        assert_eq!(dashboard_ui.get_ai_actions_limit(), 100);
+
+        dashboard_ui.set_ai_actions_used(100);
+        assert_eq!(dashboard_ui.get_ai_actions_used(), 100);
+    }
+
+
+    #[test]
+    fn test_e2e_dashboard_ai_advisory() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        assert_eq!(dashboard_ui.get_show_ai_advisory_warning(), false);
+
+        dashboard_ui.set_show_ai_advisory_warning(true);
+        assert_eq!(dashboard_ui.get_show_ai_advisory_warning(), true);
+        assert_eq!(dashboard_ui.get_ai_advisory_warning_message(), "Your business is booming! You're using a lot of AI actions to reply to customers. Consider upgrading to the Starter plan so your Ambassador agent doesn't pause.");
+
+        let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let billing_clone = billing_opened.clone();
+        dashboard_ui.on_action_open_billing(move || {
+            *billing_clone.borrow_mut() = true;
+        });
+
+        dashboard_ui.invoke_action_open_billing();
+        assert!(*billing_opened.borrow());
     }
 
     #[test]

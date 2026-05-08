@@ -30,6 +30,9 @@ export component Dashboard inherits Window {
     in property <int> new_orders_count: 0;
     in property <int> active_helpers_count: 0;
     in property <int> tasks_in_progress_count: 0;
+    in property <int> ai_actions_used: 85;
+    in property <int> ai_actions_limit: 100;
+
     in property <string> generative_score: "85";
     in property <bool> is_loading: false;
     in-out property <bool> is_advanced: false;
@@ -69,6 +72,11 @@ export component Dashboard inherits Window {
     callback action_open_email_marketing();
     callback action_grow_business();
     callback action_mark_order_ready();
+
+    in property <bool> show_ai_advisory_warning: false;
+    in property <string> ai_advisory_warning_message: "Your business is booming! You're using a lot of AI actions to reply to customers. Consider upgrading to the Starter plan so your Ambassador agent doesn't pause.";
+    callback action_open_billing();
+
     callback action_open_kairos_orchestration();
 
     in-out property <bool> show_upgrade_prompt: false;
@@ -216,6 +224,37 @@ export component Dashboard inherits Window {
             }
         }
 
+
+        // AI Actions Usage Indicator
+        VerticalBox {
+            spacing: 12px;
+            Text { text: "Usage This Month"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+            GlassCard {
+                border-color: rgba(255, 255, 255, 0.1);
+                border-width: 1px;
+                VerticalBox {
+                    padding: 16px; spacing: 12px; alignment: center;
+                    HorizontalBox {
+                        alignment: center; spacing: 16px;
+                        Rectangle {
+                            width: 60px; height: 60px; border-radius: 30px;
+                            border-width: 4px;
+                            border-color: (root.ai_actions_used >= root.ai_actions_limit) ? #ef4444 : ((root.ai_actions_used * 10 >= root.ai_actions_limit * 8) ? #f59e0b : #4ade80);
+                            Text {
+                                text: root.ai_actions_used + "/" + root.ai_actions_limit;
+                                color: white; font-weight: 700; horizontal-alignment: center; vertical-alignment: center;
+                            }
+                        }
+                        VerticalBox {
+                            alignment: center;
+                            Text { text: "AI Actions"; font-size: 16px; color: white; font-weight: 700; }
+                            Text { text: "Included in Free tier"; font-size: 12px; color: #cbd5e1; }
+                        }
+                    }
+                }
+            }
+        }
+
         // Business Advisory Nudges
         VerticalBox {
             spacing: 12px;
@@ -225,7 +264,23 @@ export component Dashboard inherits Window {
                 Text { text: "Business Advisory"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
                 TooltipElement { tooltip_id: "advisory_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } } }
             }
-            GlassCard {
+
+            if (root.show_ai_advisory_warning) : GlassCard {
+                border-color: rgba(239, 68, 68, 0.5); // red-500
+                border-width: 1px;
+                background: rgba(239, 68, 68, 0.1);
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: root.ai_advisory_warning_message; font-size: 16px; color: white; wrap: word-wrap; }
+                    HorizontalBox {
+                        alignment: end;
+                        Button { text: "Upgrade Plan"; height: 44px; clicked => { root.action_open_billing(); } }
+                    }
+                }
+            }
+
+            if (!root.show_ai_advisory_warning) : GlassCard {
                 border-color: rgba(168, 85, 247, 0.5);
                 border-width: 1px;
                 background: rgba(168, 85, 247, 0.1);
