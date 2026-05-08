@@ -1,10 +1,15 @@
 use sqlx::{Executor, Postgres, query};
 
+pub async fn set_system_context<'a, E>(executor: E) -> Result<(), sqlx::Error> where E: Executor<'a, Database = Postgres> {
+    query("SET LOCAL ROLE ohc_bypassrls").execute(executor).await?;
+    Ok(())
+}
+
 pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sqlx::Error>
 where
     E: Executor<'a, Database = Postgres>,
 {
-    if !crate::config::get().multitenant && (org_id == "system" || org_id.is_empty()) {
+    if org_id.is_empty() {
         // Elevate privileges for system-level queries.
         // We cannot issue multiple queries because sqlx extended protocol doesn't allow it,
         // and we cannot call execute multiple times because E is consumed.
