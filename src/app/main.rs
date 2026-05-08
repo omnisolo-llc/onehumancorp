@@ -551,6 +551,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let release_notes_ui = app::ReleaseNotes::new().unwrap();
+                                        if let Ok(referrals_ui) = app::Referrals::new() {
+                                            dashboard.on_action_open_referrals({
+                                                let referrals_ui = referrals_ui.clone_strong();
+                                                move || {
+                                                    let _ = referrals_ui.show();
+                                                }
+                                            });
+                                        }
+                                        if let Ok(business_share_ui) = app::BusinessShare::new() {
+                                            dashboard.on_action_share_store({
+                                                let business_share_ui = business_share_ui.clone_strong();
+                                                move || {
+                                                    let _ = business_share_ui.show();
+                                                }
+                                            });
+                                        }
+                                        if let Ok(email_marketing_ui) = app::EmailMarketing::new() {
+                                            dashboard.on_action_open_email_marketing({
+                                                let email_marketing_ui = email_marketing_ui.clone_strong();
+                                                move || {
+                                                    let _ = email_marketing_ui.show();
+                                                }
+                                            });
+                                        }
+                                        if let Ok(social_posting_ui) = app::SocialPosting::new() {
+                                            dashboard.on_action_open_social_posting({
+                                                let social_posting_ui = social_posting_ui.clone_strong();
+                                                move || {
+                                                    let _ = social_posting_ui.show();
+                                                }
+                                            });
+                                        }
                                         let release_notes_handle = release_notes_ui.as_weak();
                                         dashboard.on_open_release_notes(move || {
                                             if let Some(ui) = release_notes_handle.upgrade() {
@@ -675,6 +707,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let release_notes_ui = app::ReleaseNotes::new().unwrap();
+                                        if let Ok(referrals_ui) = app::Referrals::new() {
+                                            dashboard.on_action_open_referrals({
+                                                let referrals_ui = referrals_ui.clone_strong();
+                                                move || {
+                                                    let _ = referrals_ui.show();
+                                                }
+                                            });
+                                        }
+                                        if let Ok(business_share_ui) = app::BusinessShare::new() {
+                                            dashboard.on_action_share_store({
+                                                let business_share_ui = business_share_ui.clone_strong();
+                                                move || {
+                                                    let _ = business_share_ui.show();
+                                                }
+                                            });
+                                        }
+                                        if let Ok(email_marketing_ui) = app::EmailMarketing::new() {
+                                            dashboard.on_action_open_email_marketing({
+                                                let email_marketing_ui = email_marketing_ui.clone_strong();
+                                                move || {
+                                                    let _ = email_marketing_ui.show();
+                                                }
+                                            });
+                                        }
+                                        if let Ok(social_posting_ui) = app::SocialPosting::new() {
+                                            dashboard.on_action_open_social_posting({
+                                                let social_posting_ui = social_posting_ui.clone_strong();
+                                                move || {
+                                                    let _ = social_posting_ui.show();
+                                                }
+                                            });
+                                        }
                                         let release_notes_handle = release_notes_ui.as_weak();
                                         dashboard.on_open_release_notes(move || {
                                             if let Some(ui) = release_notes_handle.upgrade() {
@@ -2410,6 +2474,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 let release_notes_ui = app::ReleaseNotes::new().unwrap();
+                                        if let Ok(referrals_ui) = app::Referrals::new() {
+                                            dashboard.on_action_open_referrals({
+                                                let referrals_ui = referrals_ui.clone_strong();
+                                                move || {
+                                                    let _ = referrals_ui.show();
+                                                }
+                                            });
+                                        }
+                                        if let Ok(business_share_ui) = app::BusinessShare::new() {
+                                            dashboard.on_action_share_store({
+                                                let business_share_ui = business_share_ui.clone_strong();
+                                                move || {
+                                                    let _ = business_share_ui.show();
+                                                }
+                                            });
+                                        }
+                                        if let Ok(email_marketing_ui) = app::EmailMarketing::new() {
+                                            dashboard.on_action_open_email_marketing({
+                                                let email_marketing_ui = email_marketing_ui.clone_strong();
+                                                move || {
+                                                    let _ = email_marketing_ui.show();
+                                                }
+                                            });
+                                        }
+                                        if let Ok(social_posting_ui) = app::SocialPosting::new() {
+                                            dashboard.on_action_open_social_posting({
+                                                let social_posting_ui = social_posting_ui.clone_strong();
+                                                move || {
+                                                    let _ = social_posting_ui.show();
+                                                }
+                                            });
+                                        }
                 let release_notes_handle = release_notes_ui.as_weak();
 
                 ai_chat_ui.on_send_message({
