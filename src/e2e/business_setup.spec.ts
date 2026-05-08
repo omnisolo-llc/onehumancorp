@@ -33,6 +33,21 @@ test.describe('Business Setup Wizard', () => {
     await expect(page.locator('text=/What kind of business are you building/i')).toBeVisible();
   });
 
+  test('should support Instant Build (AI) journey', async ({ page }) => {
+    await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
+    await page.click('text=⚡ Instant Build (AI) →');
+
+    await expect(page.locator('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]')).toBeVisible();
+    await page.fill('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]', 'I run a local tech shop');
+
+    await page.click('text=Generate Storefront →');
+
+    await expect(page.locator('text="Launch My Business →"')).toBeVisible({ timeout: 15000 });
+    await page.click('text="Launch My Business →"');
+
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+  });
+
   test('should show business type options', async ({ page }) => {
     await page.click('text=🚀 Start My Business');
     await expect(page.locator('text=Online Store')).toBeVisible();
