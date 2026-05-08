@@ -159,7 +159,7 @@ export component Dashboard inherits Window { // milestones
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Store Health"; value: generative_score; value_color: #34d399; }
+                    StatCard { label: "Business Health"; value: generative_score; value_color: #34d399; }
                 }
             }
 
@@ -175,7 +175,7 @@ export component Dashboard inherits Window { // milestones
                 HorizontalBox {
                     spacing: 16px;
                     StatCard { label: "Ongoing Tasks"; value: tasks_in_progress_count; value_color: #f59e0b; }
-                    StatCard { label: "Store Health"; value: generative_score; value_color: #34d399; }
+                    StatCard { label: "Business Health"; value: generative_score; value_color: #34d399; }
                 }
             }
         }
@@ -322,9 +322,9 @@ export component Dashboard inherits Window { // milestones
                     spacing: 8px;
                     TooltipElement { tooltip_id: "social_posting"; Button { text: "Social"; height: 44px; clicked => { action_open_social_posting(); } } }
                     TooltipElement { tooltip_id: "kairos_orchestration"; Button { text: "Automations"; height: 44px; clicked => { action_open_kairos_orchestration(); } } }
-                    Button { text: "Simulate Order"; height: 44px; clicked => { action_simulate_order(); } }
+                    Button { text: "Test Order"; height: 44px; clicked => { action_simulate_order(); } }
                     if (new_orders_count > 0) : Button {
-                        text: "Ready Order";
+                        text: "Ship Order";
                         height: 44px;
                         clicked => { action_mark_order_ready(); }
                     }
@@ -333,7 +333,7 @@ export component Dashboard inherits Window { // milestones
         }
         if (pending_approvals.length > 0) : VerticalBox {
             spacing: 16px;
-            Text { text: "Agent Activity Feed"; font-size: 20px; font-weight: 700; color: white; }
+            Text { text: "Tasks for You to Approve"; font-size: 20px; font-weight: 700; color: white; }
 
             for approval in pending_approvals : GlassCard {
                 border-color: rgba(255, 255, 255, 0.1);
