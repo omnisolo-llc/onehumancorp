@@ -376,6 +376,8 @@ impl AgentServiceImpl {
             resume_from_checkpoint_id: None,
             injected_context: None,
             enable_langgraph_mechanic: false,
+            enable_time_travel_rewind: false,
+            max_rewind_attempts: 3,
             // Long-term memory store for cross-department context sharing
             long_term_memory,
         }
@@ -550,6 +552,11 @@ impl AgentService for AgentServiceImpl {
                         content: format!("HANDOFF REQUESTED TO: {}", target_agent),
                         ..Default::default()
                     },
+                    AgentEvent::RewindOccurred { iteration, checkpoint_id, reason } => RunTaskEvent {
+                        r#type: EventType::TextChunk as i32,
+                        content: format!("[Rewind Occurred at Iteration {}: Checkpoint {}, Reason: {}]\n", iteration, checkpoint_id, reason),
+                        ..Default::default()
+                    },
                 };
                 let _ = tx_clone.try_send(Ok(pb));
             };
@@ -643,6 +650,8 @@ impl AgentService for AgentServiceImpl {
                 resume_from_checkpoint_id: None,
                 injected_context,
                 enable_langgraph_mechanic: false,
+                enable_time_travel_rewind: false,
+                max_rewind_attempts: 3,
                 long_term_memory: None,
             };
 
