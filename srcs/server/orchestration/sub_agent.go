@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+t"onehumancorp/srcs/server/telemetry"
 	"context"
 	"encoding/json"
 	"errors"
@@ -174,7 +175,7 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 			"timestamp": time.Now().Unix(),
 			"progress":  fmt.Sprintf("%d/3", i+1),
 		}
-		statusBytes, _ := json.Marshal(statusData)
+		statusBytes, _ := json.Marshal(telemetry.RedactInterfacePII(statusData))
 
 		// Ensure file write operations are idempotent and don't fail half-way (temp file -> rename).
 		tempFile := statusFile + ".tmp"
@@ -198,7 +199,7 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 		"status":    "COMPLETED",
 		"timestamp": time.Now().Unix(),
 	}
-	finalBytes, _ := json.Marshal(finalData)
+	finalBytes, _ := json.Marshal(telemetry.RedactInterfacePII(finalData))
 	tempFile := statusFile + ".tmp"
 	_ = os.WriteFile(tempFile, finalBytes, 0644)
 	_ = os.Rename(tempFile, statusFile)
@@ -248,7 +249,7 @@ func (s *DefaultSubAgentSpawner) broadcastLifecycleEvent(ctx context.Context, ta
 		"event":   eventType,
 		"time":    time.Now().Unix(),
 	}
-	bytes, _ := json.Marshal(payload)
+	bytes, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 	// The problem description mentioned "mesh:tasks" channels
 	_ = s.mesh.Publish(ctx, "mesh:tasks", bytes)
 }

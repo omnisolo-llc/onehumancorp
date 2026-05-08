@@ -164,18 +164,18 @@ mod tests {
     #[test]
     fn test_create_blob_provider() {
         // Reset env
-        env::remove_var("OHC_STANDALONE");
-        env::remove_var("OHC_MULTITENANT");
+        temp_env::with_vars(vec![("OHC_STANDALONE", None::<String>), ("OHC_MULTITENANT", None::<String>)], || {
+
 
         // Test default
-        let _provider = create_blob_provider();
+        let _provider = create_blob_provider(); });
 
         // Test multitenant
-        env::set_var("OHC_MULTITENANT", "true");
-        let _provider_mt = create_blob_provider();
+        temp_env::with_vars(vec![("OHC_STANDALONE", None::<String>), ("OHC_MULTITENANT", Some("true"))], || {
+        let _provider_mt = create_blob_provider(); });
 
         // Test standalone overrides multitenant
-        env::set_var("OHC_STANDALONE", "true");
-        let _provider_st = create_blob_provider();
+        temp_env::with_vars(vec![("OHC_STANDALONE", Some("true")), ("OHC_MULTITENANT", Some("true"))], || {
+        let _provider_st = create_blob_provider(); });
     }
 }
