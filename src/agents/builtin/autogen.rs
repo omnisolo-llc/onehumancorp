@@ -79,7 +79,10 @@ impl GroupChatManager {
         let req = ohc_builtin_agent_core::types::ChatRequest {
             model: "default".to_string(), // The mock or underlying LLM determines this
             system: system_prompt,
-            messages: vec![Message::user(format!("History:\n{}\n\nWho should speak next?", history))],
+            messages: vec![Message::user(format!(
+                "History:\n{}\n\nWho should speak next?",
+                history
+            ))],
             tools: vec![],
             max_tokens: 50,
             temperature: 0.0,
@@ -125,7 +128,10 @@ impl GroupChatManager {
             tracing::info!("Round {}: {} is speaking...", round, next_speaker.name);
 
             // Format transcript into a single prompt for the selected agent
-            let mut prompt_context = format!("You are participating in a group chat as {}.\n\nRecent Transcript:\n", next_speaker.name);
+            let mut prompt_context = format!(
+                "You are participating in a group chat as {}.\n\nRecent Transcript:\n",
+                next_speaker.name
+            );
             let tail = if current_transcript.len() > 20 {
                 &current_transcript[current_transcript.len() - 20..]
             } else {
@@ -139,10 +145,15 @@ impl GroupChatManager {
 
             let mut run_cfg = next_speaker.run_config.clone();
             // Make sure the agent's role is injected
-            run_cfg.server_system_message = format!("You are {}. {}", next_speaker.name, next_speaker.description);
+            run_cfg.server_system_message = format!(
+                "You are {}. {}",
+                next_speaker.name, next_speaker.description
+            );
 
             let mut on_event = |_| {};
-            let response_text = next_speaker.agent.run(&run_cfg, &prompt_context, &mut on_event)
+            let response_text = next_speaker
+                .agent
+                .run(&run_cfg, &prompt_context, &mut on_event)
                 .await
                 .map_err(|e| format!("Agent {} failed: {}", next_speaker.name, e))?;
 
@@ -164,8 +175,109 @@ impl GroupChatManager {
     }
 }
 
+/// The Orchestrator that manages a sequential flow of agents.
+pub struct SequentialChatManager {
+    pub agents: Vec<ChatAgent>,
+}
+
+impl SequentialChatManager {
+    pub fn new(agents: Vec<ChatAgent>) -> Self {
+        Self { agents }
+    }
+
+    /// Run the sequential chat loop, passing output from one agent to the next.
+    pub async fn run_sequential(&self, initial_task: &str) -> Result<Vec<Message>, String> {
+        let mut transcript = Vec::new();
+        transcript.push(Message::user(format!("Admin: {}", initial_task)));
+
+        let mut current_input = initial_task.to_string();
+
+        for agent_cfg in &self.agents {
+            tracing::info!("Sequential Step: {} is running...", agent_cfg.name);
+
+            let prompt_context = format!(
+                "You are participating in a sequential workflow as {}.
+
+Your input task/context is:
+{}
+
+Provide your response, which will be passed to the next agent in the sequence.",
+                agent_cfg.name, current_input
+            );
+
+            let mut run_cfg = agent_cfg.run_config.clone();
+            run_cfg.server_system_message =
+                format!("You are {}. {}", agent_cfg.name, agent_cfg.description);
+
+            let mut on_event = |_| {};
+            let response_text = agent_cfg
+                .agent
+                .run(&run_cfg, &prompt_context, &mut on_event)
+                .await
+                .map_err(|e| format!("Agent {} failed: {}", agent_cfg.name, e))?;
+
+            let formatted_response = format!("{}: {}", agent_cfg.name, response_text);
+            transcript.push(Message::assistant(formatted_response.clone()));
+
+            // The output of this agent becomes the input for the next
+            current_input = response_text;
+        }
+
+        Ok(transcript)
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_autogen_sequential_chat() {
+        let agent1_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec!["I am Agent1. Output 1".to_string()]),
+        });
+        let agent1 = Arc::new(Agent::new(agent1_llm, vec![]));
+
+        let agent2_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                "I am Agent2. I received the output and did Output 2".to_string(),
+            ]),
+        });
+        let agent2 = Arc::new(Agent::new(agent2_llm, vec![]));
+
+        let cfg = AgentRunConfig::default();
+
+        let chat_agent1 = ChatAgent {
+            name: "Agent1".to_string(),
+            description: "First agent.".to_string(),
+            agent: agent1,
+            run_config: cfg.clone(),
+        };
+
+        let chat_agent2 = ChatAgent {
+            name: "Agent2".to_string(),
+            description: "Second agent.".to_string(),
+            agent: agent2,
+            run_config: cfg.clone(),
+        };
+
+        let manager = SequentialChatManager::new(vec![chat_agent1, chat_agent2]);
+
+        let result = manager.run_sequential("Initial task").await;
+        assert!(result.is_ok());
+
+        let transcript = result.unwrap();
+
+        assert_eq!(transcript.len(), 3);
+        assert!(transcript[0].content.contains("Initial task"));
+        assert!(transcript[1]
+            .content
+            .contains("Agent1: I am Agent1. Output 1"));
+        assert!(transcript[2]
+            .content
+            .contains("Agent2: I am Agent2. I received the output and did Output 2"));
+    }
+
     use super::*;
     use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
 
@@ -175,7 +287,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl crate::llm::LlmClient for AutoGenMockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut resps = self.responses.lock().await;
             let content = if !resps.is_empty() {
                 resps.remove(0)
@@ -203,7 +318,7 @@ mod tests {
 
         let agent1_llm = Arc::new(AutoGenMockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
-                "I am Agent1. I have done my part.".to_string(),
+                "I am Agent1. I have done my part.".to_string()
             ]),
         });
         let agent1 = Arc::new(Agent::new(agent1_llm, vec![]));
@@ -241,7 +356,11 @@ mod tests {
 
         assert_eq!(transcript.len(), 3);
         assert!(transcript[0].content.contains("Solve the problem"));
-        assert!(transcript[1].content.contains("Agent1: I am Agent1. I have done my part."));
-        assert!(transcript[2].content.contains("Agent2: I am Agent2. Everything looks good. TERMINATE"));
+        assert!(transcript[1]
+            .content
+            .contains("Agent1: I am Agent1. I have done my part."));
+        assert!(transcript[2]
+            .content
+            .contains("Agent2: I am Agent2. Everything looks good. TERMINATE"));
     }
 }
