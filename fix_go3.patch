@@ -1,0 +1,12 @@
+--- srcs/server/orchestration/sip.go
++++ srcs/server/orchestration/sip.go
+@@ -54,8 +54,7 @@
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE agent_missions
+		SET status = 'blocked',
+-		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '
+-' END || $1
++		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '\n' END || $1
+		WHERE id = $2`, blockers, missionID)
+	return err
+ }

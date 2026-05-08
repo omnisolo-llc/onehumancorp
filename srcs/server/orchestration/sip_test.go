@@ -21,7 +21,8 @@ func setupSIPDB(t *testing.T) (*sql.DB, func()) {
 		id TEXT PRIMARY KEY,
 		status TEXT,
 		payload TEXT,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		mission_log TEXT
 	)`)
 	require.NoError(t, err)
 
@@ -180,4 +181,39 @@ func TestDelegateMission_DatabaseError(t *testing.T) {
 
 	err = sipdb.DelegateMission(context.Background(), mission)
 	assert.Error(t, err)
+}
+
+func TestReportMissionHandover(t *testing.T) {
+	db, cleanup := setupSIPDB(t)
+	defer cleanup()
+
+	sipdb := NewSIPDB(db)
+
+	mission := &AgentMission{
+		ID:      "m_handoff",
+		Status:  "PENDING",
+		Payload: json.RawMessage(`{"task":"do work"}`),
+	}
+
+	err := sipdb.DelegateMission(context.Background(), mission)
+	require.NoError(t, err)
+
+	err = sipdb.ReportMissionHandover(context.Background(), "m_handoff", "Blocked by prompt instructions")
+	require.NoError(t, err)
+
+	var status, missionLog string
+	err = db.QueryRow("SELECT status, mission_log FROM agent_missions WHERE id = ?", "m_handoff").Scan(&status, &missionLog)
+	require.NoError(t, err)
+
+	assert.Equal(t, "blocked", status)
+	assert.Equal(t, "Blocked by prompt instructions", missionLog)
+
+	err = sipdb.ReportMissionHandover(context.Background(), "m_handoff", "Blocked again")
+	require.NoError(t, err)
+
+	err = db.QueryRow("SELECT status, mission_log FROM agent_missions WHERE id = ?", "m_handoff").Scan(&status, &missionLog)
+	require.NoError(t, err)
+
+	assert.Equal(t, "blocked", status)
+	assert.Equal(t, "Blocked by prompt instructions\nBlocked again", missionLog)
 }

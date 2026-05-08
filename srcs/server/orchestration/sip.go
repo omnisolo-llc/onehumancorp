@@ -51,11 +51,10 @@ func (s *SIPDB) DelegateMission(ctx context.Context, mission *AgentMission) erro
 }
 
 func (s *SIPDB) ReportMissionHandover(ctx context.Context, missionID string, blockers string) error {
-	_, err := s.db.ExecContext(ctx, `
-		UPDATE agent_missions
+	_, err := s.db.ExecContext(ctx, `UPDATE agent_missions
 		SET status = 'blocked',
-		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '
-' END || $1
+		    mission_log = CASE WHEN COALESCE(mission_log, '') = '' THEN $1 ELSE mission_log || '
+' || $1 END
 		WHERE id = $2`, blockers, missionID)
 	return err
 }
