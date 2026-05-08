@@ -48,6 +48,21 @@ mod tests {
             }
         }
 
+
+        // Test regression: Empty org_id should NOT bypass RLS
+        match pool.begin().await {
+            Ok(mut tx) => {
+                // Call the actual vulnerable function to test application logic
+                crate::utils::auth_utils::set_org_context(&mut *tx, "").await.expect("Failed to call set_org_context");
+                let result = sqlx::query("SELECT COUNT(*) FROM customers")
+                    .fetch_one(&mut *tx).await;
+                let row = result.expect("Query failed to execute");
+                let count: i64 = row.get(0);
+                assert_eq!(count, 0, "Should return 0 rows for empty tenant context");
+            },
+            Err(_) => {}
+        }
+
         // To test RLS, we explicitly begin a transaction and set the local variable to tenant_1.
         match pool.begin().await {
             Ok(mut tx) => {
