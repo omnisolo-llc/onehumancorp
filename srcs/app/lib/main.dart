@@ -5,6 +5,7 @@ import 'screens/unified_inbox_screen.dart';
 import 'screens/business_setup_wizard_screen.dart';
 import 'screens/help/help_center_screen.dart';
 import 'screens/help/ai_help_chat_screen.dart';
+import 'screens/referral_program_screen.dart';
 
 
 void main() {
@@ -158,7 +159,12 @@ class DashboardScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       InkWell(
-                        onTap: () { /* Share link flow */ },
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const ReferralProgramScreen()),
+                          );
+                        },
                         child: const Row(
                           children: [
                             Icon(Icons.radio_button_unchecked, color: Colors.white70, size: 18),
