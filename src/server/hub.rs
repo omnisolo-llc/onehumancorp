@@ -115,19 +115,23 @@ impl Hub {
 
     fn invalidate_agent_cache(&self) {
         *self.agent_cache.write().unwrap() = None;
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                let _: Result<(), _> = conn.del("hub:agents");
-            }
+        if let Some(client) = self.redis_client.clone() {
+            tokio::task::spawn_blocking(move || {
+                if let Ok(mut conn) = client.get_connection() {
+                    let _: Result<(), _> = redis::Commands::del(&mut conn, "hub:agents");
+                }
+            });
         }
     }
 
     fn invalidate_meetings_cache(&self) {
         *self.meetings_cache.write().unwrap() = None;
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                let _: Result<(), _> = conn.del("hub:meetings");
-            }
+        if let Some(client) = self.redis_client.clone() {
+            tokio::task::spawn_blocking(move || {
+                if let Ok(mut conn) = client.get_connection() {
+                    let _: Result<(), _> = redis::Commands::del(&mut conn, "hub:meetings");
+                }
+            });
         }
     }
 
@@ -172,15 +176,16 @@ impl Hub {
             }
         }
 
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                if let Ok(Some(data)) = conn.get::<_, Option<String>>("hub:agents") {
-                    if let Ok(agents) = serde_json::from_str::<Vec<Agent>>(&data) {
-                        let arc = Arc::new(agents);
-                        *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
-                        return arc;
-                    }
-                }
+        if let Some(client) = self.redis_client.clone() {
+            let res = tokio::task::block_in_place(move || {
+                let mut conn = client.get_connection().ok()?;
+                let data: Option<String> = redis::Commands::get(&mut conn, "hub:agents").ok()?;
+                let agents: Vec<Agent> = serde_json::from_str(&data?).ok()?;
+                Some(Arc::new(agents))
+            });
+            if let Some(arc) = res {
+                *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
+                return arc;
             }
         }
 
@@ -191,12 +196,15 @@ impl Hub {
         let arc = Arc::new(agents_vec);
         *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
 
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                if let Ok(json) = serde_json::to_string(&*arc) {
-                    let _: Result<(), _> = conn.set_ex("hub:agents", json, 3600);
+        if let Some(client) = self.redis_client.clone() {
+            let json = serde_json::to_string(&*arc).unwrap_or_default();
+            tokio::task::spawn_blocking(move || {
+                if let Ok(mut conn) = client.get_connection() {
+                    if !json.is_empty() {
+                        let _: Result<(), _> = redis::Commands::set_ex(&mut conn, "hub:agents", json, 3600);
+                    }
                 }
-            }
+            });
         }
 
         arc
@@ -327,15 +335,16 @@ impl Hub {
             }
         }
 
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                if let Ok(Some(data)) = conn.get::<_, Option<String>>("hub:meetings") {
-                    if let Ok(meetings) = serde_json::from_str::<Vec<MeetingRoom>>(&data) {
-                        let arc = Arc::new(meetings);
-                        *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
-                        return arc;
-                    }
-                }
+        if let Some(client) = self.redis_client.clone() {
+            let res = tokio::task::block_in_place(move || {
+                let mut conn = client.get_connection().ok()?;
+                let data: Option<String> = redis::Commands::get(&mut conn, "hub:meetings").ok()?;
+                let meetings: Vec<MeetingRoom> = serde_json::from_str(&data?).ok()?;
+                Some(Arc::new(meetings))
+            });
+            if let Some(arc) = res {
+                *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
+                return arc;
             }
         }
 
@@ -345,12 +354,15 @@ impl Hub {
         let arc = Arc::new(meetings_vec);
         *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
 
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                if let Ok(json) = serde_json::to_string(&*arc) {
-                    let _: Result<(), _> = conn.set_ex("hub:meetings", json, 3600);
+        if let Some(client) = self.redis_client.clone() {
+            let json = serde_json::to_string(&*arc).unwrap_or_default();
+            tokio::task::spawn_blocking(move || {
+                if let Ok(mut conn) = client.get_connection() {
+                    if !json.is_empty() {
+                        let _: Result<(), _> = redis::Commands::set_ex(&mut conn, "hub:meetings", json, 3600);
+                    }
                 }
-            }
+            });
         }
 
         arc
