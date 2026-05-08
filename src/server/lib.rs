@@ -228,7 +228,18 @@ impl HubService for MyHubService {
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
-        let payment_fees_f64 = total_revenue_f64 * 0.029;
+        // Calculate transaction fees realistically assuming mix of ACH for large transactions
+        // and CC for smaller ones.
+        let avg_transaction_size = 50.0;
+        let estimated_transactions = total_revenue_f64 / avg_transaction_size;
+
+        let method = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(avg_transaction_size);
+        let fee_per_transaction = if method == crate::integrations::stripe::routing::PaymentMethod::Ach {
+            (avg_transaction_size * 0.008).min(5.0)
+        } else {
+            (avg_transaction_size * 0.029) + 0.30
+        };
+        let payment_fees_f64 = estimated_transactions * fee_per_transaction;
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
@@ -238,8 +249,8 @@ impl HubService for MyHubService {
             llm_cost: (llm_cost_f64 * 100.0) as i64,
             storage_cost: (storage_cost_f64 * 100.0) as i64,
             payment_fees: (payment_fees_f64 * 100.0) as i64,
-            period_start: "2024-05-01".to_string(), // In a real app this would be computed
-            period_end: "2024-05-31".to_string(),
+            period_start: chrono::Utc::now().format("%Y-%m-01").to_string(),
+            period_end: chrono::Utc::now().format("%Y-%m-%d").to_string(),
         }))
     }
 

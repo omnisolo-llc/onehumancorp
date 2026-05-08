@@ -446,4 +446,30 @@ mod tests {
             }
         }
     }
+
+    #[tokio::test]
+    async fn test_check_rate_limit_unlimited_tier() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-pro-tier";
+                let agent_id = "agent-x";
+
+                let now = chrono::Utc::now();
+                let month_key = now.format("%Y-%m").to_string();
+                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
+                let _ : () = redis::AsyncCommands::del(&mut conn, &tenant_key).await.unwrap_or(());
+
+                // Set tier to Pro (Unlimited)
+                limiter.set_tenant_tier(tenant_id, PlanTier::Pro).await.unwrap();
+
+                for _ in 0..100 {
+                    let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
+                    assert!(status.is_allowed);
+                    assert!(!status.soft_limit_reached);
+                }
+            }
+        }
+    }
 }

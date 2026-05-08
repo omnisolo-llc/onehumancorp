@@ -1782,8 +1782,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                     }
-
-
                 }).unwrap();
             }
         }

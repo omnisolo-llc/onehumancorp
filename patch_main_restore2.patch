@@ -1,0 +1,13 @@
+--- src/app/main.rs
++++ src/app/main.rs
+@@ -1782,10 +1782,6 @@
+                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
+                     }
+-
+-                    if let Some(ui) = my_plan_handle_fetch.upgrade() {
+-                        ui.set_total_actions(format!("{}", summary.total_tokens).into()); // tokens as a proxy for actions for now
+-                        ui.set_estimated_bill(format!("${:.2}", summary.projected_monthly_usd).into());
+-                    }
+                 }).unwrap();
+             }
+         }

@@ -147,3 +147,19 @@ impl Default for Tracker {
         Tracker::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_tracker_defaults() {
+        let tracker = Tracker::default();
+
+        let summary = tracker.summary("all");
+        assert_eq!(summary.total_tokens, 0);
+
+        let tier = tracker.get_tenant_tier("test-tenant").await.unwrap();
+        assert_eq!(tier, crate::pricing::rate_limit::PlanTier::Free);
+    }
+}

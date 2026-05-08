@@ -85,4 +85,15 @@ mod tests {
         let cache_lock = cache.cache.lock().unwrap();
         assert!(cache_lock.is_empty());
     }
+
+    #[test]
+    fn test_prompt_cache_update_existing() {
+        let cache = PromptCache::new(Duration::from_secs(10));
+        cache.set("Update me", "V1", 1);
+        cache.set("Update me", "V2", 2);
+
+        let response = cache.get("Update me").unwrap();
+        assert_eq!(response.text, "V2");
+        assert_eq!(response.token_count, 2);
+    }
 }
