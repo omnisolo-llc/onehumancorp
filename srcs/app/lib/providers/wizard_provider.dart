@@ -7,6 +7,7 @@ class WizardState {
   final String? industry;
   final String? size;
   final List<String> goals;
+  final String? templateSelection;
   final String? deploymentPreference;
   final String? adminName;
   final String? adminEmail;
@@ -18,6 +19,7 @@ class WizardState {
     this.industry,
     this.size,
     this.goals = const [],
+    this.templateSelection,
     this.deploymentPreference,
     this.adminName,
     this.adminEmail,
@@ -30,6 +32,7 @@ class WizardState {
     String? industry,
     String? size,
     List<String>? goals,
+    String? templateSelection,
     String? deploymentPreference,
     String? adminName,
     String? adminEmail,
@@ -41,6 +44,7 @@ class WizardState {
       industry: industry ?? this.industry,
       size: size ?? this.size,
       goals: goals ?? this.goals,
+      templateSelection: templateSelection ?? this.templateSelection,
       deploymentPreference: deploymentPreference ?? this.deploymentPreference,
       adminName: adminName ?? this.adminName,
       adminEmail: adminEmail ?? this.adminEmail,
@@ -58,7 +62,7 @@ class WizardNotifier extends Notifier<WizardState> {
   }
 
   void nextStep() {
-    if (state.currentStep < 7) {
+    if (state.currentStep < 8) {
       state = state.copyWith(currentStep: state.currentStep + 1);
     }
   }
@@ -87,6 +91,10 @@ class WizardNotifier extends Notifier<WizardState> {
     state = state.copyWith(goals: currentGoals);
   }
 
+  void setTemplateSelection(String template) {
+    state = state.copyWith(templateSelection: template);
+  }
+
   void setDeploymentPreference(String preference) {
     state = state.copyWith(deploymentPreference: preference);
   }
@@ -105,6 +113,7 @@ class WizardNotifier extends Notifier<WizardState> {
       'industry': state.industry,
       'size': state.size,
       'goals': state.goals,
+      'templateSelection': state.templateSelection,
       'deploymentPreference': state.deploymentPreference,
       'adminName': state.adminName,
       'adminEmail': state.adminEmail,

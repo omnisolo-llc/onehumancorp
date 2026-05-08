@@ -79,7 +79,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(wizardProvider);
 
-    if (state.currentStep == 7) {
+    if (state.currentStep == 8) {
       return const DashboardScreen();
     }
 
@@ -126,6 +126,8 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       case 5:
         return _buildAdministratorAccountScreen();
       case 6:
+        return _buildTemplateSelectionScreen(state);
+      case 7:
         return _buildReviewAndLaunchScreen(state);
       default:
         return const SizedBox.shrink();
@@ -542,6 +544,109 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
+  Widget _buildTemplateSelectionScreen(WizardState state) {
+    final templates = [
+      {'id': 'modern', 'name': 'Modern', 'icon': Icons.web, 'color': Colors.blue},
+      {'id': 'cozy', 'name': 'Cozy', 'icon': Icons.coffee, 'color': Colors.orange},
+      {'id': 'professional', 'name': 'Professional', 'icon': Icons.business, 'color': Colors.grey},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Select a Template',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Choose a starting vibe for your storefront.',
+          style: TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+        const SizedBox(height: 20),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: templates.map((template) {
+                final isSelected = state.templateSelection == template['id'];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 15),
+                  child: InkWell(
+                    onTap: () {
+                      ref.read(wizardProvider.notifier).setTemplateSelection(template['id'] as String);
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF6B4EFF).withOpacity(0.3) : Colors.white.withOpacity(0.05),
+                        border: Border.all(
+                          color: isSelected ? const Color(0xFF6B4EFF) : Colors.white.withOpacity(0.1),
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          Icon(template['icon'] as IconData, size: 40, color: template['color'] as Color),
+                          const SizedBox(width: 20),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  template['name'] as String,
+                                  style: const TextStyle(
+                                    fontFamily: 'Outfit',
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                const SizedBox(height: 10),
+                                Container(
+                                  height: 100,
+                                  decoration: BoxDecoration(
+                                    color: template['id'] == 'modern' ? Colors.blue.withOpacity(0.1) : template['id'] == 'cozy' ? Colors.orange.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.white24),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      state.companyName ?? "Your Business",
+                                      style: TextStyle(
+                                        fontFamily: template['id'] == 'modern' ? 'Inter' : template['id'] == 'cozy' ? 'Outfit' : 'Times New Roman',
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: template['color'] as Color,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isSelected) const Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 30),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
   Widget _buildReviewAndLaunchScreen(WizardState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -573,6 +678,8 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   _buildSummaryItem('Deployment', state.deploymentPreference ?? 'Not set'),
                   const SizedBox(height: 10),
                   _buildSummaryItem('Admin', state.adminName ?? 'Not set'),
+                  const SizedBox(height: 10),
+                  _buildSummaryItem('Template', state.templateSelection ?? 'Not set'),
                 ],
               ),
             ),
