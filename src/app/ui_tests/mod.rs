@@ -94,3 +94,5 @@ pub mod scribe_tests;
 pub mod scribe_feature_dashboard_test;
 pub mod scribe_extra_tests;
 pub mod ai_team_e2e;
+
+pub mod grandmother_e2e;

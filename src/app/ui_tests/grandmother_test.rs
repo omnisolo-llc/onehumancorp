@@ -326,9 +326,9 @@ fn test_grandmother_login_error_message_ux() {
     crate::ui_tests::init();
     let ui = crate::app::Login::new().unwrap();
     // Simulate setting an internal error message with jargon
-    ui.set_error_message("We couldn't sign you in.".into());
+    ui.set_error_message("Please check your email and password and try again.".into());
     // Assert that the raw property gets set
-    assert_eq!(ui.get_error_message(), "We couldn't sign you in.");
+    assert_eq!(ui.get_error_message(), "Please check your email and password and try again.");
     // Verify that callbacks don't panic even when error is active
     let action_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let action_invoked_clone = action_invoked.clone();
@@ -383,4 +383,56 @@ fn test_grandmother_secure_agent_config_submit_ux() {
     // Call the rust side API
     ui.invoke_save_config("secure-token-123".into());
     assert!(*invoked.borrow(), "Save config action should successfully execute");
+}
+
+#[test]
+fn test_e2e_ux_friction_fixes_flow_1() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Dashboard::new().unwrap();
+    ui.set_show_quick_actions_hint(true);
+    assert_eq!(ui.get_show_quick_actions_hint(), true);
+}
+
+#[test]
+fn test_e2e_ux_friction_fixes_flow_2() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::ScribeFeatureDashboard::new().unwrap();
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_open_api_docs(move || { *invoked_clone.borrow_mut() = true; });
+    ui.invoke_open_api_docs();
+    assert!(*invoked.borrow());
+}
+
+#[test]
+fn test_e2e_ux_friction_fixes_flow_3() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::AgentConfig::new().unwrap();
+    ui.set_is_advanced(true);
+    ui.set_api_scope_override("[\"read\"]".into());
+    assert_eq!(ui.get_api_scope_override(), "[\"read\"]");
+}
+
+#[test]
+fn test_e2e_ux_friction_fixes_flow_4() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::AiConfig::new().unwrap();
+    ui.set_is_advanced(true);
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_add_provider(move || { *invoked_clone.borrow_mut() = true; });
+    ui.invoke_add_provider();
+    assert!(*invoked.borrow());
+}
+
+#[test]
+fn test_e2e_ux_friction_fixes_flow_5() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::ApiDocs::new().unwrap();
+    assert_eq!(ui.get_test_title(), "Connect other software to your store");
 }

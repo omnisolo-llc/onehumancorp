@@ -101,10 +101,9 @@ export component Login inherits Window {
                     VerticalBox {
                         padding: 12px;
                         spacing: 4px;
-                        Text { text: "We couldn't sign you in"; color: #ef4444; font-weight: 700; font-family: "Inter"; font-size: 14px; }
                         Text {
                             width: 100%;
-                            text: "Please check your email and password and try again.";
+                            text: error_message;
                             color: #ef4444;
                             font-family: "Inter";
                             font-size: 14px;

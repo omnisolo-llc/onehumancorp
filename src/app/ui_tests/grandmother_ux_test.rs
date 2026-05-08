@@ -160,8 +160,8 @@ fn test_login_error_message() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
     let ui = crate::app::Login::new().unwrap();
-    ui.set_error_message("Invalid login".into());
-    assert_eq!(ui.get_error_message(), slint::SharedString::from("Invalid login"));
+    ui.set_error_message("Please check your email and password and try again.".into());
+    assert_eq!(ui.get_error_message(), slint::SharedString::from("Please check your email and password and try again."));
 }
 
 #[test]

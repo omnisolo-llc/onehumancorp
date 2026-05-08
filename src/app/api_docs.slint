@@ -12,7 +12,7 @@ export component ApiDocs inherits Window {
     preferred-width: 800px;
     preferred-height: 600px;
     min-width: 375px;
-    title: "API Documentation (for Advanced Users)";
+    title: "Connect other software to your store";
     out property <string> test_title: root.title;
     background: #0f172a;
     in-out property <string> api_key: "sk_live_...";
@@ -32,7 +32,7 @@ export component ApiDocs inherits Window {
             spacing: 20px;
 
             Text {
-                text: "API Documentation (for Advanced Users)";
+                text: "Connect other software to your store";
                 font-size: 24px;
                 font-weight: 700;
                 color: white;
@@ -47,7 +47,7 @@ export component ApiDocs inherits Window {
             TooltipElement {
                 tooltip_id: "api_docs_advanced";
                 CheckBox {
-                    text: "Show Advanced Developer Documentation";
+                    text: "Show Advanced Configuration";
                     checked <=> is_advanced;
                 }
             }

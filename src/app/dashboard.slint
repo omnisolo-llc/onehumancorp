@@ -292,7 +292,7 @@ export component Dashboard inherits Window { // milestones
                     Text { text: "Tuesday was your busiest day. Want to run a promo?"; font-size: 16px; color: white; wrap: word-wrap; }
                     HorizontalBox {
                         alignment: end;
-                        Button { text: "Run Promo"; height: 44px; clicked => { action_grow_business(); } }
+                        Button { text: "Promote Store"; height: 44px; clicked => { action_grow_business(); } }
                         Button { text: "Agent Activity"; height: 44px; clicked => { action_open_swarm_observability(); } }
                     }
                 }
@@ -322,7 +322,7 @@ export component Dashboard inherits Window { // milestones
                     TooltipElement { tooltip_id: "social_posting"; Button { text: "Social"; height: 44px; clicked => { action_open_social_posting(); } } }
                     TooltipElement { tooltip_id: "kairos_orchestration"; Button { text: "Automations"; height: 44px; clicked => { action_open_kairos_orchestration(); } } }
                     if (new_orders_count > 0) : Button {
-                        text: "Ready Order";
+                        text: "Fulfill Order";
                         height: 44px;
                         clicked => { action_mark_order_ready(); }
                     }
