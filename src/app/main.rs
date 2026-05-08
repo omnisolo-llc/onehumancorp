@@ -94,6 +94,7 @@ thread_local! {
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
     static GLOBAL_ANALYTICS_CHARTS: RefCell<Option<slint::Weak<app::AnalyticsCharts>>> = RefCell::new(None);
+    static GLOBAL_BUSINESS_SHARE: RefCell<Option<slint::Weak<app::BusinessShare>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
     static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
 }
@@ -1123,6 +1124,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let website_builder_ui = app::WebsiteBuilder::new()?;
     GLOBAL_WEBSITE_BUILDER.with(|g| *g.borrow_mut() = Some(website_builder_ui.as_weak()));
     website_builder_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+
+    let my_plan_ui_for_wb = app::MyPlan::new().unwrap();
+    let my_plan_handle_for_wb = my_plan_ui_for_wb.as_weak();
+    website_builder_ui.on_show_upgrade_prompt({
+        let my_plan_handle_for_wb = my_plan_handle_for_wb.clone();
+        move |msg| {
+            if let Some(ui) = my_plan_handle_for_wb.upgrade() {
+                ui.set_upgrade_prompt_message(msg.into());
+                let _ = ui.show();
+            }
+        }
+    });
     let website_builder_handle = website_builder_ui.as_weak();
     let wb_ui_weak = website_builder_handle.clone();
     add_advanced_listener(Box::new(move |val| {
@@ -1482,11 +1495,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     email_marketing_ui.on_send_campaign({
         let ui_handle = email_marketing_handle.clone();
         move || {
-            if let Some(ui) = ui_handle.upgrade() {
-                ui.set_emails_sent(150);
-                ui.set_open_rate("32%".into());
-                ui.set_status_message("Campaign sent successfully!".into());
-            }
+            let ui_handle = ui_handle.clone();
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let prompt = "Write a high-converting marketing email for a small business. Focus on engagement and clarity.".to_string();
+                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                        prompt,
+                        from_agent_id: "EmailMarketingAgent".into(),
+                    });
+                    let _ = client.reason(request).await;
+                }
+
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ui_handle.upgrade() {
+                        ui.set_emails_sent(150);
+                        ui.set_open_rate("32%".into());
+                        ui.set_status_message("Campaign sent successfully!".into());
+                    }
+                });
+            });
         }
     });
 
@@ -1547,7 +1574,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Box::leak(Box::new(business_manager_ui));
 
     let em_handle_for_gb = email_marketing_handle.clone();
-    let dashboard_handle_for_gb = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
     let business_manager_handle_for_gb = business_manager_handle.clone();
     let sp_handle_for_gb = social_posting_handle.clone();
     grow_business_ui.on_execute({
@@ -1560,7 +1586,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(ui) = sp_handle_for_gb.upgrade() {
                     let _ = ui.show();
                 }
-                if let Some(dash) = dashboard_handle_for_gb.upgrade() {
+                GLOBAL_DASHBOARD.with(|dash_ref| if let Some(dash) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
                     let mut current_tasks = Vec::new();
                     let current = dash.get_pending_approvals();
                     for i in 0..current.row_count() {
@@ -1576,7 +1602,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         proposed_content: "Check out our new products! 🚀 #newarrival".into(),
                     });
                     dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks)));
-                }
+                });
             } else if strategy == "Add 5 more products" {
                 if let Some(bm) = business_manager_handle_for_gb.upgrade() {
                     let _ = bm.show();
@@ -1587,9 +1613,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     let business_share_ui = app::BusinessShare::new()?;
+    GLOBAL_BUSINESS_SHARE.with(|g| *g.borrow_mut() = Some(business_share_ui.as_weak()));
     let business_share_handle = business_share_ui.as_weak();
 
-    let dashboard_ref_for_bs = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
 
     let analytics_charts_ui = app::AnalyticsCharts::new()?;
     GLOBAL_ANALYTICS_CHARTS.with(|g| *g.borrow_mut() = Some(analytics_charts_ui.as_weak()));
@@ -1648,18 +1674,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let dashboard_ref_for_analytics = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
     let ac_handle_for_dash = analytics_charts_handle.clone();
-    dashboard_ref_for_analytics.upgrade().unwrap().on_action_see_analytics(move || {
-        if let Some(ui) = ac_handle_for_dash.upgrade() {
-            let _ = ui.show();
-        }
-    });
-
     let bs_handle_clone_for_dash = business_share_handle.clone();
-    dashboard_ref_for_bs.upgrade().unwrap().on_action_share_store(move || {
-        if let Some(ui) = bs_handle_clone_for_dash.upgrade() {
-            let _ = ui.show();
+    let gb_handle_for_dash = grow_business_handle.clone();
+    let em_handle_for_dash = email_marketing_handle.clone();
+
+    GLOBAL_DASHBOARD.with(|dash_ref| {
+        if let Some(dash) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
+            let ac_handle = ac_handle_for_dash.clone();
+            dash.on_action_see_analytics(move || {
+                if let Some(ui) = ac_handle.upgrade() {
+                    let _ = ui.show();
+                }
+            });
+
+            let bs_handle = bs_handle_clone_for_dash.clone();
+            dash.on_action_share_store(move || {
+                if let Some(ui) = bs_handle.upgrade() {
+                    let _ = ui.show();
+                }
+            });
+
+            let gb_handle = gb_handle_for_dash.clone();
+            dash.on_action_grow_business(move || {
+                if let Some(ui) = gb_handle.upgrade() {
+                    let _ = ui.show();
+                }
+            });
+
+            let em_handle = em_handle_for_dash.clone();
+            dash.on_action_open_email_marketing(move || {
+                if let Some(ui) = em_handle.upgrade() {
+                    let _ = ui.show();
+                }
+            });
         }
     });
 
@@ -1670,19 +1718,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let gb_handle_for_dash = grow_business_handle.clone();
-    dashboard_ref_for_bs.upgrade().unwrap().on_action_grow_business(move || {
-        if let Some(ui) = gb_handle_for_dash.upgrade() {
-            let _ = ui.show();
-        }
-    });
-
-    let em_handle_for_dash = email_marketing_handle.clone();
-    dashboard_ref_for_bs.upgrade().unwrap().on_action_open_email_marketing(move || {
-        if let Some(ui) = em_handle_for_dash.upgrade() {
-            let _ = ui.show();
-        }
-    });
 
     let bs_copy_handle = business_share_handle.clone();
     business_share_ui.on_copy_link(move || {
@@ -1770,6 +1805,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     ui.set_bonus_credit(stats.bonus_credit);
                                     ui.set_download_count(stats.download_count);
                                     ui.set_waitlist_position(stats.waitlist_position);
+
+                                    GLOBAL_BUSINESS_SHARE.with(|g| {
+                                        if let Some(weak) = g.borrow().as_ref() {
+                                            if let Some(bs_ui) = weak.upgrade() {
+                                                bs_ui.set_share_link(stats.business_share_url.into());
+                                                bs_ui.set_business_name(stats.business_name.into());
+                                            }
+                                        }
+                                    });
                                 }
                             }).unwrap();
                         }
@@ -1956,6 +2000,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(res) = client.get_my_plan(req).await {
                 let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
+                let tier = plan.current_plan.clone();
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = pricing_handle_fetch.upgrade() {
                         let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
@@ -1964,6 +2009,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                     }
+                    GLOBAL_WEBSITE_BUILDER.with(|g| {
+                        if let Some(weak) = g.borrow().as_ref() {
+                            if let Some(wb_ui) = weak.upgrade() {
+                                wb_ui.set_plan_tier(tier.into());
+                            }
+                        }
+                    });
                 }).unwrap();
             }
         }
@@ -2532,7 +2584,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 business_share_ui.on_share_to_instagram(move || {
                     if let Some(ui) = bs_handle_ig.upgrade() {
                         let link = ui.get_share_link();
-                        let ig_url = format!("https://www.instagram.com/?url={}", link);
+                        let msg = format!("Check out my business on OHC! {}", link);
+                        let ig_url = format!("https://www.instagram.com/?url={}&caption={}", urlencoding::encode(&link), urlencoding::encode(&msg));
                         open_url(&ig_url);
                     }
                 });
@@ -2540,7 +2593,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 business_share_ui.on_share_to_x(move || {
                     if let Some(ui) = bs_handle_x.upgrade() {
                         let link = ui.get_share_link();
-                        let x_url = format!("https://twitter.com/intent/tweet?url={}", link);
+                        let msg = format!("I just launched my business on OHC! Check it out: {}", link);
+                        let x_url = format!("https://twitter.com/intent/tweet?text={}", urlencoding::encode(&msg));
                         open_url(&x_url);
                     }
                 });
@@ -2548,7 +2602,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 business_share_ui.on_share_to_whatsapp(move || {
                     if let Some(ui) = bs_handle_wa.upgrade() {
                         let link = ui.get_share_link();
-                        let wa_url = format!("https://wa.me/?text={}", link);
+                        let msg = format!("Hey! Check out my business on OneHumanCorp: {}", link);
+                        let wa_url = format!("https://wa.me/?text={}", urlencoding::encode(&msg));
                         open_url(&wa_url);
                     }
                 });
@@ -2596,7 +2651,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 let dashboard_approve_handle = dashboard.as_weak();
-                dashboard.on_approve_task(move |task_id| {
+    dashboard.on_approve_task({
+        let dashboard_approve_handle = dashboard_approve_handle.clone();
+        move |task_id| {
                     if let Some(ui) = dashboard_approve_handle.upgrade() {
                         let current = ui.get_pending_approvals();
                         let mut remaining = Vec::new();
@@ -2609,7 +2666,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining)));
                     }
-                });
+                }
+    });
 
                 let dashboard_briefing_handle = dashboard.as_weak();
                 dashboard.on_dismiss_daily_briefing(move || {
