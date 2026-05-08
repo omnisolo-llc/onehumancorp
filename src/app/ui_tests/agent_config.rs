@@ -125,3 +125,12 @@ fn create_verify_is_advanced() {
     ui.set_is_advanced(true);
     assert_eq!(ui.get_is_advanced(), true);
 }
+
+#[test]
+fn create_verify_advanced_toggle() {
+    let ui = create();
+    assert_eq!(ui.get_is_advanced(), false);
+
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+}

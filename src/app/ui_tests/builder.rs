@@ -163,3 +163,12 @@ fn viral_storefront_footer_publish_view() {
     ui.invoke_open_ohc_signup();
     assert!(*signup_opened.borrow(), "Clicking the viral storefront footer should open the OHC signup link");
 }
+
+#[test]
+fn create_verify_advanced_toggle() {
+    let ui = create();
+    assert_eq!(ui.get_is_advanced(), false);
+
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+}

@@ -113,3 +113,12 @@ fn create_verify_focus_reply_spanish() {
     ui.set_focus_reply_spanish(false);
     assert_eq!(ui.get_focus_reply_spanish(), false);
 }
+
+#[test]
+fn create_verify_advanced_toggle() {
+    let ui = create();
+    assert_eq!(ui.get_is_advanced(), false);
+
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+}

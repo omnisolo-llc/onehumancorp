@@ -135,3 +135,21 @@ fn create_u_verify_progress() {
     ui.set_progress(21);
     assert_eq!(ui.get_progress(), 21);
 }
+
+#[test]
+fn fix_agent_verify_is_advanced_toggle() {
+    let ui = create_f();
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+    ui.set_is_advanced(false);
+    assert_eq!(ui.get_is_advanced(), false);
+}
+
+#[test]
+fn billing_verify_is_advanced_toggle() {
+    let ui = create_b();
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+    ui.set_is_advanced(false);
+    assert_eq!(ui.get_is_advanced(), false);
+}

@@ -1,4 +1,6 @@
-import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit, Slider, ScrollView } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, Slider, ScrollView } from "std-widgets.slint";
+import { CustomToggle } from "custom_toggle.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component AgentConfig inherits Window {
@@ -36,24 +38,9 @@ export component AgentConfig inherits Window {
         HorizontalBox {
             Text { text: "Configure Helper"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
-            HorizontalBox {
-                spacing: 8px;
-                alignment: end;
-                Text { text: "Advanced"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
-                TouchArea {
-                    width: 20px;
-                    height: 20px;
-                    clicked => { is_advanced = !is_advanced; save_state(); }
-                    Rectangle {
-                        width: 100%;
-                        height: 100%;
-                        border-radius: 4px;
-                        border-color: #a855f7;
-                        border-width: 1px;
-                        background: is_advanced ? #a855f7 : transparent;
-                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
-                    }
-                }
+            AdvancedToggle {
+                is_advanced <=> is_advanced;
+                toggled => { save_state(); }
             }
         }
 
@@ -82,6 +69,7 @@ export component AgentConfig inherits Window {
                                 Text { text: "Customer Support"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                                 Text { text: "Customer Support — keeps customers happy"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
+                            Rectangle {} VerticalBox { alignment: center; spacing: 4px; Text { text: "Add to my team"; font-family: "Inter"; font-size: 10px; color: white; } CustomToggle { checked: selected_agent == "Customer Support"; toggled => { if (selected_agent != "Customer Support") { selected_agent = "Customer Support"; selected_agent_display = "Customer Support"; } } } }
                         }
                         TouchArea { clicked => { selected_agent = "Customer Support"; selected_agent_display = "Customer Support"; } }
                     }
@@ -96,6 +84,7 @@ export component AgentConfig inherits Window {
                                 Text { text: "Social Media Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                                 Text { text: "Social Media Manager — gets the word out"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
+                            Rectangle {} VerticalBox { alignment: center; spacing: 4px; Text { text: "Add to my team"; font-family: "Inter"; font-size: 10px; color: white; } CustomToggle { checked: selected_agent == "Social Media Manager"; toggled => { if (selected_agent != "Social Media Manager") { selected_agent = "Social Media Manager"; selected_agent_display = "Social Media Manager"; } } } }
                         }
                         TouchArea { clicked => { selected_agent = "Social Media Manager"; selected_agent_display = "Social Media Manager"; } }
                     }
@@ -110,6 +99,7 @@ export component AgentConfig inherits Window {
                                 Text { text: "SEO Booster"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                                 Text { text: "SEO Booster — drives traffic"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
+                            Rectangle {} VerticalBox { alignment: center; spacing: 4px; Text { text: "Add to my team"; font-family: "Inter"; font-size: 10px; color: white; } CustomToggle { checked: selected_agent == "SEO Booster"; toggled => { if (selected_agent != "SEO Booster") { selected_agent = "SEO Booster"; selected_agent_display = "SEO Booster"; } } } }
                         }
                         TouchArea { clicked => { selected_agent = "SEO Booster"; selected_agent_display = "SEO Booster"; } }
                     }
@@ -124,6 +114,7 @@ export component AgentConfig inherits Window {
                                 Text { text: "Order Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                                 Text { text: "Order Manager — handles daily operations"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
+                            Rectangle {} VerticalBox { alignment: center; spacing: 4px; Text { text: "Add to my team"; font-family: "Inter"; font-size: 10px; color: white; } CustomToggle { checked: selected_agent == "Order Manager"; toggled => { if (selected_agent != "Order Manager") { selected_agent = "Order Manager"; selected_agent_display = "Order Manager"; } } } }
                         }
                         TouchArea { clicked => { selected_agent = "Order Manager"; selected_agent_display = "Order Manager"; } }
                     }
@@ -138,6 +129,7 @@ export component AgentConfig inherits Window {
                                 Text { text: "Email Marketer"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                                 Text { text: "Email Marketer — runs email campaigns"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
+                            Rectangle {} VerticalBox { alignment: center; spacing: 4px; Text { text: "Add to my team"; font-family: "Inter"; font-size: 10px; color: white; } CustomToggle { checked: selected_agent == "Email Marketer"; toggled => { if (selected_agent != "Email Marketer") { selected_agent = "Email Marketer"; selected_agent_display = "Email Marketer"; } } } }
                         }
                         TouchArea { clicked => { selected_agent = "Email Marketer"; selected_agent_display = "Email Marketer"; } }
                     }
@@ -158,19 +150,19 @@ export component AgentConfig inherits Window {
             
             HorizontalBox {
                 Text { text: "Reply to customer messages"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
+                CustomToggle { checked: can_reply; toggled => { can_reply = !can_reply; } }
             }
             HorizontalBox {
                 Text { text: "Post to Instagram & Facebook"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
+                CustomToggle { checked: can_social; toggled => { can_social = !can_social; } }
             }
             HorizontalBox {
                 Text { text: "Write product descriptions"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_write_descriptions; toggled => { can_write_descriptions = !can_write_descriptions; } }
+                CustomToggle { checked: can_write_descriptions; toggled => { can_write_descriptions = !can_write_descriptions; } }
             }
             HorizontalBox {
                 Text { text: "Send order updates"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_send_updates; toggled => { can_send_updates = !can_send_updates; } }
+                CustomToggle { checked: can_send_updates; toggled => { can_send_updates = !can_send_updates; } }
             }
         }
 

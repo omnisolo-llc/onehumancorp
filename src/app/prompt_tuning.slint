@@ -1,5 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 
 export struct UiPromptExample {
     q: string,
@@ -31,13 +32,26 @@ export component PromptTuning inherits Window {
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    HorizontalBox {
-        spacing: 20px;
-        padding: 24px;
+    VerticalBox {
+        HorizontalBox {
+            alignment: space-between;
+            padding: 24px;
+            padding-bottom: 0px;
+            Text { text: "Prompt Tuning"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            AdvancedToggle {
+                is_advanced <=> is_advanced;
+                toggled => {
+                    save_state();
+                }
+            }
+        }
+        HorizontalBox {
+            spacing: 20px;
+            padding: 24px;
 
-        // Left Column: Wizard Steps
-        VerticalBox {
-            width: 320px;
+            // Left Column: Wizard Steps
+            VerticalBox {
+                width: 320px;
             spacing: 20px;
             
             HorizontalBox {
@@ -191,15 +205,15 @@ export component PromptTuning inherits Window {
             }
         }
 
-        // Right Column: Preview
-        VerticalBox {
-            width: 320px;
-            spacing: 16px;
-            
-            HorizontalBox {
-                Text { text: "Live Preview"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
-                Rectangle {}
-            }
+            // Right Column: Preview
+            VerticalBox {
+                width: 320px;
+                spacing: 16px;
+
+                HorizontalBox {
+                    Text { text: "Live Preview"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
+                    Rectangle {}
+                }
             
             GlassCard {
                 VerticalBox {
@@ -238,6 +252,7 @@ export component PromptTuning inherits Window {
                         }
                     }
                 }
+            }
             }
         }
     }
