@@ -6,5 +6,7 @@ metadata:
     {{- include "ohc.labels" . | nindent 4 }}
     grafana_dashboard: "1"
 data:
-  ohc-infra-dash.json: |-
-{{ .Files.Get "dashboards/grafana-dashboard.json" | indent 4 }}
+{{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
+  {{ base $path }}: |-
+{{ $bytes | toString | indent 4 }}
+{{- end }}
