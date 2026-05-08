@@ -1,17 +1,28 @@
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Order Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
-**Research Report**:
-- **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
-**Design Doc**:
-- User goes to Settings and toggles "Send me SMS for new orders".
-- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
-- (Future: Customers can also receive SMS receipts).
-**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
-**Priority**: P2
-**Estimated Scope**: Medium
+# Title: Twilio Integration for Global SMS Notifications
+
+## Problem Statement
+Many small business customers, especially those with lower English proficiency or less technical background, do not check emails reliably. SMS is the only way to ensure they see appointment reminders or payment links, reducing no-shows and late payments.
+
+## Research Report
+Twilio is the industry standard for programmatic SMS and WhatsApp.
+- **Ease of use:** Developers handle the API. Business owners just buy a number or register an Alphanumeric Sender ID.
+- **Pricing:** Very cheap per message (cents), scales with usage.
+- **Reputation:** Top tier, extremely reliable globally.
+- **Key advantages:** Global reach, unmatched reliability, and simple API.
+- **Risks:** The new A2P 10DLC regulations in the US require businesses to register their traffic, which can be confusing for small business owners and delay their ability to send messages.
+- **Environment:** Cloud works perfectly. Standalone works perfectly via outbound API calls.
+
+## Design Doc
+- User goes to "Notifications" and enables SMS.
+- User configures a Twilio API key (or OHC provides a managed number).
+- Automated workflows (e.g., "Appointment tomorrow", "Invoice due") trigger an outbound SMS API call.
+- Delivery status is logged and visible to the business owner.
+
+## Implementation Prompt
+Integrate Twilio to send outbound SMS. Allow users to input their Twilio Account SID and Auth Token. Create a trigger mechanism so that upcoming appointments send an SMS reminder 24 hours in advance. Log all sent messages in a "Communications" tab.
+
+## Priority
+P0
+
+## Estimated Scope
+Small

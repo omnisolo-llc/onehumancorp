@@ -1,18 +1,29 @@
-## [Shipping] Shippo Integration
-**Title**: Integrate Shippo for Automated Label Generation
-**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
-**Research Report**:
-- **Tool**: Shippo
-- **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
-- **Advantages**: Aggregates rates from USPS, UPS, FedEx, DHL. Simple API. No monthly fee for pay-as-you-go.
-- **Risks**: International shipping requires complex customs declarations which might be hard to automate fully for non-technical users.
-- **Pricing**: Free tier (pay per label + postage).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
-- The Operations agent shows the cheapest shipping option.
-- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
-- OHC automatically emails the customer the tracking number.
-**Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
-**Priority**: P1
-**Estimated Scope**: Large
+# Title: Shippo Integration for Seamless Shipping
+
+## Problem Statement
+Small business owners selling physical goods struggle with calculating accurate shipping rates at checkout and manually generating shipping labels. Taking packages to the post office and waiting in line is a massive waste of time.
+
+## Research Report
+Shippo provides a unified API for multiple carriers (USPS, FedEx, UPS, DHL).
+- **Ease of use:** Business owner just connects their Shippo account.
+- **Pricing:** Pay-as-you-go per label or a monthly subscription for volume.
+- **Reputation:** Highly reliable, developer-friendly.
+- **Key advantages:** Access to discounted USPS rates immediately, multi-carrier support out of the box, and automated tracking updates.
+- **Risks:** Handling edge cases for international shipping (customs forms) can be complex. Rate limits on the API might affect high-volume stores.
+- **Environment:** Cloud works perfectly. Standalone works perfectly via outbound API calls.
+
+## Design Doc
+- User goes to "Shipping" and connects Shippo.
+- During customer checkout, OHC pings Shippo to display live shipping rates based on package weight and destination.
+- When an order is paid, the user clicks "Generate Label" in OHC.
+- OHC purchases the label via Shippo and provides a printable PDF.
+- Tracking numbers are automatically emailed to the customer.
+
+## Implementation Prompt
+Integrate Shippo API to handle real-time shipping rates and label generation. Add a "Shipping Info" section to physical products to store weight/dimensions. Create an endpoint that queries Shippo for rates during checkout. Add a "Buy Label" button in the order management view that returns a printable PDF link.
+
+## Priority
+P1
+
+## Estimated Scope
+Large
