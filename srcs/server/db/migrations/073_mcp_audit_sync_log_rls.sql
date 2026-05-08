@@ -1,0 +1,1 @@
+ALTER TABLE mcp_audit_sync_log ENABLE ROW LEVEL SECURITY;

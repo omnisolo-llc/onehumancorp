@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"database/sql"
+	"onehumancorp/srcs/server/db"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -169,10 +170,9 @@ func (d *AutoDreamDaemon) upsertMemory(ctx context.Context, id string, orgID str
 	}
 	defer tx.Rollback()
 
-	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant', $1, true)", orgID)
-	if err != nil {
-		// Ignore syntax errors or function not found for sqlite testing fallback, if any
-		if !strings.Contains(err.Error(), "syntax error") && !strings.Contains(err.Error(), "no such function: set_config") {
+	if !db.GlobalProvider.IsSQLite() {
+		_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant', $1, true)", orgID)
+		if err != nil {
 			return err
 		}
 	}

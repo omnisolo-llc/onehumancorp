@@ -7,6 +7,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"onehumancorp/srcs/server/db"
 )
 
 type SharedTask struct {
@@ -112,9 +114,11 @@ func (s *PostgresTaskStore) CreateTask(ctx context.Context, task *SharedTask) er
 		return err
 	}
 	defer tx.Rollback()
-	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant', $1, true)", task.OrganizationID)
-	if err != nil {
-		return err
+	if !db.GlobalProvider.IsSQLite() {
+		_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant', $1, true)", task.OrganizationID)
+		if err != nil {
+			return err
+		}
 	}
 
 	query := `
@@ -278,9 +282,11 @@ func (s *PostgresTaskStore) GetTasksByOrganization(ctx context.Context, organiza
 		return nil, err
 	}
 	defer tx.Rollback()
-	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant', $1, true)", organizationID)
-	if err != nil {
-		return nil, err
+	if !db.GlobalProvider.IsSQLite() {
+		_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant', $1, true)", organizationID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
     query := `
