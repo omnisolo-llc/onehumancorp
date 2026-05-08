@@ -1,5 +1,6 @@
 import { GlassCard } from "glass_card.slint";
-import { Button, VerticalBox, HorizontalBox, ScrollView, CheckBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 import { TooltipElement } from "tooltip_element.slint";
 
 export struct ApiEndpoint {
@@ -46,9 +47,8 @@ export component ApiDocs inherits Window {
 
             TooltipElement {
                 tooltip_id: "api_docs_advanced";
-                CheckBox {
-                    text: "Show Advanced Connection Details";
-                    checked <=> is_advanced;
+                AdvancedToggle {
+                    is_advanced <=> is_advanced;
                 }
             }
 
