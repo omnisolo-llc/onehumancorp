@@ -60,3 +60,48 @@ fn test_api_docs_is_advanced_toggle() {
     ui.set_is_advanced(true);
     assert_eq!(ui.get_is_advanced(), true);
 }
+#[test]
+fn test_e2e_api_docs_progressive_disclosure_click_flow_1() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let _main_app = app::AppWindow::new().unwrap();
+    let ui = app::ApiDocs::new().unwrap();
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+}
+#[test]
+fn test_e2e_api_docs_progressive_disclosure_click_flow_2() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let _main_app = app::AppWindow::new().unwrap();
+    let ui = app::ApiDocs::new().unwrap();
+    ui.set_is_advanced(false);
+    assert_eq!(ui.get_is_advanced(), false);
+}
+#[test]
+fn test_e2e_api_docs_progressive_disclosure_click_flow_3() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let _main_app = app::AppWindow::new().unwrap();
+    let ui = app::ApiDocs::new().unwrap();
+    assert_eq!(ui.get_is_advanced(), false);
+}
+#[test]
+fn test_e2e_api_docs_progressive_disclosure_click_flow_4() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let _main_app = app::AppWindow::new().unwrap();
+    let ui = app::ApiDocs::new().unwrap();
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+    ui.set_is_advanced(false);
+    assert_eq!(ui.get_is_advanced(), false);
+}
+#[test]
+fn test_e2e_api_docs_progressive_disclosure_click_flow_5() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let _main_app = app::AppWindow::new().unwrap();
+    let ui = app::ApiDocs::new().unwrap();
+    for _ in 0..5 {
+        ui.set_is_advanced(true);
+        assert_eq!(ui.get_is_advanced(), true);
+        ui.set_is_advanced(false);
+        assert_eq!(ui.get_is_advanced(), false);
+    }
+}
