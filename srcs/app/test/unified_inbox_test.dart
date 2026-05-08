@@ -49,7 +49,28 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 6. Review & Launch Screen
+  // 7. Template Selection Screen
+  await tester.tap(find.text('Modern'));
+  await tester.pump(const Duration(milliseconds: 500));
+  await tester.tap(find.text('Next'));
+  await tester.pump(const Duration(milliseconds: 500));
+
+  // 8. Product Add Screen
+  await tester.enterText(find.byKey(const Key('productNameField')), 'Test Product');
+  await tester.enterText(find.byKey(const Key('productPriceField')), '19.99');
+  await tester.ensureVisible(find.text('✨ Auto-generate description'));
+  await tester.tap(find.text('✨ Auto-generate description'));
+  await tester.pump(const Duration(milliseconds: 500));
+  await tester.tap(find.text('Next'));
+  await tester.pump(const Duration(milliseconds: 500));
+
+  // 9. Domain Screen
+  await tester.tap(find.text('🌐 Free OHC Domain'));
+  await tester.pump(const Duration(milliseconds: 500));
+  await tester.tap(find.text('Next'));
+  await tester.pump(const Duration(milliseconds: 500));
+
+  // 10. Review & Launch Screen
   final launchBtn = find.text('Launch My AI Team');
   await tester.ensureVisible(launchBtn);
   await tester.pump(const Duration(milliseconds: 500));

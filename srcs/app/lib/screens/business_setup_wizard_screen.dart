@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wizard_provider.dart';
-import '../main.dart'; // For GlassContainer
+import '../main.dart';
+import 'dashboard_screen.dart'; // For GlassContainer
 
 enum EnvironmentMode { cloud, standaloneDesktop }
 
@@ -74,7 +75,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(wizardProvider);
 
-    if (state.currentStep == 7) {
+    if (state.currentStep == 10) {
       return const DashboardScreen();
     }
 
@@ -107,6 +108,12 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       case 5:
         return _buildAdministratorAccountScreen();
       case 6:
+        return _buildTemplateSelectionScreen(state);
+      case 7:
+        return _buildProductAddScreen(state);
+      case 8:
+        return _buildDomainScreen(state);
+      case 9:
         return _buildReviewAndLaunchScreen(state);
       default:
         return const SizedBox.shrink();
@@ -509,7 +516,240 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
+
+  Widget _buildTemplateSelectionScreen(WizardState state) {
+    final templates = ['Modern', 'Classic', 'Bold'];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Choose a Template',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Expanded(
+          child: ListView.builder(
+            itemCount: templates.length,
+            itemBuilder: (context, index) {
+              final template = templates[index];
+              final isSelected = state.template == template;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: GestureDetector(
+                  onTap: () {
+                    ref.read(wizardProvider.notifier).updateTemplate(template);
+                  },
+                  child: GlassContainer(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              template,
+                              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Preview of ${state.companyName ?? "your business"}',
+                              style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        Icon(
+                          isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                          color: isSelected ? const Color(0xFF6B4EFF) : Colors.white54,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
+  Widget _buildProductAddScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Add your first product or service',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                GlassContainer(
+                  child: TextField(
+                    key: const Key('productNameField'),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Product Name',
+                      labelStyle: TextStyle(color: Colors.white70),
+                      border: InputBorder.none,
+                    ),
+                    onChanged: (value) {
+                      ref.read(wizardProvider.notifier).updateProduct(name: value);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 15),
+                GlassContainer(
+                  child: Column(
+                    children: [
+                      TextField(
+                        key: const Key('productDescriptionField'),
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Description (AI will help!)',
+                          labelStyle: TextStyle(color: Colors.white70),
+                          border: InputBorder.none,
+                        ),
+                        onChanged: (value) {
+                          ref.read(wizardProvider.notifier).updateProduct(description: value);
+                        },
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            ref.read(wizardProvider.notifier).updateProduct(description: "An AI-generated description for ${state.productName ?? 'this product'}.");
+                          },
+                          child: const Text('✨ Auto-generate description', style: TextStyle(color: Color(0xFF6B4EFF))),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 15),
+                GlassContainer(
+                  child: TextField(
+                    key: const Key('productPriceField'),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Price (USD)',
+                      labelStyle: TextStyle(color: Colors.white70),
+                      border: InputBorder.none,
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (value) {
+                      ref.read(wizardProvider.notifier).updateProduct(price: value);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 15),
+                GlassContainer(
+                  child: Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: Column(
+                      children: const [
+                        Icon(Icons.camera_alt, color: Colors.white, size: 40),
+                        SizedBox(height: 10),
+                        Text('📷 Upload Photo (tap to crop)', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
+  Widget _buildDomainScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Choose a Domain',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 20),
+        GlassContainer(
+          child: GestureDetector(
+            onTap: () {
+              ref.read(wizardProvider.notifier).updateDomain('subdomain');
+            },
+            child: Row(
+              children: [
+                Icon(
+                  state.domain == 'subdomain' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                  color: state.domain == 'subdomain' ? const Color(0xFF6B4EFF) : Colors.white54,
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('🌐 Free OHC Domain', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('mybusiness.ohc.app', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 15),
+        GlassContainer(
+          child: GestureDetector(
+            onTap: () {
+              ref.read(wizardProvider.notifier).updateDomain('custom');
+            },
+            child: Row(
+              children: [
+                Icon(
+                  state.domain == 'custom' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                  color: state.domain == 'custom' ? const Color(0xFF6B4EFF) : Colors.white54,
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('🌍 Connect Custom Domain', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('e.g. www.mybusiness.com', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const Spacer(),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
   Widget _buildReviewAndLaunchScreen(WizardState state) {
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -537,10 +777,18 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   const SizedBox(height: 10),
                   _buildSummaryItem('Goals', state.goals.isEmpty ? 'None' : state.goals.join(', ')),
                   const SizedBox(height: 10),
+
                   _buildSummaryItem('Deployment', state.deploymentPreference ?? 'Not set'),
                   const SizedBox(height: 10),
                   _buildSummaryItem('Admin', state.adminName ?? 'Not set'),
+                  const SizedBox(height: 10),
+                  _buildSummaryItem('Template', state.template ?? 'Not set'),
+                  const SizedBox(height: 10),
+                  _buildSummaryItem('Product', '${state.productName ?? "None"} (\$${state.productPrice ?? "0"})'),
+                  const SizedBox(height: 10),
+                  _buildSummaryItem('Domain', state.domain == 'subdomain' ? 'Free OHC Domain' : 'Custom Domain'),
                 ],
+
               ),
             ),
           ),

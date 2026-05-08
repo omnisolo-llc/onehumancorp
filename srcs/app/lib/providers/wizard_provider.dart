@@ -11,6 +11,11 @@ class WizardState {
   final String? adminName;
   final String? adminEmail;
   final String? adminPassword;
+  final String? template;
+  final String? productName;
+  final String? productDescription;
+  final String? productPrice;
+  final String? domain;
 
   WizardState({
     this.currentStep = 0,
@@ -22,6 +27,11 @@ class WizardState {
     this.adminName,
     this.adminEmail,
     this.adminPassword,
+    this.template,
+    this.productName,
+    this.productDescription,
+    this.productPrice,
+    this.domain,
   });
 
   WizardState copyWith({
@@ -34,6 +44,11 @@ class WizardState {
     String? adminName,
     String? adminEmail,
     String? adminPassword,
+    String? template,
+    String? productName,
+    String? productDescription,
+    String? productPrice,
+    String? domain,
   }) {
     return WizardState(
       currentStep: currentStep ?? this.currentStep,
@@ -45,6 +60,11 @@ class WizardState {
       adminName: adminName ?? this.adminName,
       adminEmail: adminEmail ?? this.adminEmail,
       adminPassword: adminPassword ?? this.adminPassword,
+      template: template ?? this.template,
+      productName: productName ?? this.productName,
+      productDescription: productDescription ?? this.productDescription,
+      productPrice: productPrice ?? this.productPrice,
+      domain: domain ?? this.domain,
     );
   }
 }
@@ -58,7 +78,7 @@ class WizardNotifier extends Notifier<WizardState> {
   }
 
   void nextStep() {
-    if (state.currentStep < 7) {
+    if (state.currentStep < 10) {
       state = state.copyWith(currentStep: state.currentStep + 1);
     }
   }
@@ -97,6 +117,23 @@ class WizardNotifier extends Notifier<WizardState> {
       adminEmail: email ?? state.adminEmail,
       adminPassword: password ?? state.adminPassword,
     );
+  }
+
+
+  void updateTemplate(String? template) {
+    state = state.copyWith(template: template);
+  }
+
+  void updateProduct({String? name, String? description, String? price}) {
+    state = state.copyWith(
+      productName: name ?? state.productName,
+      productDescription: description ?? state.productDescription,
+      productPrice: price ?? state.productPrice,
+    );
+  }
+
+  void updateDomain(String? domain) {
+    state = state.copyWith(domain: domain);
   }
 
   Future<void> submitWizard() async {
