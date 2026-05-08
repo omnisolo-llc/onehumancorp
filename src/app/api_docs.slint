@@ -39,7 +39,7 @@ export component ApiDocs inherits Window {
             }
 
             Text {
-                text: "Connect other tools to your store. This is an advanced feature for software developers. If you are not a developer, you don't need to use this page.";
+                text: "Connect other tools to your store. This is an advanced feature for software developers. If you are not a developer, you do not need to use this page.";
                 color: #ef4444; // red warning
                 wrap: word-wrap;
             }
@@ -74,7 +74,7 @@ export component ApiDocs inherits Window {
                                 TooltipElement {
                                     tooltip_id: "api_test_button";
                                     Button {
-                                        text: "Run Test";
+                                        text: "Test this connection";
                                         clicked => { root.test_endpoint(ep.path); root.active_endpoint = ep.path; }
                                     }
                                 }
