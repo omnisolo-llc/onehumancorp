@@ -178,7 +178,7 @@ func (d *AutoDreamDaemon) upsertMemory(ctx context.Context, id string, orgID str
 	}
 
 	query := `
-		INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type)
+		INSERT INTO consolidated_memory (id, organization_id, agent_id, task_id, content, embedding, source_type)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT(id) DO UPDATE SET
 			content = excluded.content,
