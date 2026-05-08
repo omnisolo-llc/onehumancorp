@@ -2510,15 +2510,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = ui_handle.upgrade() {
                 let bio = ui.get_instant_bio().to_string();
                 tokio::spawn(async move {
-                    let mut company_name = "AI Generated Store".to_string();
-                    let mut business_type = "Online Store".to_string();
-                    let mut product_name = "My First Product".to_string();
-                    let mut product_price = "19.99".to_string();
-                    let mut company_description = "A great AI-generated business.".to_string();
-                    let mut domain_choice = "free".to_string();
-                    let mut website_template = "Modern".to_string();
-                    let mut admin_email = "admin@ai-generated.test".to_string();
-                    let mut payment_pref = "online".to_string();
+                    let mut company_name = String::new();
+                    let mut business_type = String::new();
+                    let mut product_name = String::new();
+                    let mut product_price = String::new();
+                    let mut company_description = String::new();
+                    let mut domain_choice = String::new();
+                    let mut website_template = String::new();
+                    let mut admin_email = String::new();
+                    let mut payment_pref = String::new();
 
                     if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                         let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
@@ -2572,7 +2572,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let name = name.to_string();
             let biz_type = biz_type.to_string();
             tokio::spawn(async move {
-                let mut description = format!("{} is a premium {} business.", name, biz_type);
+                let mut description = String::new();
                 if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let prompt = format!("Generate a catchy 1-sentence tagline/description for a business named \"{}\" which is a \"{}\".", name, biz_type);
                     let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
@@ -2610,7 +2610,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let ui_handle = ui_weak.clone();
             let prod_name = prod_name.to_string();
             tokio::spawn(async move {
-                let mut description = format!("A premium {}.", prod_name);
+                let mut description = String::new();
                 if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let prompt = format!("Generate a short, enticing product description for \"{}\".", prod_name);
                     let request = tonic::Request::new(ohc::orchestration::ReasonRequest {

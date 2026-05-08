@@ -69,6 +69,7 @@ fi
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server from $SERVER_BIN..."
+  export DATABASE_URL="postgres://ohc:ohc@127.0.0.1:5432/ohc"
   DATABASE_URL="postgres://ohc:ohc@127.0.0.1:5432/ohc" \
   REDIS_URL="redis://127.0.0.1:6379" \
     "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &

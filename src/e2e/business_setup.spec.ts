@@ -1,3 +1,4 @@
+import { Client } from 'pg';
 import { test, expect } from '@playwright/test';
 
 test.describe('Business Setup Wizard', () => {
@@ -703,5 +704,54 @@ test.describe('E2E Onboarding Persona Journeys', () => {
 
     await page.click('text="Launch My Business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+  });
+});
+
+test.describe('E2E Full Stack DB Verification', () => {
+  test('Persona: Maya - E2E with DB connection string', async ({ page }) => {
+    await page.goto('/');
+
+    // Normal guided flow
+    await page.click('text=Guided Setup');
+    await page.locator('text=Online Store').click();
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', "Maya's Real Database Cake");
+    await page.click('text=Next →');
+
+    await page.locator('text=Physical products').click();
+    await page.click('text=Next →');
+
+    await page.click('text=💳 Online (Credit Cards, Apple Pay)');
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Maya Smith"]', "Maya Test");
+    await page.fill('input[placeholder="you@email.com"]', "maya.test@example.com");
+    await page.fill('input[type="password"]', "securepassword");
+    await page.click('text=Next');
+
+    await page.click('text=✨ Modern');
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', "DB Verified Cake");
+    await page.fill('input[placeholder="e.g. 50.00"]', "100.00");
+    await page.click('text=Next →');
+
+    await page.click('text=🌐 Free OHC Domain');
+    await page.click('text=Next →');
+
+    // Launch
+    await page.click('text="Launch My Business →"');
+
+    // We should see Launch Success
+    await expect(page.locator('text=View Live Storefront →')).toBeVisible({ timeout: 15000 });
+
+    const client = new Client({ connectionString: process.env.DATABASE_URL || "postgres://ohc:ohc@127.0.0.1:5432/ohc" });
+    await client.connect();
+    const res = await client.query("SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)", ["maya.test@example.com"]);
+    await client.end();
+    expect(res.rows[0].exists).toBe(true);
+    await page.reload();
+    await expect(page.locator('text=Maya Test')).toBeVisible({ timeout: 15000 });
   });
 });

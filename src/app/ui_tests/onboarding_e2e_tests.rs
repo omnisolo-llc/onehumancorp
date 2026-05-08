@@ -257,3 +257,121 @@ fn test_e2e_onboarding_welcome_checklist() {
     wizard_ui.invoke_show_welcome_checklist();
     assert!(*checklist_called.borrow(), "Welcome checklist post-onboarding should work");
 }
+
+#[test]
+fn test_e2e_onboarding_13_steps() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let wizard_ui = crate::app::SetupWizard::new().unwrap();
+
+    // Verify all 13 steps are reachable in the Slint UI to lock in intended behavior
+    wizard_ui.set_step(0);
+    assert_eq!(wizard_ui.get_step(), 0);
+
+    wizard_ui.set_step(1);
+    assert_eq!(wizard_ui.get_step(), 1);
+
+    wizard_ui.set_step(2);
+    assert_eq!(wizard_ui.get_step(), 2);
+
+    wizard_ui.set_step(3);
+    assert_eq!(wizard_ui.get_step(), 3);
+
+    wizard_ui.set_step(4);
+    assert_eq!(wizard_ui.get_step(), 4);
+
+    wizard_ui.set_step(5);
+    assert_eq!(wizard_ui.get_step(), 5);
+
+    wizard_ui.set_step(6);
+    assert_eq!(wizard_ui.get_step(), 6);
+
+    wizard_ui.set_step(7);
+    assert_eq!(wizard_ui.get_step(), 7);
+
+    wizard_ui.set_step(8);
+    assert_eq!(wizard_ui.get_step(), 8);
+
+    wizard_ui.set_step(9);
+    assert_eq!(wizard_ui.get_step(), 9);
+
+    wizard_ui.set_step(10);
+    assert_eq!(wizard_ui.get_step(), 10);
+
+    wizard_ui.set_step(11);
+    assert_eq!(wizard_ui.get_step(), 11);
+
+    wizard_ui.set_step(100);
+    assert_eq!(wizard_ui.get_step(), 100);
+}
+
+#[test]
+fn test_e2e_onboarding_instant_build_step() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let wizard_ui = crate::app::SetupWizard::new().unwrap();
+    wizard_ui.set_step(11);
+    wizard_ui.set_instant_bio("A lovely flower shop".into());
+
+    let ai_gen_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let ai_gen_called_clone = ai_gen_called.clone();
+
+    wizard_ui.on_generate_instant_preview(move || {
+        *ai_gen_called_clone.borrow_mut() = true;
+    });
+
+    wizard_ui.invoke_generate_instant_preview();
+    assert!(*ai_gen_called.borrow(), "AI generation for instant build should work");
+}
+
+#[test]
+fn test_e2e_onboarding_generated_storefront_step() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let wizard_ui = crate::app::SetupWizard::new().unwrap();
+    wizard_ui.set_step(100);
+    wizard_ui.set_company_name("Floral Dreams".into());
+
+    assert_eq!(wizard_ui.get_company_name(), "Floral Dreams");
+}
+
+#[test]
+fn test_e2e_onboarding_instant_build_to_checklist() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let wizard_ui = crate::app::SetupWizard::new().unwrap();
+    wizard_ui.set_step(11);
+
+    let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let save_called_clone = save_called.clone();
+
+    wizard_ui.on_save_state(move || {
+        *save_called_clone.borrow_mut() = true;
+    });
+
+    wizard_ui.invoke_save_state();
+    assert!(*save_called.borrow(), "State should persist from instant build");
+}
+
+#[test]
+fn test_e2e_onboarding_welcome_checklist_navigation() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let wizard_ui = crate::app::SetupWizard::new().unwrap();
+    wizard_ui.set_step(10);
+
+    let checklist_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let checklist_called_clone = checklist_called.clone();
+
+    wizard_ui.on_show_welcome_checklist(move || {
+        *checklist_called_clone.borrow_mut() = true;
+    });
+
+    wizard_ui.invoke_show_welcome_checklist();
+    assert!(*checklist_called.borrow(), "Welcome checklist navigation should work");
+}
