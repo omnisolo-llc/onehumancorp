@@ -1,13 +1,22 @@
 package telemetry
 
-// RedactInterfacePII redacts PII from telemetry attributes
+// RedactInterfacePII redacts PII from an interface map.
 func RedactInterfacePII(attrs map[string]interface{}) map[string]interface{} {
-	redacted := make(map[string]interface{})
+	if attrs == nil {
+		return nil
+	}
+	redacted := make(map[string]interface{}, len(attrs))
 	for k, v := range attrs {
-		if k == "email" || k == "password" || k == "phone" || k == "ssn" {
+		// Basic PII redaction logic
+		if k == "email" || k == "phone" || k == "name" || k == "password" || k == "token" || k == "ssn" {
 			redacted[k] = "[REDACTED]"
 		} else {
-			redacted[k] = v
+			// For nested maps, we could recurse, but for now just copy
+			if nestedMap, ok := v.(map[string]interface{}); ok {
+				redacted[k] = RedactInterfacePII(nestedMap)
+			} else {
+				redacted[k] = v
+			}
 		}
 	}
 	return redacted
