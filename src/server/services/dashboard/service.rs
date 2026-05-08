@@ -11,6 +11,8 @@ static PRODUCTS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::organizat
     OnceLock::new();
 static ORDERS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::app::Order>>>> =
     OnceLock::new();
+static ORG_CACHE: OnceLock<RwLock<HashMap<String, crate::ohc::organization::Organization>>> =
+    OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -64,17 +66,28 @@ impl DashboardService for MyDashboardService {
 
         let hub_prod = self.hub.clone();
         let hub_orders = self.hub.clone();
+        let hub_org = self.hub.clone();
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            async { Ok::<_, String>(hub1.get_agents()) },
-            async { Ok::<_, String>(hub2.get_meetings()) },
             async {
-                let cost_auditor = hub3.get_cost_auditor();
-                Ok::<_, String>((
-                    cost_auditor.get_total_cost(),
-                    cost_auditor.get_total_tokens(),
-                    cost_auditor.get_agent_costs_snapshot(),
-                ))
+                tokio::task::spawn_blocking(move || {
+                    Ok::<_, String>(hub1.get_agents())
+                }).await.unwrap_or_else(|e| Err(e.to_string()))
+            },
+            async {
+                tokio::task::spawn_blocking(move || {
+                    Ok::<_, String>(hub2.get_meetings())
+                }).await.unwrap_or_else(|e| Err(e.to_string()))
+            },
+            async {
+                tokio::task::spawn_blocking(move || {
+                    let cost_auditor = hub3.get_cost_auditor();
+                    Ok::<_, String>((
+                        cost_auditor.get_total_cost(),
+                        cost_auditor.get_total_tokens(),
+                        cost_auditor.get_agent_costs_snapshot(),
+                    ))
+                }).await.unwrap_or_else(|e| Err(e.to_string()))
             },
             async {
                 let org_id = org_id1; // Caching layer logic (Phase 4)
@@ -243,6 +256,27 @@ impl DashboardService for MyDashboardService {
             },
             async {
                 let org_id = org_id3;
+                let cache_key = format!("hub:org:{}", org_id);
+
+                if let Some(client) = &hub_org.redis_client {
+                    if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                        use redis::AsyncCommands;
+                        let redis_res: Result<Option<String>, redis::RedisError> = conn.get(&cache_key).await;
+                        if let Ok(Some(data)) = redis_res {
+                            if let Ok(org) = serde_json::from_str(&data) {
+                                return Ok::<_, String>(Some(org));
+                            }
+                        }
+                    }
+                }
+
+                let cache = ORG_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+                if let Ok(guard) = cache.read() {
+                    if let Some(org) = guard.get(&org_id) {
+                        return Ok::<_, String>(Some(org.clone()));
+                    }
+                }
+
                 let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
                 use sqlx::Row;
                 let mut org = None;
@@ -280,6 +314,28 @@ impl DashboardService for MyDashboardService {
                         }
                     }
                 }
+
+                if let Some(org_data) = &org {
+                    if let Some(client) = &hub_org.redis_client {
+                        if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                            if let Ok(data) = serde_json::to_string(org_data) {
+                                let _: () = redis::cmd("SETEX")
+                                    .arg(&cache_key)
+                                    .arg(3600)
+                                    .arg(data)
+                                    .query_async(&mut conn)
+                                    .await
+                                    .unwrap_or_default();
+                            }
+                        }
+                    }
+
+                    let cache = ORG_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+                    if let Ok(mut guard) = cache.write() {
+                        guard.insert(org_id, org_data.clone());
+                    }
+                }
+
                 Ok::<_, String>(org)
             }
         );
@@ -304,6 +360,19 @@ impl DashboardService for MyDashboardService {
                 .collect()
         } else {
             products
+        };
+
+        let orders = if req.mobile_optimized {
+            orders
+                .into_iter()
+                .map(|o| crate::ohc::app::Order {
+                    product_id: String::new(),
+                    status: String::new(),
+                    ..o
+                })
+                .collect()
+        } else {
+            orders
         };
 
         let mut out_meetings: Vec<crate::ohc::app::MeetingRoom> = Vec::new();
@@ -392,12 +461,24 @@ impl DashboardService for MyDashboardService {
             optimized_total_tokens = (total_tokens as f64 * compression_ratio) as i64;
         }
 
+        let mut agent_summaries = Vec::new();
+        for (agent_id, cost_usd, tokens_used, roi, efficiency) in _agent_costs_data {
+            agent_summaries.push(crate::ohc::billing::AgentCostSummary {
+                agent_id,
+                cost_usd,
+                token_used: tokens_used,
+                roi,
+                efficiency,
+                pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
+            });
+        }
+
         let cost_summary = crate::ohc::billing::CostSummary {
             organization_id: req.organization_id.clone(),
             total_cost_usd: total_cost,
             total_tokens: optimized_total_tokens,
             projected_monthly_usd: 0.0,
-            agents: vec![],
+            agents: agent_summaries,
         };
 
         let mut final_agents = _filtered_agents
