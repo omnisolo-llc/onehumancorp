@@ -97,3 +97,4 @@ pub mod scribe_extra_tests;
 pub mod ai_team_e2e;
 pub mod lens_audit_tests;
 pub mod booking_quote_e2e;
+pub mod echo_dashboard;
