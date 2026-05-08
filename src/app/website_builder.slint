@@ -1,5 +1,6 @@
 import { GlassCard } from "glass_card.slint";
 import { HeroBlock, ProductGridBlock, CalendarBlock, TestimonialsBlock, ContactFormBlock } from "smart_blocks.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit, CheckBox } from "std-widgets.slint";
 
 export component WebsiteBuilder inherits Window { // storefront
@@ -25,8 +26,10 @@ export component WebsiteBuilder inherits Window { // storefront
     in-out property <string> product_price: "";
     in-out property <string> product_description: "";
     in-out property <string> domain_choice: "subdomain";
-    in-out property <bool> is_advanced: false;
     in-out property <bool> is_publishing: false;
+    in-out property <bool> is_advanced: false;
+    callback toggle_advanced();
+    toggle_advanced => { }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -37,25 +40,11 @@ export component WebsiteBuilder inherits Window { // storefront
         HorizontalBox {
             Text { text: "Website Builder"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
-            HorizontalBox {
-                spacing: 8px;
-                alignment: end;
-                Text { text: "Advanced"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
-                TouchArea {
-                    width: 20px;
-                    height: 20px;
-                    clicked => { is_advanced = !is_advanced; save_state(); }
-                    Rectangle {
-                        width: 100%;
-                        height: 100%;
-                        border-radius: 4px;
-                        border-color: #a855f7;
-                        border-width: 1px;
-                        background: is_advanced ? #a855f7 : transparent;
-                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
-                    }
-                }
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { toggle_advanced(); }
             }
+
         }
 
         // Step 0: Template
@@ -212,9 +201,15 @@ export component WebsiteBuilder inherits Window { // storefront
             }
         }
 
+
         // Step 3: Domain
         if (step == 3) : VerticalBox {
             spacing: 16px;
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: DNS Records Override"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "CNAME mybusiness.ohc.app"; }
+            }
             Text { text: "Choose a Domain"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
             Text { text: "Where will customers find you?"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
@@ -248,9 +243,15 @@ export component WebsiteBuilder inherits Window { // storefront
 
         }
 
+
         // Step 4: Review
         if (step == 4) : VerticalBox {
             spacing: 24px;
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Raw Output Export"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "<html><head></head><body>...</body></html>"; height: 80px; }
+            }
             Text { text: "Go Live: Review your site"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
 
             ScrollView {
