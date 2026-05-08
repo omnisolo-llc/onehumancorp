@@ -288,6 +288,10 @@ mod tests {
                     .filter_map(Result::ok)
                     .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs" || ext == "go" || ext == "ts"))
                 {
+                    let path_str = entry.path().to_string_lossy();
+                    if path_str.contains("telemetry_test.rs") {
+                        continue;
+                    }
                     checked_files += 1;
                     let content = fs::read_to_string(entry.path()).unwrap_or_default();
                     for (i, line) in content.lines().enumerate() {
