@@ -4,6 +4,9 @@ pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sql
 where
     E: Executor<'a, Database = Postgres>,
 {
+    if crate::config::get().multitenant && org_id == "system" {
+        return Err(sqlx::Error::Configuration("Passing 'system' as org_id is explicitly blocked in Cloud mode to prevent RLS bypass".into()));
+    }
     if !crate::config::get().multitenant && (org_id == "system" || org_id.is_empty()) {
         // Elevate privileges for system-level queries.
         // We cannot issue multiple queries because sqlx extended protocol doesn't allow it,
@@ -22,5 +25,16 @@ where
             .execute(executor)
             .await?;
     }
+    Ok(())
+}
+
+pub async fn set_system_context<'a, E>(executor: E) -> Result<(), sqlx::Error>
+where
+    E: Executor<'a, Database = Postgres>,
+{
+    // Elevate privileges for system-level background tasks
+    query("SET LOCAL ROLE ohc_bypassrls")
+        .execute(executor)
+        .await?;
     Ok(())
 }
