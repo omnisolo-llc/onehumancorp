@@ -501,7 +501,7 @@ fn test_e2e_wizard_instant_build_flow() {
     ui.set_is_instant_build(true);
     ui.set_instant_bio("I run a local bakery called Maya's Cakes".into());
 
-    // In actual implementation this calls gRPC, so we mock the callback behaviour
+    // In actual implementation this calls gRPC, so we simulate the callback behaviour
     // that invokes the set properties to match main.rs functionality.
 
     let ui_weak = ui.as_weak();

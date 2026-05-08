@@ -144,7 +144,7 @@ fn viral_storefront_footer_publish_view() {
     ui.set_step(4);
     assert_eq!(ui.get_step(), 4);
 
-    // Mock user clicking publish
+    // User clicks publish
     ui.set_is_publishing(true);
     assert_eq!(ui.get_is_publishing(), true);
 
