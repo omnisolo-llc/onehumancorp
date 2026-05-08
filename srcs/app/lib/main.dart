@@ -65,7 +65,9 @@ class DashboardScreen extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 600),
           child: Padding(
             padding: const EdgeInsets.all(20),
-            child: ListView(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
 
               children: [
                 const SizedBox(height: 20),
@@ -82,7 +84,7 @@ class DashboardScreen extends StatelessWidget {
                 GlassContainer(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
                         'Revenue',
                         style: TextStyle(fontSize: 14, color: Colors.white70),
@@ -99,7 +101,7 @@ class DashboardScreen extends StatelessWidget {
                 GlassContainer(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
                         "Welcome Checklist",
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
@@ -119,7 +121,7 @@ class DashboardScreen extends StatelessWidget {
                 GlassContainer(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
                         'Pending Agent Approvals',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
@@ -136,7 +138,7 @@ class DashboardScreen extends StatelessWidget {
                 GlassContainer(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
                         'Recent Orders',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
@@ -168,6 +170,7 @@ class DashboardScreen extends StatelessWidget {
                   child: const Text('Inbox', style: TextStyle(color: Colors.white, fontSize: 16)),
                 ),
               ],
+              ),
             ),
           ),
         ),

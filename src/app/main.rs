@@ -2111,7 +2111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 unified_inbox_ui.on_request_ai_draft(move || {
                     let ui_handle = unified_inbox_handle_draft.clone();
                     if let Some(ui) = ui_handle.upgrade() {
-                        let active_id = ui.get_active_conversation_id().to_string();
+                        let _active_id = ui.get_active_conversation_id().to_string();
                         // Get conversation context for the prompt
                         let mut context_msg = String::new();
                         let current_msgs: Vec<app::UiInboxMessage> = ui.get_current_messages().iter().collect();
