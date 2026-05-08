@@ -705,3 +705,38 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 });
+
+test.describe('E2E Onboarding Persona Journeys - Portfolio', () => {
+  test('Persona: Alex - The Artist (Portfolios)', async ({ page }) => {
+    await page.click('text=Guided Setup');
+    await page.locator('text=Creative').click();
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', "Alex Studio");
+    await page.click('text=Next →');
+
+    await page.locator('text=🖼️ Portfolios / Galleries').click();
+    await page.click('text=Next →');
+
+    await page.click('text=🌐 Online only');
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Maya Smith"]', "Alex");
+    await page.fill('input[placeholder="you@email.com"]', "alex@example.com");
+    await page.fill('input[type="password"]', "securepassword");
+    await page.click('text=Next');
+
+    await page.click('text=✨ Modern');
+    await page.click('text=Next →');
+
+    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', "Portrait Commission");
+    await page.fill('input[placeholder="e.g. 50.00"]', "100.00");
+    await page.click('text=Next →');
+
+    await page.click('text=🌐 Free OHC Domain');
+    await page.click('text=Next →');
+
+    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+  });
+});
