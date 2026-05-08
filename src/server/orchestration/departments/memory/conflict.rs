@@ -6,6 +6,7 @@ pub async fn auto_resolve_conflicts(repository: Arc<VectorRepository>) -> Result
     let mut resolved_count = 0;
 
     for (a, b) in conflicts {
+        tokio::task::yield_now().await;
         let (winner, loser) = determine_conflict_winner(&a, &b);
         repository.resolve_conflict(winner, loser).await?;
         resolved_count += 1;
