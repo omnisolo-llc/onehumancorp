@@ -145,7 +145,7 @@ export component Dashboard inherits Window { // milestones
                 spacing: 16px;
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
+                    StatCard { label: "Weekly Revenue"; value: todays_sales; value_color: #a855f7; }
                     StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
                 }
                 HorizontalBox {
@@ -162,7 +162,7 @@ export component Dashboard inherits Window { // milestones
             // Small Screen (List)
             if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
-                StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
+                StatCard { label: "Weekly Revenue"; value: todays_sales; value_color: #a855f7; }
                 HorizontalBox {
                     spacing: 16px;
                     StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
@@ -269,16 +269,16 @@ export component Dashboard inherits Window { // milestones
             }
         }
 
-        // Store Tips Nudges
+        // Actionable Insights from "The Advisor"
         VerticalBox {
             spacing: 12px;
             HorizontalBox {
                 alignment: start;
                 spacing: 8px;
-                Text { text: "Store Tips"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                Text { text: "Actionable Insights"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
                 TooltipElement { tooltip_id: "advisory_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_advisory_hint = !show_advisory_hint; } } }
             }
-            if (show_advisory_hint) : Text { text: "AI analyzes your store to suggest the best actions to take."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+            if (show_advisory_hint) : Text { text: "The Advisor analyzes your store to suggest the best actions to take."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             GlassCard {
                 border-color: rgba(168, 85, 247, 0.5);
                 border-width: 1px;
@@ -294,6 +294,27 @@ export component Dashboard inherits Window { // milestones
                     }
                 }
             }
+        }
+
+        // Pending Orders/Bookings (Middle)
+        VerticalBox {
+            spacing: 12px;
+            Text { text: "Pending Orders/Bookings"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            if (new_orders_count > 0) : GlassCard {
+                border-color: #06b6d4;
+                border-width: 1px;
+                background: rgba(6, 182, 212, 0.1);
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "You have " + new_orders_count + " orders to fulfill."; font-size: 16px; color: white; wrap: word-wrap; }
+                    HorizontalBox {
+                        alignment: end;
+                        Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); } }
+                    }
+                }
+            }
+            if (new_orders_count == 0) : Text { text: "No pending orders."; color: #cbd5e1; font-size: 14px; }
         }
 
         // Quick Actions Navigation
@@ -397,48 +418,56 @@ export component Dashboard inherits Window { // milestones
     }
 }
 
-        // Floating Bottom Navigation Bar
+    // Floating Action Button (Bottom)
     Rectangle {
         y: parent.height - 80px;
-        x: 0;
-        width: parent.width;
-        height: 80px;
-        background: #1e293b.transparentize(20%); // Glassmorphism backdrop
-        drop-shadow-blur: 20px;
+        x: parent.width - 80px;
+        width: 60px;
+        height: 60px;
+        background: #8b5cf6;
+        border-radius: 30px;
+        drop-shadow-blur: 10px;
         drop-shadow-color: rgba(0, 0, 0, 0.5);
 
-        HorizontalBox {
-            alignment: center;
-            spacing: 4px;
+        Text {
+            text: "+";
+            color: white;
+            font-size: 32px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
 
-            VerticalBox {
-                alignment: center;
-                TooltipElement {
-                    tooltip_id: "add_product";
-                    Button { text: "Add"; width: 64px; height: 44px; clicked => { action_add_product(); } }
-                }
+        TouchArea {
+            clicked => {
+                // We'll map this floating action button to add product for now
+                action_add_product();
             }
-            VerticalBox {
-                alignment: center;
-                TooltipElement {
-                    tooltip_id: "view_orders";
-                    Button { text: "Orders"; width: 64px; height: 44px; clicked => { action_view_orders(); } }
-                }
-            }
-            VerticalBox {
-                alignment: center;
-                TooltipElement {
-                    tooltip_id: "messages";
-                    Button { text: "Chat"; width: 64px; height: 44px; clicked => { action_check_messages(); } }
-                }
-            }
-            VerticalBox {
-                alignment: center;
-                TooltipElement { tooltip_id: "stats"; Button { text: "Stats"; width: 64px; height: 44px; clicked => { action_see_analytics(); } } }
-            }
-            VerticalBox {
-                alignment: center;
-                TooltipElement { tooltip_id: "share"; Button { text: "Share"; width: 64px; height: 44px; clicked => { action_share_store(); } } }
+        }
+    }
+
+    // Floating Create Post (Bottom Left for another quick action)
+    Rectangle {
+        y: parent.height - 80px;
+        x: 20px;
+        width: 60px;
+        height: 60px;
+        background: #3b82f6;
+        border-radius: 30px;
+        drop-shadow-blur: 10px;
+        drop-shadow-color: rgba(0, 0, 0, 0.5);
+
+        Text {
+            text: "✍️";
+            color: white;
+            font-size: 24px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        TouchArea {
+            clicked => {
+                action_open_social_posting();
             }
         }
     }
