@@ -258,7 +258,7 @@ mod chaos_tests {
 
         // The pull_available_tasks for cloud has a 2-second timeout on the lock or DB
         // The mocked sleeping mesh sleeps for 2.5s, forcing the 2s timeout to trigger.
-        // assert!(elapsed < std::time::Duration::from_millis(2200));
+        assert!(elapsed < std::time::Duration::from_millis(2200));
         assert!(elapsed > std::time::Duration::from_millis(1900));
 
         // It must fallback safely returning an empty vector
