@@ -12,7 +12,7 @@ export component ApiDocs inherits Window {
     preferred-width: 800px;
     preferred-height: 600px;
     min-width: 375px;
-    title: "API Documentation (for Advanced Users)";
+    title: "Connect Your Store";
     out property <string> test_title: root.title;
     background: #0f172a;
     in-out property <string> api_key: "sk_live_...";
@@ -32,14 +32,14 @@ export component ApiDocs inherits Window {
             spacing: 20px;
 
             Text {
-                text: "API Documentation (for Advanced Users)";
+                text: "Connect Your Store";
                 font-size: 24px;
                 font-weight: 700;
                 color: white;
             }
 
             Text {
-                text: "Connect other tools to your store. This is an advanced feature for software developers. If you are not a developer, you don't need to use this page.";
+                text: "Connect other tools to your store to automate your work.";
                 color: #ef4444; // red warning
                 wrap: word-wrap;
             }
@@ -47,7 +47,7 @@ export component ApiDocs inherits Window {
             TooltipElement {
                 tooltip_id: "api_docs_advanced";
                 CheckBox {
-                    text: "Show Advanced Developer Documentation";
+                    text: "Show Advanced Connection Details";
                     checked <=> is_advanced;
                 }
             }
