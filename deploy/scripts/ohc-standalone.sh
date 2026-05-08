@@ -42,7 +42,7 @@ find "${OHC_RUNTIME_DIR}" -type d -exec chmod 700 {} \+
 if [ -z "$OHC_SQLITE_KEY" ]; then
   KEY_FILE="${OHC_RUNTIME_DIR}/.sqlite_key"
   if [ ! -f "$KEY_FILE" ]; then
-    openssl rand -hex 32 > "$KEY_FILE"
+    (umask 077 && openssl rand -hex 32 > "$KEY_FILE")
     chmod 600 "$KEY_FILE"
   fi
   export OHC_SQLITE_KEY="$(cat "$KEY_FILE")"

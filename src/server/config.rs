@@ -143,7 +143,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                         perms.set_mode(0o600);
                         if let Err(e) = file.set_permissions(perms) {
                             tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
-                            std::process::exit(1); // Fail-closed
+                            panic!("Failed to securely update existing standalone database file permissions: {}", e); // Fail-closed gracefully
                         }
                     }
                 }
