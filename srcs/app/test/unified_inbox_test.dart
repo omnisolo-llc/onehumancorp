@@ -8,7 +8,13 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.pumpWidget(const ProviderScope(child: OHCApp()));
 
   // 1. Welcome Screen
-  await tester.tap(find.text('Get Started'));
+  final emailField = find.byKey(const Key('signupEmailField'));
+  await tester.ensureVisible(emailField);
+  await tester.enterText(emailField, 'test@test.com');
+  await tester.enterText(find.byKey(const Key('signupPasswordField')), 'pw');
+  final signupBtn = find.byKey(const Key('signupBtn'));
+  await tester.ensureVisible(signupBtn);
+  await tester.tap(signupBtn);
   await tester.pump(const Duration(milliseconds: 500));
 
   // 2. Business Profile Screen
