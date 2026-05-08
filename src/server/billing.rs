@@ -38,7 +38,17 @@ impl Tracker {
 
     pub async fn track_storage_usage(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {
-            limiter.check_storage_quota(tenant_id, delta_bytes).await
+            match limiter.check_storage_quota(tenant_id, delta_bytes).await {
+                Ok(status) => Ok(status),
+                Err(e) => {
+                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    Ok(RateLimitStatus {
+                        is_allowed: true,
+                        soft_limit_reached: false,
+                        user_message: None,
+                    })
+                }
+            }
         } else {
             Ok(RateLimitStatus {
                 is_allowed: true,
@@ -50,7 +60,17 @@ impl Tracker {
 
     pub async fn check_product_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {
-            limiter.check_product_quota(tenant_id).await
+            match limiter.check_product_quota(tenant_id).await {
+                Ok(status) => Ok(status),
+                Err(e) => {
+                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    Ok(RateLimitStatus {
+                        is_allowed: true,
+                        soft_limit_reached: false,
+                        user_message: None,
+                    })
+                }
+            }
         } else {
             Ok(RateLimitStatus {
                 is_allowed: true,
@@ -62,7 +82,13 @@ impl Tracker {
 
     pub async fn record_product_added(&self, tenant_id: &str) -> Result<(), String> {
         if let Some(ref limiter) = self.rate_limiter {
-            limiter.record_product_added(tenant_id).await
+            match limiter.record_product_added(tenant_id).await {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    Ok(())
+                }
+            }
         } else {
             Ok(())
         }
@@ -70,7 +96,17 @@ impl Tracker {
 
     pub async fn check_rate_limit(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {
-            limiter.record_action(tenant_id, agent_id).await
+            match limiter.record_action(tenant_id, agent_id).await {
+                Ok(status) => Ok(status),
+                Err(e) => {
+                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    Ok(RateLimitStatus {
+                        is_allowed: true,
+                        soft_limit_reached: false,
+                        user_message: None,
+                    })
+                }
+            }
         } else {
             Ok(RateLimitStatus {
                 is_allowed: true,
@@ -82,7 +118,17 @@ impl Tracker {
 
     pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {
-            limiter.check_agent_quota(tenant_id).await
+            match limiter.check_agent_quota(tenant_id).await {
+                Ok(status) => Ok(status),
+                Err(e) => {
+                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    Ok(RateLimitStatus {
+                        is_allowed: true,
+                        soft_limit_reached: false,
+                        user_message: None,
+                    })
+                }
+            }
         } else {
             Ok(RateLimitStatus {
                 is_allowed: true,
@@ -94,7 +140,13 @@ impl Tracker {
 
     pub async fn record_agent_added(&self, tenant_id: &str) -> Result<(), String> {
         if let Some(ref limiter) = self.rate_limiter {
-            limiter.record_agent_added(tenant_id).await
+            match limiter.record_agent_added(tenant_id).await {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    Ok(())
+                }
+            }
         } else {
             Ok(())
         }

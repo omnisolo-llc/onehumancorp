@@ -30,10 +30,7 @@ pub async fn tier_middleware(
                 }
             }
             Err(e) => {
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(json!({ "error": "RateLimitError", "message": e })),
-                ).into_response();
+                tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
             }
         }
     }
