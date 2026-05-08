@@ -1305,6 +1305,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    email_marketing_ui.on_connect_resend(move || {
+        GLOBAL_INTEGRATIONS.with(|global| {
+            if let Some(weak) = &*global.borrow() {
+                if let Some(ui) = weak.upgrade() {
+                    ui.invoke_configure_integration("Resend".into());
+                    ui.show().unwrap();
+                }
+            }
+        });
+    });
+
     email_marketing_ui.on_close({
         let ui_handle = email_marketing_handle.clone();
         move || {
@@ -1356,6 +1367,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move |id| {
             println!("Archive action triggered for product: {}", id);
         }
+    });
+
+    business_manager_ui.on_purchase_shippo_label(move |_id| {
+        GLOBAL_INTEGRATIONS.with(|global| {
+            if let Some(weak) = &*global.borrow() {
+                if let Some(ui) = weak.upgrade() {
+                    ui.invoke_configure_integration("Shippo".into());
+                    ui.show().unwrap();
+                }
+            }
+        });
+    });
+    business_manager_ui.on_connect_zoom(move || {
+        GLOBAL_INTEGRATIONS.with(|global| {
+            if let Some(weak) = &*global.borrow() {
+                if let Some(ui) = weak.upgrade() {
+                    ui.invoke_configure_integration("Zoom".into());
+                    ui.show().unwrap();
+                }
+            }
+        });
+    });
+    business_manager_ui.on_connect_calcom(move || {
+        GLOBAL_INTEGRATIONS.with(|global| {
+            if let Some(weak) = &*global.borrow() {
+                if let Some(ui) = weak.upgrade() {
+                    ui.invoke_configure_integration("Cal.com".into());
+                    ui.show().unwrap();
+                }
+            }
+        });
     });
 
     let business_manager_handle = business_manager_ui.as_weak();
@@ -2147,6 +2189,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         // Clear suggested replies since we sent a manual message
                         ui.set_suggested_replies(slint::ModelRc::new(slint::VecModel::from(vec![])));
                     }
+                });
+
+                unified_inbox_ui.on_connect_chatwoot(move || {
+                    GLOBAL_INTEGRATIONS.with(|global| {
+                        if let Some(weak) = &*global.borrow() {
+                            if let Some(ui) = weak.upgrade() {
+                                ui.invoke_configure_integration("Chatwoot".into());
+                                ui.show().unwrap();
+                            }
+                        }
+                    });
                 });
 
                 Box::leak(Box::new(unified_inbox_ui));
@@ -7246,7 +7299,7 @@ fn test_business_share_flow() {
         let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
         let submitted_clone = submitted.clone();
 
-        manager_ui.on_submit(move |type_, name, desc, price, _dur, _sch| {
+        manager_ui.on_submit(move |type_, name, desc, price, _dur, _sch, _loc| {
             assert_eq!(type_, "PHYSICAL");
             assert_eq!(name, "Soap");
             assert_eq!(desc, "Clean");
@@ -7263,7 +7316,7 @@ fn test_business_share_flow() {
         manager_ui.set_product_description("Clean".into());
         manager_ui.set_product_price("5.00".into());
 
-        manager_ui.invoke_submit("PHYSICAL".into(), "Soap".into(), "Clean".into(), "5.00".into(), "".into(), "".into());
+        manager_ui.invoke_submit("PHYSICAL".into(), "Soap".into(), "Clean".into(), "5.00".into(), "".into(), "".into(), "".into());
         assert!(*submitted.borrow());
     }
 
@@ -7276,7 +7329,7 @@ fn test_business_share_flow() {
         let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
         let submitted_clone = submitted.clone();
 
-        manager_ui.on_submit(move |type_, name, desc, price, _dur, _sch| {
+        manager_ui.on_submit(move |type_, name, desc, price, _dur, _sch, _loc| {
             assert_eq!(type_, "DIGITAL");
             assert_eq!(name, "Ebook");
             assert_eq!(desc, "Read me");
@@ -7291,7 +7344,7 @@ fn test_business_share_flow() {
         manager_ui.set_product_description("Read me".into());
         manager_ui.set_product_price("10.00".into());
 
-        manager_ui.invoke_submit("DIGITAL".into(), "Ebook".into(), "Read me".into(), "10.00".into(), "".into(), "".into());
+        manager_ui.invoke_submit("DIGITAL".into(), "Ebook".into(), "Read me".into(), "10.00".into(), "".into(), "".into(), "".into());
         assert!(*submitted.borrow());
     }
 
@@ -7304,7 +7357,7 @@ fn test_business_share_flow() {
         let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
         let submitted_clone = submitted.clone();
 
-        manager_ui.on_submit(move |type_, name, desc, price, dur, sch| {
+        manager_ui.on_submit(move |type_, name, desc, price, dur, sch, _loc| {
             assert_eq!(type_, "SERVICE");
             assert_eq!(name, "Consulting");
             assert_eq!(desc, "Talk to me");
@@ -7323,7 +7376,7 @@ fn test_business_share_flow() {
         manager_ui.set_service_duration("30".into());
         manager_ui.set_service_schedule("{\"mon\":true}".into());
 
-        manager_ui.invoke_submit("SERVICE".into(), "Consulting".into(), "Talk to me".into(), "100.00".into(), "30".into(), "{\"mon\":true}".into());
+        manager_ui.invoke_submit("SERVICE".into(), "Consulting".into(), "Talk to me".into(), "100.00".into(), "30".into(), "{\"mon\":true}".into(), "Virtual".into());
         assert!(*submitted.borrow());
     }
 
@@ -7612,12 +7665,12 @@ mod e2e_login_to_dashboard_tests {
 
         let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
         let sub_clone = submitted.clone();
-        manager_ui.on_submit(move |t, n, _d, _p, _dur, _sched| {
+        manager_ui.on_submit(move |t, n, _d, _p, _dur, _sched, _loc| {
             assert_eq!(t, "DIGITAL");
             assert_eq!(n, "E-book");
             *sub_clone.borrow_mut() = true;
         });
-        manager_ui.invoke_submit("DIGITAL".into(), "E-book".into(), "".into(), "".into(), "".into(), "".into());
+        manager_ui.invoke_submit("DIGITAL".into(), "E-book".into(), "".into(), "".into(), "".into(), "".into(), "".into());
         assert!(*submitted.borrow());
     }
 
@@ -7638,12 +7691,12 @@ mod e2e_login_to_dashboard_tests {
 
         let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
         let sub_clone = submitted.clone();
-        manager_ui.on_submit(move |t, n, _d, _p, _dur, _sched| {
+        manager_ui.on_submit(move |t, n, _d, _p, _dur, _sched, _loc| {
             assert_eq!(t, "PHYSICAL");
             assert_eq!(n, "Shirt");
             *sub_clone.borrow_mut() = true;
         });
-        manager_ui.invoke_submit("PHYSICAL".into(), "Shirt".into(), "".into(), "".into(), "".into(), "".into());
+        manager_ui.invoke_submit("PHYSICAL".into(), "Shirt".into(), "".into(), "".into(), "".into(), "".into(), "".into());
         assert!(*submitted.borrow());
     }
 
@@ -7766,14 +7819,14 @@ mod e2e_login_to_dashboard_tests {
 
         let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
         let sub_clone = submitted.clone();
-        manager_ui.on_submit(move |t, n, _d, p, _dur, sched| {
+        manager_ui.on_submit(move |t, n, _d, p, _dur, sched, _loc| {
             assert_eq!(t, "SERVICE");
             assert_eq!(n, "Consulting");
             assert_eq!(p, "100");
             assert_eq!(sched, "Mon-Fri 9am-5pm");
             *sub_clone.borrow_mut() = true;
         });
-        manager_ui.invoke_submit("SERVICE".into(), "Consulting".into(), "".into(), "100".into(), "60".into(), "Mon-Fri 9am-5pm".into());
+        manager_ui.invoke_submit("SERVICE".into(), "Consulting".into(), "".into(), "100".into(), "60".into(), "Mon-Fri 9am-5pm".into(), "Virtual".into());
         assert!(*submitted.borrow());
     }
 }

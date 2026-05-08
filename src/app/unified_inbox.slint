@@ -43,6 +43,7 @@ export component UnifiedInbox inherits Window {
     callback use_quick_reply(string);
     callback request_ai_draft();
     callback back_to_list();
+    callback connect_chatwoot();
 
     HorizontalBox {
         // Conversation List (Left side on desktop, full screen conditionally on mobile)
@@ -56,7 +57,10 @@ export component UnifiedInbox inherits Window {
                 padding: 16px;
                 spacing: 16px;
 
-                Text { text: "Inbox"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                HorizontalBox {
+                    Text { text: "Inbox"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                    Button { text: "Connect Chatwoot (IG/FB/WA)"; clicked => { connect_chatwoot(); } }
+                }
 
                 ScrollView {
                     VerticalBox {

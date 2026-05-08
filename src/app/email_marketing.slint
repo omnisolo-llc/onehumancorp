@@ -17,6 +17,7 @@ export component EmailMarketing inherits Window {
 
     callback generate_template(string);
     callback send_campaign();
+    callback connect_resend();
     callback close();
 
     VerticalBox {
@@ -25,6 +26,7 @@ export component EmailMarketing inherits Window {
 
         HorizontalBox {
             Text { text: "Email Marketing"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Button { text: "Connect Resend"; height: 44px; clicked => { connect_resend(); } }
             Rectangle {}
             Button { text: "Close"; height: 44px; clicked => { close(); } }
         }

@@ -43,3 +43,18 @@ test.describe('Email Marketing Flow', () => {
     await expect(page.locator('text=Open Rate: 32%')).toBeVisible();
   });
 });
+
+  test('should verify the resend connection button exists', async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
+
+    await page.waitForURL('**/dashboard');
+
+    const emailMarketingBtn = page.locator('button:has-text("Email Marketing")').first();
+    await expect(emailMarketingBtn).toBeVisible();
+    await emailMarketingBtn.click();
+
+    await expect(page.locator('button:has-text("Connect Resend")')).toBeVisible();
+  });

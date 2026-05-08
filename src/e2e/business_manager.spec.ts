@@ -109,4 +109,50 @@ test.describe('Business Manager UI', () => {
     await expect(page.locator('text=My Offerings')).toBeVisible();
   });
 
+  test('should flow correctly for Service Item creation with Virtual location', async ({ page }) => {
+    await page.locator('text="+ Add New Offering"').click();
+
+    await page.locator('text=⏱️ My Time / Service').click();
+
+    const nextBtn = page.locator('text="Next →"');
+    await expect(nextBtn).toBeVisible();
+    await nextBtn.click();
+
+    await expect(page.locator('text=Details')).toBeVisible();
+
+    await page.fill('input[placeholder="E.g. Custom Vegan Cake"]', 'Test Service Product');
+    await page.fill('input[placeholder="Brief description"]', 'A high quality test service');
+    await page.fill('input[placeholder="0.00"]', '100.00');
+    await page.fill('input[placeholder="60"]', '60');
+    await page.fill('input[placeholder="e.g. Mon-Fri 9am-5pm"]', 'Mon-Fri 9am-5pm');
+
+    await page.selectOption('select', 'Virtual');
+
+    // Assert Zoom connection button appears and functions
+    await expect(page.locator('button:has-text("Connect Zoom")')).toBeVisible();
+
+    const createBtn = page.locator('text="Create"');
+    await expect(createBtn).toBeVisible();
+    await createBtn.click();
+  });
 });
+
+  test('should verify shippo label purchase button exists for physical items', async ({ page }) => {
+    // Navigate to Add Offering
+    await page.locator('text="+ Add New Offering"').click();
+    await page.locator('text=📦 Physical Item').click();
+    await page.locator('text="Next →"').click();
+
+    await page.fill('input[placeholder="E.g. Custom Vegan Cake"]', 'Test Physical Product Shippo');
+    await page.fill('input[placeholder="Brief description"]', 'A high quality test item');
+    await page.fill('input[placeholder="0.00"]', '19.99');
+
+    await page.locator('text="Create"').click();
+
+    // Verify it's created and buy label button exists
+    await expect(page.locator('text=Test Physical Product Shippo')).toBeVisible();
+
+    // We expect the buy label button to be on physical items.
+    const buyLabelBtn = page.locator('button:has-text("Buy Label (Shippo)")').first();
+    await expect(buyLabelBtn).toBeVisible();
+  });

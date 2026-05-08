@@ -104,3 +104,18 @@ test('verify empty state when no conversation is selected', async ({ page }) => 
 
     await expect(page.locator('text="Select a conversation"')).toBeVisible();
 });
+
+test('verify chatwoot connection integration button exists', async ({ page }) => {
+    await page.goto('/');
+
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
+
+    await expect(page.locator('text="Welcome"')).toBeVisible();
+
+    await page.click('button:has-text("Check Messages")');
+    await expect(page.locator('text="Customer Inbox"')).toBeVisible();
+
+    await expect(page.locator('button:has-text("Connect Chatwoot")')).toBeVisible();
+});

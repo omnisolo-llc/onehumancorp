@@ -32,15 +32,19 @@ export component BusinessManager inherits Window {
     // Service specific
     in-out property <string> service_duration: "60";
     in-out property <string> service_schedule: "{}";
+    in-out property <string> service_location: "";
 
     callback next_step();
     callback prev_step();
     callback select_type(string);
-    callback submit(string, string, string, string, string, string); // type, name, desc, price, duration, schedule
+    callback submit(string, string, string, string, string, string, string); // type, name, desc, price, duration, schedule, location
     callback close();
     callback action_add_new();
     callback action_edit(string);
     callback action_archive(string);
+    callback purchase_shippo_label(string);
+    callback connect_zoom();
+    callback connect_calcom();
 
     next_step => { step = step + 1; }
     prev_step => { step = step - 1; }
@@ -106,6 +110,7 @@ export component BusinessManager inherits Window {
                                 spacing: 8px;
                                 Button { text: "Edit"; height: 36px; clicked => { action_edit(prod.id); } }
                                 Button { text: "Archive"; height: 36px; clicked => { action_archive(prod.id); } }
+                                if (prod.type_label == "PHYSICAL") : Button { text: "Buy Label (Shippo)"; height: 36px; clicked => { purchase_shippo_label(prod.id); } }
                             }
                         }
                     }
@@ -197,6 +202,13 @@ export component BusinessManager inherits Window {
                     Text { text: "Available Hours"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                     LineEdit { text <=> service_schedule; placeholder-text: "e.g. Mon-Fri 9am-5pm"; height: 44px; }
                 }
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Location"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    ComboBox { model: ["In-Person", "Virtual", "Video Call"]; current-value <=> service_location; height: 44px; }
+                    if (service_location == "Virtual" || service_location == "Video Call") : Button { text: "Connect Zoom"; clicked => { connect_zoom(); } }
+                    Button { text: "Connect Cal.com"; clicked => { connect_calcom(); } }
+                }
             }
         }
 
@@ -232,7 +244,7 @@ export component BusinessManager inherits Window {
                 VerticalBox { alignment: center; Text { text: "Create"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea {
                     clicked => {
-                        submit(selected_type, product_name, product_description, product_price, service_duration, service_schedule);
+                        submit(selected_type, product_name, product_description, product_price, service_duration, service_schedule, service_location);
                         close();
                     }
                 }

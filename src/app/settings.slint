@@ -13,6 +13,8 @@ export component Settings inherits Window {
     in-out property <string> org_id;
     in-out property <string> user_role;
     in-out property <bool> local_service_running: true;
+    in-out property <string> payment_provider: "Stripe";
+    in-out property <bool> sms_notifications: false;
 
     callback start_stop_service();
     callback run_doctor();
@@ -81,6 +83,51 @@ export component Settings inherits Window {
             CheckBox {
                 checked: standalone_mode;
                 toggled => { standalone_mode = !standalone_mode; }
+            }
+        }
+
+        // Finance Section
+        Text { text: "FINANCE & PAYMENTS"; color: #7c3aed; font-weight: 700; }
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+
+            VerticalBox {
+                spacing: 12px;
+                padding: 16px;
+
+                HorizontalBox {
+                    Text { text: "Payment Provider:"; color: #1e293b; horizontal-alignment: center; }
+                    Rectangle {}
+                    Button { text: root.payment_provider == "Stripe" ? "Switch to Mercado Pago" : "Switch to Stripe"; clicked => { root.payment_provider = root.payment_provider == "Stripe" ? "Mercado Pago" : "Stripe"; save_state(); } }
+                }
+
+                Text {
+                    text: root.payment_provider == "Stripe" ? "Using Stripe for global payments." : "Using Mercado Pago for LATAM payments (Pix, OXXO).";
+                    color: #64748b;
+                    wrap: word-wrap;
+                }
+            }
+        }
+
+        // Notifications Section
+        Text { text: "NOTIFICATIONS (Twilio)"; color: #7c3aed; font-weight: 700; }
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+
+            HorizontalBox {
+                padding: 16px;
+                Text { text: "SMS Notifications for new orders"; color: #1e293b; }
+                Rectangle {}
+                CheckBox {
+                    checked: root.sms_notifications;
+                    toggled => { root.sms_notifications = !root.sms_notifications; save_state(); }
+                }
             }
         }
 

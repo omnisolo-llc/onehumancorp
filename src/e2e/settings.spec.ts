@@ -202,3 +202,14 @@ test.describe('Profile Settings', () => {
     await expect(page.locator('text=/match|mismatch/i')).toBeVisible();
   });
 });
+test.describe('Settings Specific Features', () => {
+  test('should verify the mercado pago switch exists', async ({ page }) => {
+    await page.goto('/settings');
+    await expect(page.locator('button:has-text("Switch to Mercado Pago")').first()).toBeVisible();
+  });
+
+  test('should verify the twilio sms toggle exists', async ({ page }) => {
+    await page.goto('/settings');
+    await expect(page.locator('text="SMS Notifications for new orders"')).toBeVisible();
+  });
+});
