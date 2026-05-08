@@ -24,6 +24,7 @@ export component AgentConfig inherits Window {
     in-out property <string> api_scope_override: "";
     in-out property <string> cron_override: "";
     in-out property <string> raw_activation_payload: "";
+    in-out property <bool> is_added_to_team: true;
 
     next_step => { step = step + 1; }
 
@@ -205,6 +206,7 @@ export component AgentConfig inherits Window {
             }
             spacing: 16px;
             Text { text: "Review & Activate"; color: white; font-family: "Inter"; }
+            HorizontalBox { Text { text: "Add to my team"; color: white; font-family: "Inter"; } CheckBox { checked <=> is_added_to_team; } }
             GlassCard {
                 VerticalBox {
                     padding: 16px;
