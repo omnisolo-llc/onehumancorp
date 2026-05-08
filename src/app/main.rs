@@ -1562,35 +1562,70 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let business_manager_ui = app::BusinessManager::new().unwrap();
 
-    let dummy_products = vec![
-        app::UiProduct {
-            id: "prod_1".into(),
-            name: "Custom Vegan Cake".into(),
-            type_label: "Physical".into(),
-            price: "$40.00".into(),
-            inventory_count: 5,
-            is_out_of_stock: false,
-        },
-        app::UiProduct {
-            id: "prod_2".into(),
-            name: "Website Template".into(),
-            type_label: "Digital".into(),
-            price: "$19.00".into(),
-            inventory_count: 0,
-            is_out_of_stock: false,
-        },
-        app::UiProduct {
-            id: "prod_3".into(),
-            name: "Plumbing Repair".into(),
-            type_label: "Service".into(),
-            price: "$150.00".into(),
-            inventory_count: 0,
-            is_out_of_stock: true,
-        },
-    ];
-    let product_model = slint::VecModel::from(dummy_products);
+    let product_model = slint::VecModel::from(Vec::<app::UiProduct>::new());
     let product_model_rc = std::rc::Rc::new(product_model);
     business_manager_ui.set_products(product_model_rc.clone().into());
+
+    let bm_handle_fetch = business_manager_ui.as_weak();
+    #[cfg(not(target_arch = "wasm32"))]
+    tokio::spawn(async move {
+        use ohc::api::v1::dashboard_service_client::DashboardServiceClient;
+        use ohc::api::v1::GetDashboardRequest;
+        let hub_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+        if let Ok(channel) = tonic::transport::Channel::from_shared(hub_url) {
+            if let Ok(channel) = channel.connect().await {
+                let mut client = DashboardServiceClient::with_interceptor(channel, crate::client_spiffe_interceptor);
+                let mut req = tonic::Request::new(GetDashboardRequest {
+                    organization_id: std::env::var("OHC_BOOTSTRAP_ORG_ID").unwrap_or_else(|_| "default".to_string()),
+                    mobile_optimized: false,
+                });
+                if let Ok(token) = std::env::var("OHC_TOKEN") {
+                    req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+                }
+                if let Ok(res) = client.get_dashboard(req).await {
+                    let snapshot = res.into_inner();
+                    let mut ui_products = Vec::new();
+                    for p in snapshot.products {
+                        let type_label = match p.fulfillment_strategy.to_lowercase().as_str() {
+                            "physical" => "Physical",
+                            "digital" => "Digital",
+                            "booking" | "service" => "Service",
+                            _ => "Product",
+                        };
+                        let price_str = if p.currency.is_empty() {
+                            format!("${:.2}", p.price_cents as f64 / 100.0)
+                        } else {
+                            format!("{:.2} {}", p.price_cents as f64 / 100.0, p.currency)
+                        };
+
+                        // Parse metadata_json for inventory if present, otherwise default to 0
+                        let mut inventory_count = 0;
+                        if !p.metadata_json.is_empty() {
+                            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&p.metadata_json) {
+                                if let Some(count) = val.get("inventory_count").and_then(|v| v.as_i64()) {
+                                    inventory_count = count as i32;
+                                }
+                            }
+                        }
+
+                        ui_products.push(app::UiProduct {
+                            id: p.id.into(),
+                            name: p.name.into(),
+                            type_label: type_label.into(),
+                            price: price_str.into(),
+                            inventory_count,
+                            is_out_of_stock: inventory_count == 0 && type_label != "Digital",
+                        });
+                    }
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = bm_handle_fetch.upgrade() {
+                            ui.set_products(slint::ModelRc::new(slint::VecModel::from(ui_products)));
+                        }
+                    });
+                }
+            }
+        }
+    });
 
     business_manager_ui.on_action_edit({
         move |_id| {
@@ -2657,7 +2692,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         current_msgs.push(app::UiInboxMessage {
                             id: format!("msg-{}", current_msgs.len() + 1).into(),
                             author_name: "Me".into(),
-                            body: format!("Great! I've approved the quote for {}. You can pay your deposit and book your time here: https://checkout.stripe.com/pay/cs_test_dummy", amount).into(),
+                            body: format!("Great! I've approved the quote for {}. You can pay your deposit and book your time here: https://checkout.stripe.com/pay/cs_test_test", amount).into(),
                             is_me: true,
                             time: "Just now".into(),
                             is_quote: false,
