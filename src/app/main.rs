@@ -122,6 +122,19 @@ thread_local! {
 mod ui_tests;
 
 #[allow(dead_code)]
+fn sync_advanced_mode(is_advanced: bool) {
+    let state = std::collections::HashMap::from([
+        ("is_advanced".to_string(), is_advanced.to_string()),
+    ]);
+    #[cfg(not(target_arch = "wasm32"))]
+    tokio::spawn(async move {
+        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+            let _ = client.save_wizard_state(request).await;
+        }
+    });
+}
+
 fn set_global_is_advanced(val: bool) {
     IS_ADVANCED.with(|ia| *ia.borrow_mut() = val);
     ADVANCED_LISTENERS.with(|listeners| {
@@ -208,6 +221,23 @@ pub fn setup_welcome_checklist_routing(
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let agents_ui = app::Agents::new()?;
+    agents_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let agents_handle_adv = agents_ui.as_weak();
+    let ag_ui_weak = agents_handle_adv.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = ag_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+    agents_ui.on_toggle_advanced({
+        let ui_handle = agents_handle_adv.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+                sync_advanced_mode(ui.get_is_advanced());
+            }
+        }
+    });
     let agents_ui_for_dashboard = agents_ui.clone_strong();
 
 
@@ -249,6 +279,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let login_ui = app::Login::new()?;
+    login_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let login_handle = login_ui.as_weak();
+    let lo_ui_weak = login_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = lo_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+    login_ui.on_toggle_advanced({
+        let ui_handle = login_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+                sync_advanced_mode(ui.get_is_advanced());
+            }
+        }
+    });
     let login_ui_handle = login_ui.as_weak();
 
     let setup_wizard_ui = app::SetupWizard::new()?;
@@ -3592,6 +3639,23 @@ pub async fn main_wasm() -> Result<(), JsValue> {
 #[cfg(target_arch = "wasm32")]
 async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
     let login_ui = app::Login::new()?;
+    login_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    let login_handle = login_ui.as_weak();
+    let lo_ui_weak = login_handle.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = lo_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+    login_ui.on_toggle_advanced({
+        let ui_handle = login_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+                sync_advanced_mode(ui.get_is_advanced());
+            }
+        }
+    });
     let login_ui_handle = login_ui.as_weak();
 
     let setup_wizard_ui = app::SetupWizard::new()?;
@@ -8009,6 +8073,49 @@ fn test_business_share_flow() {
     dashboard_ui.invoke_action_share_store();
     assert!(*share_store_called.borrow(), "Share Store should be invoked from Dashboard");
 }
+
+
+    #[test]
+    fn test_e2e_agents_advanced_mode_toggle() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let ui = app::Agents::new().unwrap();
+
+        // Advanced Mode Progressive Disclosure Check
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.invoke_toggle_advanced();
+        assert_eq!(ui.get_is_advanced(), true);
+        ui.invoke_toggle_advanced();
+        assert_eq!(ui.get_is_advanced(), false);
+    }
+
+    #[test]
+    fn test_e2e_login_advanced_mode_toggle() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::Login::new().unwrap();
+
+        // Advanced Mode Progressive Disclosure Check
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.invoke_toggle_advanced();
+        assert_eq!(ui.get_is_advanced(), true);
+        ui.invoke_toggle_advanced();
+        assert_eq!(ui.get_is_advanced(), false);
+    }
+
 
     #[test]
     fn test_e2e_api_docs_flow() {
