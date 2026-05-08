@@ -69,6 +69,10 @@ func TestTelemetrySyncEngine_SyncPendingMetrics(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
+		if pt.Attributes["secret"] != "[REDACTED]" {
+			t.Errorf("Expected secret to be redacted, got '%v'", pt.Attributes["secret"])
+		}
 		if pt.MetricName != "test_metric" {
 			t.Errorf("Expected metric name 'test_metric', got '%s'", pt.MetricName)
 		}
@@ -79,7 +83,7 @@ func TestTelemetrySyncEngine_SyncPendingMetrics(t *testing.T) {
 	engine := NewTelemetrySyncEngine(db, server.URL)
 	ctx := context.Background()
 
-	attrs := map[string]interface{}{"service": "agent"}
+	attrs := map[string]interface{}{"service": "agent", "secret": "my-secret"}
 	err := engine.BufferMetric(ctx, "test_metric", 42.0, attrs)
 	if err != nil {
 		t.Fatalf("Failed to buffer metric: %v", err)
@@ -149,6 +153,16 @@ func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
 
 	// Mock the cloud endpoint
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var pt MetricPoint
+		if err := json.NewDecoder(r.Body).Decode(&pt); err != nil {
+			t.Errorf("Failed to decode request body: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if pt.MetricName != "test_metric_daemon" {
+			t.Errorf("Expected metric name 'test_metric_daemon', got '%s'", pt.MetricName)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
