@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
+### Cloud Scaling Improvements
+- 🤖 Implementer: Harness Upgrade - [AutoGen Group Chat] (#11329)
+
+### Privacy/Offline Improvements
+- 🤖 Implementer: Harness Upgrade - [AutoGen Group Chat] (#11329)
+
 ## v0.4.28 (Cloud) / v0.4.28+1 (Standalone)
 ### Cloud Scaling Improvements
 - ✍️ Scribe: Scaled the Help Center & Tooltip Documentation System for multi-tenant cloud environments (#11267)
