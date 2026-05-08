@@ -90,18 +90,28 @@ fi
 # Trap INT and EXIT signals to gracefully shutdown all local processes
 function cleanup {
   echo -e "\n${DIM}[Shutting down Standalone Desktop...]${RESET}"
-  kill $APP_PID 2>/dev/null || true
-  kill $SERVER_PID 2>/dev/null || true
-  kill $PRUNE_PID 2>/dev/null || true
+  # Terminate child processes gracefully
+  kill -TERM $APP_PID $SERVER_PID $PRUNE_PID 2>/dev/null || true
+
+  # Resource Cleanup: Clean additional temporary artifact directories
+  echo -e "${DIM}  Cleaning temporary artifacts...${RESET}"
+  rm -rf "${OHC_STATUS_DIR}"/* 2>/dev/null || true
+  find "tmp/" -type f -delete > /dev/null 2>&1 || true
+  find ".cache/" -type f -delete > /dev/null 2>&1 || true
+
   docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
   docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
+
+  # Wait for processes to exit
   wait $APP_PID 2>/dev/null || true
   wait $SERVER_PID 2>/dev/null || true
+  wait $PRUNE_PID 2>/dev/null || true
+
   echo -e "${GREEN}✓ Local standalone processes terminated successfully.${RESET}"
 }
 
-trap cleanup EXIT INT
+trap cleanup EXIT INT TERM
 
 echo -e "\n${BOLD}${GREEN}Standalone Runtime is active. Press Ctrl+C to terminate.${RESET}"
 # Wait indefinitely for processes
-wait $APP_PID
+wait $APP_PID $SERVER_PID 2>/dev/null || true
