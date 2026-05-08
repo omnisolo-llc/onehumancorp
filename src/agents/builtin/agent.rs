@@ -342,33 +342,38 @@ impl Agent {
                         let mut current_total = state.get("total_tokens").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
                         current_total += total_tokens_this_turn;
 
+                        let mut final_content = resp.message.content.clone();
+                        let mut has_tool_calls = !resp.message.tool_calls.is_empty();
+
                         if llm_cfg_c.max_task_tokens > 0 && current_total > llm_cfg_c.max_task_tokens {
-                            return Err(format!("Terminal condition reached: token budget exhausted ({} / {}).", current_total, llm_cfg_c.max_task_tokens));
+                            final_content = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
+                            has_tool_calls = false; // Prevent further tool calls
                         }
 
-                        let has_tool_calls = !resp.message.tool_calls.is_empty();
+                        let final_tool_calls = if has_tool_calls {
+                            resp.message.tool_calls.iter().map(|tc| serde_json::json!({
+                                "id": tc.id,
+                                "name": tc.name,
+                                "arguments": tc.arguments,
+                            })).collect::<Vec<_>>()
+                        } else {
+                            vec![]
+                        };
+
                         let mut update = serde_json::json!({
                             "has_tool_calls": has_tool_calls,
                             "total_tokens": current_total,
                             "last_message": {
                                 "role": "assistant",
-                                "content": resp.message.content,
-                                "tool_calls": resp.message.tool_calls.iter().map(|tc| serde_json::json!({
-                                    "id": tc.id,
-                                    "name": tc.name,
-                                    "arguments": tc.arguments,
-                                })).collect::<Vec<_>>()
+                                "content": final_content,
+                                "tool_calls": final_tool_calls
                             }
                         });
                         // Also append to messages array using the reducer
                         update.as_object_mut().unwrap().insert("messages".to_string(), serde_json::json!([{
                                 "role": "assistant",
-                                "content": resp.message.content,
-                                "tool_calls": resp.message.tool_calls.iter().map(|tc| serde_json::json!({
-                                    "id": tc.id,
-                                    "name": tc.name,
-                                    "arguments": tc.arguments,
-                                })).collect::<Vec<_>>()
+                                "content": final_content,
+                                "tool_calls": final_tool_calls
                         }]));
                         Ok(update)
                     }
@@ -1134,9 +1139,10 @@ impl Agent {
 
             // Enforce Server-side token budget strictly every turn
             if global_turn_tokens >= final_cfg.max_task_tokens {
-                let err_msg = format!("Terminal condition reached: Server-side token budget exhausted ({} / {}). Agent transitioning to PAUSED state.", global_turn_tokens, final_cfg.max_task_tokens);
-                on_event(AgentEvent::TaskError { error: err_msg.clone() });
-                return Err(err_msg.into());
+                let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
+                on_event(AgentEvent::TextChunk { content: msg.clone() });
+                on_event(AgentEvent::TaskComplete { content: msg.clone() });
+                return Ok(msg);
             }
 
             // Unified Cost Calculation Mechanic
@@ -1196,9 +1202,10 @@ impl Agent {
                 );
 
                 if decision.action == BudgetAction::Stop {
-                    let err_msg = format!("Terminal condition reached: token budget exhausted ({} / {}).", global_turn_tokens, final_cfg.max_task_tokens);
-                    on_event(AgentEvent::TaskError { error: err_msg.clone() });
-                    return Err(ToolError::Fatal(err_msg).into());
+                    let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
+                    on_event(AgentEvent::TextChunk { content: msg.clone() });
+                    on_event(AgentEvent::TaskComplete { content: msg.clone() });
+                    return Ok(msg);
                 }
                 if decision.action == BudgetAction::Continue {
                     // Add the budget nudge to messages and continue.
@@ -3844,21 +3851,19 @@ mod tests {
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
 
-        assert!(result.is_err());
-        let err_str = result.unwrap_err().to_string();
-        assert!(err_str.contains("token budget exhausted"));
+        assert!(result.is_ok());
 
-        // Also ensure an AgentEvent::TaskError was emitted
-        let mut found_task_error = false;
+        // Also ensure an AgentEvent::TaskComplete was emitted with the friendly prompt
+        let mut found_task_complete = false;
         for e in events {
-            if let AgentEvent::TaskError { error } = e {
-                if error.contains("token budget exhausted") {
-                    found_task_error = true;
+            if let AgentEvent::TaskComplete { content } = e {
+                if content.contains("token budget") && content.contains("upgrade your plan") {
+                    found_task_complete = true;
                     break;
                 }
             }
         }
-        assert!(found_task_error);
+        assert!(found_task_complete, "Should emit TaskComplete with friendly prompt on token budget exhaustion");
     }
 
 
@@ -3900,9 +3905,10 @@ mod tests {
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
 
-        assert!(result.is_err());
-        let err_str = result.unwrap_err().to_string();
-        assert!(err_str.contains("token budget exhausted (100 / 80)"));
+        // In the Langgraph path, it returns Ok(String) with the last message
+        assert!(result.is_ok());
+        let msg = result.unwrap();
+        assert!(msg.contains("I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!"));
     }
 
     #[tokio::test]
