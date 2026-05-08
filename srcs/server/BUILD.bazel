@@ -1,5 +1,11 @@
 load("@rules_go//go:def.bzl", "go_binary")
 
+filegroup(
+    name = "all_go_files",
+    srcs = glob(["**/*.go"]),
+    visibility = ["//visibility:public"],
+)
+
 go_binary(
     name = "server",
     srcs = ["main.go"],
