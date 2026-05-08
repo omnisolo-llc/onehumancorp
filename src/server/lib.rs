@@ -8,6 +8,7 @@ pub mod billing;
 pub mod ultraplan;
 #[path = "../agents/builtin/autodream.rs"]
 pub mod autodream;
+pub mod autodream_pipeline;
 pub mod tasks;
 pub mod settings;
 pub mod scheduler;
