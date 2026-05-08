@@ -318,7 +318,10 @@ mod tests {
                                lower_line.contains("bank") ||
                                lower_line.contains("account") ||
                                lower_line.contains("stripe") ||
-                               lower_line.contains("billing") {
+                               lower_line.contains("billing") ||
+                               lower_line.contains("phone_number") ||
+                               lower_line.contains("ssn") ||
+                               lower_line.contains("auth_token") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
                         }
