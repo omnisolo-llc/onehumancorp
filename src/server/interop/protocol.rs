@@ -65,7 +65,7 @@ impl InteropProtocol {
 
         let mut buf = Vec::new();
         if let Err(e) = handoff_msg.encode(&mut buf) {
-            let _ = self.lock.release_lock(&idempotency_lock_resource, "system").await;
+            let _ = self.lock.release_lock(&idempotency_lock_resource, &attempt_owner).await;
             let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
             return Err(e.to_string());
         }
