@@ -39,14 +39,20 @@ spec:
       - protocol: TCP
         port: 53
   - to:
-    - podSelector:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Release.Namespace }}
+      podSelector:
         matchLabels:
           app: {{ .Values.cnpg.clusterName }}-rw
     ports:
     - protocol: TCP
       port: 5432
   - to:
-    - podSelector:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Release.Namespace }}
+      podSelector:
         matchLabels:
           app: {{ .Release.Name }}-redis-master
     ports:

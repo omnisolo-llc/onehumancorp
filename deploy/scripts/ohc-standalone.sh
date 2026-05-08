@@ -20,6 +20,8 @@ export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
 export TOKIO_WORKER_THREADS=1
+ulimit -m 2097152 2>/dev/null || true # 2GB limit
+ulimit -v 2097152 2>/dev/null || true
 export MALLOC_ARENA_MAX=2
 export RAYON_NUM_THREADS=2
 export OHC_STANDALONE=true

@@ -17,9 +17,9 @@ spec:
       - containerName: chatwoot
         controlledResources: ["cpu", "memory"]
         minAllowed:
-          cpu: {{ .Values.chatwoot.resources.requests.cpu }}
-          memory: {{ .Values.chatwoot.resources.requests.memory }}
+          cpu: {{ .Values.chatwoot.resources.requests.cpu | quote }}
+          memory: {{ .Values.chatwoot.resources.requests.memory | quote }}
         maxAllowed:
-          cpu: {{ .Values.chatwoot.resources.limits.cpu }}
-          memory: {{ .Values.chatwoot.resources.limits.memory }}
+          cpu: {{ .Values.chatwoot.resources.limits.cpu | quote }}
+          memory: {{ .Values.chatwoot.resources.limits.memory | quote }}
 {{- end }}
