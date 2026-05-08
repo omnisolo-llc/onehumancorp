@@ -5409,7 +5409,36 @@ mod docs_tests {
         let grow_business_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let grow_business_opened_clone = grow_business_opened.clone();
 
-        dashboard_ui.on_action_grow_business(move || {
+
+                let dashboard_handle_simulate = dashboard_ui.as_weak();
+
+                dashboard_ui.on_action_simulate_order(move || {
+                    let d_ui = dashboard_handle_simulate.unwrap();
+
+
+                    // Add activities to SwarmObservabilityPanel
+                    let mut activities: Vec<app::SwarmActivity> = d_ui.get_swarm_activities().iter().collect();
+                    activities.push(app::SwarmActivity {
+                        message: "Operations processed OrderReceived".into(),
+                        time: "Just now".into(),
+                    });
+                    activities.push(app::SwarmActivity {
+                        message: "Customer Success drafted confirmation".into(),
+                        time: "Just now".into(),
+                    });
+                    d_ui.set_swarm_activities(slint::ModelRc::new(slint::VecModel::from(activities)));
+
+                    // Add a draft to Pending Approvals
+                    let mut approvals: Vec<app::UiPendingApproval> = d_ui.get_pending_approvals().iter().collect();
+                    approvals.push(app::UiPendingApproval {
+                        task_id: "draft_1".into(),
+                        title: "Review SMS to Customer".into(),
+                        proposed_content: "Thank you for your order! Your cake is being prepared.".into(),
+                        helper_name: "The Ambassador (Customer Success)".into(),
+                    });
+                    d_ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(approvals)));
+                });
+dashboard_ui.on_action_grow_business(move || {
             *grow_business_opened_clone.borrow_mut() = true;
         });
 
