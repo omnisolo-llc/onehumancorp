@@ -47,5 +47,3 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 )
-
-replace github.com/onehumancorp/mono/srcs/proto => ../proto
