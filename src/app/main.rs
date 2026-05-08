@@ -1991,6 +1991,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    pricing_ui.on_save_state({
+        let ui_handle = pricing_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            set_global_is_advanced(ui.get_is_advanced());
+            let state = std::collections::HashMap::from([
+                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+            ]);
+            #[cfg(not(target_arch = "wasm32"))]
+            tokio::spawn(async move {
+                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    let _ = client.save_wizard_state(request).await;
+                }
+            });
+        }
+    });
+
     let pricing_handle_select = pricing_handle.clone();
     let my_plan_handle_select = my_plan_handle.clone();
     pricing_ui.on_select_plan(move |plan| {
