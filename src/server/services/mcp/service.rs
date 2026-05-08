@@ -221,9 +221,6 @@ impl McpService for MyMcpService {
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
         let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
-        if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
-        }
 
         let req = request.into_inner();
 
@@ -266,9 +263,6 @@ impl McpService for MyMcpService {
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
         let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
-        if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
-        }
 
         let req = request.into_inner();
         let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";

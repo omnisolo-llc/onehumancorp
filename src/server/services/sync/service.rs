@@ -87,9 +87,6 @@ impl SyncService for MySyncService {
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
         let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
         let mut tenant_id = parsed.0;
-        if tenant_id.is_empty() {
-            tenant_id = "system".to_string();
-        }
 
         let items: Vec<serde_json::Value> = serde_json::from_str(&req.payload).unwrap_or_default();
         if items.is_empty() {
@@ -164,9 +161,6 @@ impl SyncService for MySyncService {
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
         let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
         let mut tenant_id = parsed.0;
-        if tenant_id.is_empty() {
-            tenant_id = "system".to_string();
-        }
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
@@ -237,9 +231,6 @@ impl SyncService for MySyncService {
         let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
         let tenant_id = parsed.0;
 
-        if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
-        }
 
         if deltas.is_empty() {
             return Ok(Response::new(SyncMcpDeltasResponse {
