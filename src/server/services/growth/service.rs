@@ -93,8 +93,6 @@ impl GrowthService for MyGrowthService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-
         let total_referrals = rows.len() as i32;
         let mut click_count = 0;
         let mut conversions = 0;
@@ -120,6 +118,19 @@ impl GrowthService for MyGrowthService {
         let waitlist_position = self.waitlist.read().unwrap().len() as i32 + 42;
         let download_count = self.downloads.read().unwrap().len() as i32 + 105;
 
+        // Generate clean business URL for sharing
+        let business_name: String = sqlx::query_scalar("SELECT business_name FROM tenants WHERE tenant_id = $1::uuid")
+            .bind(&org_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .unwrap_or(None)
+            .unwrap_or_else(|| "My Awesome Store".to_string());
+
+        let slug = crate::utils::slug::slugify(&business_name);
+        let business_share_url = format!("ohc.app/b/{}", slug);
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
         Ok(Response::new(ReferralStatsResponse {
             total_referrals,
             click_count,
@@ -128,6 +139,8 @@ impl GrowthService for MyGrowthService {
             bonus_credit,
             download_count,
             waitlist_position,
+            business_share_url,
+            business_name,
         }))
     }
 

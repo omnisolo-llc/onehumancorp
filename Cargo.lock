@@ -184,6 +184,7 @@ dependencies = [
  "tonic",
  "tonic-build",
  "tracing",
+ "urlencoding",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

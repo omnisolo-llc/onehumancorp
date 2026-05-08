@@ -688,6 +688,8 @@ message ReferralStatsResponse {
   int32 bonus_credit = 5;
   int32 download_count = 6;
   int32 waitlist_position = 7;
+  string business_share_url = 8;
+  string business_name = 9;
 }
 
 message GrowthIdRequest {
