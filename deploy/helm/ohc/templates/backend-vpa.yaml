@@ -17,9 +17,9 @@ spec:
       - containerName: backend
         controlledResources: ["cpu", "memory"]
         minAllowed:
-          cpu: {{ .Values.backend.resources.requests.cpu }}
-          memory: {{ .Values.backend.resources.requests.memory }}
+          cpu: {{ .Values.backend.resources.requests.cpu | quote }}
+          memory: {{ .Values.backend.resources.requests.memory | quote }}
         maxAllowed:
-          cpu: {{ .Values.backend.resources.limits.cpu }}
-          memory: {{ .Values.backend.resources.limits.memory }}
+          cpu: {{ .Values.backend.resources.limits.cpu | quote }}
+          memory: {{ .Values.backend.resources.limits.memory | quote }}
 {{- end }}
