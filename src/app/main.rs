@@ -6007,6 +6007,34 @@ dashboard_ui.on_action_grow_business(move || {
 
         agents_ui.invoke_fix_agent("agent_1".into());
         assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
+
+        let fix_agent_ui = app::FixAgent::new().unwrap();
+        assert_eq!(fix_agent_ui.get_step(), 0);
+
+        // Advance to step 1
+        fix_agent_ui.set_step(1);
+
+        let apply_fix_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let apply_fix_called_clone = apply_fix_called.clone();
+        fix_agent_ui.on_apply_fix(move || {
+            *apply_fix_called_clone.borrow_mut() = true;
+        });
+
+        fix_agent_ui.invoke_apply_fix();
+        assert!(*apply_fix_called.borrow(), "Apply fix should be called");
+
+        // Advance to step 2 manually as in test simulation we drive state
+        fix_agent_ui.set_step(2);
+
+        let return_to_agents_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let return_to_agents_called_clone = return_to_agents_called.clone();
+        fix_agent_ui.on_return_to_agents(move || {
+            *return_to_agents_called_clone.borrow_mut() = true;
+        });
+
+        fix_agent_ui.invoke_return_to_agents();
+        assert!(*return_to_agents_called.borrow(), "Return to agents should be called");
+
         let tune_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let tune_agent_opened_clone = tune_agent_opened.clone();
 
