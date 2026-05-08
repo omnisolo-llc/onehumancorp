@@ -1573,7 +1573,76 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let business_share_ui = app::BusinessShare::new()?;
     let business_share_handle = business_share_ui.as_weak();
 
+    let pos_terminal_ui = app::PosTerminal::new()?;
+    let pos_terminal_handle = pos_terminal_ui.as_weak();
+
+    pos_terminal_ui.on_close({
+        let handle = pos_terminal_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                let _ = ui.hide();
+            }
+        }
+    });
+
+    pos_terminal_ui.on_add_digit({
+        let handle = pos_terminal_handle.clone();
+        move |digit| {
+            if let Some(ui) = handle.upgrade() {
+                let mut current = ui.get_amount().to_string();
+                if current == "0.00" {
+                    current = "".to_string();
+                } else {
+                    current = current.replace(".", "");
+                }
+                current.push_str(&digit);
+
+                let parsed = current.parse::<f64>().unwrap_or(0.0);
+                ui.set_amount(format!("{:.2}", parsed / 100.0).into());
+            }
+        }
+    });
+
+    pos_terminal_ui.on_clear_amount({
+        let handle = pos_terminal_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.set_amount("0.00".into());
+            }
+        }
+    });
+
+    pos_terminal_ui.on_charge({
+        let handle = pos_terminal_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.set_status("connecting".into());
+                let ui_handle = ui.as_weak();
+                slint::Timer::single_shot(std::time::Duration::from_secs(1), move || {
+                    if let Some(ui) = ui_handle.upgrade() {
+                        ui.set_status("processing".into());
+                        let ui_handle2 = ui.as_weak();
+                        slint::Timer::single_shot(std::time::Duration::from_secs(2), move || {
+                            if let Some(ui) = ui_handle2.upgrade() {
+                                ui.set_status("approved".into());
+                            }
+                        });
+                    }
+                });
+            }
+        }
+    });
+
+    Box::leak(Box::new(pos_terminal_ui));
+
     let dashboard_ref_for_bs = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
+
+    let pt_handle_for_dash = pos_terminal_handle.clone();
+    dashboard_ref_for_bs.upgrade().unwrap().on_action_open_terminal(move || {
+        if let Some(ui) = pt_handle_for_dash.upgrade() {
+            let _ = ui.show();
+        }
+    });
 
     let bs_handle_clone_for_dash = business_share_handle.clone();
     dashboard_ref_for_bs.upgrade().unwrap().on_action_share_store(move || {

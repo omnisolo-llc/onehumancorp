@@ -1,0 +1,118 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component PosTerminal inherits Window {
+    preferred-width: 500px;
+    min-width: 375px;
+    height: 600px;
+    title: "Stripe Terminal";
+
+    in-out property <string> amount: "0.00";
+    in-out property <string> status: "idle"; // idle, connecting, processing, approved
+
+    callback close();
+    callback charge();
+    callback add_digit(string);
+    callback clear_amount();
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Point of Sale"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            Button { text: "Close"; clicked => { close(); } }
+        }
+
+        if (status == "idle") : VerticalBox {
+            spacing: 20px;
+
+            GlassCard {
+                height: 80px;
+                VerticalBox {
+                    alignment: center;
+                    Text {
+                        text: "$" + amount;
+                        font-size: 48px;
+                        font-family: "Inter";
+                        font-weight: 700;
+                        color: white;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
+
+            VerticalBox {
+                spacing: 12px;
+                HorizontalBox {
+                    spacing: 12px;
+                    Button { text: "1"; height: 60px; clicked => { add_digit("1"); } }
+                    Button { text: "2"; height: 60px; clicked => { add_digit("2"); } }
+                    Button { text: "3"; height: 60px; clicked => { add_digit("3"); } }
+                }
+                HorizontalBox {
+                    spacing: 12px;
+                    Button { text: "4"; height: 60px; clicked => { add_digit("4"); } }
+                    Button { text: "5"; height: 60px; clicked => { add_digit("5"); } }
+                    Button { text: "6"; height: 60px; clicked => { add_digit("6"); } }
+                }
+                HorizontalBox {
+                    spacing: 12px;
+                    Button { text: "7"; height: 60px; clicked => { add_digit("7"); } }
+                    Button { text: "8"; height: 60px; clicked => { add_digit("8"); } }
+                    Button { text: "9"; height: 60px; clicked => { add_digit("9"); } }
+                }
+                HorizontalBox {
+                    spacing: 12px;
+                    Button { text: "C"; height: 60px; clicked => { clear_amount(); } }
+                    Button { text: "0"; height: 60px; clicked => { add_digit("0"); } }
+                    Button { text: "00"; height: 60px; clicked => { add_digit("00"); } }
+                }
+            }
+
+            Rectangle {}
+
+            GlassCard {
+                height: 60px;
+                background: amount != "0.00" ? rgba(168, 85, 247, 1.0) : rgba(100, 116, 139, 0.4);
+                VerticalBox {
+                    alignment: center;
+                    Text { text: "Charge $" + amount; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; }
+                }
+                TouchArea {
+                    enabled: amount != "0.00";
+                    clicked => { charge(); }
+                }
+            }
+        }
+
+        if (status != "idle") : VerticalBox {
+            alignment: center;
+            spacing: 20px;
+
+            Text {
+                text: status == "connecting" ? "Connecting to Reader..." : (status == "processing" ? "Tap, Insert, or Swipe" : "Payment Approved!");
+                font-size: 24px;
+                font-family: "Outfit";
+                font-weight: 700;
+                color: status == "approved" ? #10b981 : white;
+                horizontal-alignment: center;
+            }
+
+            if (status == "approved") : Text {
+                text: "✅";
+                font-size: 64px;
+                horizontal-alignment: center;
+            }
+
+            if (status == "approved") : Button {
+                text: "New Sale";
+                height: 50px;
+                clicked => { clear_amount(); status = "idle"; }
+            }
+        }
+    }
+}
