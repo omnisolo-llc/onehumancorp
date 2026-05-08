@@ -30,7 +30,13 @@ impl StripeClient {
         StripeClient { api_key }
     }
 
-    pub async fn create_checkout_session(&self, _price_id: &str, _customer_id: &str, payment_method: Option<crate::integrations::stripe::routing::PaymentMethod>) -> Result<String, String> {
+    pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, payment_method: Option<crate::integrations::stripe::routing::PaymentMethod>) -> Result<String, String> {
+        let _ = crate::telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            customer_id, // assume customer_id is a proxy for organization_id
+            "stripe_checkout_session",
+            0.10 // mock cost for api orchestration
+        ).await;
         let pm = payment_method.unwrap_or(crate::integrations::stripe::routing::PaymentMethod::CreditCard);
         match pm {
             crate::integrations::stripe::routing::PaymentMethod::Ach => {
@@ -42,7 +48,13 @@ impl StripeClient {
         }
     }
 
-    pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
+    pub async fn get_subscription(&self, subscription_id: &str) -> Result<StripeSubscription, String> {
+        let _ = crate::telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            "unknown",
+            "stripe_get_subscription",
+            0.01
+        ).await;
         Ok(StripeSubscription {
             id: "sub_test_...".to_string(),
             status: "active".to_string(),
