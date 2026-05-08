@@ -9,7 +9,7 @@ use chrono::Utc;
 
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
-use opentelemetry::trace::{Tracer, TraceContextExt};
+use opentelemetry::trace::Tracer;
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,
