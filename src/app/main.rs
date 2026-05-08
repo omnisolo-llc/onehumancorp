@@ -93,6 +93,7 @@ thread_local! {
     static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
+    static GLOBAL_ANALYTICS_CHARTS: RefCell<Option<slint::Weak<app::AnalyticsCharts>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
     static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
 }
@@ -109,6 +110,7 @@ thread_local! {
     static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
+    static GLOBAL_ANALYTICS_CHARTS: RefCell<Option<slint::Weak<app::AnalyticsCharts>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
     static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
 }
@@ -1537,6 +1539,71 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let business_share_handle = business_share_ui.as_weak();
 
     let dashboard_ref_for_bs = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
+
+    let analytics_charts_ui = app::AnalyticsCharts::new()?;
+    GLOBAL_ANALYTICS_CHARTS.with(|g| *g.borrow_mut() = Some(analytics_charts_ui.as_weak()));
+    let analytics_charts_handle = analytics_charts_ui.as_weak();
+
+    // Setup mock data for analytics charts
+    let mock_charts = vec![
+        app::UiChartData {
+            title: "Revenue Over Time".into(),
+            points: slint::ModelRc::new(slint::VecModel::from(vec![
+                app::UiDataPoint { label: "Mon".into(), value: 40.0, display_value: "$400".into() },
+                app::UiDataPoint { label: "Tue".into(), value: 65.0, display_value: "$650".into() },
+                app::UiDataPoint { label: "Wed".into(), value: 30.0, display_value: "$300".into() },
+                app::UiDataPoint { label: "Thu".into(), value: 80.0, display_value: "$800".into() },
+                app::UiDataPoint { label: "Fri".into(), value: 120.0, display_value: "$1.2k".into() },
+                app::UiDataPoint { label: "Sat".into(), value: 150.0, display_value: "$1.5k".into() },
+                app::UiDataPoint { label: "Sun".into(), value: 100.0, display_value: "$1.0k".into() },
+            ])),
+        },
+        app::UiChartData {
+            title: "Orders by Day".into(),
+            points: slint::ModelRc::new(slint::VecModel::from(vec![
+                app::UiDataPoint { label: "Mon".into(), value: 20.0, display_value: "10".into() },
+                app::UiDataPoint { label: "Tue".into(), value: 40.0, display_value: "20".into() },
+                app::UiDataPoint { label: "Wed".into(), value: 30.0, display_value: "15".into() },
+                app::UiDataPoint { label: "Thu".into(), value: 50.0, display_value: "25".into() },
+                app::UiDataPoint { label: "Fri".into(), value: 80.0, display_value: "40".into() },
+                app::UiDataPoint { label: "Sat".into(), value: 100.0, display_value: "50".into() },
+                app::UiDataPoint { label: "Sun".into(), value: 70.0, display_value: "35".into() },
+            ])),
+        },
+        app::UiChartData {
+            title: "Top Products".into(),
+            points: slint::ModelRc::new(slint::VecModel::from(vec![
+                app::UiDataPoint { label: "Vegan Cake".into(), value: 100.0, display_value: "120".into() },
+                app::UiDataPoint { label: "Latte".into(), value: 75.0, display_value: "90".into() },
+                app::UiDataPoint { label: "Cookies".into(), value: 50.0, display_value: "60".into() },
+            ])),
+        },
+        app::UiChartData {
+            title: "Traffic Sources".into(),
+            points: slint::ModelRc::new(slint::VecModel::from(vec![
+                app::UiDataPoint { label: "Direct".into(), value: 80.0, display_value: "40%".into() },
+                app::UiDataPoint { label: "Social".into(), value: 60.0, display_value: "30%".into() },
+                app::UiDataPoint { label: "Search".into(), value: 40.0, display_value: "20%".into() },
+                app::UiDataPoint { label: "Referral".into(), value: 20.0, display_value: "10%".into() },
+            ])),
+        },
+    ];
+    analytics_charts_ui.set_charts(slint::ModelRc::new(slint::VecModel::from(mock_charts)));
+
+    let ac_close_handle = analytics_charts_handle.clone();
+    analytics_charts_ui.on_close(move || {
+        if let Some(ui) = ac_close_handle.upgrade() {
+            let _ = ui.hide();
+        }
+    });
+
+    let dashboard_ref_for_analytics = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
+    let ac_handle_for_dash = analytics_charts_handle.clone();
+    dashboard_ref_for_analytics.upgrade().unwrap().on_action_see_analytics(move || {
+        if let Some(ui) = ac_handle_for_dash.upgrade() {
+            let _ = ui.show();
+        }
+    });
 
     let bs_handle_clone_for_dash = business_share_handle.clone();
     dashboard_ref_for_bs.upgrade().unwrap().on_action_share_store(move || {
