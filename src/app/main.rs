@@ -306,10 +306,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let _ = client.save_wizard_state(request).await;
                 }
             });
-            #[cfg(target_arch = "wasm32")]
-            wasm_bindgen_futures::spawn_local(async move {
-                // HTTP call in WASM stubbed
-            });
         }
     });
 
@@ -3561,10 +3557,6 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
                     request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
                     let _ = client.save_wizard_state(request).await;
                 }
-            });
-            #[cfg(target_arch = "wasm32")]
-            wasm_bindgen_futures::spawn_local(async move {
-                // HTTP call in WASM stubbed
             });
         }
     });
