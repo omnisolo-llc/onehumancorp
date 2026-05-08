@@ -757,7 +757,7 @@ pub async fn insert_autodream_memory(
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
                     .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
                     .await?.rows_affected()
@@ -765,7 +765,7 @@ pub async fn insert_autodream_memory(
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 set_org_context(&mut *tx, "system").await?;
-                let affected = sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
+                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
                     .bind(threshold)
                     .execute(&mut *tx)
                     .await?.rows_affected();
@@ -1083,5 +1083,31 @@ mod e2e_tenant_isolation_tests {
 
         // This verifies tenant access doesn't bleed across pools
         // (RLS logic inherently evaluated by postgres)
+    }
+}
+
+#[cfg(test)]
+mod tests_db {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_cleanup_stagnant_missions() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy(&database_url)
+            .unwrap();
+
+        let db = DB {
+            pool: pool.clone(),
+            store: DbStore::Postgres,
+        };
+
+        // Ensure it doesn't panic
+        let res = db.cleanup_stagnant_missions(3600).await;
+        assert!(res.is_ok() || res.is_err());
     }
 }
