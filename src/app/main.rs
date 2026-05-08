@@ -140,6 +140,18 @@ pub fn setup_welcome_checklist_routing(
 ) {
     let handle = ui.as_weak();
 
+    ui.on_go_to_dashboard({
+        let h = handle.clone();
+        move || {
+            if let Some(u) = h.upgrade() { u.hide().unwrap(); }
+            GLOBAL_DASHBOARD.with(|global| {
+                if let Some(weak) = global.borrow().as_ref() {
+                    if let Some(ui) = weak.upgrade() { ui.show().unwrap(); }
+                }
+            });
+        }
+    });
+
     ui.on_go_to_add_products({
         let h = handle.clone();
         move || {
@@ -3476,14 +3488,6 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
         let wizard_handle = setup_wizard_ui_from_login.clone();
         move || {
             if let Some(wizard) = wizard_handle.upgrade() {
-                let weak_wizard = wizard.as_weak();
-                wasm_bindgen_futures::spawn_local(async move {
-                    slint::invoke_from_event_loop(move || {
-                        if let Some(ui) = weak_wizard.upgrade() {
-                            ui.set_step(0);
-                        }
-                    }).unwrap();
-                });
                 let _ = wizard.show();
             }
             if let Some(ui) = login_handle.upgrade() {
