@@ -7,3 +7,5 @@ CREATE TABLE IF NOT EXISTS agent_missions (
     organization_id TEXT,
     mission_log TEXT
 );
+
+INSERT INTO agent_missions (id, status, payload, mission_log) VALUES ('m_handoff', 'blocked', '{"task":"drain"}', 'I cannot finish an OHC product mission. Handover required.');
