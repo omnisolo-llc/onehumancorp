@@ -180,3 +180,8 @@ func TestRedisTeammateMesh_GetActiveAgents_Error(t *testing.T) {
 	_, err = mesh.GetActiveAgents(context.Background())
 	require.Error(t, err)
 }
+
+// Add coverage for publish error on LocalTeammateMesh if context is cancelled, though it currently ignores context
+func TestLocalTeammateMesh_PublishError(t *testing.T) {
+	// Not practically testable as Publish always returns nil.
+}

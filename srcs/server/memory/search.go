@@ -35,7 +35,7 @@ func (d *AutoDreamDaemon) SearchSimilarMemories(ctx context.Context, query strin
 		// Fallback to text-based recency logic in SQLite Standalone mode
 		queryStr = `
 			SELECT id, organization_id, task_id, content
-			FROM autodream_memories
+			FROM consolidated_memory
 			WHERE organization_id = ? AND content LIKE ?
 			ORDER BY created_at DESC
 			LIMIT ?
@@ -45,7 +45,7 @@ func (d *AutoDreamDaemon) SearchSimilarMemories(ctx context.Context, query strin
 		// Exact Nearest Neighbor search in Postgres Cloud mode
 		queryStr = `
 			SELECT id, organization_id, task_id, content
-			FROM autodream_memories
+			FROM consolidated_memory
 			WHERE organization_id = $1
 			ORDER BY embedding <-> $2
 			LIMIT $3
