@@ -700,6 +700,11 @@ impl Hub {
         Ok(child_id)
     }
 
+    pub async fn handoff_mission(&self, mission_id: &str, blockers: &str, tenant_id: &str) -> Result<(), String> {
+        let sip_db = crate::sip::SipDB::new(self.pool.clone(), tenant_id.to_string());
+        sip_db.handoff_mission(mission_id, blockers).await.map_err(|e| e.to_string())
+    }
+
     pub async fn check_health(&self) -> Result<serde_json::Value, String> {
         let start = std::time::Instant::now();
 

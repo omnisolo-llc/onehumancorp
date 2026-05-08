@@ -1,11 +1,16 @@
 use serde_json::{Value, Map};
 use sqlx::{PgPool, query};
 use chrono::Utc;
-use std::sync::OnceLock;
+use std::sync::{OnceLock, Arc};
 use opentelemetry::global;
 use opentelemetry::metrics::UpDownCounter;
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static MESH_TRANSPORT: OnceLock<Arc<dyn crate::orchestration::mesh::TeammateMesh>> = OnceLock::new();
+
+pub fn set_mesh_transport(transport: Arc<dyn crate::orchestration::mesh::TeammateMesh>) {
+    let _ = MESH_TRANSPORT.set(transport);
+}
 
 pub fn get_deployment_mode() -> &'static str {
     static DEPLOYMENT_MODE: OnceLock<String> = OnceLock::new();
@@ -150,6 +155,43 @@ pub async fn record_rag_escalation(pool: &PgPool, org_id: &str, error: &str) -> 
     buffer_metric(pool, "ohc_rag_escalation_total", "counter", 1.0, serde_json::json!({ "organization_id": org_id, "error": error })).await
 }
 
+pub async fn record_mcp_tool_invocation(pool: &PgPool, tool_id: &str, status: &str, latency_ms: f32) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_mcp_tool_invocation_total",
+        "counter",
+        1.0,
+        serde_json::json!({
+            "tool_id": tool_id,
+            "status": status,
+        }),
+    ).await?;
+
+    buffer_metric(
+        pool,
+        "ohc_mcp_tool_invocation_latency_ms",
+        "histogram",
+        latency_ms,
+        serde_json::json!({
+            "tool_id": tool_id,
+        }),
+    ).await?;
+
+    if let Some(mesh) = MESH_TRANSPORT.get() {
+        let telemetry_event = serde_json::json!({
+            "type": "mcp_tool_invocation",
+            "tool_id": tool_id,
+            "status": status,
+            "latency_ms": latency_ms,
+            "timestamp": Utc::now(),
+        });
+        if let Ok(payload) = serde_json::to_vec(&telemetry_event) {
+            let _ = mesh.publish("mesh:telemetry:mcp", payload).await;
+        }
+    }
+
+    Ok(())
+}
 
 pub async fn buffer_metric(
     pool: &PgPool,

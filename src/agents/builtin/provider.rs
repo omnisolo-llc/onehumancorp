@@ -334,13 +334,47 @@ impl Provider for BuiltinProvider {
     fn get_credentials(&self) -> Credentials { Credentials::default() }
     fn is_authenticated(&self) -> bool { true }
     async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        // TODO: Support OHC_AGENT_ADDRESS gRPC dispatch if needed
-        // Advanced GRPC Dispatch Support
         let address = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_default();
         if !address.is_empty() {
             tracing::debug!("Dispatching via gRPC to {}", address);
-            // This is handled by orchestrator at runtime via OHC_AGENT_ADDRESS
-            // It overrides local builtin tools loop with a remote node.
+
+            let mut client = crate::proto::agent_service::agent_service_client::AgentServiceClient::connect(format!("http://{}", address))
+                .await
+                .map_err(|e| format!("Failed to connect to remote agent at {}: {}", address, e))?;
+
+            let req = crate::proto::agent_service::RunTaskRequest {
+                task_id: uuid::Uuid::new_v4().to_string(),
+                task: command.to_string(),
+                model: std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "claude-3-5-sonnet".to_string()),
+                llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_else(|_| "anthropic".to_string()),
+                llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
+                system_prompt: std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default(),
+                max_tokens: 4096,
+                temperature: 0.0,
+                max_context_messages: 100,
+                injected_context_json: String::new(),
+                runtime_config: None,
+                toolset_config: None,
+                department: "engineering".to_string(),
+            };
+
+            let mut stream = client.run_task(req).await
+                .map_err(|e| format!("gRPC run_task failed: {}", e))?
+                .into_inner();
+
+            while let Some(event) = stream.message().await.map_err(|e| e.to_string())? {
+                if let Some(transport) = &transport {
+                    let msg = serde_json::to_vec(&event).unwrap_or_default();
+                    let _ = transport.send(&msg).await;
+                }
+                if event.r#type == crate::proto::agent_service::EventType::TaskComplete as i32 {
+                    return Ok(());
+                }
+                if event.r#type == crate::proto::agent_service::EventType::TaskError as i32 {
+                    return Err(event.error);
+                }
+            }
+            return Ok(());
         }
         execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
     }

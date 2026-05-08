@@ -23,6 +23,7 @@ pub mod finance;
 pub mod local_fs_sync;
 pub mod ollama;
 pub mod subagent;
+pub mod mission;
 pub mod head;
 pub mod tail;
 pub mod hybrid_blob;
@@ -83,6 +84,7 @@ pub fn all_tools(
     todos: SharedTodos,
     task_store: SharedTaskStore,
     mailbox: SharedMailbox,
+    mission_manager: Option<Arc<dyn ohc_builtin_agent_core::types::MissionManager>>,
     working_dir: Option<std::path::PathBuf>,
     memory_accessor: Option<Arc<dyn anthropic_memory::MemoryAccessor>>,
     observation_store: Arc<dashmap::DashMap<String, String>>,
@@ -127,6 +129,10 @@ pub fn all_tools(
     if let Some(accessor) = memory_accessor {
         tools.push(anthropic_memory::topic_retrieve_tool(accessor.clone()));
         tools.push(anthropic_memory::transcript_search_tool(accessor));
+    }
+
+    if let Some(m) = mission_manager {
+        tools.push(mission::mission_handover_tool(m));
     }
 
     tools

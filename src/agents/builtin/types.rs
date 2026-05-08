@@ -160,3 +160,9 @@ impl std::fmt::Display for ToolError {
 }
 
 impl std::error::Error for ToolError {}
+
+/// Trait for managing missions from within tools.
+#[async_trait::async_trait]
+pub trait MissionManager: Send + Sync {
+    async fn handoff_mission(&self, mission_id: &str, blockers: &str, tenant_id: &str) -> Result<(), String>;
+}

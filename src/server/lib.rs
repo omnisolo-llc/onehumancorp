@@ -171,6 +171,13 @@ impl MyHubService {
     }
 }
 
+#[async_trait::async_trait]
+impl ohc_builtin_agent::types::MissionManager for Hub {
+    async fn handoff_mission(&self, mission_id: &str, blockers: &str, tenant_id: &str) -> Result<(), String> {
+        self.handoff_mission(mission_id, blockers, tenant_id).await
+    }
+}
+
 #[tonic::async_trait]
 impl HubService for MyHubService {
 
@@ -1315,6 +1322,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         tracing::error!("Failed to start handoff listener: {}", e);
     }
 
+
+    // Register mesh transport for telemetry
+    crate::telemetry::set_mesh_transport(handoff_mesh.clone());
 
     // Start Cross-Mode Health Monitor
     let monitor_mesh = handoff_mesh.clone();

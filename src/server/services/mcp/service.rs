@@ -77,6 +77,7 @@ impl McpService for MyMcpService {
         &self,
         request: Request<McpInvokeRequest>,
     ) -> Result<Response<McpInvokeResponse>, Status> {
+        let start = std::time::Instant::now();
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
 
@@ -91,7 +92,8 @@ impl McpService for MyMcpService {
             return Err(Status::invalid_argument("toolId is required"));
         }
 
-        return match req.tool_id.as_str() {
+        let tool_id = req.tool_id.clone();
+        let result = match req.tool_id.as_str() {
             "telegram-mcp" | "slack-mcp" | "teams-mcp" => {
                 let params: serde_json::Value = serde_json::from_str(&req.params)
                     .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
@@ -218,7 +220,20 @@ impl McpService for MyMcpService {
             _ => {
                 Err(Status::unimplemented(format!("tool {} not implemented in stub", req.tool_id)))
             }
-        }
+        };
+
+        let duration = start.elapsed();
+        let status = if result.is_ok() { "success" } else { "error" };
+        let pool = self.hub.pool.clone();
+        let tool_id_clone = tool_id.clone();
+
+        tokio::spawn(async move {
+            if let Err(e) = crate::telemetry::record_mcp_tool_invocation(&pool, &tool_id_clone, status, duration.as_millis() as f32).await {
+                tracing::error!("Failed to record MCP tool invocation telemetry: {}", e);
+            }
+        });
+
+        result
     }
 
     async fn sync_missions(

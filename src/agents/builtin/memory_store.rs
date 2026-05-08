@@ -18,13 +18,14 @@ pub struct EmbeddingRecord {
     pub metadata: Option<String>,
 }
 
+#[derive(Clone)]
 pub enum VectorMemoryStore {
     Postgres(sqlx::PgPool),
     Sqlite(sqlx::SqlitePool),
 }
 
 pub struct VectorRepository {
-    store: VectorMemoryStore,
+    pub store: VectorMemoryStore,
 }
 
 impl VectorRepository {

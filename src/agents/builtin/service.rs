@@ -8,8 +8,9 @@ use crate::auth::AuthMode;
 use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
 };
+use ohc_builtin_agent_core::types::MissionManager;
 use crate::memory::inject_memories_into_prompt;
-use crate::memory_store::{VectorRepository, EmbeddingRecord};
+use crate::memory_store::{VectorRepository, EmbeddingRecord, VectorMemoryStore};
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SubAgentRequest, SubAgentResponse,
@@ -44,9 +45,40 @@ pub struct AgentServiceImpl {
     cfg: AgentConfig,
     auth: AuthMode,
     memory: Option<Arc<VectorRepository>>,
+    pub mission_manager: Option<Arc<dyn MissionManager>>,
     pub anthropic_memory: Option<Arc<crate::memory_store::Anthropic3TierMemoryStore>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
+}
+
+pub struct DbMissionManager {
+    pub store: VectorMemoryStore,
+}
+
+#[async_trait::async_trait]
+impl MissionManager for DbMissionManager {
+    async fn handoff_mission(&self, mission_id: &str, blockers: &str, tenant_id: &str) -> Result<(), String> {
+        let query = "UPDATE agent_missions \
+                     SET status = 'blocked', \
+                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END, \
+                         updated_at = CURRENT_TIMESTAMP \
+                     WHERE id = $2 AND tenant_id = $3";
+
+        let pool = match &self.store {
+            VectorMemoryStore::Postgres(p) => p,
+            VectorMemoryStore::Sqlite(_) => return Err("Mission handover not yet implemented for SQLite in DbMissionManager".to_string()),
+        };
+
+        sqlx::query(query)
+            .bind(blockers)
+            .bind(mission_id)
+            .bind(tenant_id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
 }
 
 
@@ -127,12 +159,15 @@ impl AgentServiceImpl {
             cfg,
             auth,
             memory: None,
+            mission_manager: None,
             llm_override: None,
             anthropic_memory: None,
         }
     }
 
     pub async fn init_memory(&mut self) {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+
         if std::env::var("OHC_ENABLE_ANTHROPIC_MEMORY").unwrap_or_default() == "true" {
             let base_dir = std::env::var("OHC_ANTHROPIC_MEMORY_DIR").unwrap_or_else(|_| ".agent-memory".to_string());
             if let Ok(store) = crate::memory_store::Anthropic3TierMemoryStore::new(&base_dir) {
@@ -142,12 +177,13 @@ impl AgentServiceImpl {
             }
         }
 
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
         if !db_url.is_empty() {
             if db_url.starts_with("sqlite") {
                 match sqlx::SqlitePool::connect_lazy(&db_url) {
                     Ok(pool) => {
-                        self.memory = Some(Arc::new(VectorRepository::new_sqlite(pool)));
+                        let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
+                        self.memory = Some(repo);
+                        // We don't set mission_manager for SQLite here as the query is PG-specific for now
                     }
                     Err(e) => {
                         tracing::error!("Failed to connect to sqlite for memory store: {}", e);
@@ -156,7 +192,9 @@ impl AgentServiceImpl {
             } else {
                 match sqlx::PgPool::connect_lazy(&db_url) {
                     Ok(pool) => {
-                        self.memory = Some(Arc::new(VectorRepository::new(pool)));
+                        let repo = Arc::new(VectorRepository::new(pool.clone()));
+                        self.memory = Some(repo.clone());
+                        self.mission_manager = Some(Arc::new(DbMissionManager { store: repo.store.clone() }));
                     }
                     Err(e) => {
                         tracing::error!("Failed to connect to database for memory store: {}", e);
@@ -394,7 +432,7 @@ impl AgentServiceImpl {
         let mailbox = Arc::new(RwLock::new(Mailbox::default()));
         let observation_store = Arc::new(dashmap::DashMap::new());
         
-        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None, observation_store.clone());
+        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, self.mission_manager.clone(), None, None, observation_store.clone());
         let mut unarc_agent = Agent::new(llm, tools);
         unarc_agent.observation_store = observation_store;
         if let Some(wd) = &run_cfg.workspace_path {
@@ -451,7 +489,7 @@ impl AgentService for AgentServiceImpl {
         } else { None };
         let observation_store = Arc::new(dashmap::DashMap::new());
 
-        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, accessor, observation_store.clone());
+        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, self.mission_manager.clone(), None, accessor, observation_store.clone());
         let tools = if !task_req.department.is_empty() {
             if let Ok(dep) = Department::from_str(&task_req.department) {
                 let dep_cfg = get_department_config(dep);
@@ -661,7 +699,7 @@ impl AgentService for AgentServiceImpl {
             let observation_store = Arc::new(dashmap::DashMap::new());
 
             let working_dir = if sub_req.working_dir.is_empty() { None } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
-            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir, None, observation_store.clone());
+            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, self.mission_manager.clone(), working_dir, None, observation_store.clone());
             let mut agent = Agent::new(llm, tools);
             agent.observation_store = observation_store;
 
