@@ -94,6 +94,8 @@ pub struct Store {
     secret: Vec<u8>,
     #[allow(dead_code)]
     oidc_cfg: RwLock<OIDCConfig>,
+    #[allow(dead_code)]
+    pub repo: Option<Arc<dyn UserRepository>>,
 }
 
 impl Store {
@@ -186,11 +188,17 @@ impl Store {
                 client_id,
                 enabled,
             }),
+            repo: None,
         };
 
         store.seed_default_admin(now);
 
         store
+    }
+
+    pub fn with_repo(mut self, repo: Arc<dyn UserRepository>) -> Self {
+        self.repo = Some(repo);
+        self
     }
 
     fn seed_default_admin(&self, now: DateTime<Utc>) {
@@ -200,13 +208,13 @@ impl Store {
 
         let hash = hash(admin_pass, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
 
-        let id = hex::encode(random_bytes(8));
         
+        let id = hex::encode(random_bytes(8));
         let admin = User {
             id: id.clone(),
             username: admin_user.clone(),
             email: admin_email.clone(),
-            password_hash: hash,
+            password_hash: hash.clone(),
             roles: vec![ROLE_ADMIN.to_string()],
             active: true,
             organization_id: None,
@@ -228,6 +236,33 @@ impl Store {
             return Err("password must be at least 6 characters".to_string());
         }
 
+        let pwd_hash = hash(password.clone(), if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
+        let id = hex::encode(random_bytes(8));
+        let now = Utc::now();
+        if let Some(ref repo) = self.repo {
+            let user_to_save = User {
+                id: id.clone(),
+                username: username.clone(),
+                email: email.clone(),
+                password_hash: pwd_hash.clone(),
+                roles: roles.clone(),
+                active: true,
+                organization_id: Some(org_id.clone()),
+                created_at: now,
+                updated_at: now,
+                oidc_subject: None,
+            };
+            // Not using async runtime inside sync create_user without tokio context block
+            // Just relying on the fact that if a repo is used we are in a tokio async context
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let org_id_clone = org_id.clone();
+                let repo_clone = repo.clone();
+                tokio::spawn(async move {
+                    let _ = repo_clone.create_user(user_to_save, &org_id_clone).await;
+                });
+            }
+        }
+
         let mut users = self.users.write().unwrap();
         let mut by_name = self.by_name.write().unwrap();
         let mut by_email = self.by_email.write().unwrap();
@@ -242,16 +277,13 @@ impl Store {
             return Err("email already registered".to_string());
         }
 
-        let hash = hash(password, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
 
-        let id = hex::encode(random_bytes(8));
-        let now = Utc::now();
 
         let user = User {
             id: id.clone(),
             username,
             email,
-            password_hash: hash,
+            password_hash: pwd_hash.clone(),
             roles,
             active: true,
             organization_id: Some(org_id),
@@ -388,7 +420,11 @@ impl Store {
         Ok(())
     }
 
-    pub fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
+    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) {
+        if let Some(ref repo) = self.repo {
+            let _ = repo.revoke_token(jti.clone(), exp, org_id).await;
+        }
+
         let mut revoked = self.revoked.write().unwrap();
         revoked.insert(jti, exp);
         
@@ -396,7 +432,13 @@ impl Store {
         revoked.retain(|_, v| *v > now);
     }
 
-    pub fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
+    pub async fn is_revoked(&self, jti: &str, org_id: &str) -> bool {
+        if let Some(ref repo) = self.repo {
+            if let Ok(revoked) = repo.is_revoked(jti, org_id).await {
+                if revoked { return true; }
+            }
+        }
+
         let revoked = self.revoked.read().unwrap();
         if let Some(exp) = revoked.get(jti) {
              if exp > &Utc::now() {
@@ -440,7 +482,7 @@ impl Store {
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
                         return Err("Invalid token: empty claims".to_string());
                     }
-                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
+                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()).await {
                         return Err("token revoked".to_string());
                     }
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
@@ -537,7 +579,7 @@ impl AuthService for AuthServiceServerImpl {
                     if let Ok(claims) = self.store.validate_token(token).await {
                         let exp = chrono::DateTime::from_timestamp(claims.exp as i64, 0)
                             .unwrap_or_else(|| chrono::Utc::now());
-                        let _ = self.store.revoke_token(claims.jti, exp, &claims.organization_id.unwrap_or_default());
+                        let _ = self.store.revoke_token(claims.jti, exp, &claims.organization_id.unwrap_or_default()).await;
                     }
                 }
             }
@@ -830,7 +872,7 @@ mod tests {
         let token = s.issue_token(&u).unwrap();
         
         let claims = s.validate_token(&token).await.unwrap();
-        s.revoke_token(claims.jti.clone(), Utc::now() + chrono::Duration::hours(24), "");
+        s.revoke_token(claims.jti.clone(), Utc::now() + chrono::Duration::hours(24), "").await;
         
         assert!(s.validate_token(&token).await.is_err());
     }

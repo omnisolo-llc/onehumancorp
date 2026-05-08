@@ -196,6 +196,14 @@ impl IpcBus {
     pub async fn new(db_url: &str) -> Result<Self, String> {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
+        let options = if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+            if let Ok(key) = std::env::var("OHC_SQLITE_KEY") {
+                if key.is_empty() { panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty."); }
+                options.pragma("key", key).pragma("cipher", "sqlcipher")
+            } else {
+                panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode.");
+            }
+        } else { options };
         let options = options.create_if_missing(true);
         let pool = SqlitePoolOptions::new().connect_with(options).await.map_err(|e| e.to_string())?;
 

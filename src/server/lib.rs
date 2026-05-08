@@ -1432,7 +1432,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
-    let store = std::sync::Arc::new(auth::Store::new());
+
+    let mut auth_store = auth::Store::new();
+    match &db.store {
+        db::DbStore::Postgres => {
+            let pg_repo = auth::postgres_store::PgUserRepository::new(db.pool.clone());
+            auth_store = auth_store.with_repo(Arc::new(pg_repo));
+        }
+        _ => {}
+    }
+    let store = std::sync::Arc::new(auth_store);
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if crate::config::get().telemetry_enabled {
