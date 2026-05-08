@@ -1,17 +1,30 @@
 use sqlx::{Executor, Postgres, query};
 
+pub async fn set_system_context<'a, E>(executor: E) -> Result<(), sqlx::Error>
+where
+    E: Executor<'a, Database = Postgres>,
+{
+    // Elevate privileges for system-level queries securely.
+    query("SET LOCAL ROLE ohc_bypassrls")
+        .execute(executor)
+        .await?;
+    Ok(())
+}
+
 pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sqlx::Error>
 where
     E: Executor<'a, Database = Postgres>,
 {
+    if org_id == "system" && crate::config::get().multitenant {
+        // Explicitly block passing 'system' as an org_id in Cloud (multitenant) mode
+        // to prevent Row-Level Security (RLS) bypass vulnerabilities.
+        tracing::error!("CRITICAL SECURITY ERROR: Attempted to bypass RLS by passing invalid id in multitenant mode.");
+        return Err(sqlx::Error::Configuration("RLS bypass blocked".into()));
+    }
+
     if !crate::config::get().multitenant && org_id == "system" {
-        // Elevate privileges for system-level queries.
-        // We cannot issue multiple queries because sqlx extended protocol doesn't allow it,
-        // and we cannot call execute multiple times because E is consumed.
-        // Wait, we can use `query` instead of `executor.execute`, because `query` takes `executor` which we can borrow if we used `&mut executor`, but wait, we had errors with `&mut executor` too because E doesn't implement `Executor` for `&mut E`.
-        // The right way is to use a single SQL function, or use an anonymous DO block if we want multiple statements!
-        // But DO blocks can't be used with extended query protocol either? Actually they can!
-        // Another option: "SET LOCAL ROLE ohc_bypassrls" is all we need! We don't strictly *need* to set current_tenant to empty.
+        // Elevate privileges for system-level queries in standalone mode for backward compat,
+        // though `set_system_context` should be preferred.
         query("SET LOCAL ROLE ohc_bypassrls")
             .execute(executor)
             .await?;

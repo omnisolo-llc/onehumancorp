@@ -4,7 +4,7 @@ use sqlx::SqlitePool;
 use std::str::FromStr;
 use std::env;
 use sqlx::Row;
-use crate::utils::auth_utils::set_org_context;
+use crate::utils::auth_utils::{set_org_context, set_system_context};
 use chrono::{DateTime, Utc};
 use std::path::Path;
 
@@ -586,7 +586,7 @@ impl DB {
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => { sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ?").bind(threshold).execute(sqlite_pool).await?; },
-            DbStore::Postgres => { let mut tx = self.pool.begin().await?; set_org_context(&mut *tx, "system").await?; sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1").bind(threshold).execute(&mut *tx).await?; tx.commit().await?; }
+            DbStore::Postgres => { let mut tx = self.pool.begin().await?; set_system_context(&mut *tx).await?; sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1").bind(threshold).execute(&mut *tx).await?; tx.commit().await?; }
         };
 
         Ok(result)
@@ -597,7 +597,7 @@ impl DB {
             DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES (?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding").bind(memory_id).bind(context).bind(embedding).execute(sqlite_pool).await?; },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
-                set_org_context(&mut *tx, "system").await?;
+                set_system_context(&mut *tx).await?;
                 sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
                 .bind(memory_id)
                 .bind(context)
@@ -633,7 +633,7 @@ impl DB {
             },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
-                set_org_context(&mut *tx, "system").await?;
+                set_system_context(&mut *tx).await?;
                 let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
@@ -762,7 +762,7 @@ pub async fn insert_autodream_memory(
             },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
-                set_org_context(&mut *tx, "system").await?;
+                set_system_context(&mut *tx).await?;
                 let affected = sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
                     .bind(threshold)
                     .execute(&mut *tx)
@@ -795,7 +795,7 @@ pub async fn insert_autodream_memory(
                     "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
                 };
                 let mut tx = self.pool.begin().await?;
-                set_org_context(&mut *tx, "system").await?;
+                set_system_context(&mut *tx).await?;
                 sqlx::query(query).bind(task_id).execute(&mut *tx).await?;
                 tx.commit().await?;
             }

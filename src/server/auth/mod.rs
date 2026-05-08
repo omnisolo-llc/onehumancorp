@@ -122,8 +122,7 @@ impl Store {
                     mac.update(sqlite_key.as_bytes());
                     mac.finalize().into_bytes().to_vec()
                 } else {
-                    tracing::warn!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence");
-                    panic!("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+                    panic!("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
                 };
 
                 #[cfg(unix)]

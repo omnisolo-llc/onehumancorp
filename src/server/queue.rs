@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use sqlx::Row;
-use crate::utils::auth_utils::set_org_context;
+use crate::utils::auth_utils::{set_org_context, set_system_context};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Job {
@@ -721,7 +721,7 @@ impl TaskQueueService {
 
     pub async fn complete_task(&self, task_id: &str) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
-        set_org_context(&mut *tx, "system").await?;
+        set_system_context(&mut *tx).await?;
         sqlx::query("UPDATE shared_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(task_id)
             .execute(&mut *tx)
@@ -736,7 +736,7 @@ impl TaskQueueService {
         let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
         // We could merge this better using jsonb operators or just save status
         let mut tx = self.pool.begin().await?;
-        set_org_context(&mut *tx, "system").await?;
+        set_system_context(&mut *tx).await?;
         sqlx::query("UPDATE shared_tasks SET status = 'FAILED', payload = COALESCE(payload, '{}'::jsonb) || $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(task_id)
             .bind(payload_update)
