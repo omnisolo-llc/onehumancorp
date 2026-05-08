@@ -1,5 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 
 export struct UiProduct {
     id: string,
@@ -22,6 +23,7 @@ export component BusinessManager inherits Window {
     in property <[UiProduct]> products;
 
     in-out property <int> step: 0;
+    in-out property <bool> is_advanced: false;
     in-out property <string> selected_type: "";
 
     // Form fields
@@ -58,6 +60,7 @@ export component BusinessManager inherits Window {
             Rectangle {}
             if (current_view == "add") : Button { text: "Back to List"; clicked => { current_view = "list"; } }
             if (current_view == "list") : Button { text: "Close"; clicked => { close(); } }
+            AdvancedToggle { is_advanced <=> root.is_advanced; toggled => {} }
         }
 
         if (current_view == "list") : VerticalBox {

@@ -3,6 +3,7 @@ import { TooltipRegistry } from "tooltip_registry.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { StatCard } from "stat_card.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 
 import { UpgradePrompt } from "./upgrade_prompt.slint";
 import { DailyBriefing } from "daily_briefing.slint";
@@ -116,6 +117,7 @@ export component Dashboard inherits Window { // milestones
             Rectangle {} // Spacer
             TooltipElement { tooltip_id: "ask_ai"; Button { text: "Ask anything"; height: 44px; clicked => { open_ai_chat(); } } }
             TooltipElement { tooltip_id: "menu"; Button { text: "Menu"; height: 44px; clicked => { show_menu = !show_menu; } } }
+            AdvancedToggle { is_advanced <=> root.is_advanced; toggled => {} }
         }
 
         if (show_menu) : Rectangle {

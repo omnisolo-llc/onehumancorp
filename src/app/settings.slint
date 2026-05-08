@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 
 export component Settings inherits Window {
     width: 500px;
@@ -112,11 +113,7 @@ export component Settings inherits Window {
 
         // Other Settings
         HorizontalBox {
-            Text { text: "Advanced mode"; color: #1e293b; }
-            CheckBox {
-                checked: is_advanced;
-                toggled => { is_advanced = !is_advanced; save_state(); }
-            }
+            AdvancedToggle { is_advanced <=> root.is_advanced; toggled => { save_state(); } }
         }
 
         // Account Section

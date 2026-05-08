@@ -103,7 +103,7 @@ mod tests {
                 let mut attempt = 0;
                 let max_attempts = 10;
                 let mut backoff = Duration::from_millis(10);
-                loop {
+                loop { tokio::task::yield_now().await;
                     let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')")
                         .bind(format!("m_{}", i))
                         .execute(&*p)
@@ -150,7 +150,7 @@ mod tests {
             Err::<(), String>("Redis connection dropped or lock held".to_string())
         };
 
-        loop {
+        loop { tokio::task::yield_now().await;
             if simulated_acquire().await.is_ok() {
                 success = true;
                 break;
@@ -311,7 +311,7 @@ mod tests {
             // Memory exhaustion simulation
             let mut vec: Vec<u8> = Vec::with_capacity(1024 * 10);
             // CPU exhaustion spinloop
-            loop {
+            loop { tokio::task::yield_now().await;
                 vec.push(1);
                 if vec.len() > 1024 * 100 {
                     vec.clear();
