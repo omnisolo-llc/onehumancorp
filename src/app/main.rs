@@ -337,7 +337,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
                         if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
                     }
-                }).unwrap();
+                }).ok();
             }
         }
     });
@@ -382,7 +382,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
                                     if let Some(val) = state.get("instant_bio") { ui.set_instant_bio(val.into()); }
                                 }
-                            }).unwrap();
+                            }).ok();
                         }
                     }
                 });
@@ -639,7 +639,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                             }).collect();
                                                             ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(ui_tasks)));
                                                         }
-                                                    }).unwrap();
+                                                    }).ok();
                                                 }
                                             }
                                         });
@@ -647,7 +647,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     }
                                 }
                             }
-                        }).unwrap();
+                        }).ok();
                     });
                 }
             }
@@ -819,7 +819,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                                 }
                             }
-                        }).unwrap();
+                        }).ok();
                     });
                 }
             }
@@ -863,7 +863,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
                         if let Some(val) = state.get("instant_bio") { ui.set_instant_bio(val.into()); }
                     }
-                }).unwrap();
+                }).ok();
             }
         }
     });
@@ -931,7 +931,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(_ui) = init_agent_config_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
-                }).unwrap();
+                }).ok();
             }
         }
     });
@@ -991,7 +991,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(ui) = ui_handle_err.upgrade() {
                                     ui.set_show_toast(false);
                                 }
-                            }).unwrap();
+                            }).ok();
                         }
                     }
                     Err(e) => {
@@ -1000,7 +1000,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(ui) = ui_handle_err.upgrade() {
                                 ui.set_show_toast(false);
                             }
-                        }).unwrap();
+                        }).ok();
                     }
                 }
             });
@@ -1026,7 +1026,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(_ui) = init_prompt_tuning_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
-                }).unwrap();
+                }).ok();
             }
         }
     });
@@ -1075,7 +1075,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     ui.set_show_toast(false); // rollback optimistic UI
                                     // In a real app we might show an error toast here
                                 }
-                            }).unwrap();
+                            }).ok();
                             return;
                         }
 
@@ -1095,7 +1095,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(ui) = ui_err_clone.upgrade() {
                                     ui.set_show_toast(false); // rollback
                                 }
-                            }).unwrap();
+                            }).ok();
                         }
                     }
                     Err(e) => {
@@ -1104,7 +1104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(ui) = ui_handle_err.upgrade() {
                                 ui.set_show_toast(false); // rollback optimistic UI
                             }
-                        }).unwrap();
+                        }).ok();
                     }
                 }
             });
@@ -1153,7 +1153,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(_ui) = init_website_builder_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
-                }).unwrap();
+                }).ok();
             }
         }
     });
@@ -1201,7 +1201,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(ui) = ui_handle.upgrade() {
                                     ui.set_primary_color(hex.into());
                                 }
-                            }).unwrap();
+                            }).ok();
                         }
                     } else {
                         // Fallback for missing backend, e.g. tests
@@ -1209,7 +1209,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(ui) = ui_handle.upgrade() {
                                 ui.set_primary_color("#34C759".into());
                             }
-                        }).unwrap();
+                        }).ok();
                     }
                 });
             }
@@ -1235,7 +1235,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(ui) = ui_handle.upgrade() {
                                     ui.set_product_description(desc.into());
                                 }
-                            }).unwrap();
+                            }).ok();
                         }
                     } else {
                         // Fallback for missing backend, e.g. tests
@@ -1243,7 +1243,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(ui) = ui_handle.upgrade() {
                                 ui.set_product_description(format!("An AI-generated description for {}.", name).into());
                             }
-                        }).unwrap();
+                        }).ok();
                     }
                 });
             }
@@ -1287,13 +1287,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 // In Slint <= 1.5 setting clipboard requires backend trait, avoiding for compat
                                 ui.invoke_copy_to_clipboard(url.into());
                             }
-                        }).unwrap();
+                        }).ok();
                     } else {
                         slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_handle_clone.upgrade() {
                                 ui.set_is_publishing(false);
                             }
-                        }).unwrap();
+                        }).ok();
                     }
                 }
             });
@@ -1345,7 +1345,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(_ui) = init_settings_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
-                }).unwrap();
+                }).ok();
             }
         }
     });
@@ -1405,7 +1405,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(_ui) = init_grow_business_handle.upgrade() {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                     }
-                }).unwrap();
+                }).ok();
             }
         }
     });
@@ -1621,51 +1621,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     GLOBAL_ANALYTICS_CHARTS.with(|g| *g.borrow_mut() = Some(analytics_charts_ui.as_weak()));
     let analytics_charts_handle = analytics_charts_ui.as_weak();
 
-    // Setup mock data for analytics charts
-    let mock_charts = vec![
-        app::UiChartData {
-            title: "Revenue Over Time".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Mon".into(), value: 40.0, display_value: "$400".into() },
-                app::UiDataPoint { label: "Tue".into(), value: 65.0, display_value: "$650".into() },
-                app::UiDataPoint { label: "Wed".into(), value: 30.0, display_value: "$300".into() },
-                app::UiDataPoint { label: "Thu".into(), value: 80.0, display_value: "$800".into() },
-                app::UiDataPoint { label: "Fri".into(), value: 120.0, display_value: "$1.2k".into() },
-                app::UiDataPoint { label: "Sat".into(), value: 150.0, display_value: "$1.5k".into() },
-                app::UiDataPoint { label: "Sun".into(), value: 100.0, display_value: "$1.0k".into() },
-            ])),
-        },
-        app::UiChartData {
-            title: "Orders by Day".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Mon".into(), value: 20.0, display_value: "10".into() },
-                app::UiDataPoint { label: "Tue".into(), value: 40.0, display_value: "20".into() },
-                app::UiDataPoint { label: "Wed".into(), value: 30.0, display_value: "15".into() },
-                app::UiDataPoint { label: "Thu".into(), value: 50.0, display_value: "25".into() },
-                app::UiDataPoint { label: "Fri".into(), value: 80.0, display_value: "40".into() },
-                app::UiDataPoint { label: "Sat".into(), value: 100.0, display_value: "50".into() },
-                app::UiDataPoint { label: "Sun".into(), value: 70.0, display_value: "35".into() },
-            ])),
-        },
-        app::UiChartData {
-            title: "Top Products".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Vegan Cake".into(), value: 100.0, display_value: "120".into() },
-                app::UiDataPoint { label: "Latte".into(), value: 75.0, display_value: "90".into() },
-                app::UiDataPoint { label: "Cookies".into(), value: 50.0, display_value: "60".into() },
-            ])),
-        },
-        app::UiChartData {
-            title: "Traffic Sources".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Direct".into(), value: 80.0, display_value: "40%".into() },
-                app::UiDataPoint { label: "Social".into(), value: 60.0, display_value: "30%".into() },
-                app::UiDataPoint { label: "Search".into(), value: 40.0, display_value: "20%".into() },
-                app::UiDataPoint { label: "Referral".into(), value: 20.0, display_value: "10%".into() },
-            ])),
-        },
-    ];
-    analytics_charts_ui.set_charts(slint::ModelRc::new(slint::VecModel::from(mock_charts)));
+    let init_analytics_charts_handle = analytics_charts_handle.clone();
+
+    #[cfg(not(target_arch = "wasm32"))]
+    tokio::spawn(async move {
+        use ohc::orchestration::org_service_client::OrgServiceClient;
+        if let Ok(mut client) = OrgServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            let req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+            if let Ok(resp) = client.get_analytics(req).await {
+                let inner = resp.into_inner();
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_analytics_charts_handle.upgrade() {
+                        let total_agents = inner.total_agents as f32;
+                        let token_velocity = inner.token_velocity as f32;
+                        let charts = vec![
+                            app::UiChartData {
+                                title: "System Analytics".into(),
+                                points: slint::ModelRc::new(slint::VecModel::from(vec![
+                                    app::UiDataPoint { label: "Agents".into(), value: total_agents, display_value: format!("{}", inner.total_agents).into() },
+                                    app::UiDataPoint { label: "Token Vel".into(), value: token_velocity, display_value: format!("{}", inner.token_velocity).into() },
+                                ])),
+                            }
+                        ];
+                        ui.set_charts(slint::ModelRc::new(slint::VecModel::from(charts)));
+                    }
+                }).ok();
+            }
+        }
+    });
+
 
     let ac_close_handle = analytics_charts_handle.clone();
     analytics_charts_ui.on_close(move || {
@@ -1788,7 +1772,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     }).collect();
                                     ui.set_referrals(slint::ModelRc::new(slint::VecModel::from(ui_referrals)));
                                 }
-                            }).unwrap();
+                            }).ok();
                         }
 
                         let stats_response: Result<tonic::Response<_>, tonic::Status> = client.get_referral_stats(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
@@ -1815,7 +1799,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         }
                                     });
                                 }
-                            }).unwrap();
+                            }).ok();
                         }
 
                         let vc_response: Result<tonic::Response<_>, tonic::Status> = client.get_viral_coefficient(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
@@ -1826,7 +1810,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(ui) = handle_clone.upgrade() {
                                     ui.set_viral_coefficient(vc.k_factor as f32);
                                 }
-                            }).unwrap();
+                            }).ok();
                         }
                     }
                     Err(_) => {}
@@ -1910,7 +1894,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(ui) = handle.upgrade() {
                                     ui.set_my_referral_link(link.into());
                                 }
-                            }).unwrap();
+                            }).ok();
                         }
                     }
                     Err(_) => {}
@@ -2016,7 +2000,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                     });
-                }).unwrap();
+                }).ok();
             }
         }
     });
@@ -2060,7 +2044,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_total_actions(format!("{}", summary.total_tokens).into()); // tokens as a proxy for actions for now
                         ui.set_estimated_bill(format!("${:.2}", summary.projected_monthly_usd).into());
                     }
-                }).unwrap();
+                }).ok();
             }
         }
     });
@@ -2098,7 +2082,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                             ui.set_agent_costs(slint::ModelRc::new(slint::VecModel::from(ui_agent_costs)));
                         }
-                    }).unwrap();
+                    }).ok();
                 }
             }
         });
@@ -2180,7 +2164,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-    }).unwrap();
+    }).ok();
 
     let cost_dashboard_handle_fetch = cost_dashboard_handle.clone();
     slint::spawn_local(async move {
@@ -2216,7 +2200,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-    }).unwrap();
+    }).ok();
 
     let _pricing_handle_select2 = pricing_handle.clone();
     pricing_ui.on_select_plan(move |plan| {
@@ -2236,7 +2220,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-        }).unwrap();
+        }).ok();
     });
 
 
@@ -2262,7 +2246,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                 }
-            }).unwrap();
+            }).ok();
         }
     });
 
@@ -2283,7 +2267,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     open_url(&resp.into_inner().pdf_url);
                 }
             }
-        }).unwrap();
+        }).ok();
     });
 
 
@@ -2325,7 +2309,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             // We could log or do something else here, but to avoid regressions, we don't block
                                         }
                                     }
-                                }).unwrap();
+                                }).ok();
                             }
                         }
                     });
@@ -2338,7 +2322,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(ui) = dashboard_handle_inner.upgrade() {
                                 // For WASM target, we simulate it currently to avoid the E0433 errors and keep WASM functioning
                             }
-                        }).unwrap();
+                        }).ok();
                     });
                 });
 
@@ -2457,7 +2441,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(ui) = ui_handle.upgrade() {
                                     ui.set_new_message(draft.into());
                                 }
-                            }).unwrap();
+                            }).ok();
                         });
                     }
                 });
@@ -3101,7 +3085,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 }
                             }
                         }
-                    }).unwrap();
+                    }).ok();
                     return;
                 }
             }
@@ -3111,7 +3095,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(config_ui) = agent_config_handle_inner.upgrade() {
                     let _ = config_ui.show();
                 }
-            }).unwrap();
+            }).ok();
         });
 
         #[cfg(target_arch = "wasm32")]
@@ -3122,7 +3106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = config_ui.show();
                     }
                 }
-            }).unwrap();
+            }).ok();
         });
     });
 
@@ -3210,7 +3194,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                     ui.set_is_generating_instant_preview(false);
                                                     ui.set_step(9); // Skip straight to Review & Launch
                                                 }
-                                            }).unwrap();
+                                            }).ok();
                                             break;
                                         }
                                     }
@@ -3248,7 +3232,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_company_description(description.into());
                         ui.set_is_generating_company_description(false);
                     }
-                }).unwrap();
+                }).ok();
             });
         }
     });
@@ -3286,7 +3270,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_product_description(description.into());
                         ui.set_is_generating_product_description(false);
                     }
-                }).unwrap();
+                }).ok();
             });
         }
     });
@@ -3410,7 +3394,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         ui.set_launch_details(msg.into());
                                         ui.invoke_copy_link(ui.get_shareable_link());
                                     }
-                                }).unwrap();
+                                }).ok();
                             }
                             Err(e) => {
                                 let err_msg = if e.code() == tonic::Code::DeadlineExceeded {
@@ -3425,7 +3409,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         ui.set_launch_status("Almost there! We hit a small snag.".into());
                                         ui.set_launch_details(err_msg.into());
                                     }
-                                }).unwrap();
+                                }).ok();
                             }
                         }
 
@@ -6864,7 +6848,7 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                     }
-                }).unwrap();
+                }).ok();
             }
         }
     });
@@ -7010,7 +6994,7 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                     }
-                }).unwrap();
+                }).ok();
             }
         }
     });
@@ -7058,7 +7042,7 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                     }
-                }).unwrap();
+                }).ok();
             }
         }
     });
