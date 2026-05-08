@@ -1,4 +1,3 @@
-use slint::SharedString;
 use slint::ModelRc;
 use slint::VecModel;
 use std::rc::Rc;
