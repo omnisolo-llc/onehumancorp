@@ -136,6 +136,9 @@ func TestMeshHandler_Subscribe(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
+	// Wait for the server to register the subscriber
+	time.Sleep(100 * time.Millisecond)
+
 	// Publish to the mesh
 	ctx := context.Background()
 	body := []byte(`{"message": "hello from mesh"}`)
