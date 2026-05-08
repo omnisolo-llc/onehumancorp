@@ -1,4 +1,5 @@
 import { GlassCard } from "glass_card.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 import { HeroBlock, ProductGridBlock, CalendarBlock, TestimonialsBlock, ContactFormBlock } from "smart_blocks.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit, CheckBox } from "std-widgets.slint";
 
@@ -119,6 +120,11 @@ export component WebsiteBuilder inherits Window { // storefront
 
         // Step 1: Colors
         if (step == 1) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Advanced: Raw Hex Color"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { text <=> primary_color; height: 44px; }
+            }
             spacing: 16px;
             Text { text: "Brand Colors & Logo"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
             Text { text: "AI suggested 3 palettes"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
@@ -214,6 +220,11 @@ export component WebsiteBuilder inherits Window { // storefront
 
         // Step 3: Domain
         if (step == 3) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Advanced: DNS Target IP"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "e.g. 192.168.1.1"; height: 44px; }
+            }
             spacing: 16px;
             Text { text: "Choose a Domain"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
             Text { text: "Where will customers find you?"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
