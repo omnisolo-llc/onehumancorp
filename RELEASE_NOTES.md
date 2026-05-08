@@ -1,3 +1,12 @@
+## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Implemented autoDream Memory Consolidation Pipeline CUJ and robust E2E testing to ensure vectorized consolidation routing.
+
+### Privacy/Offline Improvements
+- Ensured local environments securely mock dependencies for testing without containerized Postgres.
+
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
