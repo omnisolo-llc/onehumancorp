@@ -27,7 +27,7 @@ pub async fn bench_queue_latency() {
 }
 
 pub async fn bench_dashboard_snapshot() {
-    tracing::info!("Benchmarking Dashboard Snapshot Fetching...");
+    println!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
@@ -36,18 +36,23 @@ pub async fn bench_dashboard_snapshot() {
         return;
     }
 
-    let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-        .connect(&database_url).await;
+    let db = if database_url.starts_with("sqlite") {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url).await.unwrap();
+        // Run minimal migrations for benchmark
+        sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
 
-    let pg_pool = match pool_res {
-        Ok(p) => p,
-        Err(_e) => {
-            return;
-        }
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
+    } else {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
 
-    let hub = Arc::new(crate::hub::Hub::new(tx, pg_pool.clone()));
+    let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
     let iterations = 100;
     let mut fetch_times = Vec::new();
@@ -95,30 +100,49 @@ pub async fn bench_dashboard_snapshot() {
 
         let req_desktop = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
         use crate::ohc::app::dashboard_service_server::DashboardService;
-        let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
-        let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db, hub.clone());
-        let _res_desktop = dashboard_service.get_dashboard(tonic::Request::new(req_desktop)).await.unwrap().into_inner();
+        let db_arc = std::sync::Arc::new(db.clone());
+        let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
+        let mut request = tonic::Request::new(req_desktop);
+        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
+            org_id: "system".to_string(),
+            agent_id: "test".to_string(),
+        });
+        let _res_desktop = dashboard_service.get_dashboard(request).await.unwrap().into_inner();
 
         fetch_times.push(start.elapsed().as_micros());
     }
 
     fetch_times.sort();
-    tracing::info!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
+    println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 
     let req_mobile = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
     let req_desktop = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
 
     use crate::ohc::app::dashboard_service_server::DashboardService;
-    let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
-    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db, hub.clone());
+    let db_arc = std::sync::Arc::new(db.clone());
+    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
 
-    let res_mobile = dashboard_service.get_dashboard(tonic::Request::new(req_mobile)).await.unwrap().into_inner();
-    let res_desktop = dashboard_service.get_dashboard(tonic::Request::new(req_desktop)).await.unwrap().into_inner();
+    let mut req_mobile_t = tonic::Request::new(req_mobile);
+    req_mobile_t.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
+        spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
+        org_id: "system".to_string(),
+        agent_id: "test".to_string(),
+    });
+    let mut req_desktop_t = tonic::Request::new(req_desktop);
+    req_desktop_t.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
+        spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
+        org_id: "system".to_string(),
+        agent_id: "test".to_string(),
+    });
 
-    tracing::info!("Mobile optimized meetings length: {}, desktop: {}", res_mobile.meetings.len(), res_desktop.meetings.len());
+    let res_mobile = dashboard_service.get_dashboard(req_mobile_t).await.unwrap().into_inner();
+    let res_desktop = dashboard_service.get_dashboard(req_desktop_t).await.unwrap().into_inner();
+
+    println!("Mobile optimized meetings length: {}, desktop: {}", res_mobile.meetings.len(), res_desktop.meetings.len());
     if !res_mobile.meetings.is_empty() {
-        tracing::info!("Mobile meeting 0 transcript len: {}", res_mobile.meetings[0].transcript.len());
-        tracing::info!("Desktop meeting 0 transcript len: {}", res_desktop.meetings[0].transcript.len());
+        println!("Mobile meeting 0 transcript len: {}", res_mobile.meetings[0].transcript.len());
+        println!("Desktop meeting 0 transcript len: {}", res_desktop.meetings[0].transcript.len());
         assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
         assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop payload should contain transcripts");
     }
@@ -185,8 +209,8 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let deq_p95 = if iterations > 0 { dequeue_times[(iterations as f32 * 0.95) as usize] } else { 0 };
     let deq_p99 = if iterations > 0 { dequeue_times[(iterations as f32 * 0.99) as usize] } else { 0 };
 
-    tracing::info!("{}: Batch Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
-    tracing::info!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
+    println!("{}: Batch Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
+    println!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
 }
 
 #[cfg(test)]
@@ -201,7 +225,9 @@ mod tests {
     #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        if db_url == "dummy" || !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await, Ok(Ok(_))) {
+        println!("DEBUG: db_url = {}", db_url);
+        if db_url == "dummy" {
+            println!("DEBUG: skipping because db_url is dummy");
             return;
         }
         println!("RUNNING BENCHMARK DASHBOARD SNAPSHOT");

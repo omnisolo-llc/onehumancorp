@@ -2,17 +2,12 @@ use crate::ohc::app::dashboard_service_server::DashboardService;
 use crate::ohc::app::*;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
-
-use std::collections::HashMap;
+use crate::utils::cache::HybridCache;
 use std::sync::OnceLock;
-use std::sync::RwLock;
 
-static PRODUCTS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::organization::Product>>>> =
-    OnceLock::new();
-static ORDERS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::app::Order>>>> =
-    OnceLock::new();
-static ORG_CACHE: OnceLock<RwLock<HashMap<String, crate::ohc::organization::Organization>>> =
-    OnceLock::new();
+static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<crate::ohc::organization::Product>>> = OnceLock::new();
+static ORDERS_CACHE: OnceLock<HybridCache<Vec<crate::ohc::app::Order>>> = OnceLock::new();
+static ORG_CACHE: OnceLock<HybridCache<Option<crate::ohc::organization::Organization>>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -90,25 +85,12 @@ impl DashboardService for MyDashboardService {
                 }).await.unwrap_or_else(|e| Err(e.to_string()))
             },
             async {
-                let org_id = org_id1; // Caching layer logic (Phase 4)
+                let org_id = org_id1;
                 let cache_key = format!("hub:products:{}", org_id);
+                let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(hub_prod.redis_client.clone()));
 
-                if let Some(client) = &hub_prod.redis_client {
-                    if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
-                        use redis::AsyncCommands; let redis_res: Result<Option<String>, redis::RedisError> = conn.get(&cache_key).await; if let Ok(Some(data)) = redis_res
-                        {
-                            if let Ok(products) = serde_json::from_str(&data) {
-                                return Ok::<_, String>(products);
-                            }
-                        }
-                    }
-                }
-
-                let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(guard) = cache.read() {
-                    if let Some(products) = guard.get(&org_id) {
-                        return Ok::<_, String>(products.clone());
-                    }
+                if let Some(products) = cache.get(&cache_key).await {
+                    return Ok::<_, String>(products);
                 }
 
                 let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
@@ -155,47 +137,18 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                if let Some(client) = &hub_prod.redis_client {
-                    if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
-                        if let Ok(data) = serde_json::to_string(&results) {
-                            let _: () = redis::cmd("SETEX")
-                                .arg(&cache_key)
-                                .arg(3600)
-                                .arg(data)
-                                .query_async(&mut conn)
-                                .await
-                                .unwrap_or_default();
-                        }
-                    }
-                }
-
-                let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(mut guard) = cache.write() {
-                    guard.insert(org_id, results.clone());
-                }
+                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
                 Ok::<_, String>(results)
             },
             async {
                 let org_id = org_id2;
                 let cache_key = format!("hub:orders:{}", org_id);
+                let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(hub_orders.redis_client.clone()));
 
-                if let Some(client) = &hub_orders.redis_client {
-                    if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
-                        use redis::AsyncCommands; let redis_res: Result<Option<String>, redis::RedisError> = conn.get(&cache_key).await; if let Ok(Some(data)) = redis_res
-                        {
-                            if let Ok(orders) = serde_json::from_str(&data) {
-                                return Ok::<_, String>(orders);
-                            }
-                        }
-                    }
+                if let Some(orders) = cache.get(&cache_key).await {
+                    return Ok::<_, String>(orders);
                 }
 
-                let cache = ORDERS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(guard) = cache.read() {
-                    if let Some(orders) = guard.get(&org_id) {
-                        return Ok::<_, String>(orders.clone());
-                    }
-                }
                 let q = "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
@@ -234,47 +187,16 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                if let Some(client) = &hub_orders.redis_client {
-                    if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
-                        if let Ok(data) = serde_json::to_string(&results) {
-                            let _: () = redis::cmd("SETEX")
-                                .arg(&cache_key)
-                                .arg(5)
-                                .arg(data)
-                                .query_async(&mut conn)
-                                .await
-                                .unwrap_or_default();
-                        }
-                    }
-                }
-
-                let cache = ORDERS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(mut guard) = cache.write() {
-                    guard.insert(org_id, results.clone());
-                }
+                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
                 Ok::<_, String>(results)
             },
             async {
                 let org_id = org_id3;
                 let cache_key = format!("hub:org:{}", org_id);
+                let cache = ORG_CACHE.get_or_init(|| HybridCache::new(hub_org.redis_client.clone()));
 
-                if let Some(client) = &hub_org.redis_client {
-                    if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
-                        use redis::AsyncCommands;
-                        let redis_res: Result<Option<String>, redis::RedisError> = conn.get(&cache_key).await;
-                        if let Ok(Some(data)) = redis_res {
-                            if let Ok(org) = serde_json::from_str(&data) {
-                                return Ok::<_, String>(Some(org));
-                            }
-                        }
-                    }
-                }
-
-                let cache = ORG_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(guard) = cache.read() {
-                    if let Some(org) = guard.get(&org_id) {
-                        return Ok::<_, String>(Some(org.clone()));
-                    }
+                if let Some(org) = cache.get(&cache_key).await {
+                    return Ok::<_, String>(org);
                 }
 
                 let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
@@ -315,27 +237,7 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                if let Some(org_data) = &org {
-                    if let Some(client) = &hub_org.redis_client {
-                        if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
-                            if let Ok(data) = serde_json::to_string(org_data) {
-                                let _: () = redis::cmd("SETEX")
-                                    .arg(&cache_key)
-                                    .arg(3600)
-                                    .arg(data)
-                                    .query_async(&mut conn)
-                                    .await
-                                    .unwrap_or_default();
-                            }
-                        }
-                    }
-
-                    let cache = ORG_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                    if let Ok(mut guard) = cache.write() {
-                        guard.insert(org_id, org_data.clone());
-                    }
-                }
-
+                cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
                 Ok::<_, String>(org)
             }
         );
@@ -497,6 +399,17 @@ impl DashboardService for MyDashboardService {
                 agent.name = String::new();
             }
         }
+
+        let org = if req.mobile_optimized {
+            org.map(|mut o| {
+                o.domain = String::new();
+                o.members = vec![];
+                o.role_profiles = vec![];
+                o
+            })
+        } else {
+            org
+        };
 
         Ok(Response::new(DashboardSnapshot {
             organization: org,
