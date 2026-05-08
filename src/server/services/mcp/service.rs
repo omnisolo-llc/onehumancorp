@@ -77,7 +77,15 @@ impl McpService for MyMcpService {
         &self,
         request: Request<McpInvokeRequest>,
     ) -> Result<Response<McpInvokeResponse>, Status> {
-        let req = request.into_inner();
+        let md = request.metadata().clone();
+        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+
+        let mut req = request.into_inner();
+        // OVERRIDE the request body's spiffe_id with the one from the authenticated session
+        // to prevent multi-tenant safety issue where tenant_id is read from request body
+        if !spiffe_id_str.is_empty() {
+            req.spiffe_id = spiffe_id_str.to_string();
+        }
         
         if req.tool_id.is_empty() {
             return Err(Status::invalid_argument("toolId is required"));
