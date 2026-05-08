@@ -19,7 +19,8 @@ echo ""
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
-export TOKIO_WORKER_THREADS=2
+export TOKIO_WORKER_THREADS=1
+export MALLOC_ARENA_MAX=2
 export RAYON_NUM_THREADS=2
 export OHC_STANDALONE=true
 export LOG_FORMAT="json"
