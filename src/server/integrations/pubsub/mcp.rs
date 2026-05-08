@@ -4,27 +4,24 @@ use crate::ohc::orchestration::TeammateMeshEvent;
 
 pub struct PubSubManager {
     transport: Arc<dyn MeshTransport>,
-    is_cloud: bool,
 }
 
 impl PubSubManager {
-    pub fn new(transport: Arc<dyn MeshTransport>, is_cloud: bool) -> Self {
+    pub fn new(transport: Arc<dyn MeshTransport>) -> Self {
         PubSubManager {
             transport,
-            is_cloud,
         }
     }
 
     pub fn from_env(transport: Arc<dyn MeshTransport>) -> Self {
-        let is_cloud = std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true";
-        Self::new(transport, is_cloud)
+        Self::new(transport)
     }
 
     fn format_topic(&self, tenant_id: &str, topic: &str) -> String {
-        if self.is_cloud {
-            format!("{}:{}", tenant_id, topic)
-        } else {
+        if tenant_id == "local" || tenant_id.is_empty() {
             topic.to_string()
+        } else {
+            format!("{}:{}", tenant_id, topic)
         }
     }
 
@@ -91,7 +88,9 @@ impl PubSubManager {
 
     pub async fn get_active_agents(&self, tenant_id: &str) -> Result<Vec<(String, String)>, String> {
         let agents = self.transport.get_active_agents().await?;
-        if self.is_cloud {
+        if tenant_id == "local" || tenant_id.is_empty() {
+            Ok(agents)
+        } else {
             let prefix = format!("{}:", tenant_id);
             Ok(agents.into_iter()
                 .filter_map(|(id, status)| {
@@ -102,8 +101,6 @@ impl PubSubManager {
                     }
                 })
                 .collect())
-        } else {
-            Ok(agents)
         }
     }
 }
@@ -118,7 +115,7 @@ mod tests {
     #[tokio::test]
     async fn test_pubsub_manager_standalone() {
         let transport = Arc::new(MemoryTransport::new());
-        let manager = PubSubManager::new(transport, false);
+        let manager = PubSubManager::new(transport);
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
@@ -130,12 +127,12 @@ mod tests {
         });
 
         let cancel = manager
-            .subscribe("tenant_123", "test_topic", handler)
+            .subscribe("local", "test_topic", handler)
             .await
             .unwrap();
 
         manager
-            .publish("tenant_123", "test_topic", b"hello".to_vec())
+            .publish("local", "test_topic", b"hello".to_vec())
             .await
             .unwrap();
 
@@ -148,7 +145,7 @@ mod tests {
     #[tokio::test]
     async fn test_pubsub_manager_cloud() {
         let transport = Arc::new(MemoryTransport::new());
-        let manager = PubSubManager::new(transport, true);
+        let manager = PubSubManager::new(transport);
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
@@ -179,7 +176,7 @@ mod tests {
     async fn test_pubsub_manager_locking() {
         // Test Cloud Mode Locking
         let transport = Arc::new(MemoryTransport::new());
-        let manager_cloud = PubSubManager::new(transport.clone(), true);
+        let manager_cloud = PubSubManager::new(transport.clone());
 
         // Acquire lock
         let acquired = manager_cloud.acquire_lock("tenant_a", "my_resource", "agent_1", 10).await.unwrap();
@@ -202,20 +199,20 @@ mod tests {
 
         // Test Standalone Mode Locking
         let transport_standalone = Arc::new(MemoryTransport::new());
-        let manager_standalone = PubSubManager::new(transport_standalone.clone(), false);
+        let manager_standalone = PubSubManager::new(transport_standalone.clone());
 
-        let acquired_sa = manager_standalone.acquire_lock("tenant_x", "my_resource", "agent_1", 10).await.unwrap();
+        let acquired_sa = manager_standalone.acquire_lock("local", "my_resource", "agent_1", 10).await.unwrap();
         assert!(acquired_sa);
 
         // Tenant ID doesn't matter in standalone
-        let acquired_sa_diff = manager_standalone.acquire_lock("tenant_y", "my_resource", "agent_2", 10).await.unwrap();
+        let acquired_sa_diff = manager_standalone.acquire_lock("local", "my_resource", "agent_2", 10).await.unwrap();
         assert!(!acquired_sa_diff);
     }
 
     #[tokio::test]
     async fn test_pubsub_manager_presence() {
         let transport = Arc::new(MemoryTransport::new());
-        let manager_cloud = PubSubManager::new(transport.clone(), true);
+        let manager_cloud = PubSubManager::new(transport.clone());
 
         manager_cloud.register_presence("tenant_a", "agent_1", "online", 10).await.unwrap();
         manager_cloud.register_presence("tenant_a", "agent_2", "busy", 10).await.unwrap();
@@ -231,17 +228,17 @@ mod tests {
         assert_eq!(agents_b.len(), 1);
         assert_eq!(agents_b[0].0, "agent_3");
 
-        let _manager_standalone = PubSubManager::new(transport.clone(), false);
+        let _manager_standalone = PubSubManager::new(transport.clone());
         // Because the underlying memory transport is the same, we expect it to
         // just return the cloud registered ones directly without stripping since we called from cloud manager,
         // so let's register specifically with standalone manager
         let transport_sa = Arc::new(MemoryTransport::new());
-        let manager_sa = PubSubManager::new(transport_sa.clone(), false);
+        let manager_sa = PubSubManager::new(transport_sa.clone());
 
-        manager_sa.register_presence("tenant_x", "agent_x", "online", 10).await.unwrap();
-        manager_sa.register_presence("tenant_y", "agent_y", "busy", 10).await.unwrap();
+        manager_sa.register_presence("local", "agent_x", "online", 10).await.unwrap();
+        manager_sa.register_presence("local", "agent_y", "busy", 10).await.unwrap();
 
-        let agents_sa = manager_sa.get_active_agents("tenant_z").await.unwrap();
+        let agents_sa = manager_sa.get_active_agents("local").await.unwrap();
         assert_eq!(agents_sa.len(), 2);
     }
 }

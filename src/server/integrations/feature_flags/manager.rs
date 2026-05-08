@@ -4,42 +4,37 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait FeatureStore: Send + Sync {
-    async fn evaluate_flag(&self, tenant_id: &str, flag_key: &str, context: &HashMap<String, String>) -> Result<bool, String>;
-    async fn list_flags(&self, tenant_id: &str) -> Result<Vec<String>, String>;
+    async fn evaluate_flag(&self, flag_key: &str, context: &HashMap<String, String>) -> Result<bool, String>;
+    async fn list_flags(&self) -> Result<Vec<String>, String>;
 }
 
 pub struct FeatureFlagsManager {
     store: Box<dyn FeatureStore>,
-    pub is_cloud: bool,
 }
 
 impl FeatureFlagsManager {
-    pub fn new(store: Box<dyn FeatureStore>, is_cloud: bool) -> Self {
+    pub fn new(store: Box<dyn FeatureStore>) -> Self {
         Self {
             store,
-            is_cloud,
         }
     }
 
     pub fn from_env(store: Box<dyn FeatureStore>) -> Self {
-        let is_cloud = std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true";
-        Self::new(store, is_cloud)
+        Self::new(store)
     }
 
-    pub async fn evaluate_flag(&self, tenant_id: &str, flag_key: &str, context: &HashMap<String, String>) -> Result<bool, String> {
-        let actual_tenant = if self.is_cloud { tenant_id } else { "local" };
-        self.store.evaluate_flag(actual_tenant, flag_key, context).await
+    pub async fn evaluate_flag(&self, flag_key: &str, context: &HashMap<String, String>) -> Result<bool, String> {
+        self.store.evaluate_flag(flag_key, context).await
     }
 
-    pub async fn list_flags(&self, tenant_id: &str) -> Result<Vec<String>, String> {
-        let actual_tenant = if self.is_cloud { tenant_id } else { "local" };
-        self.store.list_flags(actual_tenant).await
+    pub async fn list_flags(&self) -> Result<Vec<String>, String> {
+        self.store.list_flags().await
     }
 }
 
-// In-Memory store for tests
+// Memory-based implementation
 pub struct MemoryFeatureStore {
-    flags: std::sync::RwLock<HashMap<String, HashMap<String, bool>>>,
+    flags: std::sync::RwLock<HashMap<String, bool>>,
 }
 
 impl MemoryFeatureStore {
@@ -49,33 +44,69 @@ impl MemoryFeatureStore {
         }
     }
 
-    pub fn set_flag(&self, tenant_id: &str, flag_key: &str, value: bool) {
+    pub fn set_flag(&self, flag_key: &str, value: bool) {
         let mut map = self.flags.write().unwrap();
-        map.entry(tenant_id.to_string())
-            .or_insert_with(HashMap::new)
-            .insert(flag_key.to_string(), value);
+        map.insert(flag_key.to_string(), value);
     }
 }
 
 #[async_trait]
 impl FeatureStore for MemoryFeatureStore {
-    async fn evaluate_flag(&self, tenant_id: &str, flag_key: &str, _context: &HashMap<String, String>) -> Result<bool, String> {
+    async fn evaluate_flag(&self, flag_key: &str, _context: &HashMap<String, String>) -> Result<bool, String> {
         let map = self.flags.read().unwrap();
-        if let Some(tenant_flags) = map.get(tenant_id) {
-            if let Some(&val) = tenant_flags.get(flag_key) {
-                return Ok(val);
-            }
+        if let Some(&val) = map.get(flag_key) {
+            return Ok(val);
         }
         Ok(false) // Default to false if not found
     }
 
-    async fn list_flags(&self, tenant_id: &str) -> Result<Vec<String>, String> {
+    async fn list_flags(&self) -> Result<Vec<String>, String> {
         let map = self.flags.read().unwrap();
-        if let Some(tenant_flags) = map.get(tenant_id) {
-            Ok(tenant_flags.keys().cloned().collect())
+        Ok(map.keys().cloned().collect())
+    }
+}
+
+pub struct NamespacedFeatureStore {
+    prefix: String,
+    store: Box<dyn FeatureStore>,
+}
+
+impl NamespacedFeatureStore {
+    pub fn new(tenant_id: &str, store: Box<dyn FeatureStore>) -> Self {
+        let prefix = if tenant_id.is_empty() || tenant_id == "local" {
+            "".to_string()
         } else {
-            Ok(vec![])
+            format!("{}:", tenant_id)
+        };
+        Self { prefix, store }
+    }
+
+    fn format_key(&self, key: &str) -> String {
+        format!("{}{}", self.prefix, key)
+    }
+}
+
+#[async_trait]
+impl FeatureStore for NamespacedFeatureStore {
+    async fn evaluate_flag(&self, flag_key: &str, context: &HashMap<String, String>) -> Result<bool, String> {
+        self.store.evaluate_flag(&self.format_key(flag_key), context).await
+    }
+
+    async fn list_flags(&self) -> Result<Vec<String>, String> {
+        let all_flags = self.store.list_flags().await?;
+        if self.prefix.is_empty() {
+            return Ok(all_flags);
         }
+        Ok(all_flags
+            .into_iter()
+            .filter_map(|key| {
+                if key.starts_with(&self.prefix) {
+                    Some(key.strip_prefix(&self.prefix).unwrap().to_string())
+                } else {
+                    None
+                }
+            })
+            .collect())
     }
 }
 
@@ -86,55 +117,37 @@ mod tests {
     #[tokio::test]
     async fn test_feature_flags_manager_cloud() {
         let store = MemoryFeatureStore::new();
-        store.set_flag("tenant_123", "new_ui", true);
+        store.set_flag("tenant_123:new_ui", true);
 
-        let manager = FeatureFlagsManager::new(Box::new(store), true);
+        let namespaced = NamespacedFeatureStore::new("tenant_123", Box::new(store));
+        let manager = FeatureFlagsManager::new(Box::new(namespaced));
 
         let context = HashMap::new();
-        let result = manager.evaluate_flag("tenant_123", "new_ui", &context).await.unwrap();
+        let result = manager.evaluate_flag("new_ui", &context).await.unwrap();
         assert!(result);
 
-        let result = manager.evaluate_flag("tenant_123", "nonexistent", &context).await.unwrap();
+        let result = manager.evaluate_flag("nonexistent", &context).await.unwrap();
         assert!(!result);
 
-        let mut flags = manager.list_flags("tenant_123").await.unwrap();
+        let mut flags = manager.list_flags().await.unwrap();
         flags.sort();
         assert_eq!(flags, vec!["new_ui"]);
-
-        // Different tenant
-        let result = manager.evaluate_flag("tenant_other", "new_ui", &context).await.unwrap();
-        assert!(!result);
     }
 
     #[tokio::test]
     async fn test_feature_flags_manager_standalone() {
         let store = MemoryFeatureStore::new();
-        // In standalone, tenant is ignored and always uses "local"
-        store.set_flag("local", "new_ui", true);
+        store.set_flag("new_ui", true);
 
-        let manager = FeatureFlagsManager::new(Box::new(store), false);
+        let namespaced = NamespacedFeatureStore::new("local", Box::new(store));
+        let manager = FeatureFlagsManager::new(Box::new(namespaced));
 
         let context = HashMap::new();
-        let result = manager.evaluate_flag("tenant_any", "new_ui", &context).await.unwrap();
+        let result = manager.evaluate_flag("new_ui", &context).await.unwrap();
         assert!(result);
 
-        let mut flags = manager.list_flags("tenant_any").await.unwrap();
+        let mut flags = manager.list_flags().await.unwrap();
         flags.sort();
         assert_eq!(flags, vec!["new_ui"]);
-    }
-
-    #[tokio::test]
-    async fn test_from_env() {
-        temp_env::with_var("OHC_MULTITENANT", Some("true"), || {
-            let store = Box::new(MemoryFeatureStore::new());
-            let manager = FeatureFlagsManager::from_env(store);
-            assert!(manager.is_cloud);
-        });
-
-        temp_env::with_var("OHC_MULTITENANT", None::<&str>, || {
-            let store = Box::new(MemoryFeatureStore::new());
-            let manager = FeatureFlagsManager::from_env(store);
-            assert!(!manager.is_cloud);
-        });
     }
 }

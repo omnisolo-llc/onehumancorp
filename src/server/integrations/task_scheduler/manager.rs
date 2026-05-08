@@ -18,27 +18,24 @@ pub trait TaskQueue: Send + Sync {
 
 pub struct TaskSchedulerManager {
     queue: Box<dyn TaskQueue>,
-    pub is_cloud: bool,
 }
 
 impl TaskSchedulerManager {
-    pub fn new(queue: Box<dyn TaskQueue>, is_cloud: bool) -> Self {
+    pub fn new(queue: Box<dyn TaskQueue>) -> Self {
         Self {
             queue,
-            is_cloud,
         }
     }
 
     pub fn from_env(queue: Box<dyn TaskQueue>) -> Self {
-        let is_cloud = std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true";
-        Self::new(queue, is_cloud)
+        Self::new(queue)
     }
 
     fn format_queue_name(&self, tenant_id: &str, queue_name: &str) -> String {
-        if self.is_cloud {
-            format!("{}:{}", tenant_id, queue_name)
-        } else {
+        if tenant_id == "local" || tenant_id.is_empty() {
             queue_name.to_string()
+        } else {
+            format!("{}:{}", tenant_id, queue_name)
         }
     }
 
@@ -96,7 +93,7 @@ mod tests {
     #[tokio::test]
     async fn test_task_scheduler_manager_cloud() {
         let queue = MemoryTaskQueue::new();
-        let manager = TaskSchedulerManager::new(Box::new(queue), true);
+        let manager = TaskSchedulerManager::new(Box::new(queue));
 
         let task_id = manager.enqueue_task("tenant_123", "emails", b"send welcome".to_vec(), Duration::from_secs(1)).await.unwrap();
 
@@ -110,9 +107,9 @@ mod tests {
     #[tokio::test]
     async fn test_task_scheduler_manager_standalone() {
         let queue = MemoryTaskQueue::new();
-        let manager = TaskSchedulerManager::new(Box::new(queue), false);
+        let manager = TaskSchedulerManager::new(Box::new(queue));
 
-        let task_id = manager.enqueue_task("tenant_123", "emails", b"send welcome".to_vec(), Duration::from_secs(1)).await.unwrap();
+        let task_id = manager.enqueue_task("local", "emails", b"send welcome".to_vec(), Duration::from_secs(1)).await.unwrap();
 
         // Ensure the queue name was NOT prefixed
         assert!(task_id.starts_with("emails-"));
@@ -124,24 +121,10 @@ mod tests {
     #[tokio::test]
     async fn test_task_not_found() {
         let queue = MemoryTaskQueue::new();
-        let manager = TaskSchedulerManager::new(Box::new(queue), false);
+        let manager = TaskSchedulerManager::new(Box::new(queue));
 
         let err = manager.get_task_status("missing-task").await.unwrap_err();
         assert_eq!(err, "Task not found");
     }
 
-    #[tokio::test]
-    async fn test_from_env() {
-        temp_env::with_var("OHC_MULTITENANT", Some("true"), || {
-            let queue = Box::new(MemoryTaskQueue::new());
-            let manager = TaskSchedulerManager::from_env(queue);
-            assert!(manager.is_cloud);
-        });
-
-        temp_env::with_var("OHC_MULTITENANT", None::<&str>, || {
-            let queue = Box::new(MemoryTaskQueue::new());
-            let manager = TaskSchedulerManager::from_env(queue);
-            assert!(!manager.is_cloud);
-        });
-    }
 }
