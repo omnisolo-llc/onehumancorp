@@ -1,5 +1,6 @@
 pub mod social_posting;
 pub mod onboarding_e2e_tests;
+pub mod full_journey_e2e;
 pub mod login;
 pub mod wizard;
 pub mod dashboard;
