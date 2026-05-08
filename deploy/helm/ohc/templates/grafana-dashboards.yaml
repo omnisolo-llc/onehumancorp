@@ -1,4 +1,4 @@
-{{- if dig "kube-prometheus-stack" "grafana" "enabled" false .Values }}
+{{- if dig "kube-prometheus-stack" "grafana" "enabled" false (.Values | toYaml | fromYaml) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
