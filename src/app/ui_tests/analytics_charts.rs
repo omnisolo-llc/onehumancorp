@@ -22,7 +22,7 @@ fn test_analytics_charts_e2e_flow() {
         }
     });
 
-    // 2. Mock Data Injection
+    // 2. Data is now fetched dynamically, but for UI isolation tests we can directly inject
     let mock_charts = vec![
         app::UiChartData {
             title: "Revenue Over Time".into(),

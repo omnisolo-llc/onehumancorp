@@ -1108,6 +1108,17 @@ message MarketplaceItemsResponse {
   repeated MarketplaceItemProto items = 1;
 }
 
+message UiDataPointProto {
+  string label = 1;
+  double value = 2;
+  string display_value = 3;
+}
+
+message UiChartDataProto {
+  string title = 1;
+  repeated UiDataPointProto points = 2;
+}
+
 message AnalyticsSummaryResponse {
   double human_agent_ratio = 1;
   int32 total_agents = 2;
@@ -1117,6 +1128,7 @@ message AnalyticsSummaryResponse {
   int32 pending_approvals = 6;
   int32 active_handoffs = 7;
   int64 token_velocity = 8;
+  repeated UiChartDataProto charts = 9;
 }
 
 service OrgService {

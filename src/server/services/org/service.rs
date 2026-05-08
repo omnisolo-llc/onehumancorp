@@ -66,15 +66,21 @@ impl OrgService for MyOrgService {
 
     async fn get_analytics(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
+        let tenant_id_str = match request.metadata().get("x-tenant-id") {
+            Some(v) => v.to_str().unwrap_or("system").to_string(),
+            None => "system".to_string()
+        };
+
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
         let hub3 = self.hub.clone();
+        let tenant_id_for_task = tenant_id_str.clone();
         let (agents_res, meetings_res, summary_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),
             tokio::task::spawn_blocking(move || hub2.get_meetings()),
-            tokio::task::spawn_blocking(move || hub3.tracker().summary("system"))
+            tokio::task::spawn_blocking(move || hub3.tracker().summary(&tenant_id_for_task))
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
@@ -111,8 +117,71 @@ impl OrgService for MyOrgService {
             0.0
         };
         
+        let db = crate::db::DB {
+            pool: self.hub.pool.clone(),
+            store: if std::env::var("DATABASE_URL").unwrap_or_default().starts_with("sqlite") {
+                crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect_lazy(&std::env::var("DATABASE_URL").unwrap()).unwrap())
+            } else {
+                crate::db::DbStore::Postgres
+            },
+        };
+        let tenant_id = tenant_id_str.as_str();
+        let orders_res = db.get_orders_for_analytics(tenant_id).await.unwrap_or_default();
+        let products_res = db.get_products_for_analytics(tenant_id).await.unwrap_or_default();
+        let traffic_res = db.get_traffic_for_analytics(tenant_id).await.unwrap_or_default();
 
-        
+        let mut order_points = Vec::new();
+        let mut revenue_points = Vec::new();
+        for (dt, total, count) in orders_res {
+            order_points.push(UiDataPointProto {
+                label: dt.clone(),
+                value: count as f64,
+                display_value: count.to_string(),
+            });
+            revenue_points.push(UiDataPointProto {
+                label: dt,
+                value: total,
+                display_value: format!("${:.2}", total),
+            });
+        }
+
+        let mut product_points = Vec::new();
+        for (name, qty) in products_res {
+            product_points.push(UiDataPointProto {
+                label: name,
+                value: qty as f64,
+                display_value: qty.to_string(),
+            });
+        }
+
+        let mut traffic_points = Vec::new();
+        for (source, clicks) in traffic_res {
+            traffic_points.push(UiDataPointProto {
+                label: source,
+                value: clicks,
+                display_value: format!("{:.0}", clicks),
+            });
+        }
+
+        let charts = vec![
+            UiChartDataProto {
+                title: "Revenue Over Time".to_string(),
+                points: revenue_points,
+            },
+            UiChartDataProto {
+                title: "Orders by Day".to_string(),
+                points: order_points,
+            },
+            UiChartDataProto {
+                title: "Top Products".to_string(),
+                points: product_points,
+            },
+            UiChartDataProto {
+                title: "Traffic Sources".to_string(),
+                points: traffic_points,
+            }
+        ];
+
         Ok(Response::new(AnalyticsSummaryResponse {
             human_agent_ratio,
             total_agents,
@@ -122,6 +191,7 @@ impl OrgService for MyOrgService {
             pending_approvals: 2,
             active_handoffs: 1,
             token_velocity: summary.total_tokens,
+            charts,
         }))
     }
 }

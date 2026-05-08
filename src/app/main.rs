@@ -1583,51 +1583,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     GLOBAL_ANALYTICS_CHARTS.with(|g| *g.borrow_mut() = Some(analytics_charts_ui.as_weak()));
     let analytics_charts_handle = analytics_charts_ui.as_weak();
 
-    // Setup mock data for analytics charts
-    let mock_charts = vec![
-        app::UiChartData {
-            title: "Revenue Over Time".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Mon".into(), value: 40.0, display_value: "$400".into() },
-                app::UiDataPoint { label: "Tue".into(), value: 65.0, display_value: "$650".into() },
-                app::UiDataPoint { label: "Wed".into(), value: 30.0, display_value: "$300".into() },
-                app::UiDataPoint { label: "Thu".into(), value: 80.0, display_value: "$800".into() },
-                app::UiDataPoint { label: "Fri".into(), value: 120.0, display_value: "$1.2k".into() },
-                app::UiDataPoint { label: "Sat".into(), value: 150.0, display_value: "$1.5k".into() },
-                app::UiDataPoint { label: "Sun".into(), value: 100.0, display_value: "$1.0k".into() },
-            ])),
-        },
-        app::UiChartData {
-            title: "Orders by Day".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Mon".into(), value: 20.0, display_value: "10".into() },
-                app::UiDataPoint { label: "Tue".into(), value: 40.0, display_value: "20".into() },
-                app::UiDataPoint { label: "Wed".into(), value: 30.0, display_value: "15".into() },
-                app::UiDataPoint { label: "Thu".into(), value: 50.0, display_value: "25".into() },
-                app::UiDataPoint { label: "Fri".into(), value: 80.0, display_value: "40".into() },
-                app::UiDataPoint { label: "Sat".into(), value: 100.0, display_value: "50".into() },
-                app::UiDataPoint { label: "Sun".into(), value: 70.0, display_value: "35".into() },
-            ])),
-        },
-        app::UiChartData {
-            title: "Top Products".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Vegan Cake".into(), value: 100.0, display_value: "120".into() },
-                app::UiDataPoint { label: "Latte".into(), value: 75.0, display_value: "90".into() },
-                app::UiDataPoint { label: "Cookies".into(), value: 50.0, display_value: "60".into() },
-            ])),
-        },
-        app::UiChartData {
-            title: "Traffic Sources".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Direct".into(), value: 80.0, display_value: "40%".into() },
-                app::UiDataPoint { label: "Social".into(), value: 60.0, display_value: "30%".into() },
-                app::UiDataPoint { label: "Search".into(), value: 40.0, display_value: "20%".into() },
-                app::UiDataPoint { label: "Referral".into(), value: 20.0, display_value: "10%".into() },
-            ])),
-        },
-    ];
-    analytics_charts_ui.set_charts(slint::ModelRc::new(slint::VecModel::from(mock_charts)));
+    // Mock data removed. Wired to real DB via GetAnalytics RPC on dashboard button click.
 
     let ac_close_handle = analytics_charts_handle.clone();
     analytics_charts_ui.on_close(move || {
@@ -1639,9 +1595,72 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dashboard_ref_for_analytics = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
     let ac_handle_for_dash = analytics_charts_handle.clone();
     dashboard_ref_for_analytics.upgrade().unwrap().on_action_see_analytics(move || {
-        if let Some(ui) = ac_handle_for_dash.upgrade() {
-            let _ = ui.show();
-        }
+        let ac_handle_inner = ac_handle_for_dash.clone();
+        #[cfg(not(target_arch = "wasm32"))]
+        tokio::spawn(async move {
+            if let Ok(mut client) = OrgServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+                req.metadata_mut().insert("x-tenant-id", "system".parse().unwrap());
+                if let Ok(resp) = client.get_analytics(req).await {
+                    let analytics: ohc::orchestration::AnalyticsSummaryResponse = resp.into_inner();
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ac_handle_inner.upgrade() {
+                            let mut slint_charts = Vec::new();
+                            for chart in analytics.charts {
+                                let mut slint_points = Vec::new();
+                                for pt in chart.points {
+                                    slint_points.push(app::UiDataPoint {
+                                        label: pt.label.into(),
+                                        value: pt.value as f32,
+                                        display_value: pt.display_value.into(),
+                                    });
+                                }
+                                slint_charts.push(app::UiChartData {
+                                    title: chart.title.into(),
+                                    points: slint::ModelRc::new(slint::VecModel::from(slint_points)),
+                                });
+                            }
+                            ui.set_charts(slint::ModelRc::new(slint::VecModel::from(slint_charts)));
+                            let _ = ui.show();
+                        }
+                    }).unwrap();
+                }
+            }
+        });
+
+        #[cfg(target_arch = "wasm32")]
+        wasm_bindgen_futures::spawn_local(async move {
+            let mut client = OrgServiceClient::new(tonic_web_wasm_client::Client::new(
+                std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())
+            ));
+            let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+            // In a real implementation we would attach x-tenant-id metadata to the WASM request
+            req.metadata_mut().insert("x-tenant-id", "system".parse().unwrap());
+            if let Ok(resp) = client.get_analytics(req).await {
+                let analytics: ohc::orchestration::AnalyticsSummaryResponse = resp.into_inner();
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ac_handle_inner.upgrade() {
+                        let mut slint_charts = Vec::new();
+                        for chart in analytics.charts {
+                            let mut slint_points = Vec::new();
+                            for pt in chart.points {
+                                slint_points.push(app::UiDataPoint {
+                                    label: pt.label.into(),
+                                    value: pt.value as f32,
+                                    display_value: pt.display_value.into(),
+                                });
+                            }
+                            slint_charts.push(app::UiChartData {
+                                title: chart.title.into(),
+                                points: slint::ModelRc::new(slint::VecModel::from(slint_points)),
+                            });
+                        }
+                        ui.set_charts(slint::ModelRc::new(slint::VecModel::from(slint_charts)));
+                        let _ = ui.show();
+                    }
+                }).unwrap();
+            }
+        });
     });
 
     let bs_handle_clone_for_dash = business_share_handle.clone();
@@ -2931,7 +2950,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(not(target_arch = "wasm32"))]
         tokio::spawn(async move {
             if let Ok(mut client) = OrgServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                let resp: Result<tonic::Response<_>, tonic::Status> = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+                req.metadata_mut().insert("x-tenant-id", "system".parse().unwrap());
+                let resp: Result<tonic::Response<_>, tonic::Status> = client.get_analytics(req).await;
                 if let Ok(resp) = resp {
                     let analytics: ohc::orchestration::AnalyticsSummaryResponse = resp.into_inner();
                     let total_agents = analytics.total_agents;
