@@ -1684,10 +1684,31 @@ impl Agent {
 
             // 3. Git Commit Checkpointing (Claude Code Mechanic)
             if cfg.enable_git_checkpointing && !mutating_calls.is_empty() {
+                // If a checkpointer exists, save structured progress
+                if let Some(checkpointer) = &self_with_memory.checkpointer {
+                    let cp = crate::checkpointer::Checkpoint {
+                        thread_id: cfg.thread_id.clone().unwrap_or_else(|| "default-thread".to_string()),
+                        checkpoint_id: format!("git-cp-{}", uuid::Uuid::new_v4()),
+                        parent_id: last_checkpoint_id.clone(),
+                        data: serde_json::to_value(&messages).unwrap_or(serde_json::Value::Null),
+                        metadata: serde_json::json!({
+                            "iteration": iteration,
+                            "mutating_calls": mutating_calls,
+                        }),
+                        created_at: chrono::Utc::now(),
+                    };
+                    if let Err(e) = checkpointer.put_checkpoint(cp.clone()).await {
+                        tracing::error!("Git Checkpointing via checkpointer failed: {}", e);
+                    } else {
+                        last_checkpoint_id = Some(cp.checkpoint_id);
+                    }
+                }
+
+                // Still execute the actual git operations required for the Claude Code mechanic to capture codebase changes
                 let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
                 let commit_msg = format!("checkpoint: agent iteration {}", iteration);
                 let _ = std::process::Command::new("git").arg("add").arg(".").current_dir(&wd).output();
-                let _ = std::process::Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&wd).output();
+                let _ = std::process::Command::new("git").arg("commit").arg("--allow-empty").arg("-m").arg(&commit_msg).current_dir(&wd).output();
             }
 
             // Cross-Department Memory Consolidation: Auto-store task result if successful
