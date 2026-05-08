@@ -286,7 +286,7 @@ mod tests {
 
                 for entry in walker
                     .filter_map(Result::ok)
-                    .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs" || ext == "go"))
+                    .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs" || ext == "go" || ext == "ts"))
                 {
                     checked_files += 1;
                     let content = fs::read_to_string(entry.path()).unwrap_or_default();
@@ -302,6 +302,7 @@ mod tests {
                            lower_line.contains("println!") ||
                            lower_line.contains("log.print") ||
                            lower_line.contains("fmt.errorf") || lower_line.contains("fmt.error") || lower_line.contains("log.printf") || lower_line.contains("fmt.print") ||
+                           lower_line.contains("console.log") || lower_line.contains("console.error") || lower_line.contains("console.warn") || lower_line.contains("console.info") || lower_line.contains("console.debug") ||
                            lower_line.contains("eprintln!")
                         {
                             if lower_line.contains("tenant_id") ||
