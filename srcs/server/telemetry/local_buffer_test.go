@@ -194,6 +194,9 @@ func TestBufferMetricHelper_RedactsPII(t *testing.T) {
 		"service":   "agent",
 		"tenant_id": "secret-tenant-123",
 		"email":     "user@example.com",
+		"ip_address":  "192.168.1.1",
+		"mac_address": "00:1B:44:11:3A:B7",
+		"geolocation": "37.7749,-122.4194",
 		"nested": map[string]interface{}{
 			"password": "my-secret-password",
 			"safe":     "value",
@@ -221,6 +224,15 @@ func TestBufferMetricHelper_RedactsPII(t *testing.T) {
 	}
 	if storedAttrs["email"] != "[REDACTED]" {
 		t.Errorf("Expected 'email' to be redacted, got %v", storedAttrs["email"])
+	}
+	if storedAttrs["ip_address"] != "[REDACTED]" {
+		t.Errorf("Expected 'ip_address' to be redacted, got %v", storedAttrs["ip_address"])
+	}
+	if storedAttrs["mac_address"] != "[REDACTED]" {
+		t.Errorf("Expected 'mac_address' to be redacted, got %v", storedAttrs["mac_address"])
+	}
+	if storedAttrs["geolocation"] != "[REDACTED]" {
+		t.Errorf("Expected 'geolocation' to be redacted, got %v", storedAttrs["geolocation"])
 	}
 
 	nested, ok := storedAttrs["nested"].(map[string]interface{})
