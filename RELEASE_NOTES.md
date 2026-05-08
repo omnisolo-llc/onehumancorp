@@ -1,3 +1,8 @@
+## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
+
+- Scaling (Cloud): Fix orchestration mesh tests that failed due to multiple declarations and invalid imports.
+- Privacy/Offline (Standalone): Add missing `RedactInterfacePII` to fix backend telemetry data sync crashes.
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 - Scaling (Cloud): update api routing to use axum 0.8 style path variables (#11553).
