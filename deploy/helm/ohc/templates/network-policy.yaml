@@ -49,7 +49,10 @@ spec:
           port: 53
     {{- if .Values.cnpg.enabled }}
     - to:
-        - podSelector:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
             matchLabels:
               app: {{ .Values.cnpg.clusterName }}-rw
       ports:
@@ -58,7 +61,10 @@ spec:
     {{- end }}
     {{- if .Values.redis.enabled }}
     - to:
-        - podSelector:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
             matchLabels:
               app: {{ .Release.Name }}-redis-master
       ports:

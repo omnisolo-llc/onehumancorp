@@ -17,11 +17,11 @@ spec:
       - containerName: backend
         controlledResources: ["cpu", "memory"]
         minAllowed:
-          cpu: {{ .Values.backend.resources.requests.cpu }}
-          memory: {{ .Values.backend.resources.requests.memory }}
+          cpu: {{ .Values.backend.resources.requests.cpu | quote }}
+          memory: {{ .Values.backend.resources.requests.memory | quote }}
         maxAllowed:
-          cpu: {{ .Values.backend.resources.limits.cpu }}
-          memory: {{ .Values.backend.resources.limits.memory }}
+          cpu: {{ .Values.backend.resources.limits.cpu | quote }}
+          memory: {{ .Values.backend.resources.limits.memory | quote }}
 {{- end }}
 ---
 {{- if and .Values.ohcCore.enabled .Values.ohcCore.vpa.enabled }}
@@ -43,11 +43,11 @@ spec:
       - containerName: ohc-core
         controlledResources: ["cpu", "memory"]
         minAllowed:
-          cpu: {{ .Values.ohcCore.resources.requests.cpu }}
-          memory: {{ .Values.ohcCore.resources.requests.memory }}
+          cpu: {{ .Values.ohcCore.resources.requests.cpu | quote }}
+          memory: {{ .Values.ohcCore.resources.requests.memory | quote }}
         maxAllowed:
-          cpu: {{ .Values.ohcCore.resources.limits.cpu }}
-          memory: {{ .Values.ohcCore.resources.limits.memory }}
+          cpu: {{ .Values.ohcCore.resources.limits.cpu | quote }}
+          memory: {{ .Values.ohcCore.resources.limits.memory | quote }}
 {{- end }}
 ---
 {{- if and .Values.chatwoot.enabled .Values.chatwoot.vpa.enabled }}
@@ -69,11 +69,11 @@ spec:
       - containerName: chatwoot
         controlledResources: ["cpu", "memory"]
         minAllowed:
-          cpu: {{ .Values.chatwoot.resources.requests.cpu }}
-          memory: {{ .Values.chatwoot.resources.requests.memory }}
+          cpu: {{ .Values.chatwoot.resources.requests.cpu | quote }}
+          memory: {{ .Values.chatwoot.resources.requests.memory | quote }}
         maxAllowed:
-          cpu: {{ .Values.chatwoot.resources.limits.cpu }}
-          memory: {{ .Values.chatwoot.resources.limits.memory }}
+          cpu: {{ .Values.chatwoot.resources.limits.cpu | quote }}
+          memory: {{ .Values.chatwoot.resources.limits.memory | quote }}
 {{- end }}
 ---
 {{- if and .Values.powersync.enabled .Values.powersync.vpa.enabled }}
@@ -95,9 +95,9 @@ spec:
       - containerName: powersync
         controlledResources: ["cpu", "memory"]
         minAllowed:
-          cpu: {{ .Values.powersync.resources.requests.cpu }}
-          memory: {{ .Values.powersync.resources.requests.memory }}
+          cpu: {{ .Values.powersync.resources.requests.cpu | quote }}
+          memory: {{ .Values.powersync.resources.requests.memory | quote }}
         maxAllowed:
-          cpu: {{ .Values.powersync.resources.limits.cpu }}
-          memory: {{ .Values.powersync.resources.limits.memory }}
+          cpu: {{ .Values.powersync.resources.limits.cpu | quote }}
+          memory: {{ .Values.powersync.resources.limits.memory | quote }}
 {{- end }}
