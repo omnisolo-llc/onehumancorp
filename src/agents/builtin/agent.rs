@@ -54,6 +54,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub visual_verification_command: String,
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
+    pub enable_git_checkpointing: bool,
     pub state_scratchpad_path: Option<String>,
     pub workspace_path: Option<String>,
     pub project_trusted: bool,
@@ -98,6 +99,7 @@ enable_llmcompiler_plan_and_execute: false,
             visual_verification_command: String::new(),
             guardrails: None,
             enable_state_checkpointing: false,
+            enable_git_checkpointing: false,
             state_scratchpad_path: None,
             workspace_path: None,
             project_trusted: true,
@@ -1677,6 +1679,14 @@ impl Agent {
                         });
                     }
                 }
+            }
+
+            // 3. Git Commit Checkpointing (Claude Code Mechanic)
+            if cfg.enable_git_checkpointing && !mutating_calls.is_empty() {
+                let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+                let commit_msg = format!("checkpoint: agent iteration {}", iteration);
+                let _ = std::process::Command::new("git").arg("add").arg(".").current_dir(&wd).output();
+                let _ = std::process::Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&wd).output();
             }
 
             // Cross-Department Memory Consolidation: Auto-store task result if successful
@@ -4177,6 +4187,74 @@ mod tests {
             }
         }
         assert!(found_event, "UserInterventionRequired event should be emitted");
+    }
+
+    #[tokio::test]
+    async fn test_git_checkpointing_mechanic() {
+        struct MutatingToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for MutatingToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("Mutating tool executed".to_string())
+            }
+        }
+
+        let mutating_tool = Tool {
+            name: "mutating_tool".to_string(),
+            description: "A mutating tool".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({"type": "object"}),
+            execute: Arc::new(MutatingToolExecutor),
+        };
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "mutating_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("1".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("1".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("Task done."),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("2".to_string()),
+                }
+            ]),
+        });
+
+        let agent = Agent::new(client, vec![mutating_tool]);
+
+        // We don't actually run git in a real repo, but we can verify it doesn't crash
+        // and that we can supply the config cleanly.
+        let temp_dir = std::env::temp_dir().join(format!("git_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_git_checkpointing = true;
+        cfg.workspace_path = Some(temp_dir.to_str().unwrap().to_string());
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        // We expect it to try to run `git add` and `git commit` in temp_dir.
+        // Because temp_dir is not a git repo, the commands will fail but silently (output is ignored).
+        let res = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(res.is_ok());
+
+        std::fs::remove_dir_all(&temp_dir).unwrap();
     }
 }
 
