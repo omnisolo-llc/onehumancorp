@@ -1,32 +1,33 @@
 use super::queue::{Job, TaskQueue};
 use async_trait::async_trait;
-use sqlx::{SqlitePool, Row};
+use sqlx::{PgPool, Row};
 use std::sync::Arc;
 
-pub struct SQLiteTaskQueue {
-    pool: Arc<SqlitePool>,
+pub struct PgTaskQueue {
+    pool: Arc<PgPool>,
 }
 
-impl SQLiteTaskQueue {
-    pub fn new(pool: Arc<SqlitePool>) -> Self {
+impl PgTaskQueue {
+    pub fn new(pool: Arc<PgPool>) -> Self {
         Self { pool }
     }
 }
 
 #[async_trait]
-impl TaskQueue for SQLiteTaskQueue {
+impl TaskQueue for PgTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         for job in jobs {
+            let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
             sqlx::query(
                 "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id)
-                 VALUES (?, ?, ?, ?, 'QUEUED', ?, ?)"
+                 VALUES ($1, $2, $3, $4, 'QUEUED', $5, $6)"
             )
             .bind(&job.id)
             .bind(&job.parent_task_id)
             .bind(&job.agent_role)
-            .bind(&job.payload)
+            .bind(payload_json)
             .bind(job.run_after)
             .bind(&job.tenant_id)
             .execute(&mut *tx)
@@ -38,14 +39,15 @@ impl TaskQueue for SQLiteTaskQueue {
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
+        let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
         sqlx::query(
             "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id)
-             VALUES (?, ?, ?, ?, 'QUEUED', ?, ?)"
+             VALUES ($1, $2, $3, $4, 'QUEUED', $5, $6)"
         )
         .bind(&job.id)
         .bind(&job.parent_task_id)
         .bind(&job.agent_role)
-        .bind(&job.payload)
+        .bind(payload_json)
         .bind(job.run_after)
         .bind(&job.tenant_id)
         .execute(&*self.pool)
@@ -62,12 +64,13 @@ impl TaskQueue for SQLiteTaskQueue {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+        let role_placeholders = roles.iter().enumerate().map(|(i, _)| format!("${}", i + 1)).collect::<Vec<_>>().join(",");
         let query_str = format!(
             "SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, organization_id
              FROM sub_agent_jobs
              WHERE status = 'QUEUED' AND agent_role IN ({})
-             LIMIT 1",
+             LIMIT 1
+             FOR UPDATE SKIP LOCKED",
             role_placeholders
         );
 
@@ -76,17 +79,19 @@ impl TaskQueue for SQLiteTaskQueue {
             query = query.bind(role);
         }
 
-        let job_opt: Option<sqlx::sqlite::SqliteRow> = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+        let job_opt = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
 
         if let Some(row) = job_opt {
+            let payload_val: serde_json::Value = row.try_get("payload").unwrap_or(serde_json::Value::Null);
+            let payload_str = serde_json::to_string(&payload_val).unwrap_or_default();
             let job = Job {
                 id: row.get("id"),
-                parent_task_id: row.get("parent_task_id"),
-                agent_role: row.get("agent_role"),
-                payload: row.get("payload"),
-                status: row.get("status"),
-                attempts: row.get("attempts"),
-                max_attempts: row.get("max_attempts"),
+                parent_task_id: row.try_get("parent_task_id").unwrap_or_default(),
+                agent_role: row.try_get("agent_role").unwrap_or_default(),
+                payload: payload_str,
+                status: row.try_get("status").unwrap_or_default(),
+                attempts: row.try_get("attempts").unwrap_or(0),
+                max_attempts: row.try_get("max_attempts").unwrap_or(3),
                 run_after: row.try_get("run_after").unwrap_or_else(|_| chrono::Utc::now()),
                 locked_until: row.try_get("locked_until").unwrap_or(None),
                 created_at: row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()),
@@ -94,7 +99,7 @@ impl TaskQueue for SQLiteTaskQueue {
                 tenant_id: row.try_get("organization_id").unwrap_or_default(),
             };
 
-            sqlx::query("UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+            sqlx::query("UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                 .bind(&job.id)
                 .execute(&mut *tx)
                 .await
@@ -109,7 +114,7 @@ impl TaskQueue for SQLiteTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
-        sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+        sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(job_id)
             .execute(&*self.pool)
             .await
@@ -118,7 +123,7 @@ impl TaskQueue for SQLiteTaskQueue {
     }
 
     async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
-        sqlx::query("UPDATE sub_agent_jobs SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+        sqlx::query("UPDATE sub_agent_jobs SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(job_id)
             .execute(&*self.pool)
             .await
