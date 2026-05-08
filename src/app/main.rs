@@ -1275,6 +1275,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let social_posting_ui = app::SocialPosting::new()?;
     let social_posting_handle = social_posting_ui.as_weak();
+    let scribe_dashboard_ui = app::ScribeFeatureDashboard::new()?;
+    let scribe_dashboard_handle = scribe_dashboard_ui.as_weak();
+
+    scribe_dashboard_ui.on_open_help_center(move || {
+        let help_center_ui = app::HelpCenter::new().unwrap();
+        let _ = help_center_ui.show();
+    });
+
+    scribe_dashboard_ui.on_open_ai_chat(move || {
+        let ai_chat_ui = app::AiHelpChat::new().unwrap();
+        let _ = ai_chat_ui.show();
+    });
+
+    scribe_dashboard_ui.on_open_walkthrough(move || {
+        let walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
+        let _ = walkthrough_ui.show();
+    });
+
+    scribe_dashboard_ui.on_open_video_tutorials(move || {
+        let video_ui = app::VideoTutorials::new().unwrap();
+        let _ = video_ui.show();
+    });
+
+    scribe_dashboard_ui.on_open_api_docs(move || {
+        let api_ui = app::ApiDocs::new().unwrap();
+        let _ = api_ui.show();
+    });
+
+    scribe_dashboard_ui.on_open_release_notes(move || {
+        let rn_ui = app::ReleaseNotes::new().unwrap();
+        let _ = rn_ui.show();
+    });
 
     social_posting_ui.on_connect_instagram({
         let ui_handle = social_posting_handle.clone();
@@ -2266,6 +2298,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let sp_handle_for_open = social_posting_handle.clone();
                 dashboard.on_action_open_social_posting(move || {
                     if let Some(ui) = sp_handle_for_open.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+                let scribe_handle_for_open = scribe_dashboard_handle.clone();
+                dashboard.on_action_open_scribe_dashboard(move || {
+                    if let Some(ui) = scribe_handle_for_open.upgrade() {
                         let _ = ui.show();
                     }
                 });

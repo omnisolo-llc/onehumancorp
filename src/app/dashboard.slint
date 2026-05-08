@@ -69,6 +69,7 @@ export component Dashboard inherits Window { // milestones
     callback action_open_referrals();
     callback action_open_email_marketing();
     callback action_open_social_posting();
+    callback action_open_scribe_dashboard();
     callback action_grow_business();
     callback action_open_swarm_observability();
     callback action_mark_order_ready();
@@ -131,6 +132,7 @@ export component Dashboard inherits Window { // milestones
                 TooltipElement { tooltip_id: "api_docs"; Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } } }
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
                 Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
+                Button { text: "Documentation Overview"; height: 44px; clicked => { action_open_scribe_dashboard(); show_menu = false; } }
                 Button { text: "Automations Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
             }

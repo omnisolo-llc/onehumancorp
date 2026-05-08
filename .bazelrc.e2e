@@ -1,0 +1,2 @@
+build --config=local
+test --test_timeout=600
