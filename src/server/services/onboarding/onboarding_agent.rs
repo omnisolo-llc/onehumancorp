@@ -331,7 +331,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_start_onboarding_feature_flags_service_and_food_cart() {
+    async fn test_start_onboarding_service_and_food_cart() {
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
