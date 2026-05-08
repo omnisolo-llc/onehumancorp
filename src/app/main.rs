@@ -7579,6 +7579,8 @@ fn test_business_share_flow() {
     fn test_e2e_api_docs_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
+        let _main_app = app::AppWindow::new().unwrap();
+
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -7606,6 +7608,13 @@ fn test_business_share_flow() {
         let ui = app::ApiDocs::new().unwrap();
         assert_eq!(ui.get_api_key(), "sk_live_...");
         assert_eq!(ui.get_endpoint_url(), "https://api.ohc.io");
+
+        // Advanced Mode Progressive Disclosure Check
+        assert_eq!(ui.get_is_advanced(), false);
+        ui.set_is_advanced(true);
+        assert_eq!(ui.get_is_advanced(), true);
+        ui.set_is_advanced(false);
+        assert_eq!(ui.get_is_advanced(), false);
     }
 
     #[test]
