@@ -17,25 +17,56 @@ func TestLocalBlobProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	path := "test-folder/test-file.txt"
-	data := []byte("hello local storage")
+	testPath := "some/test/path.txt"
+	testData := []byte("hello world")
 
-	// Test Write
-	err = provider.WriteBlob(ctx, path, data)
-	assert.NoError(t, err)
+	err = provider.WriteBlob(ctx, testPath, testData)
+	require.NoError(t, err)
 
-	// Verify file is actually on disk
-	writtenData, err := os.ReadFile(filepath.Join(tempDir, path))
-	assert.NoError(t, err)
-	assert.Equal(t, data, writtenData)
+	readData, err := provider.ReadBlob(ctx, testPath)
+	require.NoError(t, err)
+	assert.Equal(t, testData, readData)
 
-	// Test Read
-	readData, err := provider.ReadBlob(ctx, path)
-	assert.NoError(t, err)
-	assert.Equal(t, data, readData)
+	// Test escaping sandbox
+	err = provider.WriteBlob(ctx, "../escape.txt", testData)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "escapes sandbox")
 
-	// Test Sandbox Escape
-	err = provider.WriteBlob(ctx, "../escape.txt", []byte("bad"))
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "path escapes sandbox")
+	_, err = provider.ReadBlob(ctx, "../escape.txt")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "escapes sandbox")
+
+	// Test read non-existent
+	_, err = provider.ReadBlob(ctx, "does/not/exist.txt")
+	require.Error(t, err)
+}
+
+func TestNewLocalBlobProvider_Error(t *testing.T) {
+	// Root dir cannot be created (no permissions)
+	provider, err := storage.NewLocalBlobProvider("/root/some_dir")
+	require.Error(t, err)
+	assert.Nil(t, provider)
+}
+
+func TestLocalBlobProvider_WriteBlob_Error(t *testing.T) {
+	tempDir := t.TempDir()
+	provider, err := storage.NewLocalBlobProvider(tempDir)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// Make root read-only
+	os.Chmod(tempDir, 0555)
+
+	err = provider.WriteBlob(ctx, "test.txt", []byte("data"))
+	require.Error(t, err)
+
+	os.Chmod(tempDir, 0755)
+
+	// Make a file where a directory needs to be
+	err = os.WriteFile(filepath.Join(tempDir, "file_as_dir"), []byte("data"), 0644)
+	require.NoError(t, err)
+
+	err = provider.WriteBlob(ctx, "file_as_dir/test.txt", []byte("data"))
+	require.Error(t, err)
 }
