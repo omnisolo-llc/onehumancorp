@@ -21,6 +21,7 @@ pub enum AgentEvent {
     IterationStarted { iteration: i32, message_count: usize },
     CheckpointSaved { iteration: i32, path: String },
     Handoff { target_agent: String },
+    RewindOccurred { iteration: i32, checkpoint_id: String, reason: String },
 }
 
 /// Configuration for a single agent run.
@@ -67,6 +68,8 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_single_agent_maximization: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
+    pub enable_time_travel_rewind: bool,
+    pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
 }
 
@@ -113,6 +116,8 @@ enable_llmcompiler_plan_and_execute: false,
             enable_single_agent_maximization: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
+            enable_time_travel_rewind: false,
+            max_rewind_attempts: 3,
             long_term_memory: None,
         }
     }
@@ -1006,6 +1011,12 @@ impl Agent {
         let mut combined_system = build_hierarchical_system_prompt(&final_cfg, &session_tools);
 
         // Long-Term Memory Retrieval
+        let mut checkpoint_history: Vec<String> = Vec::new();
+        if let Some(id) = &last_checkpoint_id {
+            checkpoint_history.push(id.clone());
+        }
+        let mut rewind_attempts_remaining = final_cfg.max_rewind_attempts;
+
         if let Some(store) = &self_with_memory.memory_store {
             match store.retrieve(initial_message, 5).await {
                 Ok(memories) => {
@@ -1031,7 +1042,11 @@ impl Agent {
             }
         }
 
-        for iteration in 0..max_iterations {
+        let mut turn_count = 0;
+        while turn_count < max_iterations {
+            let iteration = turn_count;
+            turn_count += 1;
+
             on_event(AgentEvent::IterationStarted {
                 iteration,
                 message_count: messages.len(),
@@ -1460,6 +1475,31 @@ impl Agent {
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
                         if *count > 2 {
+                            if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
+                                rewind_attempts_remaining -= 1;
+                                let _ = checkpoint_history.pop();
+                                if let Some(prev_id) = checkpoint_history.last().cloned() {
+                                    if let Some(checkpointer) = &self.checkpointer {
+                                        if let Ok(Some(cp)) = checkpointer.get_checkpoint(final_cfg.thread_id.as_ref().unwrap(), &prev_id).await {
+                                            if let Ok(restored_msgs) = serde_json::from_value::<Vec<Message>>(cp.data) {
+                                                let _ = checkpointer.restore_checkpoint(&prev_id).await;
+                                                messages = restored_msgs;
+                                                messages.push(Message::system(format!(
+                                                    "TIME-TRAVEL REWIND: Tool '{}' failed 3 times consecutively. I have rewound your state to checkpoint '{}'. Please try a different approach to solve the task.",
+                                                    tc.name, prev_id
+                                                )));
+                                                on_event(AgentEvent::RewindOccurred {
+                                                    iteration,
+                                                    checkpoint_id: prev_id,
+                                                    reason: format!("Tool '{}' failed 3 times", tc.name),
+                                                });
+                                                tool_error_counts.remove(&tc.name);
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             let fatal_msg = format!("Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
                             on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
                             return Err(fatal_msg.into());
@@ -1582,6 +1622,31 @@ impl Agent {
                             let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                             *count += 1;
                             if *count > 2 {
+                                if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
+                                    rewind_attempts_remaining -= 1;
+                                    let _ = checkpoint_history.pop();
+                                    if let Some(prev_id) = checkpoint_history.last().cloned() {
+                                        if let Some(checkpointer) = &self.checkpointer {
+                                            if let Ok(Some(cp)) = checkpointer.get_checkpoint(final_cfg.thread_id.as_ref().unwrap(), &prev_id).await {
+                                                if let Ok(restored_msgs) = serde_json::from_value::<Vec<Message>>(cp.data) {
+                                                    let _ = checkpointer.restore_checkpoint(&prev_id).await;
+                                                    messages = restored_msgs;
+                                                    messages.push(Message::system(format!(
+                                                        "TIME-TRAVEL REWIND: Tool '{}' failed 3 times consecutively. I have rewound your state to checkpoint '{}'. Please try a different approach to solve the task.",
+                                                        tc.name, prev_id
+                                                    )));
+                                                    on_event(AgentEvent::RewindOccurred {
+                                                        iteration,
+                                                        checkpoint_id: prev_id,
+                                                        reason: format!("Tool '{}' failed 3 times", tc.name),
+                                                    });
+                                                    tool_error_counts.remove(&tc.name);
+                                                    continue;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                                 let fatal_msg = format!("Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
                                 on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
                                 return Err(fatal_msg.into());
@@ -1683,6 +1748,7 @@ impl Agent {
                     tracing::warn!("Failed to save checkpoint to database: {}", e);
                 } else {
                     last_checkpoint_id = Some(checkpoint_id.clone());
+                    checkpoint_history.push(checkpoint_id.clone());
                     on_event(AgentEvent::CheckpointSaved {
                         iteration,
                         path: format!("db:{}", checkpoint_id),
@@ -1732,6 +1798,7 @@ impl Agent {
 
             // Context Compaction Mechanic
             // Use the input_tokens from the last request to determine the current context window size.
+
             if final_cfg.enable_context_compaction && turn_input_tokens > final_cfg.compaction_threshold_tokens {
                 // We want to compact if we have enough messages to make it worthwhile
                 if messages.len() > 5 {
@@ -4371,5 +4438,138 @@ mod stream_tests {
 
         let has_task_complete = events.iter().any(|e| matches!(e, AgentEvent::TaskComplete { .. }));
         assert!(has_task_complete, "Stream should eventually emit TaskComplete event");
+    }
+
+    #[tokio::test]
+    async fn test_time_travel_rewind_mechanic() {
+        use ohc_builtin_agent_tools::ToolExecutor;
+        use crate::checkpointer::{CheckpointSaver, Checkpoint};
+
+        struct MockCheckpointerRewind {
+            checkpoints: tokio::sync::Mutex<std::collections::HashMap<String, Checkpoint>>,
+        }
+
+        #[async_trait::async_trait]
+        impl CheckpointSaver for MockCheckpointerRewind {
+            async fn get_checkpoint(&self, _tid: &str, cid: &str) -> Result<Option<Checkpoint>, String> {
+                Ok(self.checkpoints.lock().await.get(cid).cloned())
+            }
+            async fn put_checkpoint(&self, cp: Checkpoint) -> Result<(), String> {
+                self.checkpoints.lock().await.insert(cp.checkpoint_id.clone(), cp);
+                Ok(())
+            }
+            async fn list_checkpoints(&self, _tid: &str) -> Result<Vec<Checkpoint>, String> { Ok(vec![]) }
+            async fn restore_checkpoint(&self, _cid: &str) -> Result<(), String> { Ok(()) }
+        }
+
+        struct RewindMockLlm {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for RewindMockLlm {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                if *count == 1 {
+                    // Turn 1: Normal tool call. This will create the first checkpoint.
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "Initial".to_string(),
+                            tool_calls: vec![ToolCall { id: "c1".to_string(), name: "good_tool".to_string(), arguments: serde_json::Value::Null }],
+                            tool_results: vec![],
+                            response_id: Some("r1".to_string()),
+                            previous_response_id: None,
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                        response_id: Some("r1".to_string()),
+                    })
+                } else if *count == 2 {
+                    // Turn 2: Call the failing tool.
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "Failing".to_string(),
+                            tool_calls: vec![ToolCall { id: "c2".to_string(), name: "fail_tool".to_string(), arguments: serde_json::Value::Null }],
+                            tool_results: vec![],
+                            response_id: Some("r2".to_string()),
+                            previous_response_id: Some("r1".to_string()),
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                        response_id: Some("r2".to_string()),
+                    })
+                } else {
+                    // After rewind, it should see the system nudge and hopefully finish.
+                    // We check if the system nudge is present in the request.
+                    let has_rewind_msg = req.messages.iter().any(|m| m.role == Role::System && m.content.contains("TIME-TRAVEL REWIND"));
+                    if has_rewind_msg {
+                         Ok(ChatResponse {
+                            message: Message::assistant("Success after rewind"),
+                            usage: Usage::default(),
+                            stop_reason: "stop".to_string(),
+                            response_id: Some("r3".to_string()),
+                        })
+                    } else {
+                        // Keep failing until rewind happens
+                        Ok(ChatResponse {
+                            message: Message {
+                                role: Role::Assistant,
+                                content: "Failing again".to_string(),
+                                tool_calls: vec![ToolCall { id: "c2".to_string(), name: "fail_tool".to_string(), arguments: serde_json::Value::Null }],
+                                tool_results: vec![],
+                                response_id: Some("r2".to_string()),
+                                previous_response_id: Some("r1".to_string()),
+                            },
+                            usage: Usage::default(),
+                            stop_reason: "tool_calls".to_string(),
+                            response_id: Some("r2".to_string()),
+                        })
+                    }
+                }
+            }
+        }
+
+        struct FailTool;
+        #[async_trait::async_trait]
+        impl ToolExecutor for FailTool {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Err(ToolError::LlmRecoverable("I always fail".to_string()))
+            }
+        }
+        struct GoodTool;
+        #[async_trait::async_trait]
+        impl ToolExecutor for GoodTool {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("Success".to_string())
+            }
+        }
+
+        let tools = vec![
+            Tool { name: "fail_tool".to_string(), description: "fails".to_string(), is_read_only: false, parameters: serde_json::Value::Null, execute: Arc::new(FailTool) },
+            Tool { name: "good_tool".to_string(), description: "works".to_string(), is_read_only: false, parameters: serde_json::Value::Null, execute: Arc::new(GoodTool) },
+        ];
+
+        let llm = Arc::new(RewindMockLlm { call_count: tokio::sync::Mutex::new(0) });
+        let checkpointer = Arc::new(MockCheckpointerRewind { checkpoints: tokio::sync::Mutex::new(std::collections::HashMap::new()) });
+
+        let agent = Agent::new(llm, tools).with_checkpointer(checkpointer);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_time_travel_rewind = true;
+        cfg.thread_id = Some("rewind-thread".to_string());
+        cfg.max_rewind_attempts = 1;
+
+        let mut events = vec![];
+        let result = agent.run(&cfg, "Start", &mut |e| events.push(e)).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Success after rewind");
+
+        let rewind_emitted = events.iter().any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
+        assert!(rewind_emitted, "RewindOccurred event should have been emitted");
     }
 }
