@@ -84,9 +84,10 @@ func TestLocalTeammateMesh_UnsubscribeOnContextDone(t *testing.T) {
 	// Wait a bit to ensure handler isn't called
 	time.Sleep(50 * time.Millisecond)
 
-	mesh.mu.RLock()
-	defer mesh.mu.RUnlock()
-	assert.Empty(t, mesh.subscribers[channel])
+	shard := mesh.shards[getShard(channel)]
+	shard.mu.RLock()
+	defer shard.mu.RUnlock()
+	assert.Empty(t, shard.subscribers[channel])
 }
 
 func TestCentrifugeMesh_PublishSubscribe(t *testing.T) {

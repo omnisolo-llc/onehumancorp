@@ -9,7 +9,7 @@ import (
 )
 
 func TestSubAgentSpawner_TokenBudget(t *testing.T) {
-	mesh := &mockMeshHub{}
+	mesh := &mockMeshTransport{}
 	spawner := NewDefaultSubAgentSpawner(mesh, false, 0)
 
 	task := &SharedTask{

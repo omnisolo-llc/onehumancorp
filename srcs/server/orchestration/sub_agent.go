@@ -68,14 +68,14 @@ type SubAgentSpawner interface {
 }
 
 type DefaultSubAgentSpawner struct {
-	mesh      MeshHub
+	mesh      MeshTransport
 	isSQLite  bool
 	semaphore chan struct{}
 	cb        *CircuitBreaker
 }
 
 // NewDefaultSubAgentSpawner creates a new instance of DefaultSubAgentSpawner.
-func NewDefaultSubAgentSpawner(mesh MeshHub, isSQLite bool, maxConcurrency int) *DefaultSubAgentSpawner {
+func NewDefaultSubAgentSpawner(mesh MeshTransport, isSQLite bool, maxConcurrency int) *DefaultSubAgentSpawner {
 	var sem chan struct{}
 	if isSQLite {
 		if maxConcurrency <= 0 {
