@@ -36,6 +36,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			title TEXT,
 			description TEXT,
 			status TEXT,
+			state TEXT,
 			agent_id TEXT,
 			priority TEXT,
 			payload BLOB,
