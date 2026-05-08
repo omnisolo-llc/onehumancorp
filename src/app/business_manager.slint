@@ -1,3 +1,4 @@
+import { TooltipElement } from "tooltip_element.slint";
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
@@ -17,6 +18,7 @@ export component BusinessManager inherits Window {
     out property <string> test_title: root.title;
     // "list" | "add"
     in-out property <string> current_view: "list";
+    in-out property <bool> show_offering_hint: false;
 
     in property <[UiProduct]> products;
 
@@ -122,7 +124,13 @@ export component BusinessManager inherits Window {
         // Step 0: Select Type
         if (current_view == "add" && step == 0) : VerticalBox {
             spacing: 16px;
-            Text { text: "What are you offering?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "What are you offering?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; vertical-alignment: center; }
+                TooltipElement { tooltip_id: "offering_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_offering_hint = !show_offering_hint; } } }
+            }
+            if (show_offering_hint) : Text { text: "Choose the type of offering that best describes what you sell."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
 
             ScrollView {
                 VerticalBox {
