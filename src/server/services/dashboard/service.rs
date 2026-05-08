@@ -93,7 +93,7 @@ impl DashboardService for MyDashboardService {
                     return Ok::<_, String>(products);
                 }
 
-                let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
+                let q = "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
                 match &db1.store {
@@ -106,11 +106,11 @@ impl DashboardService for MyDashboardService {
                                         .try_get("organization_id")
                                         .unwrap_or_default(),
                                     name: r.try_get("name").unwrap_or_default(),
-                                    description: "".to_string(),
-                                    price_cents: 0,
-                                    currency: "USD".to_string(),
-                                    fulfillment_strategy: "".to_string(),
-                                    metadata_json: "".to_string(),
+                                    description: r.try_get("description").unwrap_or_default(),
+                                    price_cents: r.try_get("price_cents").unwrap_or_default(),
+                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
+                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                    metadata_json: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string(),
                                 };
                                 results.push(p);
                             }
@@ -125,11 +125,11 @@ impl DashboardService for MyDashboardService {
                                         .try_get("organization_id")
                                         .unwrap_or_default(),
                                     name: r.try_get("name").unwrap_or_default(),
-                                    description: "".to_string(),
-                                    price_cents: 0,
-                                    currency: "USD".to_string(),
-                                    fulfillment_strategy: "".to_string(),
-                                    metadata_json: "".to_string(),
+                                    description: r.try_get("description").unwrap_or_default(),
+                                    price_cents: r.try_get("price_cents").unwrap_or_default(),
+                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
+                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                    metadata_json: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string(),
                                 };
                                 results.push(p);
                             }
