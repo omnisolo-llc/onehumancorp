@@ -64,7 +64,14 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    // 7. Review & Launch Screen
+    // 7. Template Selection Screen
+    expect(find.text('Select a Template'), findsOneWidget);
+    await tester.tap(find.text('Modern')); // Select Modern template
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.text('Next'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 8. Review & Launch Screen
     expect(find.text('Review & Launch'), findsOneWidget);
     expect(find.text('Acme Corp'), findsOneWidget);
     expect(find.text('Technology'), findsOneWidget);

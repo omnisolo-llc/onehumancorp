@@ -49,6 +49,12 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
+  // 7. Template Selection Screen
+  await tester.tap(find.text('Modern'));
+  await tester.pump(const Duration(milliseconds: 100));
+  await tester.tap(find.text('Next'));
+  await tester.pump(const Duration(milliseconds: 500));
+
   // 6. Review & Launch Screen
   final launchBtn = find.text('Launch My AI Team');
   await tester.ensureVisible(launchBtn);
