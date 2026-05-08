@@ -1,5 +1,11 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
+### Cloud Scaling Improvements
+- Fix orchestration mesh tests that failed due to multiple declarations and invalid imports.
+### Privacy/Offline Improvements
+- Add missing `RedactInterfacePII` to fix backend telemetry data sync crashes.
+
 ## v0.4.35 (Cloud) / v0.4.35+1 (Standalone)
 ### Cloud Scaling Improvements
 - 🔨 Forge: Sub-Agent Orchestration Queue Test Fixes (#12202)
