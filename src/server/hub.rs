@@ -83,7 +83,7 @@ impl Hub {
 
                 // Blueprint: track cost in cents
                 let cost_cents = (cost * 100.0) as f32;
-                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels).await;
+                let _ = crate::telemetry::record_mission_cost(&pool_clone, "tenant", "mission", &event.agent_id, "mission", cost_cents as f64).await;
             }
         });
 

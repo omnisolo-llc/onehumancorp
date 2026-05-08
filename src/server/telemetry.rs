@@ -290,3 +290,19 @@ mod tests {
         assert_eq!(redacted_json["API_KEY"], "[REDACTED]");
     }
 }
+
+pub async fn record_mission_cost(pool: &PgPool, tenant_id: &str, mission_id: &str, agent_id: &str, role: &str, cost_cents: f64) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_mission_cost_cents",
+        "counter",
+        cost_cents as f32,
+        serde_json::json!({
+            "tenant_id": tenant_id,
+            "mission_id": mission_id,
+            "agent_id": agent_id,
+            "role": role,
+        }),
+    )
+    .await
+}

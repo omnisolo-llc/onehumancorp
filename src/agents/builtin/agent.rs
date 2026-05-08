@@ -901,6 +901,7 @@ impl Agent {
         let meter = global::meter("ohc_agent");
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
+        let mission_cost_counter = meter.f64_counter("ohc_mission_cost_cents").build();
 
         let mut tool_error_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         let mut malformed_retries = 0;
@@ -1142,7 +1143,8 @@ impl Agent {
                             (output_tokens as f64 * output_cost_per_m / 1_000_000.0);
 
             if turn_cost > 0.0 {
-                cost_counter.add(turn_cost, &[model_label, agent_label]);
+                cost_counter.add(turn_cost, &[model_label.clone(), agent_label.clone()]);
+                mission_cost_counter.add(turn_cost * 100.0, &[model_label, agent_label]);
             }
 
             let stop_reason = resp.stop_reason.as_str();

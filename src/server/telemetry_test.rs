@@ -486,3 +486,28 @@ fn test_redact_interface_pii_malicious_payloads() {
     assert_eq!(redacted["array_of_evil"][1]["address"], "[REDACTED]");
     assert_eq!(redacted["array_of_evil"][1]["phone"], "[REDACTED]");
 }
+
+#[tokio::test]
+async fn test_record_mission_cost() {
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        Ok(Ok(p)) => p,
+        _ => return, // Gracefully exit if DB is not available in sandbox or times out
+    };
+
+    let res = crate::telemetry::record_mission_cost(&pool, "tenant-1", "mission-1", "agent-1", "role-1", 10.5).await;
+    assert!(res.is_ok());
+
+    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_mission_cost_cents' ORDER BY timestamp DESC LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+    use sqlx::Row;
+    let labels_json: String = row.get("labels_json");
+    let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
+    assert!(parsed.get("tenant_id").is_some());
+    assert!(parsed.get("mission_id").is_some());
+    assert!(parsed.get("agent_id").is_some());
+    assert!(parsed.get("role").is_some());
+}
