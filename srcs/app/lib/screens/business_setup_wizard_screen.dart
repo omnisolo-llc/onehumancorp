@@ -135,62 +135,133 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   }
 
   Widget _buildWelcomeScreen() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AnimatedBuilder(
-          animation: _heroAnimation,
-          builder: (context, child) {
-            return Transform.translate(
-              offset: Offset(0, _heroAnimation.value),
-              child: child,
-            );
-          },
-          child: const Icon(Icons.rocket_launch, size: 80, color: Color(0xFF6B4EFF)),
-        ),
-        const SizedBox(height: 30),
-        const Text(
-          'Welcome to One Human Corp',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AnimatedBuilder(
+            animation: _heroAnimation,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(0, _heroAnimation.value),
+                child: child,
+              );
+            },
+            child: const Icon(Icons.rocket_launch, size: 80, color: Color(0xFF6B4EFF)),
           ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'Launch and run your small business from anywhere. Let\'s get your AI team configured.',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 16,
-            color: Colors.white70,
+          const SizedBox(height: 30),
+          const Text(
+            'Welcome to One Human Corp',
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            textAlign: TextAlign.center,
           ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 40),
-        WalkthroughHighlight(
-          showHighlight: _showWalkthrough,
-          speechBubbleText: "Start setting up your store here!",
-          onDismiss: () => setState(() => _showWalkthrough = false),
-          child: ElevatedButton(
+          const SizedBox(height: 20),
+          const Text(
+            'Create your account to start your business.',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 16,
+              color: Colors.white70,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          GlassContainer(
+            child: TextField(
+              key: const Key('signupEmailField'),
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                labelStyle: TextStyle(color: Colors.white70),
+                border: InputBorder.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          GlassContainer(
+            child: TextField(
+              key: const Key('signupPasswordField'),
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                labelStyle: TextStyle(color: Colors.white70),
+                border: InputBorder.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          WalkthroughHighlight(
+            showHighlight: _showWalkthrough,
+            speechBubbleText: "Start setting up your store here!",
+            onDismiss: () => setState(() => _showWalkthrough = false),
+            child: ElevatedButton(
+              key: const Key('signupBtn'),
+              onPressed: () {
+                setState(() => _showWalkthrough = false);
+                _nextStep();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6B4EFF),
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              child: const Text('Sign Up & Continue', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 15),
+          ElevatedButton.icon(
             onPressed: () {
               setState(() => _showWalkthrough = false);
               _nextStep();
             },
+            icon: const Icon(Icons.g_mobiledata, color: Colors.white, size: 30),
+            label: const Text('Continue with Google', style: TextStyle(fontSize: 16, color: Colors.white)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6B4EFF),
-              padding: const EdgeInsets.symmetric(vertical: 20),
+              backgroundColor: const Color(0xFF1E293B),
+              padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15),
               ),
             ),
-            child: const Text('Get Started', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
           ),
-        ),
-      ],
+          const SizedBox(height: 10),
+          ElevatedButton.icon(
+            onPressed: () {
+              setState(() => _showWalkthrough = false);
+              _nextStep();
+            },
+            icon: const Icon(Icons.apple, color: Colors.white, size: 30),
+            label: const Text('Continue with Apple', style: TextStyle(fontSize: 16, color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E293B),
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+            ),
+          ),
+          const SizedBox(height: 15),
+          Center(
+            child: TextButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Verification email resent!')),
+                );
+              },
+              child: const Text('Resend Verification Email', style: TextStyle(color: Color(0xFF6B4EFF), fontSize: 14)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
