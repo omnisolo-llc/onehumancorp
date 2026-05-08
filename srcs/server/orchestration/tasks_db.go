@@ -32,6 +32,7 @@ type TaskStore interface {
 	UpdateTaskStatus(ctx context.Context, id string, status string) error
 	GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error)
 	PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error)
+	ReportMissionHandover(ctx context.Context, missionID string, blockers string) error
 }
 
 // PostgresTaskStore implementation
@@ -277,6 +278,16 @@ func (s *PostgresTaskStore) PollDelegatedTasks(ctx context.Context, limit int) (
 	}
 
 	return tasks, nil
+}
+
+func (s *PostgresTaskStore) ReportMissionHandover(ctx context.Context, missionID string, blockers string) error {
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE agent_missions
+		SET status = 'blocked',
+		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '
+' END || $1
+		WHERE id = $2`, blockers, missionID)
+	return err
 }
 
 func (s *PostgresTaskStore) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error) {
@@ -588,6 +599,16 @@ func (s *SqliteTaskStore) UpdateTaskStatus(ctx context.Context, id string, statu
 	return err
 }
 
+
+func (s *SqliteTaskStore) ReportMissionHandover(ctx context.Context, missionID string, blockers string) error {
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE agent_missions
+		SET status = 'blocked',
+		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '
+' END || ?
+		WHERE id = ?`, blockers, missionID)
+	return err
+}
 
 func (s *SqliteTaskStore) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error) {
     query := `

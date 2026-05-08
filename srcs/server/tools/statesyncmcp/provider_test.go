@@ -27,6 +27,10 @@ func (m *mockLocalDB) ClaimTask(ctx context.Context, organizationID string, agen
 	return nil, nil
 }
 
+func (m *mockLocalDB) ReportMissionHandover(ctx context.Context, missionID string, blockers string) error {
+	return nil
+}
+
 func (m *mockLocalDB) CreateTask(ctx context.Context, task *orchestration.SharedTask) error {
 	return m.createErr
 }
