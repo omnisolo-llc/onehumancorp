@@ -24,6 +24,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			tier TEXT,
 			name TEXT,
 			category TEXT,
+			state TEXT,
 			description TEXT,
 			status TEXT,
 			created_at DATETIME,
