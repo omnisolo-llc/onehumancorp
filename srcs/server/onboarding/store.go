@@ -49,6 +49,9 @@ func (s *PostgresTenantStore) CreateTenant(ctx context.Context, tenant *Tenant) 
 	if tenant.Status == "" {
 		tenant.Status = "PENDING"
 	}
+	if tenant.Tier == "" {
+		tenant.Tier = "free"
+	}
 
 	err = tx.QueryRowContext(ctx, query,
 		tenant.Name, tenant.Category, tenant.Description, tenant.Status,
@@ -127,6 +130,9 @@ func (s *SqliteTenantStore) CreateTenant(ctx context.Context, tenant *Tenant) er
 	}
 	if tenant.Status == "" {
 		tenant.Status = "PENDING"
+	}
+	if tenant.Tier == "" {
+		tenant.Tier = "free"
 	}
 
 	_, err := s.db.ExecContext(ctx, query,
