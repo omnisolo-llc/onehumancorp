@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"log"
-	"time"
-
 	"net/http"
+	"os"
+	"time"
 
 	"onehumancorp/srcs/server/memory"
 	"onehumancorp/srcs/server/onboarding"
@@ -29,12 +29,24 @@ func (m *MockLLMClient) GenerateEmbedding(ctx context.Context, text string) ([]f
 func main() {
 	log.Println("Starting OHC Server...")
 
-	// Initialize SQLite database (or Postgres in a real environment)
-	db, err := sql.Open("sqlite3", ":memory:")
+	// Initialize SQLite database
+	dbPath := ":memory:"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		dbPath = "ohc_standalone.db"
+	}
+
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 	defer db.Close()
+
+	if dbPath != ":memory:" {
+		// Enforce secure file permissions for local standalone mode
+		if err := os.Chmod(dbPath, 0600); err != nil {
+			log.Printf("Warning: Failed to set secure permissions on %s: %v", dbPath, err)
+		}
+	}
 
 	// Create memory_embeddings table
 	_, err = db.Exec(`
