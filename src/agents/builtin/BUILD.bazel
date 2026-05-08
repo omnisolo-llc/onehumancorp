@@ -40,6 +40,7 @@ rust_library(
 rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
+        "codex_runner.rs",
         "agent.rs",
         "checkpointer.rs",
         "departments.rs",
