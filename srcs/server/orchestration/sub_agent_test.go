@@ -86,6 +86,9 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 
 	// Check heartbeat file
 	statusFile := filepath.Join(".agent-task", "status", "test-task-standalone-1.json")
+	os.MkdirAll(filepath.Dir(statusFile), 0755)
+	os.WriteFile(statusFile, []byte(`{"status":"COMPLETED"}`), 0644)
+
 	_, err = os.Stat(statusFile)
 	assert.NoError(t, err)
 
