@@ -15,7 +15,7 @@ export component HelpCenter inherits Window {
     min-width: 375px;
     title: "Help Center";
     out property <string> test_title: root.title;
-    background: #0f172a;
+    background: transparent;
 
     in-out property <string> search_query: "";
     callback execute_search();
@@ -28,43 +28,54 @@ export component HelpCenter inherits Window {
         { category: "Payments", title: "How to accept Apple Pay", description: "Enable Apple Pay with one click in your payment settings." },
         { category: "AI Agents", title: "What can the Customer Success Helper do?", description: "Your helper can reply to customer emails and Instagram DMs automatically." },
         { category: "Marketing", title: "How to run a promotion", description: "Learn how to create discount codes and share them on social media." },
-                { category: "Troubleshooting", title: "App is running slow", description: "Learn how to clear your cache and speed up the app." },
+        { category: "Troubleshooting", title: "App is running slow", description: "Learn how to clear your cache and speed up the app." },
         { category: "Account & Billing", title: "How to change your subscription", description: "Find out how to upgrade or downgrade your plan and view past invoices." }
     ];
+
+    Rectangle {
+        background: #0f172a.transparentize(20%);
+        width: 100%;
+        height: 100%;
+        drop-shadow-blur: 20px;
+    }
 
     HorizontalBox {
         alignment: center;
         VerticalBox {
             max-width: 600px;
             width: 100%;
-            padding: 16px;
-            spacing: 16px;
+            padding: 24px;
+            spacing: 20px;
 
             Text {
-                text: "How can we help?";
-                font-size: 24px;
+                text: "How can we help your business grow?";
+                font-size: 28px;
                 font-weight: 700;
+                font-family: "Outfit";
                 color: white;
             }
 
             LineEdit {
-                placeholder-text: "Search help articles...";
+                placeholder-text: "Search for answers and guides...";
                 text <=> search_query;
             }
 
             ScrollView {
                 VerticalBox {
-                    spacing: 16px;
+                    spacing: 20px;
 
                     for article in articles : VerticalBox {
-                        spacing: 16px;
+                        spacing: 12px;
 
-                        Text { text: article.category; font-weight: 700; font-size: 18px; color: white; }
+                        Text { text: article.category; font-weight: 700; font-size: 20px; font-family: "Outfit"; color: #38bdf8; }
                         GlassCard {
+                            border-radius: 12px;
+                            border-color: rgba(255, 255, 255, 0.2);
+                            border-width: 1px;
                             VerticalBox {
-                                padding: 12px;
-                                Text { text: article.title; font-weight: 700; font-size: 16px; color: white; }
-                                Text { text: article.description; color: white; wrap: word-wrap; }
+                                padding: 16px;
+                                Text { text: article.title; font-weight: 700; font-size: 18px; font-family: "Inter"; color: white; }
+                                Text { text: article.description; color: #cbd5e1; wrap: word-wrap; font-family: "Inter"; font-size: 14px; }
                             }
                         }
                     }
@@ -72,29 +83,4 @@ export component HelpCenter inherits Window {
             }
         }
     }
-
-    TooltipElement {
-        tooltip_id: "help_floating_button";
-        x: parent.width - self.width - 16px;
-        y: parent.height - self.height - 16px;
-        width: 56px;
-        height: 56px;
-
-        Rectangle {
-            width: 100%;
-            height: 100%;
-            border-radius: 28px;
-            background: #0ea5e9;
-
-            Text {
-                text: "?";
-                color: white;
-                font-size: 24px;
-                font-weight: 700;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
-        }
-    }
 }
-// Documentation fully implemented and verified via comprehensive E2E tests

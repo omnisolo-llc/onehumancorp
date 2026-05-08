@@ -6,10 +6,7 @@ fn test_scribe_dashboard_quick_actions_hint_tooltip() {
     crate::ui_tests::init();
     let dashboard_ui = app::Dashboard::new().unwrap();
 
-    // Default is false
     assert_eq!(dashboard_ui.get_show_quick_actions_hint(), false);
-
-    // We can't click easily, but we can verify the property exists and updates.
     dashboard_ui.set_show_quick_actions_hint(true);
     assert_eq!(dashboard_ui.get_show_quick_actions_hint(), true);
 }
@@ -20,7 +17,6 @@ fn test_scribe_video_tutorials_url() {
     let ui = app::VideoTutorials::new().unwrap();
     let videos = ui.get_videos();
 
-    // We can add a video and check its URL.
     let new_video = app::VideoMetadata {
         title: "Test Video".into(),
         description: "Test".into(),
@@ -39,4 +35,11 @@ fn test_scribe_video_tutorials_url() {
 
     let updated_videos = ui.get_videos();
     assert_eq!(updated_videos.row_data(updated_videos.row_count() - 1).unwrap().url, "https://test.com/video.mp4");
+}
+
+#[test]
+fn test_scribe_ai_help_chat_style() {
+    crate::ui_tests::init();
+    let ui = app::AiHelpChat::new().unwrap();
+    assert!(ui.get_messages().row_count() > 0);
 }
