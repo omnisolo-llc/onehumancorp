@@ -41,6 +41,26 @@ pub async fn run_health_monitor(
                     tracing::trace!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
                 }
             }
+
+            // Health Guardianship: Implement health-check probes specifically for hybrid-mode switching and local-to-cloud mission sync
+            if let Some(sync_queue_size) = health.get("local_to_cloud_sync_queue").and_then(|v| v.as_i64()) {
+                if sync_queue_size > 100 {
+                    tracing::error!("HEALTH MONITOR: Local-to-cloud mission sync queue is deeply saturated: {} pending", sync_queue_size);
+                } else if sync_queue_size > 50 {
+                    tracing::warn!("HEALTH MONITOR: Local-to-cloud mission sync queue is growing: {} pending", sync_queue_size);
+                }
+            }
+
+            if let (Some(cloud_connected), Some(hybrid_mode_ready)) = (
+                health.get("cloud_connected").and_then(|v| v.as_bool()),
+                health.get("hybrid_mode_ready").and_then(|v| v.as_bool()),
+            ) {
+                if !_is_cloud && hybrid_mode_ready && !cloud_connected {
+                    tracing::warn!("HEALTH MONITOR: Hybrid mode is ready but cloud connection is missing. Operating in degraded local mode.");
+                } else if !_is_cloud && !hybrid_mode_ready {
+                    tracing::error!("HEALTH MONITOR: Critical fault: Standalone mode cannot enter hybrid readiness.");
+                }
+            }
         }
 
         let mut to_fire_now: Vec<String> = Vec::new();
@@ -76,7 +96,7 @@ pub async fn run_health_monitor(
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);
                 for agent_id in to_fire_now {
-                    tracing::info!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
+                    tracing::trace!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
                     monitor_hub.fire_agent(&agent_id);
                     pending_fires.remove(&agent_id);
                 }
@@ -229,6 +249,46 @@ mod tests {
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        handle.abort();
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use crate::orchestration::mesh::TeammateMesh;
+    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use crate::hub::Hub;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_health_monitor_hybrid_guardianship_probe() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://dummy")
+            .unwrap();
+
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pg_pool));
+
+        let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
+        let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();
+        let monitor_hub = hub.clone();
+
+        let handle = tokio::spawn(async move {
+            run_health_monitor(monitor_mesh, monitor_hub, false, std::time::Duration::from_millis(10)).await;
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
         handle.abort();
     }
 }

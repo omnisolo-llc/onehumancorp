@@ -65,7 +65,7 @@ impl SipDB {
             let res = async {
                 let mut tx = self.pool.begin().await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
