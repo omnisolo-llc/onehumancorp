@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.35 (Cloud) / v0.4.35+1 (Standalone)
+### Cloud Scaling Improvements
+- 🔨 Forge: Sub-Agent Orchestration Queue Test Fixes (#12202)
+
+### Privacy/Offline Improvements
+- (No specific privacy/offline improvements in this patch)
+
 ## v0.4.34 (Cloud) / v0.4.34+2 (Standalone)
 
 - Scaling (Cloud): Fix compiler warnings in UI tests and app main to improve reliability and multi-tenant scaling (#11933).
