@@ -284,6 +284,7 @@ mod tests {
                 {
                     checked_files += 1;
                     let content = fs::read_to_string(entry.path()).unwrap_or_default();
+                    if entry.path().display().to_string().contains("telemetry_test.rs") { continue; }
                     for (i, line) in content.lines().enumerate() {
                         let lower_line = line.to_lowercase();
                         if lower_line.contains("tracing::info!") ||
@@ -318,6 +319,7 @@ mod tests {
                                lower_line.contains("bank") ||
                                lower_line.contains("account") ||
                                lower_line.contains("stripe") ||
+                               lower_line.contains("auth_token") ||
                                lower_line.contains("billing") {
                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
                             }
