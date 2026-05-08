@@ -11,7 +11,16 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+
+	"onehumancorp/srcs/server/orchestration/autodream"
 )
+
+func getMode() string {
+	if os.Getenv("OHC_MULTITENANT") == "true" {
+		return "Cloud"
+	}
+	return "Standalone"
+}
 
 type Memory struct {
 	OrganizationID string `yaml:"organization_id"`
@@ -54,11 +63,19 @@ func (w *AutoDreamWorker) handleDeadLetter(memoryDir, filePath string) {
 }
 
 func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir string) error {
+	start := time.Now()
+	mode := getMode()
+
+	defer func() {
+		autodream.BatchProcessingDuration.WithLabelValues(mode).Observe(time.Since(start).Seconds())
+	}()
+
 	entries, err := os.ReadDir(memoryDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
+		autodream.ConsolidationErrorsTotal.WithLabelValues(mode, "readdir_error").Inc()
 		return err
 	}
 
@@ -70,16 +87,19 @@ func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir 
 		filePath := filepath.Join(memoryDir, entry.Name())
 		data, err := os.ReadFile(filePath)
 		if err != nil {
+			autodream.ConsolidationErrorsTotal.WithLabelValues(mode, "read_file_error").Inc()
 			continue
 		}
 
 		var mem Memory
 		if err := yaml.Unmarshal(data, &mem); err != nil {
+			autodream.ConsolidationErrorsTotal.WithLabelValues(mode, "unmarshal_error").Inc()
 			w.handleDeadLetter(memoryDir, filePath)
 			continue
 		}
 
 		if mem.OrganizationID == "" || mem.Content == "" {
+			autodream.ConsolidationErrorsTotal.WithLabelValues(mode, "validation_error").Inc()
 			w.handleDeadLetter(memoryDir, filePath)
 			continue
 		}
@@ -100,9 +120,11 @@ func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir 
 
 		_, err = w.db.ExecContext(ctx, query, mem.OrganizationID, taskID, mem.Content, vecStr)
 		if err != nil {
+			autodream.ConsolidationErrorsTotal.WithLabelValues(mode, "db_insert_error").Inc()
 			return fmt.Errorf("failed to insert memory: %w", err)
 		}
 
+		autodream.MemoriesProcessedTotal.WithLabelValues(mode).Inc()
 		_ = os.Remove(filePath)
 	}
 
