@@ -93,6 +93,7 @@ thread_local! {
     static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
+    static GLOBAL_UNIFIED_INBOX: RefCell<Option<slint::Weak<app::UnifiedInbox>>> = RefCell::new(None);
     static GLOBAL_ANALYTICS_CHARTS: RefCell<Option<slint::Weak<app::AnalyticsCharts>>> = RefCell::new(None);
     static GLOBAL_BUSINESS_SHARE: RefCell<Option<slint::Weak<app::BusinessShare>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
@@ -111,6 +112,7 @@ thread_local! {
     static GLOBAL_INTEGRATIONS: RefCell<Option<slint::Weak<app::Integrations>>> = RefCell::new(None);
     static GLOBAL_REFERRALS: RefCell<Option<slint::Weak<app::Referrals>>> = RefCell::new(None);
     static GLOBAL_DASHBOARD: RefCell<Option<slint::Weak<app::Dashboard>>> = RefCell::new(None);
+    static GLOBAL_UNIFIED_INBOX: RefCell<Option<slint::Weak<app::UnifiedInbox>>> = RefCell::new(None);
     static GLOBAL_ANALYTICS_CHARTS: RefCell<Option<slint::Weak<app::AnalyticsCharts>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
     static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
@@ -1114,7 +1116,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let integrations_ui = app::Integrations::new()?;
     GLOBAL_INTEGRATIONS.with(|g| *g.borrow_mut() = Some(integrations_ui.as_weak()));
     integrations_ui.on_configure_integration(|id| {
-        let _id_clone = id.to_string(); tokio::spawn(async move { });
+        let id_str = id.to_string();
+        if id_str == "Facebook" || id_str == "Instagram" || id_str == "WhatsApp" {
+            GLOBAL_UNIFIED_INBOX.with(|inbox_ref| {
+                if let Some(inbox) = inbox_ref.borrow().as_ref().and_then(|i| i.upgrade()) {
+                    let mut current_convs = Vec::new();
+                    let current = inbox.get_conversations();
+                    for i in 0..current.row_count() {
+                        if let Some(item) = current.row_data(i) {
+                            current_convs.push(item);
+                        }
+                    }
+
+                    let channel_icon = match id_str.as_str() {
+                        "Facebook" => "📘",
+                        "Instagram" => "📷",
+                        "WhatsApp" => "💬",
+                        _ => "✉️",
+                    };
+
+                    current_convs.push(app::UiConversation {
+                        id: format!("conv-{}", current_convs.len() + 1).into(),
+                        customer_name: format!("{} User", id_str).into(),
+                        channel_icon: channel_icon.into(),
+                        last_message: format!("Hello from {}!", id_str).into(),
+                        unread: true,
+                        time: "Just now".into(),
+                    });
+                    inbox.set_conversations(slint::ModelRc::new(slint::VecModel::from(current_convs)));
+                    let _ = inbox.show();
+                }
+            });
+        }
+        tokio::spawn(async move { });
     });
     integrations_ui.on_invoke_tool(|id| {
         let _id_clone = id.to_string(); tokio::spawn(async move { });
@@ -2349,6 +2383,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let check_messages_called_clone = check_messages_called.clone();
 
                 let unified_inbox_ui = app::UnifiedInbox::new().unwrap();
+                GLOBAL_UNIFIED_INBOX.with(|g| *g.borrow_mut() = Some(unified_inbox_ui.as_weak()));
 
                 let conversations = vec![
                     app::UiConversation {
@@ -2392,7 +2427,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(ui) = unified_inbox_handle_select.upgrade() {
                         ui.set_active_conversation_id(id.clone());
 
-                        if id == "conv-1" {
+                        let current_convs = ui.get_conversations();
+                        let mut is_social_media = false;
+                        let mut platform_name = String::new();
+                        for i in 0..current_convs.row_count() {
+                            if let Some(conv) = current_convs.row_data(i) {
+                                if conv.id == id {
+                                    if conv.channel_icon == "📘" {
+                                        is_social_media = true;
+                                        platform_name = "Facebook".into();
+                                    } else if conv.channel_icon == "📷" && conv.customer_name != "Maya" {
+                                        is_social_media = true;
+                                        platform_name = "Instagram".into();
+                                    } else if conv.channel_icon == "💬" && conv.customer_name != "Fatima" {
+                                        is_social_media = true;
+                                        platform_name = "WhatsApp".into();
+                                    }
+                                }
+                            }
+                        }
+
+                        if is_social_media {
+                            let msgs = vec![
+                                app::UiInboxMessage {
+                                    id: "msg-1".into(),
+                                    author_name: format!("{} User", platform_name).into(),
+                                    body: format!("Hello from {}!", platform_name).into(),
+                                    is_me: false,
+                                    time: "Just now".into(),
+                                    is_quote: false,
+                                    quote_amount: "".into(),
+                                    quote_status: "".into(),
+                                }
+                            ];
+                            ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(msgs)));
+                        } else if id == "conv-1" {
                             let msgs = vec![
                                 app::UiInboxMessage {
                                     id: "msg-1".into(),
@@ -2500,6 +2569,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 unified_inbox_ui.on_send_message(move |text| {
                     if let Some(ui) = unified_inbox_handle_send.upgrade() {
                         if text.is_empty() { return; }
+
+                        // Handle reply based on active conversation
+                        let active_conv_id = ui.get_active_conversation_id().to_string();
+                        let current_convs = ui.get_conversations();
+                        let mut is_social_media = false;
+                        for i in 0..current_convs.row_count() {
+                            if let Some(conv) = current_convs.row_data(i) {
+                                if conv.id == active_conv_id {
+                                    if conv.channel_icon == "📘" || conv.channel_icon == "📷" || conv.channel_icon == "💬" {
+                                        is_social_media = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        if is_social_media {
+                           // Simulated send to original platform
+                           println!("Sending message back to original platform for conversation {}", active_conv_id);
+                        }
+
                         let mut current_msgs: Vec<app::UiInboxMessage> = ui.get_current_messages().iter().collect();
                         current_msgs.push(app::UiInboxMessage {
                             id: format!("msg-{}", current_msgs.len() + 1).into(),
