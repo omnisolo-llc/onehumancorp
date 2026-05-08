@@ -1,0 +1,142 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export struct UiPendingApproval {
+    task_id: string,
+    title: string,
+    proposed_content: string,
+    helper_name: string,
+}
+
+export component ActionCenter inherits Window {
+    preferred-width: 500px;
+    min-width: 375px;
+    height: 800px;
+    title: "Action Center";
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    in property <[UiPendingApproval]> pending_approvals;
+
+    callback close();
+    callback approve_task(string);
+    callback edit_task(string);
+
+    in-out property <string> editing_task_id: "";
+    in-out property <string> edit_content: "";
+
+    callback save_edited_task(string, string);
+    callback cancel_edit();
+
+    save_edited_task(id, content) => {
+        approve_task(id);
+        editing_task_id = "";
+        edit_content = "";
+    }
+
+    cancel_edit => {
+        editing_task_id = "";
+        edit_content = "";
+    }
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Action Center"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            Button { text: "Close"; clicked => { close(); } }
+        }
+
+        Text {
+            text: "Review and approve drafts from your AI team before they go live.";
+            font-size: 14px;
+            font-family: "Inter";
+            color: #cbd5e1;
+            wrap: word-wrap;
+        }
+
+        if (pending_approvals.length == 0) : VerticalBox {
+            alignment: center;
+            padding-top: 40px;
+            Text { text: "✅"; font-size: 48px; horizontal-alignment: center; }
+            Text { text: "You're all caught up!"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; horizontal-alignment: center; }
+            Text { text: "No pending tasks require your approval."; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center; }
+        }
+
+        if (pending_approvals.length > 0) : ScrollView {
+            VerticalBox {
+                spacing: 16px;
+
+                for approval in pending_approvals : GlassCard {
+                    border-color: rgba(255, 255, 255, 0.1);
+                    border-width: 1px;
+                    border-radius: 12px;
+
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 12px;
+
+                        HorizontalBox {
+                            spacing: 8px;
+                            alignment: start;
+                            Rectangle {
+                                width: 24px;
+                                height: 24px;
+                                background: #8b5cf6;
+                                border-radius: 12px;
+                                Text { text: "✨"; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                            }
+                            Text { text: approval.helper_name; color: #a855f7; font-weight: 700; font-size: 12px; vertical-alignment: center; }
+                        }
+
+                        VerticalBox {
+                            spacing: 4px;
+                            Text { text: approval.title; font-weight: 700; color: white; font-size: 16px; }
+
+                            if (editing_task_id != approval.task_id) : Text {
+                                text: approval.proposed_content;
+                                color: #cbd5e1;
+                                wrap: word-wrap;
+                                font-size: 14px;
+                            }
+
+                            if (editing_task_id == approval.task_id) : VerticalBox {
+                                spacing: 8px;
+                                LineEdit {
+                                    text <=> edit_content;
+                                    height: 100px;
+                                }
+                                HorizontalBox {
+                                    alignment: end;
+                                    spacing: 8px;
+                                    Button { text: "Cancel"; height: 44px; clicked => { cancel_edit(); } }
+                                    Button { text: "Save & Approve"; height: 44px; clicked => { save_edited_task(approval.task_id, edit_content); } }
+                                }
+                            }
+                        }
+
+                        if (editing_task_id != approval.task_id) : HorizontalBox {
+                            alignment: end;
+                            spacing: 10px;
+                            Button {
+                                text: "Edit";
+                                height: 44px;
+                                clicked => {
+                                    editing_task_id = approval.task_id;
+                                    edit_content = approval.proposed_content;
+                                }
+                            }
+                            Button {
+                                text: "Approve & Send";
+                                height: 44px;
+                                clicked => { approve_task(approval.task_id); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

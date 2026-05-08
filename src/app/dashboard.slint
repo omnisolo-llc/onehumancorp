@@ -7,13 +7,7 @@ import { StatCard } from "stat_card.slint";
 import { UpgradePrompt } from "./upgrade_prompt.slint";
 import { DailyBriefing } from "daily_briefing.slint";
 import { SwarmObservabilityPanel, SwarmActivity, SwarmAgentStatus } from "swarm_observability_panel.slint";
-
-export struct UiPendingApproval {
-    task_id: string,
-    title: string,
-    proposed_content: string,
-    helper_name: string,
-}
+import { ActionCenter, UiPendingApproval } from "action_center.slint";
 
 export struct UiRoleCount {
     role: string,
@@ -88,12 +82,24 @@ export component Dashboard inherits Window { // milestones
     in-out property <bool> show_advisory_hint: false;
     in-out property <bool> show_menu: false;
     in-out property <bool> show_swarm_observability: false;
+    in-out property <bool> show_action_center: false;
     in property <[SwarmActivity]> swarm_activities;
     in property <[SwarmAgentStatus]> swarm_agent_statuses;
 
     if (show_upgrade_prompt) : UpgradePrompt {
         message: root.upgrade_prompt_message;
         action_dismiss => { root.show_upgrade_prompt = false; }
+    }
+
+    if (show_action_center) : Rectangle {
+        width: parent.width;
+        height: parent.height;
+        z: 101;
+        ActionCenter {
+            pending_approvals: root.pending_approvals;
+            close => { root.show_action_center = false; }
+            approve_task(id) => { root.approve_task(id); }
+        }
     }
 
     Flickable {
@@ -352,52 +358,49 @@ export component Dashboard inherits Window { // milestones
                 }
             }
         }
-        if (pending_approvals.length > 0) : VerticalBox {
-            spacing: 16px;
-            Text { text: "Tasks for You to Approve"; font-size: 20px; font-weight: 700; color: white; }
 
-            for approval in pending_approvals : GlassCard {
-                border-color: rgba(255, 255, 255, 0.1);
-                border-width: 1px;
-                border-radius: 12px;
+        // Action Center Summary
+        GlassCard {
+            border-color: rgba(255, 255, 255, 0.1);
+            border-width: 1px;
+            border-radius: 12px;
+            background: rgba(139, 92, 246, 0.1);
 
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 12px;
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
 
-                    HorizontalBox {
-                        spacing: 8px;
-                        alignment: start;
-                        Rectangle {
-                            width: 24px;
-                            height: 24px;
-                            background: #8b5cf6;
-                            border-radius: 12px;
-                            Text { text: "✨"; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
-                        }
-                        Text { text: approval.helper_name; color: #a855f7; font-weight: 700; font-size: 12px; vertical-alignment: center; }
+                HorizontalBox {
+                    alignment: start;
+                    spacing: 8px;
+                    Text { text: "📥 Action Center"; font-size: 20px; font-weight: 700; color: white; vertical-alignment: center; }
+                    if (pending_approvals.length > 0) : Rectangle {
+                        width: 24px;
+                        height: 24px;
+                        background: #ef4444; // Red badge
+                        border-radius: 12px;
+                        Text { text: pending_approvals.length; color: white; font-size: 12px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
                     }
+                }
 
-                    VerticalBox {
-                        spacing: 4px;
-                        Text { text: approval.title; font-weight: 700; color: white; font-size: 16px; }
-                        Text { text: approval.proposed_content; color: #cbd5e1; wrap: word-wrap; font-size: 14px; }
-                    }
+                Text {
+                    text: pending_approvals.length > 0 ? "You have " + pending_approvals.length + " pending drafts requiring your approval." : "You're all caught up! No pending drafts.";
+                    color: #cbd5e1;
+                    font-size: 14px;
+                    wrap: word-wrap;
+                }
 
-                    HorizontalBox {
-                        alignment: end;
-                        spacing: 10px;
-                        Button { text: "Edit"; height: 44px; }
-                        Button {
-                            text: "Approve & Send";
-                            height: 44px;
-                            clicked => { approve_task(approval.task_id); }
-                        }
+                HorizontalBox {
+                    alignment: end;
+                    Button {
+                        text: pending_approvals.length > 0 ? "Review Tasks" : "Open Action Center";
+                        height: 44px;
+                        primary: pending_approvals.length > 0;
+                        clicked => { show_action_center = true; }
                     }
                 }
             }
         }
-
 
         // My Team
         Text { text: "My Team"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
