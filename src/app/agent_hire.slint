@@ -1,4 +1,6 @@
-import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit, Slider } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 
 export struct UiAgentProvider {
     type_: string,
@@ -15,6 +17,8 @@ export component AgentHire inherits Window {
     in-out property <string> selected_role: "";
     in-out property <string> selected_provider: "";
     in-out property <string> agent_name: "";
+    in-out property <bool> is_advanced: false;
+    in-out property <float> frequency_value: 50.0;
     
     out property <bool> next_enabled: step != 0 || selected_role != "";
     
@@ -25,95 +29,120 @@ export component AgentHire inherits Window {
     property <bool> cap_email: false;
     property <bool> cap_message: false;
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
 
-        Text { text: "Hire New Helper"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        HorizontalBox {
+            Text { text: "Hire New Helper"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { }
+            }
+        }
 
         // Step 0: Role
         if (step == 0) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Step 1 — Select Helper Role"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            spacing: 16px;
+            Text { text: "Step 1 — Select Helper Role"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
             
             HorizontalBox {
                 spacing: 10px;
-                for role in roles : Button {
-                    text: role;
-                    clicked => { selected_role = role; agent_name = "Senior " + role; }
+                for role in roles : GlassCard {
+                    width: 120px;
+                    height: 60px;
+                    background: selected_role == role ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: role; font-family: "Inter"; font-size: 14px; color: white; horizontal-alignment: center; }
+                    }
+                    TouchArea { clicked => { selected_role = role; agent_name = "Senior " + role; } }
                 }
             }
-            Text { text: "Selected: " + selected_role; color: #a855f7; }
+            Text { text: "Selected: " + selected_role; color: #a855f7; font-family: "Inter"; font-weight: 700; }
         }
 
         // Step 1: Provider
         if (step == 1) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Step 2 — Choose AI Provider"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            spacing: 16px;
+            Text { text: "Step 2 — Choose AI Provider"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
             
-            for p in providers : Button {
-                text: p.label;
-                clicked => { selected_provider = p.type_; }
+            VerticalBox {
+                spacing: 10px;
+                for p in providers : GlassCard {
+                    height: 60px;
+                    background: selected_provider == p.type_ ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox {
+                        alignment: center;
+                        padding: 12px;
+                        Text { text: p.label; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; }
+                    }
+                    TouchArea { clicked => { selected_provider = p.type_; } }
+                }
             }
-            Text { text: "Selected: " + selected_provider; color: #a855f7; }
+            Text { text: "Selected: " + selected_provider; color: #a855f7; font-family: "Inter"; font-weight: 700; }
         }
 
         // Step 2: Details
         if (step == 2) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Step 3 — Helper Details"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            spacing: 16px;
+            Text { text: "Step 3 — Helper Details"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
             LineEdit {
                 placeholder-text: "Helper Name";
                 text <=> agent_name;
+                height: 44px;
             }
         }
 
         // Step 3: Topology
         if (step == 3) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Step 4 — Sub-helper Topology"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            Text { text: "[ Topology visualization placeholder ]"; color: #64748b; horizontal-alignment: center; }
+            spacing: 16px;
+            Text { text: "Step 4 — Sub-helper Topology"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
+            if (is_advanced) : Text { text: "[ Topology visualization placeholder ]"; color: #94a3b8; horizontal-alignment: center; font-family: "Inter"; }
+            if (!is_advanced) : Text { text: "Topology visualization is available in Advanced Mode."; color: #94a3b8; horizontal-alignment: center; font-family: "Inter"; }
         }
 
         // Step 4: Capabilities
         if (step == 4) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Step 5 — Select Capabilities"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            spacing: 16px;
+            Text { text: "Step 5 — Select Capabilities"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
             HorizontalBox {
-                Text { text: "Read my emails"; color: #1e293b; }
+                Text { text: "Read my emails"; color: white; font-family: "Inter"; }
                 CheckBox { checked: cap_email; toggled => { cap_email = !cap_email; } }
             }
             HorizontalBox {
-                Text { text: "Send messages on my behalf"; color: #1e293b; }
+                Text { text: "Send messages on my behalf"; color: white; font-family: "Inter"; }
                 CheckBox { checked: cap_message; toggled => { cap_message = !cap_message; } }
             }
         }
 
         // Step 5: Limits
         if (step == 5) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Step 6 — Resource Limits"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            Text { text: "Max sessions per day: 50"; color: #1e293b; }
-            Text { text: "[ Slider ]"; color: #64748b; horizontal-alignment: center; }
+            spacing: 16px;
+            Text { text: "Step 6 — Resource Limits"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: "Max sessions per day: " + round(frequency_value); color: white; font-family: "Inter"; }
+            Slider {
+                minimum: 1.0;
+                maximum: 100.0;
+                value <=> frequency_value;
+                width: 100%;
+            }
         }
 
         // Step 6: Confirm
         if (step == 6) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Step 7 — Confirm Deployment"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
+            spacing: 16px;
+            Text { text: "Step 7 — Confirm Deployment"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
+            GlassCard {
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Name: " + agent_name; color: #1e293b; }
-                    Text { text: "Role: " + selected_role; color: #1e293b; }
-                    Text { text: "Provider: " + selected_provider; color: #1e293b; }
+                    spacing: 8px;
+                    Text { text: "Name: " + agent_name; color: white; font-family: "Inter"; }
+                    Text { text: "Role: " + selected_role; color: #94a3b8; font-family: "Inter"; }
+                    Text { text: "Provider: " + selected_provider; color: #94a3b8; font-family: "Inter"; }
                 }
             }
         }
@@ -122,19 +151,39 @@ export component AgentHire inherits Window {
 
         // Navigation
         HorizontalBox {
-            if (step > 0) : Button {
-                text: "Back";
-                clicked => { step = step - 1; }
+            if (step > 0) : GlassCard {
+                width: 80px;
+                height: 44px;
+                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { step = step - 1; } }
             }
+            if (step == 0) : Rectangle { width: 80px; } // Spacer
+
             Rectangle {} // Spacer
-            Button {
-                text: step == 6 ? "Deploy Helper" : "Next";
-                enabled: next_enabled;
-                clicked => {
-                    if (step < 6) {
-                        step = step + 1;
-                    } else {
-                        deploy_agent(agent_name, selected_role, selected_provider);
+
+            GlassCard {
+                width: 160px;
+                height: 44px;
+                background: next_enabled ? rgba(168, 85, 247, 0.8) : rgba(168, 85, 247, 0.2);
+                VerticalBox {
+                    alignment: center;
+                    Text {
+                        text: step == 6 ? "Deploy Helper" : "Next";
+                        font-family: "Inter";
+                        font-weight: 700;
+                        color: next_enabled ? white : #94a3b8;
+                        horizontal-alignment: center;
+                    }
+                }
+                TouchArea {
+                    clicked => {
+                        if (next_enabled) {
+                            if (step < 6) {
+                                step = step + 1;
+                            } else {
+                                deploy_agent(agent_name, selected_role, selected_provider);
+                            }
+                        }
                     }
                 }
             }

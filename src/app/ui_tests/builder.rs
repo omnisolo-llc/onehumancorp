@@ -34,6 +34,14 @@ fn create() -> app::WebsiteBuilder { crate::ui_tests::init(); app::WebsiteBuilde
     assert_eq!(ui.get_domain_choice(), domain);
 }
 
+#[test] fn builder_is_advanced_toggle() {
+    let ui = create();
+    ui.set_is_advanced(true);
+    assert!(ui.get_is_advanced());
+    ui.set_is_advanced(false);
+    assert!(!ui.get_is_advanced());
+}
+
 // --- Interaction / Flow Tests ---
 
 #[test] fn builder_flow_rapid_template_switch() {

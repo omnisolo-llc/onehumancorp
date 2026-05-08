@@ -94,3 +94,15 @@ fn create_verify_step() {
     ui.set_step(53);
     assert_eq!(ui.get_step(), 53);
 }
+
+#[test]
+fn create_verify_is_advanced_and_frequency() {
+    let ui = create();
+    ui.set_is_advanced(true);
+    assert!(ui.get_is_advanced());
+    ui.set_is_advanced(false);
+    assert!(!ui.get_is_advanced());
+
+    ui.set_frequency_value(25.0);
+    assert_eq!(ui.get_frequency_value(), 25.0);
+}
