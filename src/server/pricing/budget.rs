@@ -36,6 +36,15 @@ impl BudgetManager {
         let current = self.current.lock().unwrap();
         self.total_limit - *current
     }
+
+    pub fn get_remaining_cents(&self) -> i64 {
+        let current = self.current.lock().unwrap();
+        ((self.total_limit - *current) * 100.0).round() as i64
+    }
+
+    pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
+        self.record_spend((amount_cents as f64) / 100.0)
+    }
 }
 
 #[cfg(test)]
@@ -58,5 +67,10 @@ mod tests {
         
         let err = manager.record_spend(-10.0).unwrap_err();
         assert_eq!(err, "spend amount cannot be negative");
+
+        // test cents
+        assert!(manager.record_spend_cents(1000).is_ok()); // spend $10
+        assert_eq!(manager.get_remaining(), 40.0);
+        assert_eq!(manager.get_remaining_cents(), 4000);
     }
 }

@@ -34,6 +34,17 @@ impl PromptCache {
         None
     }
 
+    pub fn get_with_cost_cents(&self, prompt: &str) -> (Option<CachedResponse>, i64) {
+        let res = self.get(prompt);
+        let cost = if let Some(ref r) = res {
+            // very rough estimate of saved cents for cache hit
+            (r.token_count as f64 * 0.0001).round() as i64
+        } else {
+            0
+        };
+        (res, cost)
+    }
+
     pub fn set(&self, prompt: &str, response: &str, token_count: usize) {
         let mut cache = self.cache.lock().unwrap();
         cache.insert(prompt.to_string(), CachedResponse {
