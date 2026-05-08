@@ -62,6 +62,7 @@ pub struct AgentRunConfig {
     pub approved_tool_calls: Vec<String>,
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
+    pub enable_single_agent_maximization: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
@@ -105,6 +106,7 @@ impl Default for AgentRunConfig {
             approved_tool_calls: vec![],
             thread_id: None,
             resume_from_checkpoint_id: None,
+            enable_single_agent_maximization: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
             long_term_memory: None,
@@ -246,6 +248,16 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
+        // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
+        if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
+            let err_msg = "Task requires multi-agent split: >10 overlapping tools provided".to_string();
+
+            // Workaround to call the generic closure since _on_event is a generic F.
+            // Wait, we can just return the error directly.
+            return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
+        }
+
         // Add initial message if needed
         if !initial_message.is_empty() {
             initial_messages.push(Message::user(initial_message));
@@ -895,6 +907,14 @@ impl Agent {
         if cfg.enable_lazy_tool_loading {
             let active_tools_clone = active_tools.clone();
             session_tools.push(crate::tools::lazy_load::lazy_load_tool(active_tools_clone));
+        }
+
+        // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
+        // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
+        if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
+            let err_msg = "Task requires multi-agent split: >10 overlapping tools provided".to_string();
+            on_event(AgentEvent::TaskError { error: err_msg.clone() });
+            return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
         }
 
         // OpenAI Mechanic: Input Guardrails
@@ -2248,6 +2268,45 @@ mod tests {
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "Final Answer");
+    }
+
+    #[tokio::test]
+    async fn test_single_agent_maximization_metric() {
+        struct DummyToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for DummyToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("Dummy Tool Executed".to_string())
+            }
+        }
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![]),
+        });
+
+        // Create 11 tools to exceed the limit of 10
+        let mut tools = vec![];
+        for i in 0..11 {
+            tools.push(crate::tools::Tool {
+                name: format!("tool_{}", i),
+                description: "A tool".to_string(),
+                parameters: serde_json::Value::Null,
+                is_read_only: true,
+                execute: Arc::new(DummyToolExecutor),
+            });
+        }
+
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_single_agent_maximization = true;
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Start", &mut |e| events.push(e)).await;
+
+        assert!(res.is_err());
+        let err_str = res.unwrap_err().to_string();
+        assert!(err_str.contains("Handoff requested to: Task requires multi-agent split: >10 overlapping tools provided"));
     }
 
     #[tokio::test]
