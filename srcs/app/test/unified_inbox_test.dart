@@ -11,7 +11,14 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.tap(find.text('Get Started'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 2. Business Profile Screen
+  // 2. Administrator Account Screen (Step 1)
+  await tester.enterText(find.byKey(const Key('adminNameField')), 'John Doe');
+  await tester.enterText(find.byKey(const Key('adminEmailField')), 'john@acme.com');
+  await tester.enterText(find.byKey(const Key('adminPasswordField')), 'securePassword123');
+  await tester.tap(find.text('Next'));
+  await tester.pump(const Duration(milliseconds: 500));
+
+  // 3. Business Profile Screen (Step 2)
   await tester.enterText(find.byKey(const Key('companyNameField')), 'Acme Corp');
   await tester.tap(find.byKey(const Key('industryDropdown')));
   await tester.pump(const Duration(milliseconds: 500));
@@ -21,44 +28,78 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text('11-50').last);
   await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.text('Next'));
-  await tester.pump(const Duration(milliseconds: 500));
 
-  // 3. Goal Selection Screen
+  // Goal Selection
+  await tester.dragUntilVisible(
+    find.text('Build software'),
+    find.byType(ListView).first,
+    const Offset(0, -100),
+  );
+  await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text('Build software'));
   await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.text('Support'));
+
+  await tester.tap(find.text('Next'));
+  await tester.pump(const Duration(milliseconds: 500));
+
+  // 4. Selling Categories Screen (Step 3)
+  await tester.tap(find.text('Physical Products'));
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 4. Deployment Preference Screen
+  // 5. Deployment Preference Screen (Step 4)
   await tester.tap(find.text('Cloud'));
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 5. Administrator Account Screen
-  await tester.enterText(find.byKey(const Key('adminNameField')), 'John Doe');
-  await tester.enterText(find.byKey(const Key('adminEmailField')), 'john@acme.com');
-  await tester.enterText(find.byKey(const Key('adminPasswordField')), 'securePassword123');
+  // 6. Template Selection Screen (Step 5)
+  await tester.tap(find.text('Modern'));
+  await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 6. Review & Launch Screen
+  // 7. First Product Screen (Step 6)
+  await tester.enterText(find.byKey(const Key('productNameField')), 'Super Gadget');
+  await tester.enterText(find.byKey(const Key('productPriceField')), '99.99');
+  await tester.tap(find.text('Next'));
+  await tester.pump(const Duration(milliseconds: 500));
+
+  // 8. Domain Selection Screen (Step 7)
+  await tester.enterText(find.byKey(const Key('domainField')), 'acme-corp');
+  await tester.tap(find.text('Next'));
+  await tester.pump(const Duration(milliseconds: 500));
+
+  // 9. Review & Launch Screen (Step 8)
   final launchBtn = find.text('Launch My AI Team');
-  await tester.ensureVisible(launchBtn);
+  await tester.dragUntilVisible(
+    launchBtn,
+    find.byType(SingleChildScrollView).first,
+    const Offset(0, -100),
+  );
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(launchBtn);
+  await tester.pump();
 
   // Wait for pulse animation and API call
   await tester.pump(const Duration(seconds: 2));
+  await tester.pump(const Duration(seconds: 1));
+  await tester.pump(const Duration(seconds: 1));
+
+  // 10. Launch Success Confetti Screen (Still Step 8 but UI changed)
+  await tester.tap(find.text('View Welcome Checklist'));
+  await tester.pump(const Duration(seconds: 1));
+
+  // 11. Welcome Checklist (Step 9)
+  await tester.tap(find.text('Go to Dashboard'));
+  await tester.pump(const Duration(seconds: 1));
 
   // Dashboard is visible now. Avoid pumpAndSettle due to pulse animation running.
   // Wait explicitly instead
   await tester.pump(const Duration(seconds: 1));
 
-  // 7. Dashboard Screen
+  // 12. Dashboard Screen
   final inboxBtn = find.byKey(const Key('inboxBtn'));
   await tester.dragUntilVisible(
     inboxBtn,

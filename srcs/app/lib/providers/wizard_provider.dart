@@ -12,6 +12,22 @@ class WizardState {
   final String? adminEmail;
   final String? adminPassword;
 
+  final bool sellPhysical;
+  final bool sellDigital;
+  final bool sellServices;
+  final bool sellFood;
+  final bool sellSubscriptions;
+
+  final String? paymentPreference;
+  final String? websiteTemplate;
+
+  final String? productName;
+  final String? productDescription;
+  final String? productPrice;
+
+  final String? domainChoice;
+  final bool launchSuccess;
+
   WizardState({
     this.currentStep = 0,
     this.companyName,
@@ -22,6 +38,18 @@ class WizardState {
     this.adminName,
     this.adminEmail,
     this.adminPassword,
+    this.sellPhysical = false,
+    this.sellDigital = false,
+    this.sellServices = false,
+    this.sellFood = false,
+    this.sellSubscriptions = false,
+    this.paymentPreference,
+    this.websiteTemplate,
+    this.productName,
+    this.productDescription,
+    this.productPrice,
+    this.domainChoice,
+    this.launchSuccess = false,
   });
 
   WizardState copyWith({
@@ -34,6 +62,18 @@ class WizardState {
     String? adminName,
     String? adminEmail,
     String? adminPassword,
+    bool? sellPhysical,
+    bool? sellDigital,
+    bool? sellServices,
+    bool? sellFood,
+    bool? sellSubscriptions,
+    String? paymentPreference,
+    String? websiteTemplate,
+    String? productName,
+    String? productDescription,
+    String? productPrice,
+    String? domainChoice,
+    bool? launchSuccess,
   }) {
     return WizardState(
       currentStep: currentStep ?? this.currentStep,
@@ -45,6 +85,18 @@ class WizardState {
       adminName: adminName ?? this.adminName,
       adminEmail: adminEmail ?? this.adminEmail,
       adminPassword: adminPassword ?? this.adminPassword,
+      sellPhysical: sellPhysical ?? this.sellPhysical,
+      sellDigital: sellDigital ?? this.sellDigital,
+      sellServices: sellServices ?? this.sellServices,
+      sellFood: sellFood ?? this.sellFood,
+      sellSubscriptions: sellSubscriptions ?? this.sellSubscriptions,
+      paymentPreference: paymentPreference ?? this.paymentPreference,
+      websiteTemplate: websiteTemplate ?? this.websiteTemplate,
+      productName: productName ?? this.productName,
+      productDescription: productDescription ?? this.productDescription,
+      productPrice: productPrice ?? this.productPrice,
+      domainChoice: domainChoice ?? this.domainChoice,
+      launchSuccess: launchSuccess ?? this.launchSuccess,
     );
   }
 }
@@ -58,9 +110,7 @@ class WizardNotifier extends Notifier<WizardState> {
   }
 
   void nextStep() {
-    if (state.currentStep < 6) {
-      state = state.copyWith(currentStep: state.currentStep + 1);
-    }
+    state = state.copyWith(currentStep: state.currentStep + 1);
   }
 
   void prevStep() {
@@ -99,6 +149,50 @@ class WizardNotifier extends Notifier<WizardState> {
     );
   }
 
+  void setPaymentPreference(String preference) {
+    state = state.copyWith(paymentPreference: preference);
+  }
+
+  void toggleSellingCategory({
+    bool? physical,
+    bool? digital,
+    bool? services,
+    bool? food,
+    bool? subscriptions,
+  }) {
+    state = state.copyWith(
+      sellPhysical: physical ?? state.sellPhysical,
+      sellDigital: digital ?? state.sellDigital,
+      sellServices: services ?? state.sellServices,
+      sellFood: food ?? state.sellFood,
+      sellSubscriptions: subscriptions ?? state.sellSubscriptions,
+    );
+  }
+
+  void setWebsiteTemplate(String template) {
+    state = state.copyWith(websiteTemplate: template);
+  }
+
+  void setProductDetails({String? name, String? description, String? price}) {
+    state = state.copyWith(
+      productName: name ?? state.productName,
+      productDescription: description ?? state.productDescription,
+      productPrice: price ?? state.productPrice,
+    );
+  }
+
+  void setDomainChoice(String choice) {
+    state = state.copyWith(domainChoice: choice);
+  }
+
+  void markLaunchSuccess() {
+    state = state.copyWith(launchSuccess: true);
+  }
+
+  void reset() {
+    state = WizardState();
+  }
+
   Future<void> submitWizard() async {
     final data = {
       'companyName': state.companyName,
@@ -109,12 +203,22 @@ class WizardNotifier extends Notifier<WizardState> {
       'adminName': state.adminName,
       'adminEmail': state.adminEmail,
       'adminPassword': state.adminPassword,
+      'sellPhysical': state.sellPhysical,
+      'sellDigital': state.sellDigital,
+      'sellServices': state.sellServices,
+      'sellFood': state.sellFood,
+      'sellSubscriptions': state.sellSubscriptions,
+      'paymentPreference': state.paymentPreference,
+      'websiteTemplate': state.websiteTemplate,
+      'productName': state.productName,
+      'productDescription': state.productDescription,
+      'productPrice': state.productPrice,
+      'domainChoice': state.domainChoice,
     };
 
     await _apiService.submitBusinessData(data);
-
-    // Proceed to the dashboard
-    nextStep();
+    markLaunchSuccess();
+    // Proceed to checklist/dashboard handled by UI directly
   }
 }
 

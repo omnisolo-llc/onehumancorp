@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/unified_inbox_screen.dart';
 import 'screens/business_setup_wizard_screen.dart';
-
+import 'providers/wizard_provider.dart';
 
 void main() {
   runApp(const ProviderScope(child: OHCApp()));
@@ -53,11 +53,13 @@ class GlassContainer extends StatelessWidget {
   }
 }
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(wizardProvider);
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       body: Center(
@@ -66,7 +68,6 @@ class DashboardScreen extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: ListView(
-
               children: [
                 const SizedBox(height: 20),
                 const Text(
@@ -82,13 +83,13 @@ class DashboardScreen extends StatelessWidget {
                 GlassContainer(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         'Revenue',
                         style: TextStyle(fontSize: 14, color: Colors.white70),
                       ),
-                      SizedBox(height: 5),
-                      Text(
+                      const SizedBox(height: 5),
+                      const Text(
                         '\$0.00',
                         style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
@@ -99,19 +100,19 @@ class DashboardScreen extends StatelessWidget {
                 GlassContainer(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         "Welcome Checklist",
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
-                      SizedBox(height: 10),
-                      Text("✅ Business live", style: TextStyle(color: Colors.white)),
-                      SizedBox(height: 5),
-                      Text("⬜ Add 3 more products", style: TextStyle(color: Colors.white)),
-                      SizedBox(height: 5),
-                      Text("⬜ Connect Instagram", style: TextStyle(color: Colors.white)),
-                      SizedBox(height: 5),
-                      Text("⬜ Share your link with a friend", style: TextStyle(color: Colors.white)),
+                      const SizedBox(height: 10),
+                      Text("✅ Business live", style: const TextStyle(color: Colors.white)),
+                      const SizedBox(height: 5),
+                      Text("⬜ Add 3 more products", style: const TextStyle(color: Colors.white)),
+                      const SizedBox(height: 5),
+                      Text("⬜ Connect Instagram", style: const TextStyle(color: Colors.white)),
+                      const SizedBox(height: 5),
+                      Text("⬜ Share your link with a friend", style: const TextStyle(color: Colors.white)),
                     ],
                   ),
                 ),
