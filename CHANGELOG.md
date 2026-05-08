@@ -5,6 +5,15 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhance multi-tenant onboarding flow tests for the Welcome Checklist to ensure reliable scaling.
+
+### Privacy/Offline Improvements
+- Bolster Standalone Wizard state test coverage for improved offline reliability and progressive disclosure validation.
+
+
 ## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
 ### Cloud Scaling Improvements
 - Fix orchestration mesh tests that failed due to multiple declarations and invalid imports.
