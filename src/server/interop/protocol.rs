@@ -86,6 +86,20 @@ impl InteropProtocol {
         result
     }
 
+    /// Listens for state handoff updates
+    pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(proto::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let bus_handler = Box::new(move |msg: Message| {
+            if msg.topic == "system:state_handoff" {
+                use prost::Message as ProstMessage;
+                if let Ok(decoded) = proto::StateHandoff::decode(&msg.payload[..]) {
+                    handler(decoded);
+                }
+            }
+        });
+
+        self.bus.subscribe("system:state_handoff".to_string(), bus_handler).await
+    }
+
     /// Listens for HealthPings and sends HealthAcks
     pub async fn listen_for_pings(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let node_id = self.node_id.clone();
@@ -447,6 +461,26 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_interop_listen_for_state_handoff() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let protocol = InteropProtocol::new(bus.clone(), lock.clone(), "node1".to_string());
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let handler = Box::new(move |msg: proto::StateHandoff| {
+            if msg.mission_id == "mission_2" {
+                rx.store(true, Ordering::SeqCst);
+            }
+        });
+        let _cancel = protocol.listen_for_state_handoff(handler).await.unwrap();
+        protocol.handoff("mission_2", "tenant_2", vec![1, 2, 3]).await.unwrap();
+        sleep(Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
     async fn test_interop_dispatch_job_timeout() {
         let bus = Arc::new(MemoryBus::new());
         let lock = bus.clone();
@@ -603,7 +637,7 @@ mod tests {
         let bus = Arc::new(MemoryBus::new());
         let lock = bus.clone();
 
-        let protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+        let _protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
 
         // We simulate failure by causing a panic inside publish? No, MemoryBus never fails publish.
         // We can't easily mock MemoryBus publish failure here without changing MemoryBus.
