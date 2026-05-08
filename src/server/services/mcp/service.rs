@@ -77,6 +77,7 @@ impl McpService for MyMcpService {
         &self,
         request: Request<McpInvokeRequest>,
     ) -> Result<Response<McpInvokeResponse>, Status> {
+        let tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("").to_string()).unwrap_or_else(|| "system".to_string());
         let req = request.into_inner();
         
         if req.tool_id.is_empty() {
@@ -93,8 +94,7 @@ impl McpService for MyMcpService {
                 let content = params["content"].as_str().ok_or_else(|| Status::invalid_argument("content is required"))?;
                 let thread_id = params["thread_id"].as_str().unwrap_or_default();
 
-                let _tenant_id = request.metadata().get("x-tenant-id").map(|v| v.to_str().unwrap_or("").to_string()).unwrap_or_else(|| "system".to_string());
-                let msg = self.registry.send_chat_message(&req.tool_id, channel, from_agent, content, thread_id, &_tenant_id)
+                let msg = self.registry.send_chat_message(&req.tool_id, channel, from_agent, content, thread_id, &tenant_id)
                     .map_err(|e| Status::internal(e))?;
 
                 let resp_payload = serde_json::to_string(&msg).unwrap();

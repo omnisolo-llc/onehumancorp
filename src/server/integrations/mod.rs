@@ -16,3 +16,4 @@ pub mod ayrshare;
 pub mod cal_com;
 pub mod listmonk;
 pub mod easypost;
+pub mod jitsi;
