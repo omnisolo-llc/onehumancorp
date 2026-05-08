@@ -541,7 +541,7 @@ fn test_e2e_wizard_instant_build_flow() {
 #[test]
 fn fix_issue_wizard_state_progression() {
     crate::ui_tests::init();
-    let ui = crate::app::Wizard::new().unwrap();
+    let ui = crate::app::FixIssueWizard::new().unwrap();
 
     assert_eq!(ui.get_step(), 0);
     ui.invoke_next_step();
@@ -555,7 +555,7 @@ fn fix_issue_wizard_state_progression() {
 #[test]
 fn fix_issue_wizard_resolve_issue_callback() {
     crate::ui_tests::init();
-    let ui = crate::app::Wizard::new().unwrap();
+    let ui = crate::app::FixIssueWizard::new().unwrap();
     let callback_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let cc_clone = callback_called.clone();
 
