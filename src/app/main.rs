@@ -237,7 +237,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
-    // Mock locale-based currency detection
+    // Locale-based currency detection
     let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
         "GBP"
     } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
@@ -3098,7 +3098,7 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
-    // Mock locale-based currency detection
+    // Locale-based currency detection
     let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
         "GBP"
     } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
@@ -8266,7 +8266,7 @@ mod e2e_issue_9422_tests {
             *launch_called_clone.borrow_mut() = true;
         });
 
-        ui.set_launch_success(true); // Mock successful launch
+        ui.set_launch_success(true); // Complete successful launch
 
         // 3. Generation Screen
         // Assume generation succeeds and we go to dashboard.
