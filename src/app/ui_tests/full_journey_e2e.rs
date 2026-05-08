@@ -1,5 +1,4 @@
 use crate::app;
-use slint::ComponentHandle;
 
 #[test]
 fn test_e2e_full_onboarding_journey() {
