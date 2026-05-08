@@ -145,7 +145,6 @@ func TestTelemetrySyncEngine_SyncPendingMetrics_Failure(t *testing.T) {
 
 func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	// Mock the cloud endpoint
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -155,7 +154,6 @@ func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
 
 	engine := NewTelemetrySyncEngine(db, server.URL)
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	attrs := map[string]interface{}{"service": "agent"}
 	err := engine.BufferMetric(ctx, "test_metric_daemon", 12.0, attrs)
@@ -165,12 +163,21 @@ func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
 
 	go engine.StartSyncDaemon(ctx, 50*time.Millisecond)
 
-	// Wait for daemon to run
-	time.Sleep(200 * time.Millisecond)
-
 	var countSynced int
-	err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics WHERE synced_to_cloud = TRUE").Scan(&countSynced)
-	if err != nil || countSynced != 1 {
+	for i := 0; i < 20; i++ {
+		err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics WHERE synced_to_cloud = TRUE").Scan(&countSynced)
+		if err == nil && countSynced == 1 {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	cancel()
+	time.Sleep(50 * time.Millisecond) // Wait for goroutine to exit
+
+	if countSynced != 1 {
+		db.Close()
 		t.Fatalf("Expected 1 synced row after daemon run")
 	}
+	db.Close()
 }

@@ -193,21 +193,6 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	// Deduct tokens after successful execution (simulated)
-	deductTokens(task.OrganizationID, 100)
-
-	// Mark final completion status
-	finalData := map[string]interface{}{
-		"task_id":   task.ID,
-		"status":    "COMPLETED",
-		"timestamp": time.Now().Unix(),
-	}
-	finalBytes, _ := yaml.Marshal(finalData)
-	statusFile := filepath.Join(statusDir, fmt.Sprintf("%d.yml", time.Now().Unix()))
-	tempFile := statusFile + ".tmp"
-	_ = os.WriteFile(tempFile, finalBytes, 0644)
-	_ = os.Rename(tempFile, statusFile)
-
 	finalStatusFile := filepath.Join(statusDir, task.ID+".json")
 	finalStatusData := map[string]interface{}{
 		"task_id": task.ID,
@@ -215,6 +200,9 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 	}
 	finalStatusBytes, _ := json.Marshal(finalStatusData)
 	_ = os.WriteFile(finalStatusFile, finalStatusBytes, 0644)
+
+	// Deduct tokens after successful execution (simulated)
+	deductTokens(task.OrganizationID, 100)
 
 	return nil
 }
