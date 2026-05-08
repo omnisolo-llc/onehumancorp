@@ -51,7 +51,14 @@ fi
 echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 
 # Prune stale memory files (older than 60 mins) periodically to prevent unbounded growth
-(while true; do find "${OHC_MEMORY_DIR}" -type f -mmin +60 -delete > /dev/null 2>&1; sleep 3600; done) &
+(while true; do
+  find "${OHC_MEMORY_DIR}" -type f -mmin +60 -delete > /dev/null 2>&1
+  # Resource Cleanup: Also clean unbounded tmp, cache, and download directories
+  find "tmp/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  find ".cache/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  find "downloads/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  sleep 3600
+done) &
 PRUNE_PID=$!
 # Launch the API Server (local persistence)
 npx @bazel/bazelisk run //src/server:server &
