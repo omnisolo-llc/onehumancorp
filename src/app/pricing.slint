@@ -1,5 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 
 export struct UiPricingTier {
     name: string,
@@ -24,6 +25,9 @@ export component Pricing inherits Window {
 
     // Billing & Credits Wizard State
     in-out property <int> step: 0;
+    in-out property <bool> is_advanced: false;
+    callback toggle_advanced();
+    toggle_advanced => { }
     in property <string> current_usage: "450 / 1000 AI Actions";
     in property <string> projected_cost: "$9.00 / month";
     in property <float> usage_progress: 0.45;
@@ -80,7 +84,14 @@ export component Pricing inherits Window {
         padding: 24px;
         width: 100%;
 
-        Text { text: "Pricing & Billing"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+        HorizontalBox {
+            Text { text: "Pricing & Billing"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { toggle_advanced(); }
+            }
+        }
 
         HorizontalBox {
             spacing: 10px;
@@ -113,6 +124,11 @@ export component Pricing inherits Window {
 
         // Step 0: "What does this cost?" Flow
         if (step == 0) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Raw Configuration JSON"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "{\"current_usage\": \"" + current_usage + "\"}"; }
+            }
             spacing: 16px;
             Text { text: "Your Current Usage"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
 
@@ -212,6 +228,11 @@ export component Pricing inherits Window {
 
         // Step 1: Plans
         if (step == 1) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Override Tier Rules"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "[\"allow_custom_domains\"]"; }
+            }
             spacing: 16px;
             Text { text: "Upgrade Plan"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
 
