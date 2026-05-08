@@ -39,11 +39,11 @@ while true; do
         6)
             if ! command -v sqlite3 &> /dev/null; then
                 echo -e "${PURPLE}✗ sqlite3 is not installed. Please install it to perform the DB Health Check.${RESET}"
-            elif [ -f "local_standalone.db" ]; then
+            elif [ -f "$HOME/.ohc-local-data/standalone.db" ]; then
                 echo -e "${GREEN}✓ Standalone DB found. Checking tables...${RESET}"
-                sqlite3 "local_standalone.db" ".tables" || echo -e "${PURPLE}DB Check failed with exit status $?.${RESET}"
+                sqlite3 "$HOME/.ohc-local-data/standalone.db" ".tables" || echo -e "${PURPLE}DB Check failed with exit status $?.${RESET}"
             else
-                echo -e "${PURPLE}✗ local_standalone.db not found in the current directory.${RESET}"
+                echo -e "${PURPLE}✗ standalone.db not found in $HOME/.ohc-local-data/.${RESET}"
             fi
             ;;
         7) (set -e; bash "$SCRIPT_DIR/ohc-cloud-start.sh") || echo -e "${PURPLE}Cloud Start returned non-zero exit status ($?).${RESET}" ;;
