@@ -103,6 +103,12 @@ impl InteropProtocol {
         result
     }
 
+    /// Resumes a mission after a mode switch
+    pub async fn resume_mission(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
+        // Handoff uses the same mechanism to synchronize state
+        self.handoff(mission_id, tenant_id, state_payload).await
+    }
+
     /// Listens for state handoff updates
     pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(proto::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
@@ -432,6 +438,33 @@ mod tests {
         let is_acked = protocol_server.dispatch_job("job_1", "tenant_a", "do_work", vec![42], 500).await.unwrap();
 
         assert!(is_acked);
+    }
+
+    #[tokio::test]
+    async fn test_interop_resume_mission() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "system:state_handoff" {
+                use prost::Message as ProstMessage;
+                let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
+                if decoded.mission_id == "mission_resume_1" {
+                    rx.store(true, Ordering::SeqCst);
+                }
+            }
+        });
+
+        let _cancel = bus.subscribe("system:state_handoff".to_string(), handler).await.unwrap();
+
+        protocol.resume_mission("mission_resume_1", "tenant_1", vec![1, 2, 3]).await.unwrap();
+        sleep(Duration::from_millis(100)).await;
+
+        assert!(received.load(Ordering::SeqCst));
     }
 
     #[tokio::test]
