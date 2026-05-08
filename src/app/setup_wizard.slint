@@ -71,6 +71,7 @@ export component SetupWizard inherits Window {
     callback go_to_add_products();
     callback go_to_connect_instagram();
     callback go_to_share_link();
+    callback go_to_dashboard();
 
     callback next_step();
     callback select_business_type(string);
@@ -635,6 +636,11 @@ export component SetupWizard inherits Window {
                             height: 44px;
                             clicked => { copy_link(shareable_link); }
                         }
+                        Button {
+                            text: "Continue to Dashboard →";
+                            height: 44px;
+                            clicked => { root.go_to_dashboard(); }
+                        }
                     }
                 }
             }
@@ -791,7 +797,7 @@ export component SetupWizard inherits Window {
                 opacity: pulse_scale;
                 animate opacity { duration: 500ms; easing: ease-in-out; }
 
-                VerticalBox { alignment: center; Text { text: "Publish my business"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: "Launch My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
                     launching = true; copy_link(shareable_link);
                     launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password, price_type);
@@ -801,30 +807,15 @@ export component SetupWizard inherits Window {
             if (step == 9 && launch_success) : GlassCard {
                 height: 54px;
                 background: rgba(168, 85, 247, 1.0);
-                VerticalBox { alignment: center; Text { text: "View Live Storefront →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = 100; } }
-            }
-
-            if (step == 9 && launch_success) : GlassCard {
-                height: 54px;
-                background: rgba(16, 185, 129, 1.0);
-                VerticalBox { alignment: center; Text { text: "View Welcome Checklist →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = 10; } }
-            }
-
-            if (step == 10) : GlassCard {
-                height: 54px;
-                background: rgba(168, 85, 247, 1.0);
                 VerticalBox { alignment: center; Text { text: "Go to Dashboard →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                // In a real app, this goes to the dashboard
-                TouchArea { clicked => { root.show_welcome_checklist(); } }
+                TouchArea { clicked => { root.go_to_dashboard(); } }
             }
 
             if (step == 100) : GlassCard {
                 height: 54px;
                 background: rgba(168, 85, 247, 1.0);
-                VerticalBox { alignment: center; Text { text: "Continue to Setup Checklist →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { root.show_welcome_checklist(); } }
+                VerticalBox { alignment: center; Text { text: "Continue to Dashboard →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { root.go_to_dashboard(); } }
             }
         }
     }
