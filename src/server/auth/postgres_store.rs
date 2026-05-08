@@ -319,12 +319,13 @@ impl UserRepository for PgUserRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO revoked_tokens (jti, expires_at) VALUES ($1, $2)
+            INSERT INTO revoked_tokens (jti, expires_at, organization_id) VALUES ($1, $2, $3)
             ON CONFLICT (jti) DO NOTHING
             "#
         )
         .bind(jti)
         .bind(exp)
+        .bind(org_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
@@ -343,8 +344,9 @@ impl UserRepository for PgUserRepository {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP")
+        let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND organization_id = $2 AND expires_at >= CURRENT_TIMESTAMP")
             .bind(jti)
+            .bind(org_id)
             .fetch_one(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
