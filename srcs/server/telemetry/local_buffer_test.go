@@ -72,7 +72,7 @@ func TestTelemetrySyncEngine_SyncPendingMetrics(t *testing.T) {
 		if pt.MetricName != "test_metric" {
 			t.Errorf("Expected metric name 'test_metric', got '%s'", pt.MetricName)
 		}
-		w.WriteHeader(http.StatusOK)
+		var reqBody map[string]interface{}; json.NewDecoder(r.Body).Decode(&reqBody); w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 
@@ -149,7 +149,7 @@ func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
 
 	// Mock the cloud endpoint
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+		var reqBody map[string]interface{}; json.NewDecoder(r.Body).Decode(&reqBody); w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 
