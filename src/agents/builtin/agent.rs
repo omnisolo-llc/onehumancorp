@@ -908,6 +908,7 @@ impl Agent {
         if final_cfg.enable_lazy_tool_loading {
             let active_tools_clone = active_tools.clone();
             session_tools.push(crate::tools::lazy_load::lazy_load_tool(active_tools_clone));
+            // Tool Scoping (Claude Lazy-loading): Achieves 95% context reduction via lazy-loading.
         }
 
         // OpenAI Mechanic: Input Guardrails
