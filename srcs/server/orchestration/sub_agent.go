@@ -208,6 +208,14 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 	_ = os.WriteFile(tempFile, finalBytes, 0644)
 	_ = os.Rename(tempFile, statusFile)
 
+	finalStatusFile := filepath.Join(statusDir, task.ID+".json")
+	finalStatusData := map[string]interface{}{
+		"task_id": task.ID,
+		"status":  "COMPLETED",
+	}
+	finalStatusBytes, _ := json.Marshal(finalStatusData)
+	_ = os.WriteFile(finalStatusFile, finalStatusBytes, 0644)
+
 	return nil
 }
 
