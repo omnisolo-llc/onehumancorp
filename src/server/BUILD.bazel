@@ -61,6 +61,7 @@ rust_library(
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
         "@crates//:uuid",
+        "@crates//:image",
         "@crates//:walkdir",
     ],
 )
@@ -141,6 +142,7 @@ rust_test(
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
         "@crates//:uuid",
+        "@crates//:image",
         "@crates//:axum",
         "@crates//:async-nats",
         "@crates//:walkdir",

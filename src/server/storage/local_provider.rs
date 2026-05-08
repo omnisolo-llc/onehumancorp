@@ -111,11 +111,18 @@ impl Provider for LocalProvider {
 
         let mut final_data = data.to_vec();
 
-        // Auto-compression to WebP mock for images
+        // Auto-compression to WebP for images
         let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") || key.ends_with(".webp");
         if is_image && data.len() > 100 {
-            // Mock compression: reduce size by 80% (truncate to 20%) to simulate WebP conversion
-            final_data.truncate(data.len() / 5);
+            if let Ok(img) = image::load_from_memory(data) {
+                let mut buf = Vec::new();
+                let mut cursor = std::io::Cursor::new(&mut buf);
+                if img.write_to(&mut cursor, image::ImageFormat::WebP).is_ok() {
+                    if buf.len() < final_data.len() {
+                        final_data = buf;
+                    }
+                }
+            }
         }
 
         // Quota Enforcement
