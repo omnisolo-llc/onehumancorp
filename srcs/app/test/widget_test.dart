@@ -10,7 +10,13 @@ void main() {
 
     // 1. Welcome Screen
     expect(find.text('Welcome to One Human Corp'), findsOneWidget);
-    await tester.tap(find.text('Get Started'));
+    final emailField = find.byKey(const Key('signupEmailField'));
+    await tester.ensureVisible(emailField);
+    await tester.enterText(emailField, 'newuser@example.com');
+    await tester.enterText(find.byKey(const Key('signupPasswordField')), 'password123');
+    final signupBtn = find.byKey(const Key('signupBtn'));
+    await tester.ensureVisible(signupBtn);
+    await tester.tap(signupBtn);
     await tester.pump(const Duration(milliseconds: 500));
 
     // 2. Business Profile Screen
@@ -89,13 +95,13 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     // await tester.pumpAndSettle();
 
-    // 8. Dashboard Screen
+    // 11. Dashboard Screen
     expect(find.text("Dashboard"), findsOneWidget);
     expect(find.text("Welcome Checklist"), findsOneWidget);
-    expect(find.text("✅ Business live"), findsOneWidget);
-    expect(find.text("⬜ Add 3 more products"), findsOneWidget);
-    expect(find.text("⬜ Connect Instagram"), findsOneWidget);
-    expect(find.text("⬜ Share your link with a friend"), findsOneWidget);
+    expect(find.text("Business live"), findsOneWidget);
+    expect(find.text("Add 3 more products"), findsOneWidget);
+    expect(find.text("Connect Instagram"), findsOneWidget);
+    expect(find.text("Share your link with a friend"), findsOneWidget);
     expect(find.text("Pending Agent Approvals"), findsOneWidget);
   });
 }

@@ -121,19 +121,52 @@ class DashboardScreen extends StatelessWidget {
                 GlassContainer(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         "Welcome Checklist",
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
-                      SizedBox(height: 10),
-                      Text("✅ Business live", style: TextStyle(color: Colors.white)),
-                      SizedBox(height: 5),
-                      Text("⬜ Add 3 more products", style: TextStyle(color: Colors.white)),
-                      SizedBox(height: 5),
-                      Text("⬜ Connect Instagram", style: TextStyle(color: Colors.white)),
-                      SizedBox(height: 5),
-                      Text("⬜ Share your link with a friend", style: TextStyle(color: Colors.white)),
+                      const SizedBox(height: 10),
+                      const Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 18),
+                          SizedBox(width: 8),
+                          Text("Business live", style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      InkWell(
+                        onTap: () { /* Add product flow */ },
+                        child: const Row(
+                          children: [
+                            Icon(Icons.radio_button_unchecked, color: Colors.white70, size: 18),
+                            SizedBox(width: 8),
+                            Text("Add 3 more products", style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      InkWell(
+                        onTap: () { /* Connect Instagram flow */ },
+                        child: const Row(
+                          children: [
+                            Icon(Icons.radio_button_unchecked, color: Colors.white70, size: 18),
+                            SizedBox(width: 8),
+                            Text("Connect Instagram", style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      InkWell(
+                        onTap: () { /* Share link flow */ },
+                        child: const Row(
+                          children: [
+                            Icon(Icons.radio_button_unchecked, color: Colors.white70, size: 18),
+                            SizedBox(width: 8),
+                            Text("Share your link with a friend", style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
