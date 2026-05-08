@@ -1,0 +1,35 @@
+{
+  "title": "Tenant Costs Dashboard",
+  "panels": [
+    {
+      "title": "LLM Cost Rate (per agent)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_llm_cost_total[5m])) by (agent_id)",
+          "legendFormat": "{{agent_id}} LLM Cost/sec"
+        }
+      ]
+    },
+    {
+      "title": "Compute Cost Rate (per agent)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_compute_cost_total[5m])) by (agent_id)",
+          "legendFormat": "{{agent_id}} Compute Cost/sec"
+        }
+      ]
+    },
+    {
+      "title": "Storage Savings Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_storage_savings_total[5m]))",
+          "legendFormat": "Global Storage Savings/sec"
+        }
+      ]
+    }
+  ]
+}

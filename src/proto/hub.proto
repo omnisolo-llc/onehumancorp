@@ -1217,6 +1217,7 @@ message AgentCostSummary {
   double roi = 3;
   double efficiency = 4;
   float pct = 5;
+  string storage_usage = 6;
 }
 
 message DashboardSnapshot {
