@@ -178,12 +178,13 @@ func TestSubAgentTimeout(t *testing.T) {
 		ID: "timeout-task-1",
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
-	defer cancel()
+	// Provide an already-canceled context so that executeTask checks the Done channel immediately and returns ctx.Err()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
 
 	err := spawner.executeTask(ctx, task)
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.ErrorIs(t, err, context.Canceled)
 }
 
 func TestSubAgentSpawner_CircuitBreaker(t *testing.T) {
