@@ -1,3 +1,4 @@
+use crate::orchestration::departments::memory::layer::MemoryLayer;
 use std::sync::Arc;
 use crate::db::DB;
 use std::time::Duration;
@@ -9,25 +10,28 @@ use serde_json::json;
 pub struct OperationsWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
+    pub memory_layer: Option<Arc<MemoryLayer>>,
 }
 
 impl OperationsWorker {
-    pub fn new(db: Arc<DB>) -> Self {
+    pub fn new(db: Arc<DB>, memory_layer: Option<Arc<MemoryLayer>>) -> Self {
         Self {
             db,
             poll_interval: Duration::from_secs(5),
+            memory_layer,
         }
     }
 
     pub fn start(&self) {
         let db = self.db.clone();
         let interval_duration = self.poll_interval;
+        let memory_layer = self.memory_layer.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(interval_duration);
             loop {
                 interval.tick().await;
                 loop {
-                    match Self::poll(&db).await {
+                    match Self::poll(&db, memory_layer.as_deref()).await {
                         Ok(true) => continue, // keep polling until queue is empty
                         Ok(false) => break,
                         Err(e) => {
@@ -40,7 +44,7 @@ impl OperationsWorker {
         });
     }
 
-    pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
+    pub async fn poll(db: &Arc<DB>, memory_layer: Option<&MemoryLayer>) -> Result<bool, String> {
         let task = match &db.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
@@ -220,6 +224,24 @@ impl OperationsWorker {
                         .execute(sqlite_pool)
                         .await
                         .map_err(|e| e.to_string())?;
+
+                    if let Some(ml) = memory_layer {
+                        let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id: tenant_id.clone(),
+                            agent_id: "operations".to_string(),
+                            content: format!("Processed event"),
+                            embedding: vec![],
+                            source_type: "OPERATIONS_TASK".to_string(),
+                            created_at: chrono::Utc::now(),
+                            last_referenced_at: chrono::Utc::now(),
+                            reference_count: 0,
+                            reliability_score: 50,
+                            owner_override: false,
+                            metadata: None,
+                        };
+                        ml.store_context(record);
+                    }
                 }
             }
         }
@@ -296,7 +318,7 @@ mod tests {
                 .execute(pool).await.unwrap();
         }
 
-        let processed = OperationsWorker::poll(&db).await.unwrap();
+        let processed = OperationsWorker::poll(&db, None).await.unwrap();
         assert!(processed);
 
         if let DbStore::Sqlite(pool) = &db.store {
@@ -323,7 +345,7 @@ mod tests {
                 .execute(pool).await.unwrap();
         }
 
-        let processed = CustomerSuccessWorker::poll(&db).await.unwrap();
+        let processed = CustomerSuccessWorker::poll(&db, None).await.unwrap();
         assert!(processed);
 
         if let DbStore::Sqlite(pool) = &db.store {
@@ -344,25 +366,28 @@ mod tests {
 pub struct CustomerSuccessWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
+    pub memory_layer: Option<Arc<MemoryLayer>>,
 }
 
 impl CustomerSuccessWorker {
-    pub fn new(db: Arc<DB>) -> Self {
+    pub fn new(db: Arc<DB>, memory_layer: Option<Arc<MemoryLayer>>) -> Self {
         Self {
             db,
             poll_interval: Duration::from_secs(5),
+            memory_layer,
         }
     }
 
     pub fn start(&self) {
         let db = self.db.clone();
         let interval_duration = self.poll_interval;
+        let memory_layer = self.memory_layer.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(interval_duration);
             loop {
                 interval.tick().await;
                 loop {
-                    match Self::poll(&db).await {
+                    match Self::poll(&db, memory_layer.as_deref()).await {
                         Ok(true) => continue, // keep polling until queue is empty
                         Ok(false) => break,
                         Err(e) => {
@@ -375,7 +400,7 @@ impl CustomerSuccessWorker {
         });
     }
 
-    pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
+    pub async fn poll(db: &Arc<DB>, memory_layer: Option<&MemoryLayer>) -> Result<bool, String> {
         let task = match &db.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
@@ -496,6 +521,24 @@ impl CustomerSuccessWorker {
                         .execute(sqlite_pool)
                         .await
                         .map_err(|e| e.to_string())?;
+
+                    if let Some(ml) = memory_layer {
+                        let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id: tenant_id.clone(),
+                            agent_id: "customer_success".to_string(),
+                            content: format!("Drafted message: {}", drafted_msg),
+                            embedding: vec![],
+                            source_type: "CS_TASK".to_string(),
+                            created_at: chrono::Utc::now(),
+                            last_referenced_at: chrono::Utc::now(),
+                            reference_count: 0,
+                            reliability_score: 50,
+                            owner_override: false,
+                            metadata: None,
+                        };
+                        ml.store_context(record);
+                    }
                 }
             }
         }
