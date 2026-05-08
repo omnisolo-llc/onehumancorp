@@ -35,11 +35,11 @@ func NewAuditSyncTool(db interface{ Exec(context.Context, string, ...interface{}
 func (t *AuditSyncTool) SyncAuditLogsToCloud(ctx context.Context, payloadStr string) error {
 	var payload AuditSyncPayload
 	if err := json.Unmarshal([]byte(payloadStr), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal payload: %w", err)
+		return fmt.Errorf("failed to unmarshal request: %w", err)
 	}
 
 	if payload.TenantID == "" || payload.AgentID == "" || payload.Action == "" || payload.Resource == "" || payload.Status == "" {
-		return fmt.Errorf("invalid payload: missing required fields")
+		return fmt.Errorf("invalid request: missing required fields")
 	}
 
 	id := uuid.New().String()
