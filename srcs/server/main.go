@@ -97,6 +97,11 @@ func main() {
 
 	mux.HandleFunc("/api/dashboard/onboarding/metrics", dashboard.HandleOnboardingMetrics)
 
+	mux.HandleFunc("/api/v1/stream", dashboard.HandleStream)
+	mux.HandleFunc("/api/v1/autodream/sync", dashboard.HandleAutoDreamSync)
+	mux.HandleFunc("/api/v1/autodream/query", dashboard.HandleAutoDreamQuery)
+	mux.HandleFunc("/api/mesh/broadcast", dashboard.HandleMeshBroadcast)
+
 	go func() {
 		log.Println("Listening on :8080...")
 		if err := http.ListenAndServe(":8080", mux); err != nil {
