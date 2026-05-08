@@ -8,7 +8,6 @@ use crate::auth::AuthMode;
 use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
 };
-use crate::memory::inject_memories_into_prompt;
 use crate::memory_store::{VectorRepository, EmbeddingRecord};
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
@@ -21,6 +20,22 @@ use ohc_builtin_agent_tools::{
 use crate::departments::{Department, get_department_config};
 use std::str::FromStr;
 use tokio::sync::RwLock;
+
+pub fn inject_memories_into_prompt(memories: &[crate::memory_store::EmbeddingRecord], system_prompt: &str) -> String {
+    if memories.is_empty() {
+        return system_prompt.to_string();
+    }
+    let mut s = String::new();
+    s.push_str("## Relevant past experience\n");
+    for m in memories {
+        s.push_str("- ");
+        s.push_str(&m.content);
+        s.push('\n');
+    }
+    s.push_str("\n---\n\n");
+    s.push_str(system_prompt);
+    s
+}
 
 pub const DEFAULT_ADDRESS: &str = "127.0.0.1:50051";
 const AGENT_VERSION: &str = "1.0.0";
@@ -270,16 +285,7 @@ impl AgentServiceImpl {
             } else {
                 vec![]
             };
-            store.semantic_search(&org_id, &embedding, 5).await.map(|records| {
-                records.into_iter().map(|r| crate::memory::MemoryEntry {
-                    memory_id: r.id,
-                    context: r.content,
-                    embedding: None,
-                    source_plugin: Some(r.source_type),
-                    created_at: r.created_at,
-                    organization_id: r.tenant_id,
-                }).collect::<Vec<_>>()
-            }).unwrap_or_default()
+            store.semantic_search(&org_id, &embedding, 5).await.unwrap_or_default()
         } else {
             vec![]
         };
