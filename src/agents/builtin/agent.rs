@@ -66,6 +66,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_single_agent_maximization: bool,
+    pub enable_vercel_tool_scoping_metric: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
     pub enable_time_travel_rewind: bool,
@@ -114,6 +115,7 @@ enable_llmcompiler_plan_and_execute: false,
             thread_id: None,
             resume_from_checkpoint_id: None,
             enable_single_agent_maximization: false,
+            enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
             enable_time_travel_rewind: false,
@@ -982,6 +984,12 @@ impl Agent {
         }
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
+
+        // Tool Scoping: *Vercel Metric:* Removed 80% of tools from v0 for better results.
+        if final_cfg.enable_vercel_tool_scoping_metric && session_tools.len() > 5 {
+            let keep_count = (session_tools.len() as f64 * 0.2).max(1.0) as usize;
+            session_tools.truncate(keep_count);
+        }
 
         if final_cfg.enable_lazy_tool_loading {
             let active_tools_clone = active_tools.clone();
