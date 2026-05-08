@@ -6,10 +6,12 @@ debt_report: |
   -   Verified the Swarm Dashboard and identified multiple stagnant/blocked missions in `.agent-task/missions/`.
   ## Phase 2: Hygiene
   -   Sanitized the mission backlog by permanently failing `STUCK` missions to ensure no stuck missions persist in endless retry loops.
+  -   Removed noisy `tracing` and `println!` logging to restore zero-noise mandate.
   ## Phase 3: Architectural Audit
   -   Confirmed no recent commits violated Zero Trust or SPIRE principles.
   ## Phase 4: Verify
   -   Ran global test suite (`bazelisk test //...`) to ensure all tests pass.
+  -   Augmented `hub.check_health()` to explicitly include probes for hybrid-mode switching and local-to-cloud mission sync backlog.
   ## Health Status
   -   **Status:** Clean
   -   **Debt Level:** Low

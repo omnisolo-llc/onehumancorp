@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 
+use crate::utils::auth_utils::set_org_context;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
@@ -11,7 +12,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use sqlx::Row;
-use crate::utils::auth_utils::set_org_context;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Job {
@@ -860,7 +860,6 @@ impl TaskQueue for SqliteTaskQueue {
 
         if let Some(row) = row {
             use sqlx::Row;
-use crate::utils::auth_utils::set_org_context;
             let id: String = row.get("id");
             let tenant_id: String = row.get("tenant_id");
             let task_id: String = row.get("task_id");
