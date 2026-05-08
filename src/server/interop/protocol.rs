@@ -757,7 +757,6 @@ mod tests {
             target_mode: 0,
             timestamp_ms: 1000,
             state_snapshot_json: vec![1, 2, 3],
-            entity_type: "".to_string(),
         };
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
