@@ -4,6 +4,7 @@ go_library(
     name = "harness",
     srcs = [
         "macos_sandbox.go",
+        "assistant_sandbox.go",
         "bwrap_sandbox.go",
     ],
     importpath = "onehumancorp/srcs/server/orchestration/harness",
@@ -17,6 +18,7 @@ go_test(
     name = "harness_test",
     srcs = [
         "macos_sandbox_test.go",
+        "assistant_sandbox_test.go",
         "bwrap_sandbox_test.go",
     ],
     embed = [":harness"],
