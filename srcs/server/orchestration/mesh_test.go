@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"net/http"
+	"net/http/httptest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -88,7 +90,12 @@ func TestLocalTeammateMesh_UnsubscribeOnContextDone(t *testing.T) {
 }
 
 func TestCentrifugeMesh_PublishSubscribe(t *testing.T) {
-	mesh := NewCentrifugeMesh()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	mesh := NewCentrifugeMesh(ts.URL)
 
 	ctx := context.Background()
 	channel := "test_channel"
