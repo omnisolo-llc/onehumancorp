@@ -1,4 +1,4 @@
-use slint::Model;
+
 #[test]
 fn test_e2e_help_center_navigation_flow() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
