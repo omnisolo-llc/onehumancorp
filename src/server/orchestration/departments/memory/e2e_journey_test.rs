@@ -137,3 +137,80 @@ async fn test_full_consolidated_memory_e2e_journey() {
     assert_eq!(winner.content, "Maya's cake price is $55", "Operations should correctly see the latest $55 price");
     assert_eq!(winner.agent_id, "sales_agent", "Operations queried a record successfully created by Sales");
 }
+
+#[tokio::test]
+async fn test_tenant_isolation_e2e_journey() {
+    let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
+    let pool = SqlitePoolOptions::new()
+        .connect_with(conn_opts)
+        .await
+        .expect("Failed to connect to SQLite in-memory database");
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            agent_id TEXT,
+            content TEXT NOT NULL,
+            embedding TEXT,
+            source_type TEXT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            reference_count INTEGER DEFAULT 0,
+            reliability_score INTEGER DEFAULT 50,
+            owner_override BOOLEAN DEFAULT FALSE,
+            metadata TEXT
+        );"
+    )
+    .execute(&pool)
+    .await
+    .expect("Failed to create consolidated_memory table");
+
+    let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
+
+    let now = chrono::Utc::now();
+
+    // 1. Tenant A (Maya's Bakery) memory
+    let tenant_a_record = EmbeddingRecord {
+        id: "maya_secret_recipe_1".to_string(),
+        tenant_id: "maya_bakery".to_string(),
+        agent_id: "operations_agent".to_string(),
+        content: "Secret ingredient for chocolate cake is espresso powder.".to_string(),
+        embedding: vec![0.5, 0.5, 0.5],
+        source_type: "NOTES".to_string(),
+        created_at: now,
+        last_referenced_at: now,
+        reference_count: 1,
+        reliability_score: 99,
+        owner_override: true,
+        metadata: None,
+    };
+    repo.upsert(&tenant_a_record).await.expect("Failed to upsert Tenant A record");
+
+    // 2. Tenant B (Bob's Burgers) memory
+    let tenant_b_record = EmbeddingRecord {
+        id: "bob_secret_recipe_1".to_string(),
+        tenant_id: "bobs_burgers".to_string(),
+        agent_id: "operations_agent".to_string(),
+        content: "Secret ingredient for burgers is extra salt.".to_string(),
+        embedding: vec![0.5, 0.5, 0.5],
+        source_type: "NOTES".to_string(),
+        created_at: now,
+        last_referenced_at: now,
+        reference_count: 1,
+        reliability_score: 99,
+        owner_override: true,
+        metadata: None,
+    };
+    repo.upsert(&tenant_b_record).await.expect("Failed to upsert Tenant B record");
+
+    // Verify Tenant A search only gets Tenant A records
+    let results_a = repo.cross_department_search("maya_bakery", &[0.5, 0.5, 0.5], 10).await.expect("Tenant A search failed");
+    assert_eq!(results_a.len(), 1, "Tenant A should only see 1 record");
+    assert_eq!(results_a[0].id, "maya_secret_recipe_1", "Tenant A should see their own record");
+
+    // Verify Tenant B search only gets Tenant B records
+    let results_b = repo.cross_department_search("bobs_burgers", &[0.5, 0.5, 0.5], 10).await.expect("Tenant B search failed");
+    assert_eq!(results_b.len(), 1, "Tenant B should only see 1 record");
+    assert_eq!(results_b[0].id, "bob_secret_recipe_1", "Tenant B should see their own record");
+}
