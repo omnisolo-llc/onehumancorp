@@ -1,5 +1,4 @@
 use crate::app;
-use slint::ComponentHandle;
 
 #[test]
 fn test_business_manager_cuj_lens_audit() {
