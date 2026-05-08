@@ -2165,26 +2165,61 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Ok(token) = std::env::var("OHC_TOKEN") {
                     req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
                 }
-                let _ = client.select_plan(req).await;
+                if let Ok(resp) = client.select_plan(req).await {
+                    let checkout_url = resp.into_inner().checkout_url;
+                    if !checkout_url.is_empty() {
+                        open_url(&checkout_url);
+                    }
+                }
             }
         }).unwrap();
     });
 
 
     my_plan_ui.on_view_history(move || {
-        // Handle view history (e.g. open an invoice history modal or trigger backend flow)
+        open_url("https://billing.stripe.com/p/history/...");
     });
 
-    my_plan_ui.on_cancel_subscription(move || {
-        // Handle cancel subscription (e.g. Stripe API call)
+    my_plan_ui.on_cancel_subscription({
+        let my_plan_handle_inner = my_plan_handle.clone();
+        move || {
+            let h = my_plan_handle_inner.clone();
+            slint::spawn_local(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let mut req = tonic::Request::new(ohc::orchestration::CancelSubscriptionRequest {
+                        plan_id: "current".to_string(),
+                    });
+                    if let Ok(token) = std::env::var("OHC_TOKEN") {
+                        req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+                    }
+                    if let Ok(_) = client.cancel_subscription(req).await {
+                        if let Some(ui) = h.upgrade() {
+                            ui.set_plan_status("Canceled (pending period end)".into());
+                        }
+                    }
+                }
+            }).unwrap();
+        }
     });
 
     my_plan_ui.on_update_payment(move || {
-        // Handle update payment method
+        open_url("https://billing.stripe.com/p/session/...");
     });
 
     my_plan_ui.on_download_invoice(move || {
-        // Handle download invoice
+        slint::spawn_local(async move {
+            if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                let mut req = tonic::Request::new(ohc::orchestration::DownloadInvoiceRequest {
+                    invoice_id: "latest".to_string(),
+                });
+                if let Ok(token) = std::env::var("OHC_TOKEN") {
+                    req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+                }
+                if let Ok(resp) = client.download_invoice(req).await {
+                    open_url(&resp.into_inner().pdf_url);
+                }
+            }
+        }).unwrap();
     });
 
 
