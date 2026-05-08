@@ -1,4 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 
 export struct UiAgentProvider {
     type_: string,
@@ -12,6 +14,9 @@ export component AgentHire inherits Window {
     title: "Hire New Helper";
 
     in-out property <int> step: 0;
+    in-out property <bool> is_advanced: false;
+    callback toggle_advanced();
+    toggle_advanced => { }
     in-out property <string> selected_role: "";
     in-out property <string> selected_provider: "";
     in-out property <string> agent_name: "";
@@ -31,7 +36,15 @@ export component AgentHire inherits Window {
         spacing: 20px;
         padding: 24px;
 
-        Text { text: "Hire New Helper"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        HorizontalBox {
+            Text { text: "Hire New Helper"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { toggle_advanced(); }
+            }
+        }
 
         // Step 0: Role
         if (step == 0) : VerticalBox {
@@ -48,9 +61,15 @@ export component AgentHire inherits Window {
             Text { text: "Selected: " + selected_role; color: #a855f7; }
         }
 
+
         // Step 1: Provider
         if (step == 1) : VerticalBox {
             spacing: 10px;
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Raw Provider Endpoints"; font-size: 14px; color: #64748b; }
+                LineEdit { placeholder-text: "https://custom.api.endpoint"; }
+            }
             Text { text: "Step 2 — Choose AI Provider"; font-size: 18px; font-weight: 700; color: #1e293b; }
             
             for p in providers : Button {
@@ -91,17 +110,29 @@ export component AgentHire inherits Window {
             }
         }
 
+
         // Step 5: Limits
         if (step == 5) : VerticalBox {
             spacing: 10px;
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Raw Rate Limit Config (JSON)"; font-size: 14px; color: #64748b; }
+                LineEdit { placeholder-text: "{\"max_sessions_per_day\": 50}"; }
+            }
             Text { text: "Step 6 — Resource Limits"; font-size: 18px; font-weight: 700; color: #1e293b; }
             Text { text: "Max sessions per day: 50"; color: #1e293b; }
             Text { text: "[ Slider ]"; color: #64748b; horizontal-alignment: center; }
         }
 
+
         // Step 6: Confirm
         if (step == 6) : VerticalBox {
             spacing: 10px;
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Raw JSON Deployment Payload"; font-size: 14px; color: #64748b; }
+                LineEdit { placeholder-text: "{\"role\": \"Support\"}"; height: 60px; }
+            }
             Text { text: "Step 7 — Confirm Deployment"; font-size: 18px; font-weight: 700; color: #1e293b; }
             Rectangle {
                 background: white;
