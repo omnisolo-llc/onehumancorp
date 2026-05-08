@@ -38,7 +38,7 @@ test.describe('Dashboard Core', () => {
 
   test('should display generative score stat card', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Generative Score')).toBeVisible();
+    await expect(page.locator('text=Store Health')).toBeVisible();
   });
 
   test('should show quick actions section', async ({ page }) => {
@@ -141,7 +141,7 @@ test.describe('Dashboard Mobile', () => {
     await page.goto('/');
     await expect(page.locator('text=Today\'s Sales')).toBeVisible();
     await expect(page.locator('text=Orders to Ship')).toBeVisible();
-    await expect(page.locator('text=Generative Score')).toBeVisible();
+    await expect(page.locator('text=Store Health')).toBeVisible();
     await expect(page.locator('text=Needs Your Approval')).toBeVisible();
   });
 

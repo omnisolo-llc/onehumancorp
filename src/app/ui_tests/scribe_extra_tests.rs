@@ -1,4 +1,4 @@
-use slint::{ComponentHandle, SharedString, Model};
+use slint::{SharedString, Model};
 
 #[test]
 fn test_help_center_edge_cases() {

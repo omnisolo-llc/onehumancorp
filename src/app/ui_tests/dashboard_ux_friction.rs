@@ -1,5 +1,4 @@
 use crate::app;
-use slint::{ComponentHandle, Model};
 
 fn create() -> app::Dashboard {
     crate::ui_tests::init();
@@ -10,8 +9,6 @@ fn create() -> app::Dashboard {
 fn test_bottom_navigation_share_button() {
     let ui = create();
 
-    let ui_handle = ui.as_weak();
-    // In our test, clicking share store doesn't easily expose an internal state
     // but we can verify properties if they were exposed.
     // Instead we can test callback is wired up properly via standard mocking:
     let shared = std::rc::Rc::new(std::cell::RefCell::new(false));
