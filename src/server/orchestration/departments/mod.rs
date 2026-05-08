@@ -5,3 +5,5 @@ pub use types::*;
 pub use orchestrator::*;
 
 pub mod memory;
+pub mod operations_agent;
+pub mod customer_success_agent;
