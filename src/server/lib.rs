@@ -35,6 +35,8 @@ pub mod benchmarks;
 pub mod config;
 pub mod http;
 pub mod builder;
+#[cfg(test)]
+mod maintenance_test;
 use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {

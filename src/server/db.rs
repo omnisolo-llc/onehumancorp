@@ -753,22 +753,49 @@ pub async fn insert_autodream_memory(
 
     pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
+        let fail_threshold = Utc::now() - chrono::Duration::hours(24);
+
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
+                let mut tx = sqlite_pool.begin().await?;
+                // First, prioritize pending missions by bumping updated_at for the oldest ones
+                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' ORDER BY created_at ASC LIMIT 10)").execute(&mut *tx).await?;
+
+                // Mark truly stagnant ones
+                let res = sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
                     .bind(threshold.to_rfc3339())
-                    .execute(sqlite_pool)
-                    .await?.rows_affected()
+                    .execute(&mut *tx)
+                    .await?.rows_affected();
+
+                // Permanently fail STUCK/STAGNANT missions to resolve retry loops
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'STAGNANT' OR status = 'STUCK')").execute(&mut *tx).await?;
+
+                // Cleanup very old failed missions
+                sqlx::query("DELETE FROM agent_missions WHERE status = 'FAILED' AND created_at < ?").bind(fail_threshold.to_rfc3339()).execute(&mut *tx).await?;
+
+                tx.commit().await?;
+                res
             },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 set_org_context(&mut *tx, "system").await?;
-                let affected = sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
+
+                // Prioritize pending missions
+                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' ORDER BY created_at ASC LIMIT 10)").execute(&mut *tx).await?;
+
+                let res = sqlx::query("UPDATE agent_missions SET status = 'STAGNANT' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
                     .bind(threshold)
                     .execute(&mut *tx)
                     .await?.rows_affected();
+
+                // Permanently fail STUCK/STAGNANT missions
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'STAGNANT' OR status = 'STUCK')").execute(&mut *tx).await?;
+
+                // Cleanup very old failed missions
+                sqlx::query("DELETE FROM agent_missions WHERE status = 'FAILED' AND created_at < $1").bind(fail_threshold).execute(&mut *tx).await?;
+
                 tx.commit().await?;
-                affected
+                res
             }
         };
         if affected > 0 {

@@ -25,7 +25,10 @@ pub async fn health_handler(
         "status": health.get("status").unwrap_or(&serde_json::json!("degraded")),
         "db_ping": health.get("db_ping_ms").unwrap_or(&serde_json::json!(0)),
         "sync_backlog": health.get("local_to_cloud_sync_queue").unwrap_or(&serde_json::json!(0)),
+        "sync_error_count": health.get("sync_error_count").unwrap_or(&serde_json::json!(0)),
         "stuck_missions": stuck_missions,
-        "mesh_active": health.get("mesh_active").unwrap_or(&serde_json::json!(false))
+        "mesh_active": health.get("mesh_active").unwrap_or(&serde_json::json!(false)),
+        "hybrid_mode_ready": health.get("hybrid_mode_ready").unwrap_or(&serde_json::json!(false)),
+        "cloud_connected": health.get("cloud_connected").unwrap_or(&serde_json::json!(false))
     }))
 }

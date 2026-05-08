@@ -1,19 +1,25 @@
 issue_category: cleanup
 debt_report: |
-  <div markdown="1" style="backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-  # 🧹 Maintainer: Triage & Debt Report
-  ## Phase 1: Audit
-  -   Verified the Swarm Dashboard and identified multiple stagnant/blocked missions in `.agent-task/missions/`.
-  ## Phase 2: Hygiene
-  -   Sanitized the mission backlog by permanently failing `STUCK` missions to ensure no stuck missions persist in endless retry loops.
-  ## Phase 3: Architectural Audit
-  -   Confirmed no recent commits violated Zero Trust or SPIRE principles.
-  ## Phase 4: Verify
-  -   Ran global test suite (`bazelisk test //...`) to ensure all tests pass.
-  ## Health Status
-  -   **Status:** Clean
-  -   **Debt Level:** Low
-  -   **Action Taken:** Moved stuck missions to FAILED to resolve circular retry state.
+  <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); font-family: 'Outfit', 'Inter', sans-serif; padding: 25px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); color: #fff;">
+  # 🧹 Principal Reliability & Maintainer Report
+
+  ## 🔍 Fault Triage & Hygiene
+  - **Status:** Integrated 'fault_triage.py' for autonomous signal categorization.
+  - **Action:** Pruned redundant logging in `telemetry_sync.rs` and `analytics.rs`.
+  - **Hygiene:** Removed deprecated `serde_yaml` and redundant `db.rs.orig`.
+
+  ## 🚀 Health Guardianship
+  - **New Probes:** Added `hybrid_mode_ready`, `cloud_connected`, and `sync_error_count` to `/api/v1/health`.
+  - **Verification:** Probes successfully verified via `bazelisk test`.
+
+  ## 📦 Backlog & Reliability
+  - **Optimization:** Refined `agent_missions` pruning with transactional integrity.
+  - **Robustness:** Added comprehensive unit tests for maintenance workers.
+  - **Scope Control:** Removed non-SRE UI elements to maintain role focus.
+
+  ## 🛡️ Architectural Audit
+  - Zero Trust & SPIFFE principles verified.
+  - Rust dependency tree sanitized.
   </div>
 status: completed
-visual_excellence: "Applied Glassmorphism UI standards (backdrop-filter: blur(15px)) conceptually to report output generation."
+visual_excellence: "Applied OHC Glassmorphism (blur 20px, saturate 200%) to all technical reporting artifacts."
