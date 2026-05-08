@@ -146,7 +146,7 @@ func TestClientManager_CallTool(t *testing.T) {
 
 	// Test successful call
 	args := map[string]interface{}{"param": "value"}
-	result, err := manager.CallTool(ctx, "test_server", "test_tool", args)
+	result, err := manager.CallToolWithRateLimit(ctx, "test_server", "tenant-test", "test_tool", args)
 	if err != nil {
 		t.Fatalf("failed to call tool: %v", err)
 	}
@@ -165,13 +165,13 @@ func TestClientManager_CallTool(t *testing.T) {
 	}
 
 	// Test error call
-	_, err = manager.CallTool(ctx, "test_server", "error_tool", args)
+	_, err = manager.CallToolWithRateLimit(ctx, "test_server", "tenant-test", "error_tool", args)
 	if err == nil {
 		t.Errorf("expected error when calling error_tool")
 	}
 
 	// Test unknown server
-	_, err = manager.CallTool(ctx, "unknown_server", "test_tool", args)
+	_, err = manager.CallToolWithRateLimit(ctx, "unknown_server", "tenant-test", "test_tool", args)
 	if err == nil {
 		t.Errorf("expected error calling tool on unknown server")
 	}
@@ -246,7 +246,7 @@ done
 	callCtx, callCancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer callCancel()
 
-	_, err = manager.CallTool(callCtx, "test_server", "test_tool", map[string]interface{}{})
+	_, err = manager.CallToolWithRateLimit(callCtx, "test_server", "tenant-test", "test_tool", map[string]interface{}{})
 	if err == nil {
 		t.Errorf("expected error due to context cancellation")
 	} else if err != context.DeadlineExceeded {
