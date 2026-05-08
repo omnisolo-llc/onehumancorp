@@ -12,10 +12,6 @@ path = "src/server/main.rs"
 name = "ohc-builtin-agent"
 path = "src/agents/builtin/main.rs"
 
-[[bin]]
-name = "finalize_mission"
-path = "src/server/tools/finalize_mission.rs"
-
 [dependencies]
 tokio = { workspace = true, features = ["full"] }
 tokio-stream = { version = "0.1", features = ["full"] }
