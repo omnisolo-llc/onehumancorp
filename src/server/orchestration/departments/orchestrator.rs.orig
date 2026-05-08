@@ -51,6 +51,16 @@ impl Department for DummyDepartment {
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         self.received_events.lock().unwrap().push(event.clone());
+        // Event-Driven Execution: Simulate Draft & Approve Pattern
+        if event.event_type == "CustomerMessageReceived" || event.event_type == "StockLow" || event.event_type == "NewProductAdded" {
+             let _ = self.request_approval(
+                 format!("Drafted action for event: {}", event.event_type),
+                 event.tenant_id.clone()
+             ).await;
+        } else if event.event_type == "OrderPlaced" {
+             // low-risk executes automatically
+             tracing::trace!("Low-risk event {} processed automatically", event.event_type);
+        }
         Ok(())
     }
 
@@ -266,5 +276,200 @@ impl DepartmentOrchestrator {
             }
         }
     }
+}
 
+pub async fn setup_dummy_orchestrator(db: Arc<crate::db::DB>) -> Arc<DepartmentOrchestrator> {
+    let orchestrator = Arc::new(DepartmentOrchestrator::new(db));
+
+    let operations = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::Operations,
+        vec!["OrderPlaced".to_string(), "InventoryLow".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(operations).await;
+
+    let marketing = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::Marketing,
+        vec!["NewProductAdded".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(marketing).await;
+
+    let sales = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::Sales,
+        vec!["LeadGenerated".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(sales).await;
+
+    let customer_success = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::CustomerSuccess,
+        vec!["CustomerMessageReceived".to_string(), "OrderDelivered".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(customer_success).await;
+
+    let finance = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::Finance,
+        vec!["PaymentReceived".to_string(), "OrderPlaced".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(finance).await;
+
+    let legal = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::Legal,
+        vec!["NewContractRequested".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(legal).await;
+
+    let advisory = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::BusinessAdvisory,
+        vec!["WeeklyMetricsReady".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(advisory).await;
+
+    orchestrator
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_orchestrator_routing() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Failed to initialize database");
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = Arc::new(crate::db::DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) });
+
+        if let DbStore::Sqlite(pool) = &db.store {
+            let _ = sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_approvals (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    action_risk TEXT NOT NULL DEFAULT 'HIGH',
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                );"
+            )
+            .execute(pool)
+            .await;
+        }
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db));
+
+        let operations = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+            DepartmentType::Operations,
+            vec!["OrderPlaced".to_string()],
+            orchestrator.clone()
+        )));
+        orchestrator.register_department(operations.clone()).await;
+
+        let finance = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+            DepartmentType::Finance,
+            vec!["OrderPlaced".to_string()],
+            orchestrator.clone()
+        )));
+        orchestrator.register_department(finance.clone()).await;
+
+        let marketing = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+            DepartmentType::Marketing,
+            vec!["NewProductAdded".to_string()],
+            orchestrator.clone()
+        )));
+        orchestrator.register_department(marketing.clone()).await;
+
+
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: "tenant1".to_string(),
+            event_type: "OrderPlaced".to_string(),
+            payload: serde_json::json!({"order_id": "123"}),
+        };
+
+        let result = orchestrator.dispatch_event(event).await;
+        assert!(result.is_ok());
+
+        // Verify routing works
+        let ops_lock = operations.read().await;
+        assert_eq!(ops_lock.received_events.lock().unwrap().len(), 1);
+
+        let fin_lock = finance.read().await;
+        assert_eq!(fin_lock.received_events.lock().unwrap().len(), 1);
+
+        let mkt_lock = marketing.read().await;
+        assert_eq!(mkt_lock.received_events.lock().unwrap().len(), 0);
+
+    }
+
+    #[tokio::test]
+    async fn test_approval_workflow_tenant_isolation() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Failed to initialize database");
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = Arc::new(crate::db::DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) });
+
+        if let DbStore::Sqlite(pool) = &db.store {
+            let _ = sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_approvals (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    action_risk TEXT NOT NULL DEFAULT 'HIGH',
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                );"
+            )
+            .execute(pool)
+            .await;
+        }
+
+        let orchestrator = setup_dummy_orchestrator(db).await;
+
+        let req = ApprovalRequest {
+            id: "req1".to_string(),
+            tenant_id: "tenant1".to_string(),
+            department: DepartmentType::CustomerSuccess,
+            description: "Reply to angry customer".to_string(),
+            status: ApprovalStatus::Pending,
+            action_risk: "HIGH".to_string(),
+        };
+
+        orchestrator.add_approval_request(req).await;
+
+        // Tenant 2 shouldn't see Tenant 1's approvals
+        let pending_t2 = orchestrator.get_pending_approvals("tenant2").await;
+        assert_eq!(pending_t2.len(), 0);
+
+        // Tenant 1 should see it
+        let pending_t1 = orchestrator.get_pending_approvals("tenant1").await;
+        assert_eq!(pending_t1.len(), 1);
+
+        // Tenant 2 cannot approve Tenant 1's request
+        let result = orchestrator.decide_approval("req1", "tenant2", true).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Unauthorized");
+
+        // Tenant 1 can approve
+        let result = orchestrator.decide_approval("req1", "tenant1", true).await;
+        assert!(result.is_ok());
+
+        let pending_after = orchestrator.get_pending_approvals("tenant1").await;
+        assert_eq!(pending_after.len(), 0);
+    }
 }
