@@ -75,7 +75,21 @@ impl InteropProtocol {
             payload: buf,
         };
 
-        let result = self.bus.publish(msg).await;
+        let mut retries = 0;
+        let mut delay_ms = 100;
+        let result = loop {
+            match self.bus.publish(msg.clone()).await {
+                Ok(_) => break Ok(()),
+                Err(e) => {
+                    if retries >= 5 {
+                        break Err(format!("Failed to publish state handoff after retries: {}", e));
+                    }
+                    retries += 1;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    delay_ms *= 2; // Exponential backoff
+                }
+            }
+        };
 
         if result.is_err() {
             // Failed to publish, release idempotency lock so it can be retried
@@ -623,19 +637,55 @@ mod tests {
 
 
     #[tokio::test]
-    async fn test_interop_job_status_reporting_retry_and_failure() {
-        let bus = Arc::new(MemoryBus::new());
-        let lock = bus.clone();
+    async fn test_interop_dispatch_job_retry_success() {
+        let bus = Arc::new(MockFailingBus {
+            failures_left: std::sync::atomic::AtomicUsize::new(3),
+        });
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus, lock, "server".to_string());
 
-        let _protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+        let result = protocol.dispatch_job("job_retry_1", "tenant_a", "do_work", vec![], 10).await;
+        // The mock bus doesn't publish ACK, so it's a timeout (returns false), but it shouldn't be a publish error
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
 
-        // We simulate failure by causing a panic inside publish? No, MemoryBus never fails publish.
-        // We can't easily mock MemoryBus publish failure here without changing MemoryBus.
-        // But the constraint says 100% coverage.
-        // If we can't test it, we should maybe remove the retry loop if we are confident MemoryBus does not fail, but actually it's required for network resilience.
-        // Wait, RedisBus publish can fail. MemoryBus never fails. The test suite uses MemoryBus.
-        // If the retry loop is not testable with MemoryBus, maybe I should modify `report_job_status` to only retry for Nats/Redis or inject a mock bus that can fail.
-        // I will implement a mock bus just for this test.
+    #[tokio::test]
+    async fn test_interop_dispatch_job_retry_failure() {
+        let bus = Arc::new(MockFailingBus {
+            failures_left: std::sync::atomic::AtomicUsize::new(10), // More than max retries
+        });
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus, lock, "server".to_string());
+
+        let result = protocol.dispatch_job("job_retry_2", "tenant_a", "do_work", vec![], 10).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to publish job dispatch after retries"));
+    }
+
+    #[tokio::test]
+    async fn test_interop_handoff_retry_success() {
+        let bus = Arc::new(MockFailingBus {
+            failures_left: std::sync::atomic::AtomicUsize::new(3),
+        });
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus, lock, "node1".to_string());
+
+        let result = protocol.handoff("mission_retry_1", "tenant_1", vec![1, 2, 3]).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_interop_handoff_retry_failure() {
+        let bus = Arc::new(MockFailingBus {
+            failures_left: std::sync::atomic::AtomicUsize::new(10),
+        });
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus, lock, "node1".to_string());
+
+        let result = protocol.handoff("mission_retry_2", "tenant_1", vec![1, 2, 3]).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to publish state handoff after retries"));
     }
 
     struct MockFailingBus {
