@@ -703,3 +703,73 @@ func TestFactoryDefaultMountPath(t *testing.T) {
         }
 	}
 }
+// We can mock filepath.Abs error by running it in a directory that is subsequently removed,
+// but actually, filepath.Abs uses os.Getwd() for relative paths. If we remove the current directory
+// and pass a relative path, filepath.Abs should fail.
+
+func TestNewLocalFSProvider_AbsError(t *testing.T) {
+	// Create a temporary directory
+	tmpDir, err := os.MkdirTemp("", "test_abs_err_local")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Get the original working directory
+	originalWD, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(originalWD)
+
+	// Change into the temporary directory
+	err = os.Chdir(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Remove the directory while we are inside it
+	err = os.RemoveAll(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now try to create a provider with a relative path
+	// filepath.Abs("relative_path") will call os.Getwd() which should fail
+	_, err = NewLocalFSProvider("relative_path")
+	if err == nil {
+		t.Errorf("Expected NewLocalFSProvider to fail due to filepath.Abs error")
+	}
+}
+
+func TestNewCloudFSProvider_AbsError(t *testing.T) {
+	// Create a temporary directory
+	tmpDir, err := os.MkdirTemp("", "test_abs_err_cloud")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Get the original working directory
+	originalWD, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(originalWD)
+
+	// Change into the temporary directory
+	err = os.Chdir(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Remove the directory while we are inside it
+	err = os.RemoveAll(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now try to create a provider with a relative path
+	_, err = NewCloudFSProvider("relative_path")
+	if err == nil {
+		t.Errorf("Expected NewCloudFSProvider to fail due to filepath.Abs error")
+	}
+}
