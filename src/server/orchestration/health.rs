@@ -19,10 +19,6 @@ pub async fn run_health_monitor(
             _ => false,
         };
 
-        if !ping_ok {
-            tracing::trace!("HEALTH MONITOR: Active probe (ping) failed or timed out.");
-        }
-
         // Hybrid mode health check
         if let Ok(health) = monitor_hub.check_health().await {
             if let Some(ready) = health.get("hybrid_mode_ready").and_then(|v| v.as_bool()) {
