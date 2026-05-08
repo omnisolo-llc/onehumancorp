@@ -48,13 +48,7 @@ class InboxNotifier extends StateNotifier<InboxState> {
       instagramConnected: true,
       messages: [
         ...state.messages,
-        InboxMessage(
-          platform: "Instagram",
-          sender: "maya_bakes",
-          message: "Do you do vegan cakes?",
-          time: "2m ago",
-          isMe: false,
-        )
+        // Removed mock data to wire to real database later
       ],
     );
   }
@@ -64,13 +58,7 @@ class InboxNotifier extends StateNotifier<InboxState> {
       whatsappConnected: true,
       messages: [
         ...state.messages,
-        InboxMessage(
-          platform: "WhatsApp",
-          sender: "+1 (555) 123-4567",
-          message: "Can I order 5 cupcakes for tomorrow?",
-          time: "1m ago",
-          isMe: false,
-        )
+        // Removed mock data to wire to real database later
       ],
     );
   }

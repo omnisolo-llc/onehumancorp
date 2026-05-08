@@ -20,13 +20,13 @@ void main() {
     // Select Industry
     await tester.tap(find.byKey(const Key('industryDropdown')));
     await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.text('Technology').last);
+    await tester.ensureVisible(find.text('Technology').last); await tester.tap(find.text('Technology').last);
     await tester.pump(const Duration(milliseconds: 500));
 
     // Select Size
     await tester.tap(find.byKey(const Key('sizeDropdown')));
     await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.text('11-50').last);
+    await tester.ensureVisible(find.text('11-50').last); await tester.tap(find.text('11-50').last);
     await tester.pump(const Duration(milliseconds: 500));
 
     await tester.tap(find.text('Next'));
