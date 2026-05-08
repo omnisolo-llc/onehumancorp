@@ -2301,7 +2301,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     body: "Do you do vegan cakes?".into(),
                                     is_me: false,
                                     time: "2m ago".into(),
-                                }
+
+                            is_quote: false,
+                            quote_amount: "".into(),
+                            quote_status: "".into(),
+                        }
                             ];
                             ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(msgs)));
 
@@ -2370,6 +2374,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             body: reply_text,
                             is_me: true,
                             time: "Just now".into(),
+
+                            is_quote: false,
+                            quote_amount: "".into(),
+                            quote_status: "".into(),
                         });
                         ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(current_msgs)));
 
@@ -2400,11 +2408,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             body: text,
                             is_me: true,
                             time: "Just now".into(),
+
+                            is_quote: false,
+                            quote_amount: "".into(),
+                            quote_status: "".into(),
                         });
                         ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(current_msgs)));
 
                         // Clear suggested replies since we sent a manual message
                         ui.set_suggested_replies(slint::ModelRc::new(slint::VecModel::from(vec![])));
+                    }
+                });
+
+
+                let unified_inbox_handle_approve = unified_inbox_ui.as_weak();
+                unified_inbox_ui.on_approve_quote(move |msg_id, amount| {
+                    if let Some(ui) = unified_inbox_handle_approve.upgrade() {
+                        let mut current_msgs: Vec<app::UiInboxMessage> = ui.get_current_messages().iter().collect();
+
+                        // Update the original quote message
+                        for msg in &mut current_msgs {
+                            if msg.id == msg_id {
+                                msg.quote_status = "approved".into();
+                            }
+                        }
+
+                        // Add a system message or a "Me" message with the Stripe link
+                        current_msgs.push(app::UiInboxMessage {
+                            id: format!("msg-{}", current_msgs.len() + 1).into(),
+                            author_name: "Me".into(),
+                            body: format!("Great! I've approved the quote for {}. You can pay your deposit and book your time here: https://checkout.stripe.com/pay/cs_test_dummy", amount).into(),
+                            is_me: true,
+                            time: "Just now".into(),
+                            is_quote: false,
+                            quote_amount: "".into(),
+                            quote_status: "".into(),
+                        });
+
+                        ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(current_msgs)));
                     }
                 });
 
@@ -7515,6 +7556,10 @@ mod e2e_hybrid_blob_tests {
                             body: "Do you do vegan cakes?".into(),
                             is_me: false,
                             time: "2m ago".into(),
+
+                            is_quote: false,
+                            quote_amount: "".into(),
+                            quote_status: "".into(),
                         }
                     ];
                     ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(msgs)));
@@ -7543,7 +7588,11 @@ mod e2e_hybrid_blob_tests {
                     body: reply_text,
                     is_me: true,
                     time: "Just now".into(),
-                });
+
+                            is_quote: false,
+                            quote_amount: "".into(),
+                            quote_status: "".into(),
+                        });
                 ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(current_msgs)));
                 ui.set_suggested_replies(slint::ModelRc::new(slint::VecModel::from(vec![])));
             }
