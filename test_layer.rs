@@ -49,3 +49,4 @@ impl CrossDepartmentMemoryLayer {
         self.repository.semantic_search(tenant_id, query_embedding, limit).await
     }
 }
+// Zero WIP exit
