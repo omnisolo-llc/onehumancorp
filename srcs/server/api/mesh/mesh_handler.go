@@ -34,15 +34,12 @@ func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if msg.AgentID == "" || msg.Action == "" || msg.Status == "" {
-		http.Error(w, "Missing required OHC-SIP fields (agent_id, action, status)", http.StatusBadRequest)
+	if msg.AgentID == "" || msg.EventType == "" || msg.Channel == "" || msg.Data == nil {
+		http.Error(w, "Missing required OHC-SIP fields (agent_id, channel, event_type, data)", http.StatusBadRequest)
 		return
 	}
 
 	channel := msg.Channel
-	if channel == "" {
-		channel = "mesh:broadcast"
-	}
 
 	data, err := json.Marshal(msg)
 	if err != nil {

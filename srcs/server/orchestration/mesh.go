@@ -14,11 +14,10 @@ import (
 
 // MeshMessage represents an OHC-SIP compliant message over the mesh.
 type MeshMessage struct {
-	AgentID string           `json:"agent_id"`
-	Action  string           `json:"action"`
-	Status  string           `json:"status"`
-	Channel string           `json:"channel,omitempty"`
-	Payload *json.RawMessage `json:"payload,omitempty"`
+	AgentID   string           `json:"agent_id"`
+	EventType string           `json:"event_type"`
+	Data      *json.RawMessage `json:"data,omitempty"`
+	Channel   string           `json:"channel,omitempty"`
 }
 
 // MeshTransport defines the interface for the highly available realtime communication layer.
