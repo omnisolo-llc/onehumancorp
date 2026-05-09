@@ -163,3 +163,22 @@ fn test_pricing_usage_progress() {
     ui.set_usage_progress(20.0);
     assert_eq!(ui.get_usage_progress(), 20.0);
 }
+
+#[test]
+fn test_pricing_advanced_toggle() {
+    crate::ui_tests::init();
+    let ui = crate::app::Pricing::new().unwrap();
+
+    assert_eq!(ui.get_is_advanced(), false);
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+
+    let toggle_advanced_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let tac = toggle_advanced_called.clone();
+
+    ui.on_toggle_advanced(move || {
+        *tac.borrow_mut() = true;
+    });
+    ui.invoke_toggle_advanced();
+    assert!(*toggle_advanced_called.borrow());
+}

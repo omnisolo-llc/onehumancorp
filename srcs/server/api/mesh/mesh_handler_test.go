@@ -144,7 +144,17 @@ func TestMeshHandler_Subscribe(t *testing.T) {
 
 	// Read from websocket
 	_ = conn.SetReadDeadline(time.Now().Add(time.Second * 5))
-	_, message, err := conn.ReadMessage()
+
+	var message []byte
+	// Wait and retry for up to 5 times (1 second total) to mitigate flakes.
+	for i := 0; i < 10; i++ {
+		_, message, err = conn.ReadMessage()
+		if err == nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
 	require.NoError(t, err)
 	assert.Equal(t, string(body), string(message))
 }

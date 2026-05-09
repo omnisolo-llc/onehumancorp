@@ -1,5 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 
 export struct UiPricingTier {
     name: string,
@@ -21,6 +22,9 @@ export component Pricing inherits Window {
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     in property <bool> is_annual: false;
+    in-out property <bool> is_advanced: false;
+    callback toggle_advanced();
+    toggle_advanced => { is_advanced = !is_advanced; }
 
     // Billing & Credits Wizard State
     in-out property <int> step: 0;
@@ -80,7 +84,14 @@ export component Pricing inherits Window {
         padding: 24px;
         width: 100%;
 
-        Text { text: "Pricing & Billing"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+        HorizontalBox {
+            Text { text: "Pricing & Billing"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { toggle_advanced(); }
+            }
+        }
 
         HorizontalBox {
             spacing: 10px;
@@ -95,6 +106,11 @@ export component Pricing inherits Window {
                     padding: 2px;
                     Text { text: "1"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: white; horizontal-alignment: center; }
                 }
+            }
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Raw Billing State (JSON)"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "{\"current_usage\": \"" + current_usage + "\"}"; height: 60px; }
             }
             Text { text: "Usage"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: step == 0 ? white : #94a3b8; }
 
