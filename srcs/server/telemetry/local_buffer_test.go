@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,7 +14,7 @@ import (
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	if err != nil {
 		t.Fatalf("Failed to open test db: %v", err)
 	}
@@ -191,9 +192,9 @@ func TestBufferMetricHelper_RedactsPII(t *testing.T) {
 	ctx := context.Background()
 
 	attrs := map[string]interface{}{
-		"service":   "agent",
-		"tenant_id": "secret-tenant-123",
-		"email":     "user@example.com",
+		"service":     "agent",
+		"tenant_id":   "secret-tenant-123",
+		"email":       "user@example.com",
 		"ip_address":  "192.168.1.1",
 		"mac_address": "00:1B:44:11:3A:B7",
 		"geolocation": "37.7749,-122.4194",

@@ -4,15 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"time"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	if err != nil {
 		t.Fatalf("Failed to open DB: %v", err)
 	}
@@ -60,7 +61,7 @@ func TestTaskDecompositionService_CreateAndGetTask(t *testing.T) {
 
 	task := &SharedTaskDecomposition{
 		OrganizationID: "mission-1",
-		Title:     "Test Task",
+		Title:          "Test Task",
 	}
 
 	err := svc.CreateTask(ctx, task)
@@ -94,19 +95,19 @@ func TestTaskDecompositionService_ClaimTask(t *testing.T) {
 
 	// Task 1
 	task1 := &SharedTaskDecomposition{
-		ID:        uuid.New().String(),
+		ID:             uuid.New().String(),
 		OrganizationID: "mission-1",
-		Title:     "Task 1",
+		Title:          "Task 1",
 	}
 	_ = svc.CreateTask(ctx, task1)
 
 	// Task 2 depends on Task 1
 	deps, _ := json.Marshal([]string{task1.ID})
 	task2 := &SharedTaskDecomposition{
-		ID:           uuid.New().String(),
-		OrganizationID:    "mission-1",
-		Title:        "Task 2",
-		Dependencies: deps,
+		ID:             uuid.New().String(),
+		OrganizationID: "mission-1",
+		Title:          "Task 2",
+		Dependencies:   deps,
 	}
 	_ = svc.CreateTask(ctx, task2)
 
@@ -164,7 +165,7 @@ func TestTaskDecompositionService_UpdateTaskStatus(t *testing.T) {
 
 	task := &SharedTaskDecomposition{
 		OrganizationID: "m1",
-		Title:     "T1",
+		Title:          "T1",
 	}
 	_ = svc.CreateTask(ctx, task)
 
@@ -204,9 +205,9 @@ func TestTaskDecompositionService_Errors(t *testing.T) {
 
 	// Invalid dependencies format
 	task := &SharedTaskDecomposition{
-		OrganizationID:    "m1",
-		Title:        "T1",
-		Dependencies: json.RawMessage("invalid-json"),
+		OrganizationID: "m1",
+		Title:          "T1",
+		Dependencies:   json.RawMessage("invalid-json"),
 	}
 	_ = svc.CreateTask(ctx, task)
 
@@ -231,7 +232,7 @@ func TestTaskDecompositionService_PgSQL(t *testing.T) {
 
 	task := &SharedTaskDecomposition{
 		OrganizationID: "m1",
-		Title:     "T1",
+		Title:          "T1",
 	}
 	_ = svc.CreateTask(ctx, task)
 
@@ -242,7 +243,6 @@ func TestTaskDecompositionService_PgSQL(t *testing.T) {
 		t.Fatalf("Expected error due to SQLite not supporting FOR UPDATE SKIP LOCKED")
 	}
 }
-
 
 func TestTaskDecompositionService_FullCoverage(t *testing.T) {
 	db := setupTestDB(t)
@@ -257,7 +257,7 @@ func TestTaskDecompositionService_FullCoverage(t *testing.T) {
 	lockedUntil := time.Now().Add(time.Hour)
 
 	task := &SharedTaskDecomposition{
-		OrganizationID:       "m-full",
+		OrganizationID:  "m-full",
 		ParentPlanID:    &parentID,
 		Title:           "Full Task",
 		AssignedAgentID: &agentID,
@@ -296,9 +296,9 @@ func TestTaskDecompositionService_FullCoverage(t *testing.T) {
 	// Unmarshal dependencies with missing dependency
 	deps, _ := json.Marshal([]string{"non-existent-dep"})
 	taskWithMissingDep := &SharedTaskDecomposition{
-		OrganizationID:    "m-missing-dep",
-		Title:        "T-Missing-Dep",
-		Dependencies: deps,
+		OrganizationID: "m-missing-dep",
+		Title:          "T-Missing-Dep",
+		Dependencies:   deps,
 	}
 	_ = svc.CreateTask(ctx, taskWithMissingDep)
 
@@ -336,7 +336,7 @@ func TestTaskDecompositionService_DepsError(t *testing.T) {
 
 	_ = svc.CreateTask(ctx, &SharedTaskDecomposition{
 		OrganizationID: "m2",
-		Dependencies: json.RawMessage("invalid"),
+		Dependencies:   json.RawMessage("invalid"),
 	})
 	_, _ = svc.ClaimTask(ctx, "m2", "agent")
 }
@@ -349,7 +349,7 @@ func TestTaskDecompositionService_MoreCoverage3(t *testing.T) {
 	// Create task
 	task := &SharedTaskDecomposition{
 		OrganizationID: "m-tx",
-		Title: "tx error",
+		Title:          "tx error",
 	}
 	_ = svc.CreateTask(ctx, task)
 
@@ -374,7 +374,7 @@ func TestTaskDecompositionService_DepsMissingRow(t *testing.T) {
 
 	_ = svc.CreateTask(ctx, &SharedTaskDecomposition{
 		OrganizationID: "m2",
-		Dependencies: json.RawMessage(`["not-found"]`),
+		Dependencies:   json.RawMessage(`["not-found"]`),
 	})
 	claimed, err := svc.ClaimTask(ctx, "m2", "agent")
 	if err != nil {

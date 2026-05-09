@@ -4,12 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"gopkg.in/yaml.v3"
+	"fmt"
+	"onehumancorp/srcs/server/pb"
 	"os"
 	"path/filepath"
 	"testing"
-	"onehumancorp/srcs/server/pb"
 	"time"
+
+	"gopkg.in/yaml.v3"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
@@ -25,13 +27,12 @@ func (m *mockMeshTransport) Publish(ctx context.Context, channel string, data []
 	return nil
 }
 
-
 func (m *mockMeshTransport) AdvertiseCapabilities(ctx context.Context, agent pb.Agent) error {
-    return nil
+	return nil
 }
 
 func (m *mockMeshTransport) DiscoverAgents(ctx context.Context, skill string) ([]pb.Agent, error) {
-    return nil, nil
+	return nil, nil
 }
 
 func (m *mockMeshTransport) StartHeartbeat(ctx context.Context, agent pb.Agent) {
@@ -41,7 +42,7 @@ func (m *mockMeshTransport) Subscribe(ctx context.Context, channel string, handl
 }
 
 func setupTestDBForSubAgent(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 
 	query := `

@@ -1,20 +1,22 @@
 package orchestration
 
 import (
-	"github.com/DATA-DOG/go-sqlmock"
-	"time"
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"testing"
+	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
+
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 
 	_, err = db.Exec(`
@@ -133,7 +135,6 @@ func TestSqliteTaskStore_UpdateTaskStatus(t *testing.T) {
 // Mocks for Postgres are complex due to sql.DB, but we can hit some lines with mock errors if needed,
 // however, sqlite testing is preferred for covering the logic since the SQL semantics are similar.
 // For full >90% coverage as requested, we will use a sqlmock library or we can increase sqlite coverage first.
-
 
 func TestPostgresTaskStore_CreateTask(t *testing.T) {
 	db, mock, err := sqlmock.New()
@@ -320,14 +321,14 @@ func TestPostgresTaskStore_CreateTask_WithPayloads(t *testing.T) {
 	store := NewPostgresTaskStore(db)
 	ctx := context.Background()
 
-    rawPayload := json.RawMessage(`{"key":"value"}`)
+	rawPayload := json.RawMessage(`{"key":"value"}`)
 	task := &SharedTask{
 		OrganizationID: "org-1",
 		Title:          "Test Task",
 		Status:         "PENDING",
 		Priority:       "P1",
-        Payload:        &rawPayload,
-        Dependencies:   json.RawMessage(`["dep-1"]`),
+		Payload:        &rawPayload,
+		Dependencies:   json.RawMessage(`["dep-1"]`),
 	}
 
 	mock.ExpectBegin()
@@ -351,8 +352,8 @@ func TestSqliteTaskStore_ClaimTask_Errors(t *testing.T) {
 	store := NewSqliteTaskStore(db)
 	ctx := context.Background()
 
-    // Close DB to force an error on BeginTx
-    db.Close()
+	// Close DB to force an error on BeginTx
+	db.Close()
 	_, err := store.ClaimTask(ctx, "org-1", "agent-x")
 	require.Error(t, err)
 }
@@ -366,10 +367,10 @@ func TestSqliteTaskStore_GetTask_ErrorParsing(t *testing.T) {
 	_, err := db.Exec(`INSERT INTO shared_tasks (id, organization_id, title, created_at) VALUES ('bad-date', 'org-1', 'title', 'not-a-date')`)
 	require.NoError(t, err)
 
-    // We expect it to still return the task, but parsing of time might silently fail or fallback
-    task, err := store.GetTask(ctx, "bad-date")
-    require.NoError(t, err)
-    require.NotNil(t, task)
+	// We expect it to still return the task, but parsing of time might silently fail or fallback
+	task, err := store.GetTask(ctx, "bad-date")
+	require.NoError(t, err)
+	require.NotNil(t, task)
 }
 
 func TestPostgresTaskStore_GetTask_Errors(t *testing.T) {
@@ -416,21 +417,21 @@ func TestSqliteTaskStore_CreateTask_WithPayloads(t *testing.T) {
 	store := NewSqliteTaskStore(db)
 	ctx := context.Background()
 
-    rawPayload := json.RawMessage(`{"key":"value"}`)
+	rawPayload := json.RawMessage(`{"key":"value"}`)
 	task := &SharedTask{
 		OrganizationID: "org-1",
 		Title:          "Test Task",
 		Status:         "PENDING",
 		Priority:       "P1",
-        Payload:        &rawPayload,
+		Payload:        &rawPayload,
 	}
 
 	err := store.CreateTask(ctx, task)
 	require.NoError(t, err)
 
-    savedTask, err := store.GetTask(ctx, task.ID)
-    require.NoError(t, err)
-    assert.Equal(t, task.Payload, savedTask.Payload)
+	savedTask, err := store.GetTask(ctx, task.ID)
+	require.NoError(t, err)
+	assert.Equal(t, task.Payload, savedTask.Payload)
 }
 
 func TestPostgresTaskStore_GetTasksByOrganization(t *testing.T) {
@@ -694,7 +695,7 @@ func TestPostgresTaskStore_UpdateTaskStatus_CommitError(t *testing.T) {
 }
 
 func TestSqliteTaskStore_ClaimTask_CommitError(t *testing.T) {
-    db, mock, err := sqlmock.New()
+	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -949,7 +950,7 @@ func TestSqliteTaskStore_GetTasksByOrganization_ParseDateError(t *testing.T) {
 
 // Append to tasks_db_test.go so we don't mess up parity tests
 func TestSqliteTaskStore_PollDelegatedTasks(t *testing.T) {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 	defer db.Close()
 	_, err = db.Exec(`
@@ -1046,7 +1047,7 @@ func TestPostgresTaskStore_PollDelegatedTasks_FullCoverage(t *testing.T) {
 
 func TestSqliteTaskStore_PollDelegatedTasks_Errors(t *testing.T) {
 	// We can't practically mock Mattn sqlite, so testing an open/close error
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 	store := NewSqliteTaskStore(db)
 	ctx := context.Background()
@@ -1136,7 +1137,7 @@ func TestPostgresTaskStore_PollDelegatedTasks_CommitError(t *testing.T) {
 
 func TestSqliteTaskStore_PollDelegatedTasks_ScanError(t *testing.T) {
 	// Given we are scanning a set structure, it's easiest to create a table with wrong schema
-	badDB, err := sql.Open("sqlite3", ":memory:")
+	badDB, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 	defer badDB.Close()
 

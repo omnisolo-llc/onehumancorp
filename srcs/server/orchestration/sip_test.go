@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +16,7 @@ import (
 )
 
 func setupSIPDB(t *testing.T) (*sql.DB, func()) {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 
 	_, err = db.Exec(`CREATE TABLE agent_missions (
@@ -166,9 +168,9 @@ func TestDelegateMission_DatabaseError(t *testing.T) {
 	db, cleanup := setupSIPDB(t)
 	defer cleanup()
 
-    // Drop the table to simulate a database error
-    _, err := db.Exec("DROP TABLE agent_missions")
-    require.NoError(t, err)
+	// Drop the table to simulate a database error
+	_, err := db.Exec("DROP TABLE agent_missions")
+	require.NoError(t, err)
 
 	sipdb := NewSIPDB(db)
 	sipdb.ContextRoot = ""

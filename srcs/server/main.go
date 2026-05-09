@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -31,14 +32,16 @@ func main() {
 	log.Println("Starting OHC Server...")
 
 	// Initialize SQLite database
-	dbPath := ":memory:"
+	var dbPath string
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		dbPath = "ohc_standalone.db"
+	} else {
+		dbPath = fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano())
 	}
 
     // Pass key via DSN query parameter for sqlcipher
     dsn := dbPath
-    if dbPath != ":memory:" {
+    if os.Getenv("OHC_STANDALONE") == "true" {
         dbKey := os.Getenv("OHC_LOCAL_DB_KEY")
         if dbKey == "" {
             log.Fatalf("OHC_LOCAL_DB_KEY environment variable is required for local standalone mode encryption")
@@ -52,7 +55,7 @@ func main() {
 	}
 	defer db.Close()
 
-	if dbPath != ":memory:" {
+	if os.Getenv("OHC_STANDALONE") == "true" {
 		// Enforce secure file permissions for local standalone mode
 		if err := os.Chmod(dbPath, 0600); err != nil {
 			log.Printf("Warning: Failed to set secure permissions on %s: %v", dbPath, err)

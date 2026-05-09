@@ -2,7 +2,9 @@ package migrations_test
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
@@ -10,7 +12,7 @@ import (
 
 // A dummy test to ensure schema logic executes cleanly against SQLite in tests
 func TestKairosOrchestrationSchema(t *testing.T) {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 	defer db.Close()
 

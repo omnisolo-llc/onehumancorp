@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 )
 
 func setupSyncTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 
 	_, err = db.Exec(`
@@ -130,7 +131,7 @@ func TestSyncDaemon_SyncPendingMissions_ContextCancel(t *testing.T) {
 	localStore := NewSqliteTaskStore(localDB)
 	cloudStore := &mockPostgresProvider{NewSqliteTaskStore(cloudDB)}
 
-    task := &SharedTask{
+	task := &SharedTask{
 		ID:             "task-1",
 		OrganizationID: "org-1",
 		Title:          "Task 1",
@@ -139,19 +140,19 @@ func TestSyncDaemon_SyncPendingMissions_ContextCancel(t *testing.T) {
 
 	err := localStore.CreateTask(context.Background(), task)
 	require.NoError(t, err)
-    err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_ESCALATION")
-    require.NoError(t, err)
+	err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_ESCALATION")
+	require.NoError(t, err)
 
-    ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 
-    go func() {
-        time.Sleep(10 * time.Millisecond)
-        cancel()
-    }()
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		cancel()
+	}()
 
-    go StartSyncDaemon(ctx, localStore, cloudStore)
+	go StartSyncDaemon(ctx, localStore, cloudStore)
 
-    time.Sleep(100 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 }
 
 func TestSyncDaemon_SyncPendingMissions_ScanError(t *testing.T) {
@@ -177,7 +178,7 @@ func TestSyncDaemon_SyncPendingMissions_ScanError(t *testing.T) {
 	cloudStore := &mockPostgresProvider{NewSqliteTaskStore(db)}
 
 	err := syncPendingEscalations(context.Background(), localStore, cloudStore)
-    assert.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestSyncDaemon_SyncPendingMissions_SanitizeMockError(t *testing.T) {
@@ -190,7 +191,7 @@ func TestSyncDaemon_SyncPendingMissions_SanitizeMockError(t *testing.T) {
 	localStore := NewSqliteTaskStore(localDB)
 	cloudStore := &mockPostgresProvider{NewSqliteTaskStore(cloudDB)}
 
-    payload := `{"data": "test [PRIVATE:secret]"}`
+	payload := `{"data": "test [PRIVATE:secret]"}`
 	rawPayload := json.RawMessage(payload)
 	task := &SharedTask{
 		ID:             "task-1",
@@ -202,15 +203,15 @@ func TestSyncDaemon_SyncPendingMissions_SanitizeMockError(t *testing.T) {
 
 	err := localStore.CreateTask(context.Background(), task)
 	require.NoError(t, err)
-    err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_ESCALATION")
-    require.NoError(t, err)
+	err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_ESCALATION")
+	require.NoError(t, err)
 
-    // Override SanitizePayloadFunc
-    originalSanitize := SanitizePayloadFunc
-    defer func() { SanitizePayloadFunc = originalSanitize }()
-    SanitizePayloadFunc = func(payload string) (string, error) {
-        return "", errors.New("mock sanitize error")
-    }
+	// Override SanitizePayloadFunc
+	originalSanitize := SanitizePayloadFunc
+	defer func() { SanitizePayloadFunc = originalSanitize }()
+	SanitizePayloadFunc = func(payload string) (string, error) {
+		return "", errors.New("mock sanitize error")
+	}
 
 	err = syncPendingEscalations(context.Background(), localStore, cloudStore)
 	assert.NoError(t, err) // It continues on error
@@ -236,7 +237,7 @@ func TestSyncDaemon_SyncCompletedEscalations_CloudGetError(t *testing.T) {
 	localStore := NewSqliteTaskStore(localDB)
 	cloudStore := &mockPostgresProvider{NewSqliteTaskStore(cloudDB)}
 
-    task := &SharedTask{
+	task := &SharedTask{
 		ID:             "task-1",
 		OrganizationID: "org-1",
 		Title:          "Task 1",
@@ -245,10 +246,10 @@ func TestSyncDaemon_SyncCompletedEscalations_CloudGetError(t *testing.T) {
 
 	err := localStore.CreateTask(context.Background(), task)
 	require.NoError(t, err)
-    err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_PROCESSING")
-    require.NoError(t, err)
+	err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_PROCESSING")
+	require.NoError(t, err)
 
-    cloudDB.Close() // this will cause GetTask to fail
+	cloudDB.Close() // this will cause GetTask to fail
 
 	err = syncCompletedEscalations(context.Background(), localStore, cloudStore)
 	assert.NoError(t, err)
@@ -270,7 +271,7 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 	ClearSemaphore()
 	defer ClearSemaphore()
 
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 	defer db.Close()
 
