@@ -25,16 +25,6 @@ type SharedTaskDecomposition struct {
 	CreatedAt       time.Time
 }
 
-type StateMachineTransition struct {
-	ID         string
-	EntityID   string
-	EntityType string
-	FromState  string
-	ToState    string
-	AgentID    *string
-	Reason     *string
-	OccurredAt time.Time
-}
 
 type TaskDecompositionService interface {
 	CreateTask(ctx context.Context, task *SharedTaskDecomposition) error

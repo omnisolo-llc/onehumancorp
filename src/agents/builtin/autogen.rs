@@ -277,7 +277,7 @@ Provide your response.",
         let results = futures::future::join_all(futures).await;
         let mut combined_responses = String::new();
 
-        for (i, res) in results.into_iter().enumerate() {
+        for (_, res) in results.into_iter().enumerate() {
             let text = res?;
             combined_responses.push_str(&text);
             combined_responses.push_str("\n\n");
