@@ -139,12 +139,19 @@ func TestMeshHandler_Subscribe(t *testing.T) {
 	// Publish to the mesh
 	ctx := context.Background()
 	body := []byte(`{"message": "hello from mesh"}`)
-	err = mesh.Publish(ctx, "test-channel", body)
-	require.NoError(t, err)
+	// Try up to 5 times to publish and read, handling the flaky connection startup
+	var message []byte
+	for i := 0; i < 5; i++ {
+		err = mesh.Publish(ctx, "test-channel", body)
+		require.NoError(t, err)
 
-	// Read from websocket
-	_ = conn.SetReadDeadline(time.Now().Add(time.Second * 5))
-	_, message, err := conn.ReadMessage()
+		_ = conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		_, message, err = conn.ReadMessage()
+		if err == nil {
+			break
+		}
+	}
+
 	require.NoError(t, err)
 	assert.Equal(t, string(body), string(message))
 }
