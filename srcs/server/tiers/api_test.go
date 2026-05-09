@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"onehumancorp/srcs/server/onboarding"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -44,15 +46,17 @@ func TestAPIHandler(t *testing.T) {
 
 	svc := NewTierService(db)
 	handler := NewAPIHandler(svc)
+	wrappedHandler := onboarding.TenantAuthMiddleware(handler.HandleCheckLimit)
 
 	// Valid Request
-	req, err := http.NewRequest("GET", "/api/tiers/check?tenant_id="+tenantID+"&metric=products", nil)
+	req, err := http.NewRequest("GET", "/api/tiers/check?metric=products", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("X-Tenant-Id", tenantID)
 
 	rr := httptest.NewRecorder()
-	handler.HandleCheckLimit(rr, req)
+	wrappedHandler(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -74,12 +78,14 @@ func TestAPIHandler(t *testing.T) {
 		t.Fatalf("failed to update usage")
 	}
 
-	req2, err := http.NewRequest("GET", "/api/tiers/check?tenant_id="+tenantID+"&metric=products", nil)
+	req2, err := http.NewRequest("GET", "/api/tiers/check?metric=products", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	req2.Header.Set("X-Tenant-Id", tenantID)
+
 	rr2 := httptest.NewRecorder()
-	handler.HandleCheckLimit(rr2, req2)
+	wrappedHandler(rr2, req2)
 
 	if status := rr2.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -95,35 +101,38 @@ func TestAPIHandler(t *testing.T) {
 		t.Errorf("expected allowed to be false")
 	}
 
-	// Test missing parameter tenant_id
+	// Test missing tenant ID
 	req3, _ := http.NewRequest("GET", "/api/tiers/check?metric=products", nil)
 	rr3 := httptest.NewRecorder()
-	handler.HandleCheckLimit(rr3, req3)
-	if status := rr3.Code; status != http.StatusBadRequest {
-		t.Errorf("handler returned wrong status code for missing param: got %v want %v", status, http.StatusBadRequest)
+	wrappedHandler(rr3, req3)
+	if status := rr3.Code; status != http.StatusUnauthorized {
+		t.Errorf("handler returned wrong status code for missing param: got %v want %v", status, http.StatusUnauthorized)
 	}
 
 	// Test missing parameter metric
-	req4, _ := http.NewRequest("GET", "/api/tiers/check?tenant_id="+tenantID, nil)
+	req4, _ := http.NewRequest("GET", "/api/tiers/check", nil)
+	req4.Header.Set("X-Tenant-Id", tenantID)
 	rr4 := httptest.NewRecorder()
-	handler.HandleCheckLimit(rr4, req4)
+	wrappedHandler(rr4, req4)
 	if status := rr4.Code; status != http.StatusBadRequest {
 		t.Errorf("handler returned wrong status code for missing param: got %v want %v", status, http.StatusBadRequest)
 	}
 
 	// Test invalid method
-	req5, _ := http.NewRequest("POST", "/api/tiers/check?tenant_id="+tenantID+"&metric=products", nil)
+	req5, _ := http.NewRequest("POST", "/api/tiers/check?metric=products", nil)
+	req5.Header.Set("X-Tenant-Id", tenantID)
 	rr5 := httptest.NewRecorder()
-	handler.HandleCheckLimit(rr5, req5)
+	wrappedHandler(rr5, req5)
 	if status := rr5.Code; status != http.StatusMethodNotAllowed {
 		t.Errorf("handler returned wrong status code for invalid method: got %v want %v", status, http.StatusMethodNotAllowed)
 	}
 
 	// Test service error (simulate db close)
 	db.Close()
-	req6, _ := http.NewRequest("GET", "/api/tiers/check?tenant_id="+tenantID+"&metric=products", nil)
+	req6, _ := http.NewRequest("GET", "/api/tiers/check?metric=products", nil)
+	req6.Header.Set("X-Tenant-Id", tenantID)
 	rr6 := httptest.NewRecorder()
-	handler.HandleCheckLimit(rr6, req6)
+	wrappedHandler(rr6, req6)
 	if status := rr6.Code; status != http.StatusInternalServerError {
 		t.Errorf("handler returned wrong status code for internal error: got %v want %v", status, http.StatusInternalServerError)
 	}
