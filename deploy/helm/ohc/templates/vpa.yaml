@@ -12,6 +12,16 @@ spec:
     name: {{ include "ohc.fullname" . }}-backend
   updatePolicy:
     updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: backend
+        controlledResources: ["cpu", "memory"]
+        minAllowed:
+          cpu: {{ .Values.backend.resources.requests.cpu }}
+          memory: {{ .Values.backend.resources.requests.memory }}
+        maxAllowed:
+          cpu: {{ .Values.backend.resources.limits.cpu }}
+          memory: {{ .Values.backend.resources.limits.memory }}
 {{- end }}
 ---
 {{- if .Values.ohcCore.vpa.enabled }}
@@ -26,6 +36,38 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-core
+  updatePolicy:
+    updateMode: "Off"
+{{- end }}
+---
+{{- if and .Values.chatwoot.enabled .Values.chatwoot.vpa.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-chatwoot-vpa
+  labels:
+    app: {{ .Release.Name }}-chatwoot
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}-chatwoot
+  updatePolicy:
+    updateMode: "Off"
+{{- end }}
+---
+{{- if and .Values.powersync.enabled .Values.powersync.vpa.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-powersync-vpa
+  labels:
+    app: {{ .Release.Name }}-powersync
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}-powersync
   updatePolicy:
     updateMode: "Off"
 {{- end }}
