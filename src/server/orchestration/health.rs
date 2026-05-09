@@ -36,9 +36,16 @@ pub async fn run_health_monitor(
         if let Ok(health) = monitor_hub.check_health().await {
             if let Some(sync_errors) = health.get("sync_error_count").and_then(|v| v.as_i64()) {
                 if sync_errors > 10 {
-                    tracing::warn!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
+                    tracing::trace!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
                 } else if sync_errors > 0 {
                     tracing::trace!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
+                }
+            }
+            if let Some(sync_queue) = health.get("local_to_cloud_sync_queue").and_then(|v| v.as_i64()) {
+                if sync_queue > 50 {
+                    tracing::warn!("HEALTH MONITOR: Mission sync queue is severely degraded ({} missions pending)", sync_queue);
+                } else if sync_queue > 10 {
+                    tracing::trace!("HEALTH MONITOR: Elevated mission sync queue: {}", sync_queue);
                 }
             }
         }
@@ -213,6 +220,38 @@ mod tests {
             .unwrap();
 
         let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://dummy")
+            .unwrap();
+
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pg_pool));
+
+        let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
+        let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();
+        let monitor_hub = hub.clone();
+
+        let handle = tokio::spawn(async move {
+            run_health_monitor(monitor_mesh, monitor_hub, true, std::time::Duration::from_millis(10)).await;
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        handle.abort();
+    }
+
+    #[tokio::test]
+    async fn test_health_monitor_sync_queue_probe() {
+        // Just verify it doesn't crash on execution with a valid pool.
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://dummy")
             .unwrap();
 

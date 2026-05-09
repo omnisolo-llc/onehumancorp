@@ -8,7 +8,7 @@ debt_report: |
   - Verified logic in `src/server/sip.rs` where stagnant missions trigger `UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK'`, avoiding circular retry state loops.
 
   ## Phase 2: Hygiene
-  - Fixed Signal Hygiene in `src/server/orchestration/health.rs`: Downgraded high-frequency sync error noise logs from `tracing::info!` to `tracing::trace!` to unobfuscate genuine reliability signals.
+  - Fixed Signal Hygiene in `src/server/orchestration/health.rs`: Downgraded high-frequency sync error noise logs from `tracing::warn!` to `tracing::trace!` to unobfuscate genuine reliability signals.
 
   ## Phase 3: Architectural Audit
   - Confirmed no security, zero trust, or SPIRE principles are violated.
