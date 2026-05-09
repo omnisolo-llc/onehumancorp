@@ -29,6 +29,7 @@ export component WebsiteBuilder inherits Window { // storefront
     in-out property <string> product_description: "";
     in-out property <string> domain_choice: "subdomain";
     in-out property <bool> is_publishing: false;
+    in-out property <bool> is_network_error: false;
     in-out property <bool> is_advanced: false;
     callback toggle_advanced();
     toggle_advanced => { }
@@ -329,10 +330,19 @@ export component WebsiteBuilder inherits Window { // storefront
                     padding: 16px;
                     alignment: center;
                     spacing: 8px;
-                    Text { text: "Publishing Site..."; font-size: 18px; font-family: "Outfit"; color: #a855f7; font-weight: 700; horizontal-alignment: center; }
-                    Text { text: "Site goes live instantly!"; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center; }
+                    Text { text: is_network_error ? "Network Error / Timeout" : "Publishing Site..."; font-size: 18px; font-family: "Outfit"; color: is_network_error ? #ef4444 : #a855f7; font-weight: 700; horizontal-alignment: center; }
+                    Text { text: is_network_error ? "There was a problem publishing your site." : "Site goes live instantly!"; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center; }
 
-                    GlassCard {
+                    if (is_network_error) : GlassCard {
+                        height: 44px;
+                        background: rgba(239, 68, 68, 0.2);
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "Retry"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center;}
+                        }
+                        TouchArea { clicked => { is_network_error = false; publish_site(selected_template, primary_color, product_name, product_price, product_description, domain_choice); } }
+                    }
+
+                    if (!is_network_error) : GlassCard {
                         height: 44px;
                         background: rgba(168, 85, 247, 0.2);
                         VerticalBox { alignment: center; padding: 12px;

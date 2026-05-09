@@ -1,3 +1,4 @@
+use slint::Model;
 use crate::app;
 
 
@@ -163,4 +164,22 @@ fn test_agents_ui_tune_callback() {
 
     ui.invoke_tune_agent("agent-456".into());
     assert_eq!(*tuned_id.borrow(), "agent-456");
+}
+
+#[test]
+fn test_agent_chaos_status_handling() {
+    crate::ui_tests::init();
+    let app = app::Agents::new().unwrap();
+
+    let initial_agents = vec![
+        app::UiAgent { id: "a1".into(), name: "Bob".into(), role: "Sales".into(), status: "Idle".into(), is_running: true, svid_verified: true, is_new: false },
+        app::UiAgent { id: "a2".into(), name: "Alice".into(), role: "Support".into(), status: "Retrying".into(), is_running: false, svid_verified: true, is_new: false },
+        app::UiAgent { id: "a3".into(), name: "Charlie".into(), role: "Billing".into(), status: "Paused".into(), is_running: false, svid_verified: true, is_new: false },
+        app::UiAgent { id: "a4".into(), name: "Dave".into(), role: "Analyst".into(), status: "Unavailable".into(), is_running: false, svid_verified: true, is_new: false },
+    ];
+    let model = std::rc::Rc::new(slint::VecModel::from(initial_agents));
+    app.set_agents(model.into());
+
+    let agents = app.get_agents();
+    assert_eq!(agents.row_count(), 4);
 }

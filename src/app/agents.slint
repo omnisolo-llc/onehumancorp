@@ -92,10 +92,10 @@ export component Agents inherits Window {
                         Text { 
                             text: agent.status; 
                             font-family: "Inter";
-                            color: agent.is_running ? #10b981 : #ef4444; 
+                            color: agent.is_running ? #10b981 : (agent.status == "Retrying" ? #f59e0b : (agent.status == "Paused" || agent.status == "Unavailable" || agent.status == "Down" ? #94a3b8 : #ef4444));
                             horizontal-alignment: center; 
                         }
-                        if (!agent.is_running) : Button { text: "Help me fix this"; clicked => { fix_agent(agent.id); } }
+                        if (!agent.is_running && agent.status != "Retrying" && agent.status != "Running" && agent.status != "Paused" && agent.status != "Unavailable" && agent.status != "Down") : Button { text: "Run"; clicked => { fix_agent(agent.id); } }
                         Button { text: "Tune this agent"; clicked => { tune_agent(agent.id); } }
                     }
                 }
