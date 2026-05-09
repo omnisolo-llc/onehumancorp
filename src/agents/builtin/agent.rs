@@ -113,6 +113,16 @@ impl Default for AgentRunConfig {
 }
 
 /// Progress metrics for a running agent task.
+impl AgentRunConfig {
+    pub fn apply_harness_thickness_heuristic(&mut self) {
+        let model = self.model.to_lowercase();
+        if model.contains("gpt-4o") || model.contains("claude-3-5") || model.contains("opus") || model.contains("gemini-1.5-pro") {
+            self.enable_lost_in_the_middle_prevention = false;
+            self.enable_context_compaction = false;
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct AgentProgress {
     tool_use_count: AtomicU64,
@@ -654,6 +664,9 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let mut cfg_clone = cfg.clone();
+        cfg_clone.apply_harness_thickness_heuristic();
+        let cfg = &cfg_clone;
         on_event(AgentEvent::RunStarted {
             iteration: 0,
         });
@@ -818,6 +831,9 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let mut cfg_clone = cfg.clone();
+        cfg_clone.apply_harness_thickness_heuristic();
+        let cfg = &cfg_clone;
         let mut self_with_memory = self;
         let owned_agent;
         if let Some(ltm) = &cfg.long_term_memory {
@@ -4096,5 +4112,46 @@ mod stream_tests {
 
         let has_task_complete = events.iter().any(|e| matches!(e, AgentEvent::TaskComplete { .. }));
         assert!(has_task_complete, "Stream should eventually emit TaskComplete event");
+    }
+}
+
+#[cfg(test)]
+mod harness_thickness_tests {
+    use super::*;
+
+    #[test]
+    fn test_harness_thickness_heuristic() {
+        // Test weak model
+        let mut cfg = AgentRunConfig::default();
+        cfg.model = "gpt-3.5-turbo".to_string();
+        cfg.enable_lost_in_the_middle_prevention = true;
+        cfg.enable_context_compaction = true;
+
+        cfg.apply_harness_thickness_heuristic();
+
+        assert!(cfg.enable_lost_in_the_middle_prevention, "Weak model should retain lost-in-the-middle prevention");
+        assert!(cfg.enable_context_compaction, "Weak model should retain context compaction");
+
+        // Test highly capable model (GPT-4o)
+        let mut cfg2 = AgentRunConfig::default();
+        cfg2.model = "gpt-4o-2024-05-13".to_string();
+        cfg2.enable_lost_in_the_middle_prevention = true;
+        cfg2.enable_context_compaction = true;
+
+        cfg2.apply_harness_thickness_heuristic();
+
+        assert!(!cfg2.enable_lost_in_the_middle_prevention, "Capable model should disable lost-in-the-middle prevention");
+        assert!(!cfg2.enable_context_compaction, "Capable model should disable context compaction");
+
+        // Test highly capable model (Claude-3.5)
+        let mut cfg3 = AgentRunConfig::default();
+        cfg3.model = "claude-3-5-sonnet-20240620".to_string();
+        cfg3.enable_lost_in_the_middle_prevention = true;
+        cfg3.enable_context_compaction = true;
+
+        cfg3.apply_harness_thickness_heuristic();
+
+        assert!(!cfg3.enable_lost_in_the_middle_prevention, "Capable model should disable lost-in-the-middle prevention");
+        assert!(!cfg3.enable_context_compaction, "Capable model should disable context compaction");
     }
 }
