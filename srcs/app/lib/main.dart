@@ -6,6 +6,7 @@ import 'screens/business_setup_wizard_screen.dart';
 import 'screens/help/help_center_screen.dart';
 import 'screens/help/ai_help_chat_screen.dart';
 import 'screens/referral_program_screen.dart';
+import 'widgets/milestone_notification.dart';
 
 
 void main() {
@@ -100,6 +101,11 @@ class DashboardScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
+                ),
+                const SizedBox(height: 20),
+                const MilestoneNotification(
+                  title: '🎉 You just got your 10th order!',
+                  message: 'Keep up the great work!',
                 ),
                 const SizedBox(height: 20),
                 GlassContainer(
