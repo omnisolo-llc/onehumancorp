@@ -758,7 +758,7 @@ impl Hub {
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
             "hybrid_mode_ready": hybrid_mode_ready,
-            "local_to_cloud_sync_queue": local_to_cloud_sync_queue,
+            "mission_sync_backlog": local_to_cloud_sync_queue,
             "sync_error_count": sync_error_count,
         }))
     }
@@ -980,6 +980,6 @@ mod tests {
         assert!(health.get("status").is_some());
         assert!(health.get("db_ping_ms").is_some());
         assert!(health.get("hybrid_mode_ready").is_some());
-        assert!(health.get("local_to_cloud_sync_queue").is_some());
+        assert!(health.get("mission_sync_backlog").is_some());
     }
 }

@@ -192,9 +192,9 @@ impl UserRepository for PgUserRepository {
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         let query = if org_id == "system" && !crate::config::get().multitenant {
-            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
+            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users ORDER BY updated_at ASC"
         } else {
-            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE organization_id = $1 ORDER BY created_at"
+            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE organization_id = $1 ORDER BY updated_at ASC"
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;

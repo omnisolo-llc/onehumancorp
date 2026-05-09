@@ -227,7 +227,7 @@ impl McpService for MyMcpService {
     ) -> Result<Response<EmptyResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
@@ -272,7 +272,7 @@ impl McpService for MyMcpService {
     ) -> Result<Response<EmptyResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));

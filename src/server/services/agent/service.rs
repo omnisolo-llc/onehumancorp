@@ -78,7 +78,10 @@ impl AgentManagerService for MyAgentManagerService {
     ) -> Result<Response<DashboardSnapshot>, Status> {
         let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
-        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+        let org_id = tenant_id;
 
 
         let req = request.into_inner();
@@ -221,7 +224,10 @@ impl AgentManagerService for MyAgentManagerService {
     ) -> Result<Response<OrgSnapshot>, Status> {
         let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
-        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+        let org_id = tenant_id;
 
 
         let req = request.into_inner();

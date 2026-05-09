@@ -85,10 +85,10 @@ impl SyncService for MySyncService {
         tracing::debug!("PowerSync received push request.");
 
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
-        let mut tenant_id = parsed.0;
+        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let tenant_id = parsed.0;
         if tenant_id.is_empty() {
-            tenant_id = "system".to_string();
+            return Err(Status::unauthenticated("missing tenant identity in session"));
         }
 
         let items: Vec<serde_json::Value> = serde_json::from_str(&req.payload).unwrap_or_default();
@@ -162,10 +162,10 @@ impl SyncService for MySyncService {
 
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
-        let mut tenant_id = parsed.0;
+        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let tenant_id = parsed.0;
         if tenant_id.is_empty() {
-            tenant_id = "system".to_string();
+            return Err(Status::unauthenticated("missing tenant identity in session"));
         }
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
@@ -234,7 +234,7 @@ impl SyncService for MySyncService {
         let deltas = req.deltas;
 
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
         let tenant_id = parsed.0;
 
         if tenant_id.is_empty() {
@@ -298,8 +298,11 @@ impl SyncService for MySyncService {
     ) -> Result<Response<SyncEscalationResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
-        let tenant_id = if parsed.0.is_empty() { "system".to_string() } else { parsed.0 };
+        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let tenant_id = parsed.0;
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
 
         let req = request.into_inner();
         let payloads = req.payloads;
@@ -375,7 +378,8 @@ mod tests {
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
-        let req = Request::new(PowerSyncPushRequest { payload: "[]".to_string() });
+        let mut req = Request::new(PowerSyncPushRequest { payload: "[]".to_string() });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap());
         let resp = service.power_sync_push(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "ok");
     }
@@ -460,7 +464,8 @@ mod tests {
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
-        let req = Request::new(SyncEscalationRequest { payloads: vec![] });
+        let mut req = Request::new(SyncEscalationRequest { payloads: vec![] });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap());
         let resp = service.sync_escalation(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
         assert_eq!(resp.get_ref().synced_count, 0);
