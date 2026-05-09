@@ -32,7 +32,14 @@ pub struct Job {
 #[async_trait]
 pub trait TaskQueue: Send + Sync {
     async fn enqueue(&self, job: Job) -> Result<(), String>;
-    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> { for job in jobs { self.enqueue(job).await?; } Ok(()) }
+    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+        let mut futures = Vec::new();
+        for job in jobs {
+            futures.push(self.enqueue(job));
+        }
+        futures::future::join_all(futures).await.into_iter().collect::<Result<Vec<()>, String>>()?;
+        Ok(())
+    }
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String>;
         async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String>;
     async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String>;

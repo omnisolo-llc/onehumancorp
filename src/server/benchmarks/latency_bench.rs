@@ -139,6 +139,12 @@ pub async fn bench_dashboard_snapshot() {
         assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
         assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop payload should contain transcripts");
     }
+
+    if !res_mobile.products.is_empty() {
+        assert_eq!(res_mobile.products[0].description, "");
+        assert_eq!(res_mobile.products[0].metadata_json, "");
+        assert_eq!(res_mobile.products[0].fulfillment_strategy, "");
+    }
 }
 
 // Emulating high-concurrency dispatch scenarios (Phase 2 Parallel Execution Strategy)
