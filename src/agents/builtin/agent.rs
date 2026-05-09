@@ -752,6 +752,7 @@ impl Agent {
 
         // Phase 2: Execution
         let mut executed_steps = Vec::new();
+        let mut tool_error_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         for (i, step) in plan.into_iter().enumerate() {
             let tool_name = step.get("tool").and_then(|v| v.as_str()).unwrap_or("");
             let args = step.get("args").unwrap_or(&serde_json::Value::Null);
@@ -790,9 +791,43 @@ impl Agent {
                         }
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        // Since plan-and-execute can't immediately feed back to the LLM within the same loop easily,
-                        // we add it to the execution summary so the replier sees the error and can try to fix it or report it.
-                        break format!("Error executing planned step (LlmRecoverable): {}", msg);
+                        let count = tool_error_counts.entry(tool_name.to_string()).or_insert(0);
+                        *count += 1;
+                        if *count >= 3 {
+                            return Err(format!("Fatal tool error: Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg).into());
+                        }
+
+                        // LangGraph Mechanic: LLM-Recoverable ToolMessage feedback loop
+                        let repair_system = format!("Tool '{}' failed with error: {}. You must provide a repaired JSON arguments object to retry.", tool_name, msg);
+                        let repair_req = ChatRequest {
+                            model: cfg.model.clone(),
+                            system: repair_system,
+                            messages: vec![Message::user(&args.to_string())],
+                            tools: vec![],
+                            max_tokens: cfg.max_tokens,
+                            temperature: 0.0,
+                        };
+                        match self.llm.chat(repair_req).await {
+                            Ok(resp) => {
+                                let repaired_json = resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+                                if let Ok(repaired_args) = serde_json::from_str::<serde_json::Value>(repaired_json) {
+                                    let repaired_tc = ToolCall {
+                                        id: format!("{}_repair_{}", dummy_tc.id, count),
+                                        name: dummy_tc.name.clone(),
+                                        arguments: repaired_args,
+                                    };
+                                    match self.execute_tool(&repaired_tc, session_tools, &[]).await {
+                                        Ok(res) => break res,
+                                        Err(e) => break format!("Error executing repaired step: {:?}", e),
+                                    }
+                                } else {
+                                    break format!("Error executing planned step (LlmRecoverable): {} (Failed to parse repaired arguments)", msg);
+                                }
+                            }
+                            Err(_) => {
+                                break format!("Error executing planned step (LlmRecoverable): {} (LLM repair failed)", msg);
+                            }
+                        }
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
                         let err = format!("USER_FIXABLE: {}", msg);
