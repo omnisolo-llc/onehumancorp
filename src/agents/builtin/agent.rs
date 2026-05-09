@@ -699,52 +699,25 @@ impl Agent {
         };
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
-        let plan_resp = self.llm.chat(plan_req.clone()).await?;
-        let plan_json_text = plan_resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+        struct LlmClientWrapper(Arc<dyn LlmClient>);
+        #[async_trait::async_trait]
+        impl crate::output_parser::LlmClientForParser for LlmClientWrapper {
+            async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                self.0.chat(req).await
+            }
+        }
+        let llm_for_parser: Arc<dyn crate::output_parser::LlmClientForParser> = Arc::new(LlmClientWrapper(self.llm.clone()));
+
+        let plan: Vec<serde_json::Value> = match crate::output_parser::parse_structured_output::<Vec<serde_json::Value>>(
+            &llm_for_parser,
+            plan_req.clone(),
+            3
+        ).await {
+            Ok(p) => p,
+            Err(e) => return Err(format!("Failed to parse planner output after retries. Error: {}", e).into())
+        };
 
         on_event(AgentEvent::RunStarted { iteration: 1 });
-
-        let plan: Vec<serde_json::Value> = match serde_json::from_str(plan_json_text) {
-            Ok(p) => p,
-            Err(e) => {
-                // Fallback mechanic: Legacy RetryWithErrorOutputParser
-                // Feed the original prompt, the failed completion, and the parsing error back to the model.
-                let mut attempt = 0;
-                let mut current_req = plan_req;
-                let mut last_error = e.to_string();
-                let mut final_plan = None;
-
-                current_req.messages.push(Message::assistant(plan_resp.message.content.clone()));
-                let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON array without markdown formatting.", e);
-                current_req.messages.push(Message::user(error_msg));
-
-                while attempt < 3 {
-                    attempt += 1;
-                    let resp = self.llm.chat(current_req.clone()).await?;
-                    let completion = resp.message.content.clone();
-
-                    let json_text = completion.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
-                    match serde_json::from_str(json_text) {
-                        Ok(p) => {
-                            final_plan = Some(p);
-                            break;
-                        }
-                        Err(e) => {
-                            last_error = e.to_string();
-                            current_req.messages.push(Message::assistant(completion));
-                            let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON array without markdown formatting.", e);
-                            current_req.messages.push(Message::user(error_msg));
-                        }
-                    }
-                }
-
-                if let Some(p) = final_plan {
-                    p
-                } else {
-                    return Err(format!("Failed to parse planner output as JSON array after retries. Last error: {}", last_error).into());
-                }
-            }
-        };
 
         // Phase 2: Execution
         let mut executed_steps = Vec::new();
@@ -1593,7 +1566,7 @@ impl Agent {
             }
 
             if cfg.enable_observation_masking {
-                // JetBrains Observation Masking: Hide the raw output of old tools from the prompt,
+                // Context Management: JetBrains Observation Masking: Hide the raw output of old tools from the prompt,
                 // but keep the `tool_calls` themselves visible so the model remembers what it did.
                 // Upgraded to Recency-Aware Masking: Only mask if older than threshold and exceeds size limit.
                 let msg_count = messages.len();
