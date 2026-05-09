@@ -1,0 +1,33 @@
+--- srcs/server/onboarding/service_test.go
++++ srcs/server/onboarding/service_test.go
+@@ -10,7 +10,8 @@
+ )
+
+ func setupTestDB(t *testing.T) *sql.DB {
+-	db, err := sql.Open("sqlite3", ":memory:")
++	// db, err := sql.Open("sqlite3", ":memory:")
++	db, err := sql.Open("sqlite3", "file:memdb_onboarding?mode=memory&cache=shared")
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+@@ -25,8 +26,7 @@
+			status TEXT,
+			state TEXT,
+			created_at DATETIME,
+-			updated_at DATETIME,
+-			state TEXT
++			updated_at DATETIME
+		);
+		CREATE TABLE shared_tasks (
+			id TEXT PRIMARY KEY,
+@@ -39,8 +39,7 @@
+			payload BLOB,
+			parent_plan_id TEXT,
+			dependencies BLOB,
+-			created_at DATETIME,
+-			updated_at DATETIME,
+-			state TEXT
++			created_at DATETIME,
++			updated_at DATETIME
+		);
+	`)

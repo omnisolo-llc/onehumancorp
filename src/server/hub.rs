@@ -956,9 +956,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_health() {
-        // Skip test if no database is available
+        // Run test if no database is available
         if std::env::var("DATABASE_URL").is_err() {
-            return;
+            panic!("No db for test_check_health");
         }
 
         let db_url = std::env::var("DATABASE_URL").unwrap();

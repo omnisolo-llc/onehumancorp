@@ -19,12 +19,12 @@ func TestUnifiedDataModelRLSIntegration(t *testing.T) {
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		t.Skipf("Skipping integration test: %v", err)
+		t.Fatalf("Failed to open DB for integration test: %v", err)
 	}
 	defer db.Close()
 
 	if err := db.Ping(); err != nil {
-		t.Skipf("Skipping integration test due to ping failure: %v", err)
+		t.Fatalf("Failed to ping DB for integration test: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

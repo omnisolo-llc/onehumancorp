@@ -70,9 +70,9 @@ func TestNoPIILoggingStatements(t *testing.T) {
 			return nil
 		}
 
-		// Skip this test file itself to avoid self-detection
+		// Do not Skip this test file itself to avoid self-detection
 		if strings.HasSuffix(path, "pii_leakage_ast_test.go") {
-			return nil
+			// return nil
 		}
 
 		node, err := parser.ParseFile(fset, path, nil, 0)
