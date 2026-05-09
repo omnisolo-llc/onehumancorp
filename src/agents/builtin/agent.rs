@@ -1512,7 +1512,9 @@ impl Agent {
                             result: r.clone(),
                             iteration,
                         });
-                        tool_results[idx] = ToolResult {
+                        let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                        let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: r,
                             error: String::new(),
@@ -1526,7 +1528,10 @@ impl Agent {
                             result: format!("Error: {}", err),
                             iteration,
                         });
-                        tool_results[idx] = ToolResult {
+                        let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                        let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                        let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
                             error: err,
@@ -1600,7 +1605,8 @@ impl Agent {
                             result: msg.clone(),
                             iteration,
                         });
-                        tool_results[idx] = ToolResult {
+                        let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
                             error: msg,
@@ -1801,6 +1807,8 @@ impl Agent {
                 }
 
                 let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                        let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
                 tool_results[idx] = ToolResult {
                     tool_call_id: tc.id.clone(),
                     content,
