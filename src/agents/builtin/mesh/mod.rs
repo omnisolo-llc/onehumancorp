@@ -38,45 +38,100 @@ impl TeammateMeshClient {
 #[async_trait]
 impl TeammateMesh for TeammateMeshClient {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+        let job_id = uuid::Uuid::new_v4().to_string();
+        let dispatch = crate::proto::interop::JobDispatch {
+            job_id: job_id.clone(),
+            tenant_id: "default".to_string(),
+            action_name: "system:job_dispatch:mesh".to_string(),
+            payload,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+        let mut buf = Vec::new();
+        dispatch.encode(&mut buf).map_err(|e| e.to_string())?;
+
         self.transport.publish("system:job_dispatch:mesh", Message {
             agent_id: "agent".to_string(),
             action: "system:job_dispatch:mesh".to_string(),
             status: "ok".to_string(),
-            payload,
-            msg_id: uuid::Uuid::new_v4().to_string(),
+            payload: buf,
+            msg_id: job_id,
         }).await
     }
 
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+        let job_id = uuid::Uuid::new_v4().to_string();
+        let dispatch = crate::proto::interop::JobDispatch {
+            job_id: job_id.clone(),
+            tenant_id: "default".to_string(),
+            action_name: "system:coordination".to_string(),
+            payload,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+        let mut buf = Vec::new();
+        dispatch.encode(&mut buf).map_err(|e| e.to_string())?;
+
         self.transport.publish("system:coordination", Message {
             agent_id: "agent".to_string(),
             action: "system:coordination".to_string(),
             status: "ok".to_string(),
-            payload,
-            msg_id: uuid::Uuid::new_v4().to_string(),
+            payload: buf,
+            msg_id: job_id,
         }).await
     }
 
     async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("system:job_dispatch:mesh", handler).await
+        self.transport.subscribe("system:job_dispatch:mesh", Box::new(move |mut msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(dispatch) = crate::proto::interop::JobDispatch::decode(&msg.payload[..]) {
+                msg.payload = dispatch.payload;
+                handler(msg);
+            }
+        })).await
     }
 
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("system:coordination", handler).await
+        self.transport.subscribe("system:coordination", Box::new(move |mut msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(dispatch) = crate::proto::interop::JobDispatch::decode(&msg.payload[..]) {
+                msg.payload = dispatch.payload;
+                handler(msg);
+            }
+        })).await
     }
 
     async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+        let msg_id = uuid::Uuid::new_v4().to_string();
+        let handoff = crate::proto::interop::StateHandoff {
+            mission_id: msg_id.clone(),
+            tenant_id: "default".to_string(),
+            source_mode: 0,
+            target_mode: 0,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+            state_snapshot: payload,
+        };
+        let mut buf = Vec::new();
+        handoff.encode(&mut buf).map_err(|e| e.to_string())?;
+
         self.transport.publish("system:state_handoff", Message {
             agent_id: "agent".to_string(),
             action: "system:state_handoff".to_string(),
             status: "ok".to_string(),
-            payload,
-            msg_id: uuid::Uuid::new_v4().to_string(),
+            payload: buf,
+            msg_id,
         }).await
     }
 
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("system:state_handoff", handler).await
+        self.transport.subscribe("system:state_handoff", Box::new(move |mut msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(handoff) = crate::proto::interop::StateHandoff::decode(&msg.payload[..]) {
+                msg.payload = handoff.state_snapshot;
+                handler(msg);
+            }
+        })).await
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
@@ -180,7 +235,7 @@ impl TeammateMesh for TeammateMeshClient {
             job_id: job_id.clone(),
             tenant_id: "default".to_string(),
             action_name: topic.to_string(),
-            payload_json: payload,
+            payload: payload,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 
@@ -265,7 +320,7 @@ mod tests {
         mesh.publish_task(b"task_data".to_vec()).await.unwrap();
         mesh.publish_coordination(b"coord_data".to_vec()).await.unwrap();
 
-        sleep(Duration::from_millis(50)).await;
+        sleep(Duration::from_millis(100)).await;
 
         assert!(tasks_received.load(Ordering::SeqCst), "Should receive task message");
         assert!(coord_received.load(Ordering::SeqCst), "Should receive coordination message");
@@ -287,7 +342,7 @@ mod tests {
         })).await.unwrap();
 
         mesh.publish_task(b"test".to_vec()).await.unwrap();
-        sleep(Duration::from_millis(50)).await;
+        sleep(Duration::from_millis(100)).await;
 
         assert!(received.load(Ordering::SeqCst), "Fallback MemoryTransport should successfully process messages");
     }
@@ -354,7 +409,7 @@ mod tests {
         })).await.unwrap();
 
         mesh.publish_state_handoff(b"state_data".to_vec()).await.unwrap();
-        sleep(Duration::from_millis(50)).await;
+        sleep(Duration::from_millis(100)).await;
 
         assert!(received.load(Ordering::SeqCst), "Should receive state handoff message");
     }
