@@ -1,5 +1,15 @@
 # OHC Hybrid Agentic OS Changelog
 
+## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🧹 Maintainer: Fixed compiler warnings and improved reliability metrics. Reduced systematic log noise to correctly prioritize active error monitoring over routine threshold states.
+- 🧹 Cleaner: Final Mile Hybrid Version Bump and Telemetry Fix.
+
+### Privacy/Offline Improvements
+- 🧹 Maintainer: Triage & Debt Report improvements.
+- 🧹 Cleaner: Final Mile Hybrid Version Bump and Telemetry Fix.
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 ### Cloud Scaling Improvements

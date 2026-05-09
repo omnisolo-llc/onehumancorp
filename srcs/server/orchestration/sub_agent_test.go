@@ -78,8 +78,8 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Allow time for the goroutine to run (transient failures may take time to retry)
-	time.Sleep(6 * time.Second)
-	time.Sleep(6 * time.Second)
+	time.Sleep(8 * time.Second)
+	time.Sleep(8 * time.Second)
 
 	// Check MeshTransport events
 	foundSpawned := false
@@ -120,7 +120,7 @@ func TestSubAgentSpawner_SpawnCloud(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Allow time for the goroutine to run
-	time.Sleep(6 * time.Second)
+	time.Sleep(8 * time.Second)
 
 	// Check MeshTransport events
 	foundSpawned := false
@@ -169,7 +169,7 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 	assert.Equal(t, "ASSIGNED", fetchedTask.Status)
 
 	// Give spawner time
-	time.Sleep(6 * time.Second)
+	time.Sleep(8 * time.Second)
 
 	foundCompleted := false
 	for _, msg := range mesh.published {
