@@ -16,8 +16,8 @@ backend:
     targetMemoryUtilizationPercentage: 85
   resources:
     requests:
-      cpu: "500m"
-      memory: "512Mi"
+      cpu: "200m"
+      memory: "256Mi"
     limits:
       cpu: "2000m"
       memory: "4Gi"
@@ -61,8 +61,8 @@ ohcCore:
     targetMemoryUtilizationPercentage: 85
   resources:
     requests:
-      cpu: "100m"
-      memory: "128Mi"
+      cpu: "50m"
+      memory: "64Mi"
     limits:
       cpu: "500m"
       memory: "512Mi"
