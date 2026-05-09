@@ -1,17 +1,33 @@
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Order Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
-**Research Report**:
-- **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
-**Design Doc**:
-- User goes to Settings and toggles "Send me SMS for new orders".
-- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
-- (Future: Customers can also receive SMS receipts).
-**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
-**Priority**: P2
-**Estimated Scope**: Medium
+# Integration Issue Brief: SMS & Notifications (Twilio)
+
+## Title
+Global SMS Notifications & Marketing: Twilio
+
+## Problem Statement
+Many small business owners have clients who do not check email frequently or have lower English/technical proficiency. SMS is a universal, high-open-rate channel. Owners need a reliable way to send appointment reminders, order updates, and marketing blasts via SMS globally.
+
+## Research Report
+*   **Tool Evaluated**: Twilio
+*   **Ease of Use**: Developer-focused API, but highly reliable. The end-user (business owner) will not interact with Twilio directly; they will use OHC's interface, which wraps Twilio's complexity.
+*   **Market Position & Reputation**: The undisputed leader in CPaaS (Communications Platform as a Service). Unmatched global reach and reliability.
+*   **Pricing**: Pay-as-you-go usage-based pricing.
+    *   **SMS**: Starts at ~$0.0083 per message to send/receive (US pricing), varies heavily by destination country.
+    *   **Phone Numbers**: ~$1.15/month for a local US number.
+*   **Cloud vs. Standalone Compatibility**: API-based. Fully compatible with both modes.
+
+## Design Doc
+*   **Integration Trigger**: OHC administrator configures master Twilio API credentials. (Alternatively, users can plug in their own API keys).
+*   **Action Flow**:
+    1.  User creates an SMS campaign or a system event triggers an SMS (e.g., appointment reminder).
+    2.  OHC formats the payload and calls Twilio's Programmable SMS API.
+    3.  Twilio delivers the message and sends delivery status webhooks back to OHC.
+*   **User Experience**: The business owner simply types a text message into the OHC marketing/notification dashboard, hits "Send", and the message is reliably delivered to their customers' phones.
+
+## Implementation Prompt
+Implement an SMS notification engine using Twilio. Create a backend service that accepts a phone number and message body, and dispatches it via the Twilio API. Expose this service to internal OHC events (like calendar bookings for reminders) and to a user-facing "SMS Campaign" UI. Ensure the system handles opt-outs (STOP messages) appropriately to maintain compliance.
+
+## Priority
+P0
+
+## Estimated Scope
+Medium
