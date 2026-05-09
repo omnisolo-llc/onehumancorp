@@ -1,0 +1,18 @@
+--- srcs/server/onboarding/service_test.go
++++ srcs/server/onboarding/service_test.go
+@@ -25,7 +25,6 @@
+			name TEXT,
+			category TEXT,
+			description TEXT,
+-			state TEXT,
+			status TEXT,
+			state TEXT,
+			created_at DATETIME,
+@@ -36,7 +35,6 @@
+			organization_id TEXT,
+			title TEXT,
+			description TEXT,
+-			state TEXT,
+			status TEXT,
+			state TEXT,
+			agent_id TEXT,
