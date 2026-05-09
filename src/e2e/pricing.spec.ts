@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+test.describe.configure({ mode: 'serial' });
+
 test.describe('Pricing Page', () => {
 
   test('should display "What does this cost?" wizard flow correctly', async ({ page }) => {
