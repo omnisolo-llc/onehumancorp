@@ -1,6 +1,5 @@
 use crate::app;
 
-
 fn create() -> app::Login {
     crate::ui_tests::init();
     app::Login::new().unwrap()
@@ -80,5 +79,8 @@ fn test_login_echo_business_setup_click_sim() {
         *invoked_clone.borrow_mut() = true;
     });
     ui.invoke_start_setup_wizard();
-    assert!(*invoked.borrow(), "Start My Business button logic must work");
+    assert!(
+        *invoked.borrow(),
+        "Start My Business button logic must work"
+    );
 }

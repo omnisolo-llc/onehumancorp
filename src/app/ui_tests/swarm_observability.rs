@@ -1,12 +1,18 @@
 use crate::app;
 use slint::Model;
 
-fn create() -> app::Dashboard { crate::ui_tests::init(); app::Dashboard::new().unwrap() }
+fn create() -> app::Dashboard {
+    crate::ui_tests::init();
+    app::Dashboard::new().unwrap()
+}
 
 #[test]
 fn test_swarm_observability_default_hidden() {
     let ui = create();
-    assert!(!ui.get_show_swarm_observability(), "Swarm observability panel should be hidden by default");
+    assert!(
+        !ui.get_show_swarm_observability(),
+        "Swarm observability panel should be hidden by default"
+    );
 }
 
 #[test]
@@ -20,7 +26,10 @@ fn test_swarm_observability_toggle_on() {
     // Slint test limitations for inline click handlers mean we either expose a callback or test the boolean.
     // Let's test the state property
     ui.set_show_swarm_observability(true);
-    assert!(ui.get_show_swarm_observability(), "Swarm observability panel should be visible after state update");
+    assert!(
+        ui.get_show_swarm_observability(),
+        "Swarm observability panel should be visible after state update"
+    );
 }
 
 #[test]
@@ -41,7 +50,10 @@ fn test_swarm_observability_data_injection_activities() {
     let activities = ui.get_swarm_activities();
     assert_eq!(activities.row_count(), 2);
     let first_activity = activities.row_data(0).unwrap();
-    assert_eq!(first_activity.message, "✅ Your Support Agent replied to 3 customers");
+    assert_eq!(
+        first_activity.message,
+        "✅ Your Support Agent replied to 3 customers"
+    );
 }
 
 #[test]
@@ -76,7 +88,10 @@ fn test_swarm_observability_toggle_off() {
     ui.set_show_swarm_observability(true);
     assert!(ui.get_show_swarm_observability(), "Panel should be visible");
     ui.set_show_swarm_observability(false);
-    assert!(!ui.get_show_swarm_observability(), "Panel should be hidden again");
+    assert!(
+        !ui.get_show_swarm_observability(),
+        "Panel should be hidden again"
+    );
 }
 
 #[test]
@@ -91,5 +106,8 @@ fn test_swarm_observability_button_click() {
 
     ui.invoke_action_open_swarm_observability();
 
-    assert!(*invoked.borrow(), "Agent Activity button click should invoke the correct callback");
+    assert!(
+        *invoked.borrow(),
+        "Agent Activity button click should invoke the correct callback"
+    );
 }

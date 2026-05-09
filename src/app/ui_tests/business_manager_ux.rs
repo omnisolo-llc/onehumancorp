@@ -1,8 +1,7 @@
-
 use slint::ModelRc;
 use slint::VecModel;
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 use crate::app;
 
@@ -16,16 +15,14 @@ fn test_business_manager_ux_list_view() {
     let app = create();
 
     // Add dummy products to test touch targets
-    let products = Rc::new(VecModel::from(vec![
-        app::UiProduct {
-            id: "1".into(),
-            name: "Test Item".into(),
-            type_label: "PHYSICAL".into(),
-            price: "10.00".into(),
-            inventory_count: 5,
-            is_out_of_stock: false,
-        }
-    ]));
+    let products = Rc::new(VecModel::from(vec![app::UiProduct {
+        id: "1".into(),
+        name: "Test Item".into(),
+        type_label: "PHYSICAL".into(),
+        price: "10.00".into(),
+        inventory_count: 5,
+        is_out_of_stock: false,
+    }]));
     app.set_products(ModelRc::from(products));
 
     let edit_clicked = Rc::new(RefCell::new(false));
@@ -44,7 +41,10 @@ fn test_business_manager_ux_list_view() {
     assert!(*edit_clicked.borrow(), "Edit action should be triggered");
 
     app.invoke_action_archive("1".into());
-    assert!(*archive_clicked.borrow(), "Archive action should be triggered");
+    assert!(
+        *archive_clicked.borrow(),
+        "Archive action should be triggered"
+    );
 }
 
 #[test]

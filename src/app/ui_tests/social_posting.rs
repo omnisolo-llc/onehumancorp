@@ -1,4 +1,3 @@
-
 use crate::app;
 
 fn create() -> app::SocialPosting {

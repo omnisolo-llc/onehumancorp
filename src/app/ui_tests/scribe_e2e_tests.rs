@@ -1,4 +1,4 @@
-use slint::{ComponentHandle, SharedString, Model};
+use slint::{ComponentHandle, Model, SharedString};
 
 #[test]
 fn test_scribe_help_center_content() {
@@ -43,21 +43,26 @@ fn test_scribe_help_center_content() {
 fn test_scribe_tooltip_registry() {
     crate::ui_tests::init();
     let dashboard_ui = crate::app::Dashboard::new().unwrap();
-    dashboard_ui.global::<crate::app::TooltipRegistry>().on_request_tooltip_text(|id| {
-        let text = crate::get_tooltip_text(id.as_str());
-        if text.is_empty() {
-            "Find answers and how-to guides.".into()
-        } else {
-            text
-        }
-    });
+    dashboard_ui
+        .global::<crate::app::TooltipRegistry>()
+        .on_request_tooltip_text(|id| {
+            let text = crate::get_tooltip_text(id.as_str());
+            if text.is_empty() {
+                "Find answers and how-to guides.".into()
+            } else {
+                text
+            }
+        });
 
     let tr = dashboard_ui.global::<crate::app::TooltipRegistry>();
 
     // Verify some expected tooltips
     tr.invoke_show_tooltip("help_center".into(), 0.0, 0.0);
     assert!(tr.get_is_visible(), "Tooltip should be visible");
-    assert_eq!(tr.get_active_text(), SharedString::from("Find answers and how-to guides."));
+    assert_eq!(
+        tr.get_active_text(),
+        SharedString::from("Find answers and how-to guides.")
+    );
 
     tr.invoke_hide_tooltip();
     assert!(!tr.get_is_visible(), "Tooltip should hide");
@@ -88,7 +93,10 @@ fn test_scribe_ai_help_chat() {
     let ui = crate::app::AiHelpChat::new().unwrap();
     let messages = ui.get_messages();
 
-    assert!(messages.row_count() > 0, "AI Chat must have initial messages");
+    assert!(
+        messages.row_count() > 0,
+        "AI Chat must have initial messages"
+    );
     let initial_msg = messages.row_data(0).unwrap();
     assert_eq!(initial_msg.sender, "AI");
 
@@ -99,7 +107,10 @@ fn test_scribe_ai_help_chat() {
     });
 
     ui.invoke_open_article("some_link".into());
-    assert!(*link_opened.borrow(), "Article link opening should trigger callback");
+    assert!(
+        *link_opened.borrow(),
+        "Article link opening should trigger callback"
+    );
 }
 
 #[test]
@@ -111,7 +122,10 @@ fn test_scribe_video_tutorials() {
     assert!(ui.get_is_playing(), "Video should be marked as playing");
 
     ui.set_selected_video_title("Setting up your store".into());
-    assert_eq!(ui.get_selected_video_title(), SharedString::from("Setting up your store"));
+    assert_eq!(
+        ui.get_selected_video_title(),
+        SharedString::from("Setting up your store")
+    );
 }
 
 #[test]
@@ -130,7 +144,10 @@ fn test_scribe_api_docs() {
     });
 
     ui.invoke_test_endpoint("/api/v1/store".into());
-    assert!(*endpoint_tested.borrow(), "Endpoint test should trigger callback");
+    assert!(
+        *endpoint_tested.borrow(),
+        "Endpoint test should trigger callback"
+    );
 }
 
 #[test]
@@ -140,9 +157,11 @@ fn test_scribe_release_notes() {
 
     // We remove get_test_title() because ReleaseNotes doesn't expose test_title.
     ui.set_show_latest_only(true);
-    assert!(ui.get_show_latest_only(), "Show latest only toggle should work");
+    assert!(
+        ui.get_show_latest_only(),
+        "Show latest only toggle should work"
+    );
 }
-
 
 #[test]
 fn test_scribe_help_center_search() {
@@ -154,7 +173,10 @@ fn test_scribe_help_center_search() {
     // Normally search filters the model, but the slint file just exposes execute_search
     // In actual implementation, we invoke execute_search. Since it's pure UI,
     // let's just verify the property changes.
-    assert_eq!(ui.get_search_query(), slint::SharedString::from("promotion"));
+    assert_eq!(
+        ui.get_search_query(),
+        slint::SharedString::from("promotion")
+    );
 
     let search_executed = std::rc::Rc::new(std::cell::RefCell::new(false));
     let search_executed_clone = search_executed.clone();
@@ -163,5 +185,8 @@ fn test_scribe_help_center_search() {
     });
 
     ui.invoke_execute_search();
-    assert!(*search_executed.borrow(), "Search callback should be triggered");
+    assert!(
+        *search_executed.borrow(),
+        "Search callback should be triggered"
+    );
 }

@@ -1,24 +1,30 @@
 use crate::app;
 
-fn create() -> app::Skills { crate::ui_tests::init(); app::Skills::new().unwrap() }
+fn create() -> app::Skills {
+    crate::ui_tests::init();
+    app::Skills::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn skills_xss_category() {
+#[test]
+fn skills_xss_category() {
     let ui = create();
     let xss = "<textarea onload=alert(1)>";
     ui.set_selected_category(xss.into());
     assert_eq!(ui.get_selected_category(), xss);
 }
 
-#[test] fn skills_injection_category() {
+#[test]
+fn skills_injection_category() {
     let ui = create();
     let inj = "'; DELETE FROM skills; --";
     ui.set_selected_category(inj.into());
     assert_eq!(ui.get_selected_category(), inj);
 }
 
-#[test] fn skills_empty_category() {
+#[test]
+fn skills_empty_category() {
     let ui = create();
     ui.set_selected_category("".into());
     assert_eq!(ui.get_selected_category(), "");
@@ -26,7 +32,8 @@ fn create() -> app::Skills { crate::ui_tests::init(); app::Skills::new().unwrap(
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn skills_flow_rapid_category_switch() {
+#[test]
+fn skills_flow_rapid_category_switch() {
     let ui = create();
     let cats = ["Coding", "Design", "Writing", "Marketing", "Sales"];
     for _ in 0..20 {

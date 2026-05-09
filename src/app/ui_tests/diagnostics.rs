@@ -1,23 +1,29 @@
 use crate::app;
 
-fn create() -> app::Diagnostics { crate::ui_tests::init(); app::Diagnostics::new().unwrap() }
+fn create() -> app::Diagnostics {
+    crate::ui_tests::init();
+    app::Diagnostics::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn diag_xss_db_status() {
+#[test]
+fn diag_xss_db_status() {
     let ui = create();
     let xss = "<script>alert('db')</script>";
     ui.set_db_status(xss.into());
     assert_eq!(ui.get_db_status(), xss);
 }
 
-#[test] fn diag_stuck_missions_overflow() {
+#[test]
+fn diag_stuck_missions_overflow() {
     let ui = create();
     ui.set_stuck_missions(2147483647);
     assert_eq!(ui.get_stuck_missions(), 2147483647);
 }
 
-#[test] fn diag_stuck_missions_negative() {
+#[test]
+fn diag_stuck_missions_negative() {
     let ui = create();
     ui.set_stuck_missions(-100);
     assert_eq!(ui.get_stuck_missions(), -100);
@@ -25,16 +31,20 @@ fn create() -> app::Diagnostics { crate::ui_tests::init(); app::Diagnostics::new
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn diag_flow_run_callback() {
+#[test]
+fn diag_flow_run_callback() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_run_diagnostics(move || { *c.borrow_mut() = true; });
+    ui.on_run_diagnostics(move || {
+        *c.borrow_mut() = true;
+    });
     ui.invoke_run_diagnostics();
     assert!(*called.borrow());
 }
 
-#[test] fn diag_flow_status_update_loop() {
+#[test]
+fn diag_flow_status_update_loop() {
     let ui = create();
     let statuses = ["Connected", "Disconnected", "Error", "Timeout", "Retrying"];
     for s in statuses {

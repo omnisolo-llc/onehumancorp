@@ -116,22 +116,14 @@ impl Hub {
     fn invalidate_agent_cache(&self) {
         *self.agent_cache.write().unwrap() = None;
         if let Some(client) = self.redis_client.clone() {
-            tokio::task::spawn_blocking(move || {
-                if let Ok(mut conn) = client.get_connection() {
-                    let _: Result<(), _> = redis::Commands::del(&mut conn, "hub:agents");
-                }
-            });
+            tokio::spawn(async move { if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await { let _: Result<(), _> = redis::AsyncCommands::del(&mut conn, "hub:agents").await; } });
         }
     }
 
     fn invalidate_meetings_cache(&self) {
         *self.meetings_cache.write().unwrap() = None;
         if let Some(client) = self.redis_client.clone() {
-            tokio::task::spawn_blocking(move || {
-                if let Ok(mut conn) = client.get_connection() {
-                    let _: Result<(), _> = redis::Commands::del(&mut conn, "hub:meetings");
-                }
-            });
+            tokio::spawn(async move { if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await { let _: Result<(), _> = redis::AsyncCommands::del(&mut conn, "hub:meetings").await; } });
         }
     }
 
@@ -177,12 +169,12 @@ impl Hub {
         }
 
         if let Some(client) = self.redis_client.clone() {
-            let res = tokio::task::block_in_place(move || {
+            let res = (|| -> Option<Arc<Vec<Agent>>> {
                 let mut conn = client.get_connection().ok()?;
                 let data: Option<String> = redis::Commands::get(&mut conn, "hub:agents").ok()?;
                 let agents: Vec<Agent> = serde_json::from_str(&data?).ok()?;
                 Some(Arc::new(agents))
-            });
+            })();
             if let Some(arc) = res {
                 *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
                 return arc;
@@ -198,13 +190,7 @@ impl Hub {
 
         if let Some(client) = self.redis_client.clone() {
             let json = serde_json::to_string(&*arc).unwrap_or_default();
-            tokio::task::spawn_blocking(move || {
-                if let Ok(mut conn) = client.get_connection() {
-                    if !json.is_empty() {
-                        let _: Result<(), _> = redis::Commands::set_ex(&mut conn, "hub:agents", json, 3600);
-                    }
-                }
-            });
+            tokio::spawn(async move { if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await { if !json.is_empty() { let _: Result<(), _> = redis::AsyncCommands::set_ex(&mut conn, "hub:agents", json, 3600).await; } } });
         }
 
         arc
@@ -336,12 +322,12 @@ impl Hub {
         }
 
         if let Some(client) = self.redis_client.clone() {
-            let res = tokio::task::block_in_place(move || {
+            let res = (|| -> Option<Arc<Vec<MeetingRoom>>> {
                 let mut conn = client.get_connection().ok()?;
                 let data: Option<String> = redis::Commands::get(&mut conn, "hub:meetings").ok()?;
                 let meetings: Vec<MeetingRoom> = serde_json::from_str(&data?).ok()?;
                 Some(Arc::new(meetings))
-            });
+            })();
             if let Some(arc) = res {
                 *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
                 return arc;
@@ -356,13 +342,7 @@ impl Hub {
 
         if let Some(client) = self.redis_client.clone() {
             let json = serde_json::to_string(&*arc).unwrap_or_default();
-            tokio::task::spawn_blocking(move || {
-                if let Ok(mut conn) = client.get_connection() {
-                    if !json.is_empty() {
-                        let _: Result<(), _> = redis::Commands::set_ex(&mut conn, "hub:meetings", json, 3600);
-                    }
-                }
-            });
+            tokio::spawn(async move { if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await { if !json.is_empty() { let _: Result<(), _> = redis::AsyncCommands::set_ex(&mut conn, "hub:meetings", json, 3600).await; } } });
         }
 
         arc

@@ -1,24 +1,30 @@
 use crate::app;
 
-fn create() -> app::BusinessShare { crate::ui_tests::init(); app::BusinessShare::new().unwrap() }
+fn create() -> app::BusinessShare {
+    crate::ui_tests::init();
+    app::BusinessShare::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn share_xss_name() {
+#[test]
+fn share_xss_name() {
     let ui = create();
     let xss = "<script>alert('share')</script>";
     ui.set_business_name(xss.into());
     assert_eq!(ui.get_business_name(), xss);
 }
 
-#[test] fn share_injection_tagline() {
+#[test]
+fn share_injection_tagline() {
     let ui = create();
     let inj = "Best Store'); DROP TABLE stores; --";
     ui.set_business_tagline(inj.into());
     assert_eq!(ui.get_business_tagline(), inj);
 }
 
-#[test] fn share_long_link() {
+#[test]
+fn share_long_link() {
     let ui = create();
     let long = "ohc://share?b=".to_string() + &"f".repeat(1000);
     ui.set_share_link(long.clone().into());
@@ -27,29 +33,38 @@ fn create() -> app::BusinessShare { crate::ui_tests::init(); app::BusinessShare:
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn share_flow_copy_callback() {
+#[test]
+fn share_flow_copy_callback() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_copy_link(move || { *c.borrow_mut() = true; });
+    ui.on_copy_link(move || {
+        *c.borrow_mut() = true;
+    });
     ui.invoke_copy_link();
     assert!(*called.borrow());
 }
 
-#[test] fn share_flow_insta_callback() {
+#[test]
+fn share_flow_insta_callback() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_share_to_instagram(move || { *c.borrow_mut() = true; });
+    ui.on_share_to_instagram(move || {
+        *c.borrow_mut() = true;
+    });
     ui.invoke_share_to_instagram();
     assert!(*called.borrow());
 }
 
-#[test] fn share_flow_x_callback() {
+#[test]
+fn share_flow_x_callback() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_share_to_x(move || { *c.borrow_mut() = true; });
+    ui.on_share_to_x(move || {
+        *c.borrow_mut() = true;
+    });
     ui.invoke_share_to_x();
     assert!(*called.borrow());
 }
@@ -91,11 +106,14 @@ fn create_verify_share_link() {
     assert_eq!(ui.get_share_link(), "l42");
 }
 
-#[test] fn share_flow_whatsapp_callback() {
+#[test]
+fn share_flow_whatsapp_callback() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_share_to_whatsapp(move || { *c.borrow_mut() = true; });
+    ui.on_share_to_whatsapp(move || {
+        *c.borrow_mut() = true;
+    });
     ui.invoke_share_to_whatsapp();
     assert!(*called.borrow());
 }

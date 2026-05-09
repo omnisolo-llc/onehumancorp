@@ -1,9 +1,11 @@
 use crate::app;
-use slint::{Model, ComponentHandle};
+use slint::{ComponentHandle, Model};
 
 #[test]
 fn test_analytics_charts_e2e_flow() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
 
     // 1. Setup UI Components
@@ -23,21 +25,24 @@ fn test_analytics_charts_e2e_flow() {
     });
 
     // 2. Mock Data Injection
-    let mock_charts = vec![
-        app::UiChartData {
-            title: "Revenue Over Time".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Mon".into(), value: 40.0, display_value: "$400".into() },
-            ])),
-        },
-    ];
+    let mock_charts = vec![app::UiChartData {
+        title: "Revenue Over Time".into(),
+        points: slint::ModelRc::new(slint::VecModel::from(vec![app::UiDataPoint {
+            label: "Mon".into(),
+            value: 40.0,
+            display_value: "$400".into(),
+        }])),
+    }];
     analytics_ui.set_charts(slint::ModelRc::new(slint::VecModel::from(mock_charts)));
 
     // 3. User navigates from dashboard
     dashboard_ui.invoke_action_see_analytics();
 
     // Verify dashboard action
-    assert!(*see_analytics_called.borrow(), "Analytics action should be invoked from Dashboard");
+    assert!(
+        *see_analytics_called.borrow(),
+        "Analytics action should be invoked from Dashboard"
+    );
 
     // Verify chart data populated correctly
     let charts = analytics_ui.get_charts();
@@ -61,5 +66,8 @@ fn test_analytics_charts_e2e_flow() {
     });
 
     analytics_ui.invoke_close();
-    assert!(*close_called.borrow(), "Close action should be triggered on analytics window");
+    assert!(
+        *close_called.borrow(),
+        "Close action should be triggered on analytics window"
+    );
 }

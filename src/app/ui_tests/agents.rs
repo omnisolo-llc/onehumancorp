@@ -1,18 +1,22 @@
 use crate::app;
 
-
-fn create_c() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new().unwrap() }
+fn create_c() -> app::AgentConfig {
+    crate::ui_tests::init();
+    app::AgentConfig::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn agent_name_injection() {
+#[test]
+fn agent_name_injection() {
     let ui = create_c();
     let inj = "Admin'; DROP TABLE agents; --";
     ui.set_selected_agent(inj.into());
     assert_eq!(ui.get_selected_agent(), inj);
 }
 
-#[test] fn agent_freq_oob() {
+#[test]
+fn agent_freq_oob() {
     let ui = create_c();
     ui.set_frequency_value(2.0);
     assert_eq!(ui.get_frequency_value(), 2.0);
@@ -20,7 +24,8 @@ fn create_c() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::n
     assert_eq!(ui.get_frequency_value(), -1.0);
 }
 
-#[test] fn agent_xss_toast() {
+#[test]
+fn agent_xss_toast() {
     let ui = create_c();
     let xss = "<script>alert(1)</script>";
     ui.set_selected_agent(xss.into());
@@ -29,7 +34,8 @@ fn create_c() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::n
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn agent_config_permutation_flow() {
+#[test]
+fn agent_config_permutation_flow() {
     let ui = create_c();
     let flags = [true, false];
     for f1 in flags {
@@ -42,7 +48,8 @@ fn create_c() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::n
     }
 }
 
-#[test] fn agent_selection_retention_flow() {
+#[test]
+fn agent_selection_retention_flow() {
     let ui = create_c();
     ui.set_selected_agent("Agent Alpha".into());
     ui.set_is_advanced(true);
@@ -99,24 +106,25 @@ fn test_agents_ui_upgrade_prompt_message() {
     assert_eq!(ui.get_upgrade_prompt_message(), "");
 
     ui.set_upgrade_prompt_message("Please upgrade to add more helpers.".into());
-    assert_eq!(ui.get_upgrade_prompt_message(), "Please upgrade to add more helpers.");
+    assert_eq!(
+        ui.get_upgrade_prompt_message(),
+        "Please upgrade to add more helpers."
+    );
 }
 
 #[test]
 fn test_agents_ui_agent_list_population() {
     let ui = create_agents_ui();
 
-    let model = std::rc::Rc::new(slint::VecModel::from(vec![
-        app::UiAgent {
-            id: "agent-1".into(),
-            name: "Test Agent".into(),
-            role: "Support".into(),
-            status: "Running".into(),
-            is_running: true,
-            svid_verified: true,
-            is_new: false,
-        }
-    ]));
+    let model = std::rc::Rc::new(slint::VecModel::from(vec![app::UiAgent {
+        id: "agent-1".into(),
+        name: "Test Agent".into(),
+        role: "Support".into(),
+        status: "Running".into(),
+        is_running: true,
+        svid_verified: true,
+        is_new: false,
+    }]));
 
     ui.set_agents(model.into());
     // Since there's no direct getter to inspect the array lengths in generated Slint components this way easily,

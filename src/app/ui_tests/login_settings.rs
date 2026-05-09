@@ -2,7 +2,9 @@ use crate::*;
 
 #[test]
 fn test_login_settings_flow() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
 
     let login_ui = app::Login::new().unwrap();
     let settings_ui = app::Settings::new().unwrap();
@@ -55,7 +57,9 @@ fn test_login_settings_flow() {
 
 #[test]
 fn test_login_settings_flow_advanced_mode() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
 
     let login_ui = app::Login::new().unwrap();
     let settings_ui = app::Settings::new().unwrap();
@@ -102,7 +106,9 @@ fn test_login_settings_flow_advanced_mode() {
 
 #[test]
 fn test_login_settings_flow_error_message() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
 
     let login_ui = app::Login::new().unwrap();
     login_ui.set_error_message("Invalid credentials".into());
@@ -132,7 +138,9 @@ fn test_login_settings_flow_error_message() {
 
 #[test]
 fn test_login_settings_flow_standalone_mode() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
 
     let login_ui = app::Login::new().unwrap();
     let settings_ui = app::Settings::new().unwrap();
@@ -161,7 +169,9 @@ fn test_login_settings_flow_standalone_mode() {
 
 #[test]
 fn test_login_settings_flow_backend_url() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
 
     let login_ui = app::Login::new().unwrap();
     let settings_ui = app::Settings::new().unwrap();

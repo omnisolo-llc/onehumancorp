@@ -7,7 +7,9 @@ use crate::app;
 
 #[test]
 fn test_ui_setup_wizard_hero_animation_pulse_scale() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     super::init();
     let ui = app::SetupWizard::new().unwrap();
     ui.on_save_state(|| {});
@@ -23,7 +25,9 @@ fn test_ui_setup_wizard_hero_animation_pulse_scale() {
 
 #[test]
 fn test_ui_setup_wizard_hero_timer_state() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     super::init();
     let ui = app::SetupWizard::new().unwrap();
     ui.on_save_state(|| {});
@@ -37,7 +41,9 @@ fn test_ui_setup_wizard_hero_timer_state() {
 
 #[test]
 fn test_ui_setup_wizard_pulse_scale_state() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     super::init();
     let ui = app::SetupWizard::new().unwrap();
     ui.on_save_state(|| {});
@@ -46,7 +52,9 @@ fn test_ui_setup_wizard_pulse_scale_state() {
 
 #[test]
 fn test_ui_setup_wizard_hero_flow_simulation() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     super::init();
 
     let ui = app::SetupWizard::new().unwrap();
@@ -75,12 +83,17 @@ fn test_ui_setup_wizard_hero_flow_simulation() {
     ui.invoke_select_payment_pref("online".into());
     assert_eq!(ui.get_step(), 5);
 
-    assert!(*save_called.lock().unwrap(), "Save state callback should be triggered when simulating steps.");
+    assert!(
+        *save_called.lock().unwrap(),
+        "Save state callback should be triggered when simulating steps."
+    );
 }
 
 #[test]
 fn test_ui_setup_wizard_hero_animation() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     super::init();
 
     let ui = app::SetupWizard::new().unwrap();
@@ -93,7 +106,9 @@ fn test_ui_setup_wizard_hero_animation() {
 
 #[test]
 fn test_ui_setup_wizard_checklist_navigation() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     super::init();
 
     let ui = app::SetupWizard::new().unwrap();
@@ -106,12 +121,17 @@ fn test_ui_setup_wizard_checklist_navigation() {
     });
 
     ui.invoke_go_to_add_products();
-    assert!(*add_products_clicked.lock().unwrap(), "Add products callback should be triggered on SetupWizard Checklist");
+    assert!(
+        *add_products_clicked.lock().unwrap(),
+        "Add products callback should be triggered on SetupWizard Checklist"
+    );
 }
 
 #[test]
 fn test_ui_setup_wizard_storefront_preview_state() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     super::init();
 
     let ui = app::SetupWizard::new().unwrap();
@@ -123,7 +143,9 @@ fn test_ui_setup_wizard_storefront_preview_state() {
 
 #[test]
 fn test_ui_setup_wizard_state_saving_and_copy_link() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     super::init();
 
     let ui = app::SetupWizard::new().unwrap();
@@ -137,7 +159,10 @@ fn test_ui_setup_wizard_state_saving_and_copy_link() {
 
     // In our implementation we explicitly linked save_state to next_step and other specific triggers
     ui.invoke_next_step();
-    assert!(*save_called.lock().unwrap(), "save_state should be triggered alongside next_step to persist cross-device state.");
+    assert!(
+        *save_called.lock().unwrap(),
+        "save_state should be triggered alongside next_step to persist cross-device state."
+    );
 
     // Test copy link invocation
     let copy_called = std::sync::Arc::new(std::sync::Mutex::new(false));
@@ -150,12 +175,17 @@ fn test_ui_setup_wizard_state_saving_and_copy_link() {
 
     ui.set_launch_success(true);
     ui.invoke_copy_link("https://mybusiness.ohc.app".into());
-    assert!(*copy_called.lock().unwrap(), "copy_link should be triggered to auto-copy shareable link.");
+    assert!(
+        *copy_called.lock().unwrap(),
+        "copy_link should be triggered to auto-copy shareable link."
+    );
 }
 
 #[test]
 fn test_ui_setup_wizard_currency_and_product_logic() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     super::init();
 
     let ui = app::SetupWizard::new().unwrap();
@@ -173,7 +203,9 @@ fn test_ui_setup_wizard_currency_and_product_logic() {
 
 #[test]
 fn test_ui_setup_wizard_domain_assignment_logic() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     super::init();
 
     let ui = app::SetupWizard::new().unwrap();
@@ -184,7 +216,9 @@ fn test_ui_setup_wizard_domain_assignment_logic() {
 
 #[test]
 fn test_ui_setup_wizard_photo_upload_trigger() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     super::init();
 
     let ui = app::SetupWizard::new().unwrap();
@@ -197,12 +231,17 @@ fn test_ui_setup_wizard_photo_upload_trigger() {
     });
 
     ui.invoke_trigger_photo_upload();
-    assert!(*photo_called.lock().unwrap(), "Photo upload trigger should work correctly");
+    assert!(
+        *photo_called.lock().unwrap(),
+        "Photo upload trigger should work correctly"
+    );
 }
 
 #[test]
 fn test_ui_setup_wizard_product_description_ai_trigger() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     super::init();
 
     let ui = app::SetupWizard::new().unwrap();
@@ -215,12 +254,17 @@ fn test_ui_setup_wizard_product_description_ai_trigger() {
     });
 
     ui.invoke_generate_product_description("Cake".into());
-    assert!(*ai_called.lock().unwrap(), "Product description AI generator trigger should work");
+    assert!(
+        *ai_called.lock().unwrap(),
+        "Product description AI generator trigger should work"
+    );
 }
 
 #[test]
 fn test_ui_setup_wizard_welcome_checklist_transition() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     super::init();
 
     let ui = app::SetupWizard::new().unwrap();

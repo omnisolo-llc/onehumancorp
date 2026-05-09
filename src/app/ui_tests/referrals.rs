@@ -1,29 +1,36 @@
 use crate::app;
 
-fn create() -> app::Referrals { crate::ui_tests::init(); app::Referrals::new().unwrap() }
+fn create() -> app::Referrals {
+    crate::ui_tests::init();
+    app::Referrals::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn ref_long_link() {
+#[test]
+fn ref_long_link() {
     let ui = create();
     let long = "https://example.com/".to_string() + &"a".repeat(2000);
     ui.set_my_referral_link(long.clone().into());
     assert_eq!(ui.get_my_referral_link(), long);
 }
 
-#[test] fn ref_negative_balance() {
+#[test]
+fn ref_negative_balance() {
     let ui = create();
     ui.set_reward_balance("-$10.00".into());
     assert_eq!(ui.get_reward_balance(), "-$10.00");
 }
 
-#[test] fn ref_max_coefficient() {
+#[test]
+fn ref_max_coefficient() {
     let ui = create();
     ui.set_viral_coefficient(f32::MAX);
     assert_eq!(ui.get_viral_coefficient(), f32::MAX);
 }
 
-#[test] fn ref_xss_link() {
+#[test]
+fn ref_xss_link() {
     let ui = create();
     let xss = "javascript:alert(1)";
     ui.set_my_referral_link(xss.into());
@@ -32,7 +39,8 @@ fn create() -> app::Referrals { crate::ui_tests::init(); app::Referrals::new().u
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn ref_mass_click_update() {
+#[test]
+fn ref_mass_click_update() {
     let ui = create();
     for i in 0..100 {
         ui.set_click_count(i);
@@ -150,7 +158,9 @@ fn share_flow_send_invite_callback() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_send_invite_message(move |_| { *c.borrow_mut() = true; });
+    ui.on_send_invite_message(move |_| {
+        *c.borrow_mut() = true;
+    });
     ui.invoke_send_invite_message("test_link".into());
     assert!(*called.borrow());
 }

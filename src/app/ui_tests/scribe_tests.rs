@@ -1,5 +1,5 @@
-use slint::Model;
 use crate::app;
+use slint::Model;
 
 #[test]
 fn test_scribe_dashboard_quick_actions_hint_tooltip() {
@@ -38,7 +38,13 @@ fn test_scribe_video_tutorials_url() {
     ui.set_videos(slint::ModelRc::new(slint::VecModel::from(vec)));
 
     let updated_videos = ui.get_videos();
-    assert_eq!(updated_videos.row_data(updated_videos.row_count() - 1).unwrap().url, "https://test.com/video.mp4");
+    assert_eq!(
+        updated_videos
+            .row_data(updated_videos.row_count() - 1)
+            .unwrap()
+            .url,
+        "https://test.com/video.mp4"
+    );
 }
 
 #[test]
@@ -47,7 +53,10 @@ fn test_scribe_help_center_search_clear() {
     let ui = app::HelpCenter::new().unwrap();
 
     ui.set_search_query("test query".into());
-    assert_eq!(ui.get_search_query(), slint::SharedString::from("test query"));
+    assert_eq!(
+        ui.get_search_query(),
+        slint::SharedString::from("test query")
+    );
 
     ui.set_search_query("".into());
     assert_eq!(ui.get_search_query(), slint::SharedString::from(""));
@@ -78,7 +87,10 @@ fn test_scribe_ai_help_chat_history() {
 
     let updated_messages = ui.get_messages();
     assert_eq!(updated_messages.row_count(), initial_count + 1);
-    assert_eq!(updated_messages.row_data(initial_count).unwrap().sender, "User");
+    assert_eq!(
+        updated_messages.row_data(initial_count).unwrap().sender,
+        "User"
+    );
 }
 
 #[test]
@@ -93,7 +105,10 @@ fn test_scribe_video_tutorials_state() {
     ui.set_selected_video_title("How to add your first product".into());
 
     assert_eq!(ui.get_is_playing(), true);
-    assert_eq!(ui.get_selected_video_title(), slint::SharedString::from("How to add your first product"));
+    assert_eq!(
+        ui.get_selected_video_title(),
+        slint::SharedString::from("How to add your first product")
+    );
 }
 
 #[test]

@@ -1,52 +1,52 @@
-pub mod social_posting;
-pub mod onboarding_e2e_tests;
-pub mod login;
-pub mod wizard;
-pub mod dashboard;
-pub mod swarm_observability;
-mod dashboard_ux_friction;
-pub mod referrals;
-pub mod builder;
-pub mod scribe_e2e_tests;
-pub mod pricing;
-pub mod agents;
-pub mod settings;
-pub mod chat;
-pub mod ai_config;
-pub mod skills;
-pub mod grow;
-pub mod meetings;
-pub mod ongoing;
-pub mod tasklist;
-pub mod users;
-pub mod security;
-pub mod pipelines;
-pub mod integrations;
-pub mod diagnostics;
-pub mod handoffs;
-pub mod scaling;
-pub mod memory;
-pub mod hire;
-pub mod landing;
-pub mod share;
-pub mod checklist;
-pub mod indicators;
-pub mod help;
-pub mod docs;
-pub mod tutorials;
-pub mod notes;
-pub mod chat_help;
-pub mod walkthrough;
-pub mod my_plan;
-pub mod channels;
-pub mod cost_dashboard;
-pub mod logs;
-pub mod prompt_tuning;
-pub mod secure_agent_config;
 pub mod agent_config;
-pub mod daily_briefing;
-pub mod business_manager_ux;
+pub mod agents;
+pub mod ai_config;
 pub mod analytics_charts;
+pub mod builder;
+pub mod business_manager_ux;
+pub mod channels;
+pub mod chat;
+pub mod chat_help;
+pub mod checklist;
+pub mod cost_dashboard;
+pub mod daily_briefing;
+pub mod dashboard;
+mod dashboard_ux_friction;
+pub mod diagnostics;
+pub mod docs;
+pub mod grow;
+pub mod handoffs;
+pub mod help;
+pub mod hire;
+pub mod indicators;
+pub mod integrations;
+pub mod landing;
+pub mod login;
+pub mod logs;
+pub mod meetings;
+pub mod memory;
+pub mod my_plan;
+pub mod notes;
+pub mod onboarding_e2e_tests;
+pub mod ongoing;
+pub mod pipelines;
+pub mod pricing;
+pub mod prompt_tuning;
+pub mod referrals;
+pub mod scaling;
+pub mod scribe_e2e_tests;
+pub mod secure_agent_config;
+pub mod security;
+pub mod settings;
+pub mod share;
+pub mod skills;
+pub mod social_posting;
+pub mod swarm_observability;
+pub mod tasklist;
+pub mod tutorials;
+pub mod users;
+pub mod walkthrough;
+pub mod wizard;
 
 pub fn init() {
     #[cfg(not(target_arch = "wasm32"))]
@@ -55,7 +55,8 @@ pub fn init() {
         impl slint::platform::Platform for HeadlessPlatform {
             fn create_window_adapter(
                 &self,
-            ) -> Result<std::rc::Rc<dyn slint::platform::WindowAdapter>, slint::PlatformError> {
+            ) -> Result<std::rc::Rc<dyn slint::platform::WindowAdapter>, slint::PlatformError>
+            {
                 thread_local! {
                     static WINDOW: std::rc::Rc<slint::platform::software_renderer::MinimalSoftwareWindow> = {
                         slint::platform::software_renderer::MinimalSoftwareWindow::new(
@@ -87,14 +88,14 @@ pub fn init() {
         let _ = slint::platform::set_platform(Box::new(HeadlessPlatform));
     }
 }
+pub mod ai_team_e2e;
+pub mod booking_quote_e2e;
+pub mod docs_ux_test;
+pub mod echo_dashboard;
+pub mod lens_audit_tests;
 pub mod login_settings;
 pub mod login_ux_friction;
-pub mod setup_wizard_hero_test;
-pub mod docs_ux_test;
-pub mod scribe_tests;
-pub mod scribe_feature_dashboard_test;
 pub mod scribe_extra_tests;
-pub mod ai_team_e2e;
-pub mod lens_audit_tests;
-pub mod booking_quote_e2e;
-pub mod echo_dashboard;
+pub mod scribe_feature_dashboard_test;
+pub mod scribe_tests;
+pub mod setup_wizard_hero_test;

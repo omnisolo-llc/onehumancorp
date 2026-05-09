@@ -1,24 +1,30 @@
 use crate::app;
 
-fn create() -> app::MyPlan { crate::ui_tests::init(); app::MyPlan::new().unwrap() }
+fn create() -> app::MyPlan {
+    crate::ui_tests::init();
+    app::MyPlan::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn myplan_xss_tier() {
+#[test]
+fn myplan_xss_tier() {
     let ui = create();
     let xss = "<script>alert('plan')</script>";
     ui.set_tier(xss.into());
     assert_eq!(ui.get_tier(), xss);
 }
 
-#[test] fn myplan_injection_actions() {
+#[test]
+fn myplan_injection_actions() {
     let ui = create();
     let inj = "1000'); DROP TABLE actions; --";
     ui.set_total_actions(inj.into());
     assert_eq!(ui.get_total_actions(), inj);
 }
 
-#[test] fn myplan_long_date() {
+#[test]
+fn myplan_long_date() {
     let ui = create();
     let long = "Date ".repeat(200);
     ui.set_renewal_date(long.clone().into());
@@ -27,20 +33,26 @@ fn create() -> app::MyPlan { crate::ui_tests::init(); app::MyPlan::new().unwrap(
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn myplan_flow_upgrade_callback() {
+#[test]
+fn myplan_flow_upgrade_callback() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_upgrade(move || { *c.borrow_mut() = true; });
+    ui.on_upgrade(move || {
+        *c.borrow_mut() = true;
+    });
     ui.invoke_upgrade();
     assert!(*called.borrow());
 }
 
-#[test] fn myplan_flow_cancel_callback() {
+#[test]
+fn myplan_flow_cancel_callback() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_cancel_subscription(move || { *c.borrow_mut() = true; });
+    ui.on_cancel_subscription(move || {
+        *c.borrow_mut() = true;
+    });
     ui.invoke_cancel_subscription();
     assert!(*called.borrow());
 }

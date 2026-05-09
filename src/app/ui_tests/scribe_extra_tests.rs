@@ -1,4 +1,4 @@
-use slint::{SharedString, Model};
+use slint::{Model, SharedString};
 
 #[test]
 fn test_help_center_edge_cases() {
@@ -21,12 +21,18 @@ fn test_help_center_edge_cases() {
     assert!(*search_triggered.borrow());
 
     let articles = ui.get_articles();
-    assert!(articles.row_count() >= 7, "Should have at least 7 predefined articles");
+    assert!(
+        articles.row_count() >= 7,
+        "Should have at least 7 predefined articles"
+    );
 
     // Let's verify the first article
     let first = articles.row_data(0).unwrap();
     assert_eq!(first.category, SharedString::from("Getting Started"));
-    assert_eq!(first.title, SharedString::from("Set up your store in 5 minutes"));
+    assert_eq!(
+        first.title,
+        SharedString::from("Set up your store in 5 minutes")
+    );
 }
 
 #[test]
@@ -69,10 +75,16 @@ fn test_video_tutorials_metadata() {
     let ui = crate::app::VideoTutorials::new().unwrap();
 
     let videos = ui.get_videos();
-    assert!(videos.row_count() >= 10, "Should have 10 top tutorials per requirement");
+    assert!(
+        videos.row_count() >= 10,
+        "Should have 10 top tutorials per requirement"
+    );
 
     let first = videos.row_data(0).unwrap();
-    assert_eq!(first.title, SharedString::from("How to add your first product"));
+    assert_eq!(
+        first.title,
+        SharedString::from("How to add your first product")
+    );
     assert!(first.duration_sec <= 90, "Tutorials should be short <90s");
 
     let last = videos.row_data(videos.row_count() - 1).unwrap();
@@ -90,7 +102,10 @@ fn test_api_docs_edge_cases() {
     assert!(ui.get_is_advanced());
 
     ui.set_api_response("{\"status\": \"ok\"}".into());
-    assert_eq!(ui.get_api_response(), SharedString::from("{\"status\": \"ok\"}"));
+    assert_eq!(
+        ui.get_api_response(),
+        SharedString::from("{\"status\": \"ok\"}")
+    );
 
     ui.set_active_endpoint("/v1/test".into());
     assert_eq!(ui.get_active_endpoint(), SharedString::from("/v1/test"));

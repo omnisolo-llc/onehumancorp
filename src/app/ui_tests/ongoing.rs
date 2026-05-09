@@ -1,18 +1,29 @@
 use crate::app;
 
-fn create_f() -> app::FixAgent { crate::ui_tests::init(); app::FixAgent::new().unwrap() }
-fn create_u() -> app::Upgrade { crate::ui_tests::init(); app::Upgrade::new().unwrap() }
-fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unwrap() }
+fn create_f() -> app::FixAgent {
+    crate::ui_tests::init();
+    app::FixAgent::new().unwrap()
+}
+fn create_u() -> app::Upgrade {
+    crate::ui_tests::init();
+    app::Upgrade::new().unwrap()
+}
+fn create_b() -> app::Billing {
+    crate::ui_tests::init();
+    app::Billing::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn ongoing_fix_step_negative() {
+#[test]
+fn ongoing_fix_step_negative() {
     let ui = create_f();
     ui.set_step(-5);
     assert_eq!(ui.get_step(), -5);
 }
 
-#[test] fn ongoing_upgrade_progress_oob() {
+#[test]
+fn ongoing_upgrade_progress_oob() {
     let ui = create_u();
     ui.set_progress(1000);
     assert_eq!(ui.get_progress(), 1000);
@@ -22,7 +33,8 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn ongoing_fix_flow_steps() {
+#[test]
+fn ongoing_fix_flow_steps() {
     let ui = create_f();
     assert_eq!(ui.get_step(), 0);
     ui.set_step(1);
@@ -35,7 +47,8 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
     assert!(!ui.get_is_applying());
 }
 
-#[test] fn ongoing_upgrade_flow() {
+#[test]
+fn ongoing_upgrade_flow() {
     let ui = create_u();
     assert!(!ui.get_is_upgrading());
     assert!(!ui.get_done());
@@ -51,13 +64,16 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
 
 // --- Advanced Mode Tests ---
 
-#[test] fn ongoing_fix_advanced_toggle() {
+#[test]
+fn ongoing_fix_advanced_toggle() {
     let ui = create_f();
     assert!(!ui.get_is_advanced());
 
     let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let save_called_clone = save_called.clone();
-    ui.on_save_state(move || { *save_called_clone.borrow_mut() = true; });
+    ui.on_save_state(move || {
+        *save_called_clone.borrow_mut() = true;
+    });
 
     // In UI, we toggle. Programmatically simulating setting it
     ui.set_is_advanced(true);
@@ -66,13 +82,16 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
     assert!(*save_called.borrow());
 }
 
-#[test] fn ongoing_upgrade_advanced_toggle() {
+#[test]
+fn ongoing_upgrade_advanced_toggle() {
     let ui = create_u();
     assert!(!ui.get_is_advanced());
 
     let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let save_called_clone = save_called.clone();
-    ui.on_save_state(move || { *save_called_clone.borrow_mut() = true; });
+    ui.on_save_state(move || {
+        *save_called_clone.borrow_mut() = true;
+    });
 
     ui.set_is_advanced(true);
     assert!(ui.get_is_advanced());
@@ -80,13 +99,16 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
     assert!(*save_called.borrow());
 }
 
-#[test] fn ongoing_billing_advanced_toggle() {
+#[test]
+fn ongoing_billing_advanced_toggle() {
     let ui = create_b();
     assert!(!ui.get_is_advanced());
 
     let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let save_called_clone = save_called.clone();
-    ui.on_save_state(move || { *save_called_clone.borrow_mut() = true; });
+    ui.on_save_state(move || {
+        *save_called_clone.borrow_mut() = true;
+    });
 
     ui.set_is_advanced(true);
     assert!(ui.get_is_advanced());
@@ -96,18 +118,23 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
 
 // --- Unique Scenarios with Verification ---
 
-#[test] fn fix_agent_callbacks() {
+#[test]
+fn fix_agent_callbacks() {
     let ui = create_f();
 
     let apply_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let apply_called_clone = apply_called.clone();
-    ui.on_apply_fix(move || { *apply_called_clone.borrow_mut() = true; });
+    ui.on_apply_fix(move || {
+        *apply_called_clone.borrow_mut() = true;
+    });
     ui.invoke_apply_fix();
     assert!(*apply_called.borrow());
 
     let return_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let return_called_clone = return_called.clone();
-    ui.on_return_to_agents(move || { *return_called_clone.borrow_mut() = true; });
+    ui.on_return_to_agents(move || {
+        *return_called_clone.borrow_mut() = true;
+    });
     ui.invoke_return_to_agents();
     assert!(*return_called.borrow());
 }
@@ -138,7 +165,9 @@ fn create_u_verify_progress() {
 
 #[test]
 fn test_e2e_fix_agent_full_journey() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
 
     let login_ui = app::Login::new().unwrap();
     let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -151,7 +180,10 @@ fn test_e2e_fix_agent_full_journey() {
     });
 
     login_ui.invoke_login("test@example.com".into(), "password123".into());
-    assert!(*login_successful.borrow(), "User login should be successful");
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
 
     let agents_ui = app::Agents::new().unwrap();
     let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -163,7 +195,10 @@ fn test_e2e_fix_agent_full_journey() {
     });
 
     agents_ui.invoke_fix_agent("agent_1".into());
-    assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
+    assert!(
+        *fix_agent_opened.borrow(),
+        "Fix Agent should be opened from Agents screen"
+    );
 
     let fix_agent_ui = app::FixAgent::new().unwrap();
     assert_eq!(fix_agent_ui.get_step(), 0);
@@ -190,12 +225,17 @@ fn test_e2e_fix_agent_full_journey() {
     });
 
     fix_agent_ui.invoke_return_to_agents();
-    assert!(*return_to_agents_called.borrow(), "Return to agents should be called");
+    assert!(
+        *return_to_agents_called.borrow(),
+        "Return to agents should be called"
+    );
 }
 
 #[test]
 fn test_e2e_grow_business_full_journey() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
 
     let login_ui = app::Login::new().unwrap();
     let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -208,7 +248,10 @@ fn test_e2e_grow_business_full_journey() {
     });
 
     login_ui.invoke_login("test@example.com".into(), "password123".into());
-    assert!(*login_successful.borrow(), "User login should be successful");
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
 
     let dashboard_ui = app::Dashboard::new().unwrap();
     let grow_business_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -219,7 +262,10 @@ fn test_e2e_grow_business_full_journey() {
     });
 
     dashboard_ui.invoke_action_grow_business();
-    assert!(*grow_business_opened.borrow(), "Grow Business should be opened from Dashboard");
+    assert!(
+        *grow_business_opened.borrow(),
+        "Grow Business should be opened from Dashboard"
+    );
 
     let ui = app::GrowBusiness::new().unwrap();
 

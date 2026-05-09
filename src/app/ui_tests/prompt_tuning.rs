@@ -2,18 +2,23 @@ use crate::app;
 use slint::Model;
 use std::rc::Rc;
 
-fn create() -> app::PromptTuning { crate::ui_tests::init(); app::PromptTuning::new().unwrap() }
+fn create() -> app::PromptTuning {
+    crate::ui_tests::init();
+    app::PromptTuning::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn prompt_xss_tone() {
+#[test]
+fn prompt_xss_tone() {
     let ui = create();
     let xss = "<script>alert('tone')</script>";
     ui.set_tone(xss.into());
     assert_eq!(ui.get_tone(), xss);
 }
 
-#[test] fn prompt_injection_example() {
+#[test]
+fn prompt_injection_example() {
     let ui = create();
     let inj = "Question'); DROP TABLE prompts; --";
     let model = slint::VecModel::from(vec![app::UiPromptExample {
@@ -24,7 +29,8 @@ fn create() -> app::PromptTuning { crate::ui_tests::init(); app::PromptTuning::n
     assert_eq!(ui.get_examples().row_data(0).unwrap().q, inj);
 }
 
-#[test] fn prompt_step_bounds() {
+#[test]
+fn prompt_step_bounds() {
     let ui = create();
     ui.set_step(10);
     assert_eq!(ui.get_step(), 10);
@@ -34,22 +40,36 @@ fn create() -> app::PromptTuning { crate::ui_tests::init(); app::PromptTuning::n
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn prompt_flow_callbacks() {
+#[test]
+fn prompt_flow_callbacks() {
     let ui = create();
     let c1 = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c2 = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c3 = std::rc::Rc::new(std::cell::RefCell::new(false));
-    
-    let w1 = c1.clone(); ui.on_add_example(move || { *w1.borrow_mut() = true; });
-    let w2 = c2.clone(); ui.on_save_prompt(move || { *w2.borrow_mut() = true; });
-    let w3 = c3.clone(); ui.on_save_state(move || { *w3.borrow_mut() = true; });
-    
-    ui.invoke_add_example(); assert!(*c1.borrow());
-    ui.invoke_save_prompt(); assert!(*c2.borrow());
-    ui.invoke_save_state(); assert!(*c3.borrow());
+
+    let w1 = c1.clone();
+    ui.on_add_example(move || {
+        *w1.borrow_mut() = true;
+    });
+    let w2 = c2.clone();
+    ui.on_save_prompt(move || {
+        *w2.borrow_mut() = true;
+    });
+    let w3 = c3.clone();
+    ui.on_save_state(move || {
+        *w3.borrow_mut() = true;
+    });
+
+    ui.invoke_add_example();
+    assert!(*c1.borrow());
+    ui.invoke_save_prompt();
+    assert!(*c2.borrow());
+    ui.invoke_save_state();
+    assert!(*c3.borrow());
 }
 
-#[test] fn prompt_flow_step_logic() {
+#[test]
+fn prompt_flow_step_logic() {
     let ui = create();
     ui.set_step(0);
     ui.invoke_next_step();

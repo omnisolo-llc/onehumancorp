@@ -14,7 +14,10 @@ fn e2e_flow_manage_ai_team_opens_agents() {
     });
 
     dashboard_ui.invoke_action_manage_my_ai_team();
-    assert!(*agents_opened.borrow(), "Manage my AI team button should open Agents screen");
+    assert!(
+        *agents_opened.borrow(),
+        "Manage my AI team button should open Agents screen"
+    );
 }
 
 // Flow 2: Manage AI team -> Hire Helper -> steps through AgentConfig
@@ -31,7 +34,10 @@ fn e2e_flow_hire_helper_wizard() {
     });
 
     agents_ui.invoke_hire_agent();
-    assert!(*config_opened.borrow(), "Hire Helper should open AgentConfig wizard");
+    assert!(
+        *config_opened.borrow(),
+        "Hire Helper should open AgentConfig wizard"
+    );
 
     let config_ui = app::AgentConfig::new().unwrap();
     assert_eq!(config_ui.get_step(), 0);
@@ -64,7 +70,10 @@ fn e2e_flow_tune_agent_wizard() {
     });
 
     agents_ui.invoke_tune_agent("agent_1".into());
-    assert!(*tuning_opened.borrow(), "Tune agent should open PromptTuning wizard");
+    assert!(
+        *tuning_opened.borrow(),
+        "Tune agent should open PromptTuning wizard"
+    );
 
     let tuning_ui = app::PromptTuning::new().unwrap();
     assert_eq!(tuning_ui.get_step(), 0);

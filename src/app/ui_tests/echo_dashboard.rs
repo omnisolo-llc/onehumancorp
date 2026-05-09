@@ -1,11 +1,13 @@
 use crate::app;
 
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 #[test]
 fn test_dashboard_today_sales_label() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
 
     // Simulate flow from Login to Dashboard
@@ -27,12 +29,17 @@ fn test_dashboard_today_sales_label() {
     let dashboard = app::Dashboard::new().unwrap();
     dashboard.set_todays_sales("$500.00".into());
 
-    assert_eq!(dashboard.get_todays_sales(), slint::SharedString::from("$500.00"));
+    assert_eq!(
+        dashboard.get_todays_sales(),
+        slint::SharedString::from("$500.00")
+    );
 }
 
 #[test]
 fn test_dashboard_orders() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
 
     let login = app::Login::new().unwrap();
@@ -47,7 +54,9 @@ fn test_dashboard_orders() {
 
 #[test]
 fn test_dashboard_helpers() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
 
     let login = app::Login::new().unwrap();
@@ -62,7 +71,9 @@ fn test_dashboard_helpers() {
 
 #[test]
 fn test_dashboard_tasks() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
 
     let login = app::Login::new().unwrap();
@@ -77,7 +88,9 @@ fn test_dashboard_tasks() {
 
 #[test]
 fn test_dashboard_generative_score() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
 
     let login = app::Login::new().unwrap();
@@ -87,5 +100,8 @@ fn test_dashboard_generative_score() {
 
     let dashboard = app::Dashboard::new().unwrap();
     dashboard.set_generative_score("90".into());
-    assert_eq!(dashboard.get_generative_score(), slint::SharedString::from("90"));
+    assert_eq!(
+        dashboard.get_generative_score(),
+        slint::SharedString::from("90")
+    );
 }

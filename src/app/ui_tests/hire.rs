@@ -1,24 +1,30 @@
 use crate::app;
 
-fn create() -> app::AgentHire { crate::ui_tests::init(); app::AgentHire::new().unwrap() }
+fn create() -> app::AgentHire {
+    crate::ui_tests::init();
+    app::AgentHire::new().unwrap()
+}
 
 // --- Hacking / Corner Cases ---
 
-#[test] fn hire_xss_name() {
+#[test]
+fn hire_xss_name() {
     let ui = create();
     let xss = "<body onload=alert('hire')>";
     ui.set_agent_name(xss.into());
     assert_eq!(ui.get_agent_name(), xss);
 }
 
-#[test] fn hire_injection_role() {
+#[test]
+fn hire_injection_role() {
     let ui = create();
     let inj = "Engineer'); DROP TABLE agents; --";
     ui.set_selected_role(inj.into());
     assert_eq!(ui.get_selected_role(), inj);
 }
 
-#[test] fn hire_step_overflow() {
+#[test]
+fn hire_step_overflow() {
     let ui = create();
     ui.set_step(99);
     assert_eq!(ui.get_step(), 99);
@@ -26,17 +32,21 @@ fn create() -> app::AgentHire { crate::ui_tests::init(); app::AgentHire::new().u
 
 // --- Interaction / Flow Tests ---
 
-#[test] fn hire_flow_deploy_callback() {
+#[test]
+fn hire_flow_deploy_callback() {
     let ui = create();
     let called_name = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called_name.clone();
-    ui.on_deploy_agent(move |name, _, _| { *c.borrow_mut() = name.to_string(); });
-    
+    ui.on_deploy_agent(move |name, _, _| {
+        *c.borrow_mut() = name.to_string();
+    });
+
     ui.invoke_deploy_agent("Robot".into(), "Cleaner".into(), "Local".into());
     assert_eq!(*called_name.borrow(), "Robot");
 }
 
-#[test] fn hire_flow_next_enabled_logic() {
+#[test]
+fn hire_flow_next_enabled_logic() {
     let ui = create();
     ui.set_step(0);
     ui.set_selected_role("".into());

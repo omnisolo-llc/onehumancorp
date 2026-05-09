@@ -1,27 +1,31 @@
 // Automated Implementation Comment: Validating Free Tier Soft Paywalls.
 #[cfg(not(target_arch = "wasm32"))]
-use ohc::orchestration::hub_service_client::HubServiceClient;
-#[cfg(not(target_arch = "wasm32"))]
-use ohc::orchestration::org_service_client::OrgServiceClient;
-#[cfg(not(target_arch = "wasm32"))]
-use ohc::orchestration::growth_service_client::GrowthServiceClient;
+use ohc::orchestration::Agent;
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::RegisterAgentRequest;
 #[cfg(not(target_arch = "wasm32"))]
-use ohc::orchestration::Agent;
+use ohc::orchestration::growth_service_client::GrowthServiceClient;
+#[cfg(not(target_arch = "wasm32"))]
+use ohc::orchestration::hub_service_client::HubServiceClient;
+#[cfg(not(target_arch = "wasm32"))]
+use ohc::orchestration::org_service_client::OrgServiceClient;
 
 pub fn get_tooltip_text(id: &str) -> slint::SharedString {
-    static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
-    let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
+    static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> =
+        std::sync::OnceLock::new();
+    let tooltips = TOOLTIPS
+        .get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
     tooltips.get(id).cloned().unwrap_or_default().into()
 }
 
-
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
-fn client_spiffe_interceptor(mut req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+fn client_spiffe_interceptor(
+    mut req: tonic::Request<()>,
+) -> Result<tonic::Request<()>, tonic::Status> {
     if !req.metadata().contains_key("x-spiffe-id") {
-        let id = std::env::var("OHC_AGENT_SPIFFE_ID").unwrap_or_else(|_| "spiffe://onehumancorp.io/system".to_string());
+        let id = std::env::var("OHC_AGENT_SPIFFE_ID")
+            .unwrap_or_else(|_| "spiffe://onehumancorp.io/system".to_string());
         if let Ok(metadata_value) = id.parse::<tonic::metadata::MetadataValue<_>>() {
             req.metadata_mut().insert("x-spiffe-id", metadata_value);
         } else {
@@ -32,9 +36,24 @@ fn client_spiffe_interceptor(mut req: tonic::Request<()>) -> Result<tonic::Reque
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-async fn connect_with_interceptor(url: String) -> Result<ohc::orchestration::hub_service_client::HubServiceClient<tonic::codegen::InterceptedService<tonic::transport::Channel, fn(tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status>>>, tonic::transport::Error> {
+async fn connect_with_interceptor(
+    url: String,
+) -> Result<
+    ohc::orchestration::hub_service_client::HubServiceClient<
+        tonic::codegen::InterceptedService<
+            tonic::transport::Channel,
+            fn(tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status>,
+        >,
+    >,
+    tonic::transport::Error,
+> {
     let channel = tonic::transport::Endpoint::new(url)?.connect().await?;
-    Ok(ohc::orchestration::hub_service_client::HubServiceClient::with_interceptor(channel, client_spiffe_interceptor))
+    Ok(
+        ohc::orchestration::hub_service_client::HubServiceClient::with_interceptor(
+            channel,
+            client_spiffe_interceptor,
+        ),
+    )
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -56,7 +75,6 @@ use slint::ComponentHandle;
 #[cfg(not(target_arch = "wasm32"))]
 use slint::Model;
 
-
 pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
@@ -70,7 +88,9 @@ fn open_url(url: &str) {
     #[cfg(not(target_arch = "wasm32"))]
     {
         #[cfg(target_os = "windows")]
-        let _ = std::process::Command::new("cmd").args(["/C", "start", url]).spawn();
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "start", url])
+            .spawn();
         #[cfg(target_os = "macos")]
         let _ = std::process::Command::new("open").arg(url).spawn();
         #[cfg(target_os = "linux")]
@@ -79,9 +99,9 @@ fn open_url(url: &str) {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-use std::cell::RefCell;
-#[cfg(not(target_arch = "wasm32"))]
 use copypasta::{ClipboardContext, ClipboardProvider};
+#[cfg(not(target_arch = "wasm32"))]
+use std::cell::RefCell;
 
 #[cfg(not(target_arch = "wasm32"))]
 thread_local! {
@@ -135,19 +155,20 @@ fn add_advanced_listener(listener: Box<dyn Fn(bool)>) {
     });
 }
 
-
-pub fn setup_welcome_checklist_routing(
-    ui: &app::WelcomeChecklist,
-) {
+pub fn setup_welcome_checklist_routing(ui: &app::WelcomeChecklist) {
     let handle = ui.as_weak();
 
     ui.on_go_to_dashboard({
         let h = handle.clone();
         move || {
-            if let Some(u) = h.upgrade() { u.hide().unwrap(); }
+            if let Some(u) = h.upgrade() {
+                u.hide().unwrap();
+            }
             GLOBAL_DASHBOARD.with(|global| {
                 if let Some(weak) = global.borrow().as_ref() {
-                    if let Some(ui) = weak.upgrade() { ui.show().unwrap(); }
+                    if let Some(ui) = weak.upgrade() {
+                        ui.show().unwrap();
+                    }
                 }
             });
         }
@@ -156,10 +177,14 @@ pub fn setup_welcome_checklist_routing(
     ui.on_go_to_add_products({
         let h = handle.clone();
         move || {
-            if let Some(u) = h.upgrade() { u.hide().unwrap(); }
+            if let Some(u) = h.upgrade() {
+                u.hide().unwrap();
+            }
             GLOBAL_WEBSITE_BUILDER.with(|global| {
                 if let Some(weak) = global.borrow().as_ref() {
-                    if let Some(ui) = weak.upgrade() { ui.show().unwrap(); }
+                    if let Some(ui) = weak.upgrade() {
+                        ui.show().unwrap();
+                    }
                 }
             });
         }
@@ -168,10 +193,14 @@ pub fn setup_welcome_checklist_routing(
     ui.on_go_to_connect_instagram({
         let h = handle.clone();
         move || {
-            if let Some(u) = h.upgrade() { u.hide().unwrap(); }
+            if let Some(u) = h.upgrade() {
+                u.hide().unwrap();
+            }
             GLOBAL_INTEGRATIONS.with(|global| {
                 if let Some(weak) = global.borrow().as_ref() {
-                    if let Some(ui) = weak.upgrade() { ui.show().unwrap(); }
+                    if let Some(ui) = weak.upgrade() {
+                        ui.show().unwrap();
+                    }
                 }
             });
         }
@@ -180,10 +209,14 @@ pub fn setup_welcome_checklist_routing(
     ui.on_go_to_share_link({
         let h = handle.clone();
         move || {
-            if let Some(u) = h.upgrade() { u.hide().unwrap(); }
+            if let Some(u) = h.upgrade() {
+                u.hide().unwrap();
+            }
             GLOBAL_REFERRALS.with(|global| {
                 if let Some(weak) = global.borrow().as_ref() {
-                    if let Some(ui) = weak.upgrade() { ui.show().unwrap(); }
+                    if let Some(ui) = weak.upgrade() {
+                        ui.show().unwrap();
+                    }
                 }
             });
         }
@@ -192,10 +225,14 @@ pub fn setup_welcome_checklist_routing(
     ui.on_go_to_dashboard({
         let h = handle.clone();
         move || {
-            if let Some(u) = h.upgrade() { u.hide().unwrap(); }
+            if let Some(u) = h.upgrade() {
+                u.hide().unwrap();
+            }
             GLOBAL_DASHBOARD.with(|global| {
                 if let Some(weak) = global.borrow().as_ref() {
-                    if let Some(ui) = weak.upgrade() { ui.show().unwrap(); }
+                    if let Some(ui) = weak.upgrade() {
+                        ui.show().unwrap();
+                    }
                 }
             });
         }
@@ -208,10 +245,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let agents_ui = app::Agents::new()?;
     let agents_ui_for_dashboard = agents_ui.clone_strong();
 
-
     // Start bundled server if in standalone mode
     if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
-
         tokio::spawn(async move {
             if let Err(e) = server_lib::run_server().await {
                 tracing::error!("Bundled server error: {}", e);
@@ -222,9 +257,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     tokio::spawn(async move {
-        match connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+        match connect_with_interceptor(
+            std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+        )
+        .await
+        {
             Ok(mut client) => {
-
                 let request = tonic::Request::new(RegisterAgentRequest {
                     agent: Some(Agent {
                         id: "agent_1".into(),
@@ -240,9 +278,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Err(_) => {}
                 }
             }
-            Err(_) => {
-
-            }
+            Err(_) => {}
         }
     });
 
@@ -253,7 +289,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
     // Locale-based currency detection
-    let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
+    let detected_currency = if std::env::var("LANG")
+        .unwrap_or_default()
+        .starts_with("en_GB")
+    {
         "GBP"
     } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
         "EUR"
@@ -277,32 +316,86 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("step".to_string(), ui.get_step().to_string()),
-                ("business_type".to_string(), ui.get_business_type().to_string()),
-                ("company_name".to_string(), ui.get_company_name().to_string()),
-                ("company_description".to_string(), ui.get_company_description().to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                (
+                    "business_type".to_string(),
+                    ui.get_business_type().to_string(),
+                ),
+                (
+                    "company_name".to_string(),
+                    ui.get_company_name().to_string(),
+                ),
+                (
+                    "company_description".to_string(),
+                    ui.get_company_description().to_string(),
+                ),
+                (
+                    "sell_physical".to_string(),
+                    ui.get_sell_physical().to_string(),
+                ),
+                (
+                    "sell_digital".to_string(),
+                    ui.get_sell_digital().to_string(),
+                ),
+                (
+                    "sell_services".to_string(),
+                    ui.get_sell_services().to_string(),
+                ),
                 ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("sell_portfolios".to_string(), ui.get_sell_portfolios().to_string()),
-                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                (
+                    "sell_subscriptions".to_string(),
+                    ui.get_sell_subscriptions().to_string(),
+                ),
+                (
+                    "sell_portfolios".to_string(),
+                    ui.get_sell_portfolios().to_string(),
+                ),
+                (
+                    "payment_pref".to_string(),
+                    ui.get_payment_pref().to_string(),
+                ),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("product_currency".to_string(), ui.get_product_currency().to_string()),
+                (
+                    "website_template".to_string(),
+                    ui.get_website_template().to_string(),
+                ),
+                (
+                    "product_name".to_string(),
+                    ui.get_product_name().to_string(),
+                ),
+                (
+                    "product_price".to_string(),
+                    ui.get_product_price().to_string(),
+                ),
+                (
+                    "product_currency".to_string(),
+                    ui.get_product_currency().to_string(),
+                ),
                 ("price_type".to_string(), ui.get_price_type().to_string()),
-                ("is_cropping_photo".to_string(), ui.get_is_cropping_photo().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                (
+                    "is_cropping_photo".to_string(),
+                    ui.get_is_cropping_photo().to_string(),
+                ),
+                (
+                    "domain_choice".to_string(),
+                    ui.get_domain_choice().to_string(),
+                ),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let mut request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+                if let Ok(mut client) = HubServiceClient::connect(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
+                    let mut request =
+                        tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    request.metadata_mut().insert(
+                        "x-spiffe-id",
+                        "spiffe://onehumancorp.io/system".parse().unwrap(),
+                    );
                     let _ = client.save_wizard_state(request).await;
                 }
             });
@@ -317,27 +410,65 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let init_setup_wizard_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+        if let Ok(mut client) = HubServiceClient::connect(
+            std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+        )
+        .await
+        {
+            if let Ok(resp) = client
+                .get_wizard_state(tonic::Request::new(
+                    ohc::orchestration::GetWizardStateRequest {},
+                ))
+                .await
+            {
                 let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
-                                let state = inner.state;
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = init_setup_wizard_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
-                        if let Some(step) = state.get("step") { if let Ok(s) = step.parse() { ui.set_step(s); } }
-                        if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
-                        if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
-                        if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
-                        if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
-                        if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
-                        if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
-                        if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
-                        if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
-                        if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
-                        if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
-                        if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
+                        if let Some(val) = state.get("is_advanced") {
+                            set_global_is_advanced(val == "true");
+                        }
+                        if let Some(step) = state.get("step") {
+                            if let Ok(s) = step.parse() {
+                                ui.set_step(s);
+                            }
+                        }
+                        if let Some(val) = state.get("business_type") {
+                            ui.set_business_type(val.into());
+                        }
+                        if let Some(val) = state.get("company_name") {
+                            ui.set_company_name(val.into());
+                        }
+                        if let Some(val) = state.get("company_description") {
+                            ui.set_company_description(val.into());
+                        }
+                        if let Some(val) = state.get("sell_physical") {
+                            ui.set_sell_physical(val == "true");
+                        }
+                        if let Some(val) = state.get("sell_digital") {
+                            ui.set_sell_digital(val == "true");
+                        }
+                        if let Some(val) = state.get("sell_services") {
+                            ui.set_sell_services(val == "true");
+                        }
+                        if let Some(val) = state.get("sell_food") {
+                            ui.set_sell_food(val == "true");
+                        }
+                        if let Some(val) = state.get("sell_subscriptions") {
+                            ui.set_sell_subscriptions(val == "true");
+                        }
+                        if let Some(val) = state.get("payment_pref") {
+                            ui.set_payment_pref(val.into());
+                        }
+                        if let Some(val) = state.get("admin_name") {
+                            ui.set_admin_name(val.into());
+                        }
+                        if let Some(val) = state.get("admin_email") {
+                            ui.set_admin_email(val.into());
+                        }
                     }
-                }).unwrap();
+                })
+                .unwrap();
             }
         }
     });
@@ -350,39 +481,96 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(wizard) = wizard_handle.upgrade() {
                 let weak_wizard = wizard.as_weak();
                 tokio::spawn(async move {
-                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    if let Ok(mut client) = connect_with_interceptor(
+                        std::env::var("OHC_HUB_URL")
+                            .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                    )
+                    .await
+                    {
                         let req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
                         if let Ok(resp) = client.get_wizard_state(req).await {
-                            let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
-                                let state = inner.state;
+                            let inner: ohc::orchestration::GetWizardStateResponse =
+                                resp.into_inner();
+                            let state = inner.state;
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = weak_wizard.upgrade() {
-                                    if let Some(val) = state.get("step") { if let Ok(s) = val.parse::<i32>() { ui.set_step(s); } }
-                                    if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
-                                    if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
-                                    if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
-                                    if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
-                                    if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
-                                    if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
-                                    if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
-                                    if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
-                                    if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
-                                    if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
-                                    if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
-                                    if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
-                                    if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
-                                    if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
-                                    if let Some(val) = state.get("product_currency") { ui.set_product_currency(val.into()); }
-                                    if let Some(val) = state.get("price_type") { ui.set_price_type(val.into()); }
-                                    if let Some(val) = state.get("is_cropping_photo") { ui.set_is_cropping_photo(val == "true"); }
-                                    if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
-                                    if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
-                                    if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
-                                    if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
-                                    if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
-                                    if let Some(val) = state.get("instant_bio") { ui.set_instant_bio(val.into()); }
+                                    if let Some(val) = state.get("step") {
+                                        if let Ok(s) = val.parse::<i32>() {
+                                            ui.set_step(s);
+                                        }
+                                    }
+                                    if let Some(val) = state.get("business_type") {
+                                        ui.set_business_type(val.into());
+                                    }
+                                    if let Some(val) = state.get("company_name") {
+                                        ui.set_company_name(val.into());
+                                    }
+                                    if let Some(val) = state.get("company_description") {
+                                        ui.set_company_description(val.into());
+                                    }
+                                    if let Some(val) = state.get("sell_physical") {
+                                        ui.set_sell_physical(val == "true");
+                                    }
+                                    if let Some(val) = state.get("sell_digital") {
+                                        ui.set_sell_digital(val == "true");
+                                    }
+                                    if let Some(val) = state.get("sell_services") {
+                                        ui.set_sell_services(val == "true");
+                                    }
+                                    if let Some(val) = state.get("sell_food") {
+                                        ui.set_sell_food(val == "true");
+                                    }
+                                    if let Some(val) = state.get("sell_subscriptions") {
+                                        ui.set_sell_subscriptions(val == "true");
+                                    }
+                                    if let Some(val) = state.get("payment_pref") {
+                                        ui.set_payment_pref(val.into());
+                                    }
+                                    if let Some(val) = state.get("admin_name") {
+                                        ui.set_admin_name(val.into());
+                                    }
+                                    if let Some(val) = state.get("admin_email") {
+                                        ui.set_admin_email(val.into());
+                                    }
+                                    if let Some(val) = state.get("website_template") {
+                                        ui.set_website_template(val.into());
+                                    }
+                                    if let Some(val) = state.get("product_name") {
+                                        ui.set_product_name(val.into());
+                                    }
+                                    if let Some(val) = state.get("product_price") {
+                                        ui.set_product_price(val.into());
+                                    }
+                                    if let Some(val) = state.get("product_currency") {
+                                        ui.set_product_currency(val.into());
+                                    }
+                                    if let Some(val) = state.get("price_type") {
+                                        ui.set_price_type(val.into());
+                                    }
+                                    if let Some(val) = state.get("is_cropping_photo") {
+                                        ui.set_is_cropping_photo(val == "true");
+                                    }
+                                    if let Some(val) = state.get("product_sku") {
+                                        ui.set_product_sku(val.into());
+                                    }
+                                    if let Some(val) = state.get("product_inventory") {
+                                        ui.set_product_inventory(val.into());
+                                    }
+                                    if let Some(val) = state.get("domain_choice") {
+                                        ui.set_domain_choice(val.into());
+                                    }
+                                    if let Some(val) = state.get("custom_dns_target") {
+                                        ui.set_custom_dns_target(val.into());
+                                    }
+                                    if let Some(val) = state.get("is_advanced") {
+                                        ui.set_is_advanced(val == "true");
+                                    }
+                                    if let Some(val) = state.get("instant_bio") {
+                                        ui.set_instant_bio(val.into());
+                                    }
                                 }
-                            }).unwrap();
+                            })
+                            .unwrap();
                         }
                     }
                 });
@@ -670,19 +858,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = login_handle.upgrade() {
                 if ui.get_is_sign_up() {
                     ui.set_show_verification(true);
-                    ui.set_verification_message("Please check your email to verify your account.".into());
+                    ui.set_verification_message(
+                        "Please check your email to verify your account.".into(),
+                    );
                     ui.invoke_start_setup_wizard();
                 } else {
-
                     ui.set_loading(true);
                     let ui_weak = login_handle.clone();
                     tokio::spawn(async move {
                         let mut needs_wizard = false;
-                        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                            let req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
+                        if let Ok(mut client) = connect_with_interceptor(
+                            std::env::var("OHC_HUB_URL")
+                                .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                        )
+                        .await
+                        {
+                            let req =
+                                tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
                             if let Ok(resp) = client.get_wizard_state(req).await {
-                                let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
-                                                let state = inner.state;
+                                let inner: ohc::orchestration::GetWizardStateResponse =
+                                    resp.into_inner();
+                                let state = inner.state;
                                 if let Some(step) = state.get("step") {
                                     if let Ok(s) = step.parse::<i32>() {
                                         if s < 10 {
@@ -707,41 +903,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if needs_wizard {
                                     ui.invoke_start_setup_wizard();
                                 } else {
-                    ui.hide().unwrap();
-                    if let Ok(dashboard) = app::Dashboard::new() {
-                        GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
+                                    ui.hide().unwrap();
+                                    if let Ok(dashboard) = app::Dashboard::new() {
+                                        GLOBAL_DASHBOARD
+                                            .with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
 
-                        dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
-                        let dash_weak = dashboard.as_weak();
-                        add_advanced_listener(Box::new(move |val| {
-                            if let Some(ui) = dash_weak.upgrade() {
-                                ui.set_is_advanced(val);
-                            }
-                        }));
+                                        dashboard
+                                            .set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+                                        let dash_weak = dashboard.as_weak();
+                                        add_advanced_listener(Box::new(move |val| {
+                                            if let Some(ui) = dash_weak.upgrade() {
+                                                ui.set_is_advanced(val);
+                                            }
+                                        }));
 
-                        let my_plan_ui = app::MyPlan::new().unwrap();
-                        let cost_dashboard_ui = app::CostDashboard::new().unwrap();
-                        let billing_ui = app::Billing::new().unwrap();
-                        let billing_handle_clone = billing_ui.as_weak();
-                        dashboard.on_open_billing(move || {
-                            if let Some(ui) = billing_handle_clone.upgrade() {
-                                let _ = ui.show();
-                            }
-                        });
-                        let my_plan_handle_clone_dashboard = my_plan_ui.as_weak();
-                        dashboard.on_open_my_plan(move || {
-                            if let Some(ui) = my_plan_handle_clone_dashboard.upgrade() {
-                                let _ = ui.show();
-                            }
-                        });
-                        Box::leak(Box::new(billing_ui));
-                        let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
-                        my_plan_ui.on_view_details(move || {
-                            if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
-                                let _ = ui.show();
-                            }
-                        });
-                        dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| { crate::get_tooltip_text(id.as_str()) });
+                                        let my_plan_ui = app::MyPlan::new().unwrap();
+                                        let cost_dashboard_ui = app::CostDashboard::new().unwrap();
+                                        let billing_ui = app::Billing::new().unwrap();
+                                        let billing_handle_clone = billing_ui.as_weak();
+                                        dashboard.on_open_billing(move || {
+                                            if let Some(ui) = billing_handle_clone.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
+                                        let my_plan_handle_clone_dashboard = my_plan_ui.as_weak();
+                                        dashboard.on_open_my_plan(move || {
+                                            if let Some(ui) =
+                                                my_plan_handle_clone_dashboard.upgrade()
+                                            {
+                                                let _ = ui.show();
+                                            }
+                                        });
+                                        Box::leak(Box::new(billing_ui));
+                                        let cost_dashboard_handle_clone =
+                                            cost_dashboard_ui.as_weak();
+                                        my_plan_ui.on_view_details(move || {
+                                            if let Some(ui) = cost_dashboard_handle_clone.upgrade()
+                                            {
+                                                let _ = ui.show();
+                                            }
+                                        });
+                                        dashboard
+                                            .global::<app::TooltipRegistry>()
+                                            .on_request_tooltip_text(|id| {
+                                                crate::get_tooltip_text(id.as_str())
+                                            });
 
                                         let ai_help_chat_ui = app::AiHelpChat::new().unwrap();
                                         let ai_help_chat_handle = ai_help_chat_ui.as_weak();
@@ -751,15 +957,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
 
-                                        let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
-                                        let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                                        let interactive_walkthrough_ui =
+                                            app::InteractiveWalkthrough::new().unwrap();
+                                        let interactive_walkthrough_handle =
+                                            interactive_walkthrough_ui.as_weak();
                                         dashboard.on_open_interactive_walkthrough(move || {
-                                            if let Some(ui) = interactive_walkthrough_handle.upgrade() {
+                                            if let Some(ui) =
+                                                interactive_walkthrough_handle.upgrade()
+                                            {
                                                 let _ = ui.show();
                                             }
                                         });
 
-                                        let video_tutorials_ui = app::VideoTutorials::new().unwrap();
+                                        let video_tutorials_ui =
+                                            app::VideoTutorials::new().unwrap();
                                         let video_tutorials_handle = video_tutorials_ui.as_weak();
                                         dashboard.on_open_video_tutorials(move || {
                                             if let Some(ui) = video_tutorials_handle.upgrade() {
@@ -786,7 +997,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         }
                                         if let Ok(business_share_ui) = app::BusinessShare::new() {
                                             dashboard.on_action_share_store({
-                                                let business_share_ui = business_share_ui.clone_strong();
+                                                let business_share_ui =
+                                                    business_share_ui.clone_strong();
                                                 move || {
                                                     let _ = business_share_ui.show();
                                                 }
@@ -794,7 +1006,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         }
                                         if let Ok(email_marketing_ui) = app::EmailMarketing::new() {
                                             dashboard.on_action_open_email_marketing({
-                                                let email_marketing_ui = email_marketing_ui.clone_strong();
+                                                let email_marketing_ui =
+                                                    email_marketing_ui.clone_strong();
                                                 move || {
                                                     let _ = email_marketing_ui.show();
                                                 }
@@ -802,7 +1015,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         }
                                         if let Ok(social_posting_ui) = app::SocialPosting::new() {
                                             dashboard.on_action_open_social_posting({
-                                                let social_posting_ui = social_posting_ui.clone_strong();
+                                                let social_posting_ui =
+                                                    social_posting_ui.clone_strong();
                                                 move || {
                                                     let _ = social_posting_ui.show();
                                                 }
@@ -815,11 +1029,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
 
-                        dashboard.show().unwrap();
-                    }
+                                        dashboard.show().unwrap();
+                                    }
                                 }
                             }
-                        }).unwrap();
+                        })
+                        .unwrap();
                     });
                 }
             }
@@ -828,10 +1043,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let init_ui_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+        if let Ok(mut client) = connect_with_interceptor(
+            std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+        )
+        .await
+        {
+            if let Ok(resp) = client
+                .get_wizard_state(tonic::Request::new(
+                    ohc::orchestration::GetWizardStateRequest {},
+                ))
+                .await
+            {
                 let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
-                                let state = inner.state;
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = init_ui_handle.upgrade() {
                         if let Some(step_str) = state.get("step") {
@@ -839,31 +1063,78 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 ui.set_step(step);
                             }
                         }
-                        if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
-                        if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
-                        if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
-                        if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
-                        if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
-                        if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
-                        if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
-                        if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
-                        if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
-                        if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
-                        if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
-                        if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
-                        if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
-                        if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
-                        if let Some(val) = state.get("product_currency") { ui.set_product_currency(val.into()); }
-                        if let Some(val) = state.get("price_type") { ui.set_price_type(val.into()); }
-                        if let Some(val) = state.get("is_cropping_photo") { ui.set_is_cropping_photo(val == "true"); }
-                        if let Some(val) = state.get("product_sku") { ui.set_product_sku(val.into()); }
-                        if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
-                        if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
-                        if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
-                        if let Some(val) = state.get("instant_bio") { ui.set_instant_bio(val.into()); }
+                        if let Some(val) = state.get("business_type") {
+                            ui.set_business_type(val.into());
+                        }
+                        if let Some(val) = state.get("company_name") {
+                            ui.set_company_name(val.into());
+                        }
+                        if let Some(val) = state.get("company_description") {
+                            ui.set_company_description(val.into());
+                        }
+                        if let Some(val) = state.get("sell_physical") {
+                            ui.set_sell_physical(val == "true");
+                        }
+                        if let Some(val) = state.get("sell_digital") {
+                            ui.set_sell_digital(val == "true");
+                        }
+                        if let Some(val) = state.get("sell_services") {
+                            ui.set_sell_services(val == "true");
+                        }
+                        if let Some(val) = state.get("sell_food") {
+                            ui.set_sell_food(val == "true");
+                        }
+                        if let Some(val) = state.get("sell_subscriptions") {
+                            ui.set_sell_subscriptions(val == "true");
+                        }
+                        if let Some(val) = state.get("payment_pref") {
+                            ui.set_payment_pref(val.into());
+                        }
+                        if let Some(val) = state.get("admin_name") {
+                            ui.set_admin_name(val.into());
+                        }
+                        if let Some(val) = state.get("admin_email") {
+                            ui.set_admin_email(val.into());
+                        }
+                        if let Some(val) = state.get("is_advanced") {
+                            set_global_is_advanced(val == "true");
+                        }
+                        if let Some(val) = state.get("website_template") {
+                            ui.set_website_template(val.into());
+                        }
+                        if let Some(val) = state.get("product_name") {
+                            ui.set_product_name(val.into());
+                        }
+                        if let Some(val) = state.get("product_price") {
+                            ui.set_product_price(val.into());
+                        }
+                        if let Some(val) = state.get("product_currency") {
+                            ui.set_product_currency(val.into());
+                        }
+                        if let Some(val) = state.get("price_type") {
+                            ui.set_price_type(val.into());
+                        }
+                        if let Some(val) = state.get("is_cropping_photo") {
+                            ui.set_is_cropping_photo(val == "true");
+                        }
+                        if let Some(val) = state.get("product_sku") {
+                            ui.set_product_sku(val.into());
+                        }
+                        if let Some(val) = state.get("product_inventory") {
+                            ui.set_product_inventory(val.into());
+                        }
+                        if let Some(val) = state.get("domain_choice") {
+                            ui.set_domain_choice(val.into());
+                        }
+                        if let Some(val) = state.get("custom_dns_target") {
+                            ui.set_custom_dns_target(val.into());
+                        }
+                        if let Some(val) = state.get("instant_bio") {
+                            ui.set_instant_bio(val.into());
+                        }
                     }
-                }).unwrap();
+                })
+                .unwrap();
             }
         }
     });
@@ -875,36 +1146,93 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("step".to_string(), ui.get_step().to_string()),
-                ("business_type".to_string(), ui.get_business_type().to_string()),
-                ("company_name".to_string(), ui.get_company_name().to_string()),
-                ("company_description".to_string(), ui.get_company_description().to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                (
+                    "business_type".to_string(),
+                    ui.get_business_type().to_string(),
+                ),
+                (
+                    "company_name".to_string(),
+                    ui.get_company_name().to_string(),
+                ),
+                (
+                    "company_description".to_string(),
+                    ui.get_company_description().to_string(),
+                ),
+                (
+                    "sell_physical".to_string(),
+                    ui.get_sell_physical().to_string(),
+                ),
+                (
+                    "sell_digital".to_string(),
+                    ui.get_sell_digital().to_string(),
+                ),
+                (
+                    "sell_services".to_string(),
+                    ui.get_sell_services().to_string(),
+                ),
                 ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("sell_portfolios".to_string(), ui.get_sell_portfolios().to_string()),
-                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                (
+                    "sell_subscriptions".to_string(),
+                    ui.get_sell_subscriptions().to_string(),
+                ),
+                (
+                    "sell_portfolios".to_string(),
+                    ui.get_sell_portfolios().to_string(),
+                ),
+                (
+                    "payment_pref".to_string(),
+                    ui.get_payment_pref().to_string(),
+                ),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("product_currency".to_string(), ui.get_product_currency().to_string()),
+                (
+                    "website_template".to_string(),
+                    ui.get_website_template().to_string(),
+                ),
+                (
+                    "product_name".to_string(),
+                    ui.get_product_name().to_string(),
+                ),
+                (
+                    "product_price".to_string(),
+                    ui.get_product_price().to_string(),
+                ),
+                (
+                    "product_currency".to_string(),
+                    ui.get_product_currency().to_string(),
+                ),
                 ("price_type".to_string(), ui.get_price_type().to_string()),
-                ("is_cropping_photo".to_string(), ui.get_is_cropping_photo().to_string()),
+                (
+                    "is_cropping_photo".to_string(),
+                    ui.get_is_cropping_photo().to_string(),
+                ),
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
-                ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
-                ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
+                (
+                    "product_inventory".to_string(),
+                    ui.get_product_inventory().to_string(),
+                ),
+                (
+                    "domain_choice".to_string(),
+                    ui.get_domain_choice().to_string(),
+                ),
+                (
+                    "custom_dns_target".to_string(),
+                    ui.get_custom_dns_target().to_string(),
+                ),
                 ("instant_bio".to_string(), ui.get_instant_bio().to_string()),
             ]);
 
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                if let Ok(mut client) = connect_with_interceptor(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
+                    let request =
+                        tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
             });
@@ -923,15 +1251,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let init_agent_config_handle = agent_config_handle.clone();
     let init_agent_config_handle_for_hire = agent_config_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+        if let Ok(mut client) = connect_with_interceptor(
+            std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+        )
+        .await
+        {
+            if let Ok(resp) = client
+                .get_wizard_state(tonic::Request::new(
+                    ohc::orchestration::GetWizardStateRequest {},
+                ))
+                .await
+            {
                 let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
-                                let state = inner.state;
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_agent_config_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(val) = state.get("is_advanced") {
+                            set_global_is_advanced(val == "true");
+                        }
                     }
-                }).unwrap();
+                })
+                .unwrap();
             }
         }
     });
@@ -940,13 +1280,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
-            let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-            ]);
+            let state = std::collections::HashMap::from([(
+                "is_advanced".to_string(),
+                ui.get_is_advanced().to_string(),
+            )]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                if let Ok(mut client) = connect_with_interceptor(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
+                    let request =
+                        tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
             });
@@ -954,21 +1301,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     agent_config_ui.on_activate_agent({
         let ui_handle = agent_config_handle.clone();
-        move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency, api_scope_override, cron_override, raw_activation_payload| {
+        move |agent,
+              can_reply,
+              can_social,
+              can_write_descriptions,
+              can_send_updates,
+              frequency,
+              api_scope_override,
+              cron_override,
+              raw_activation_payload| {
             let ui_handle_err = ui_handle.clone();
             tokio::spawn(async move {
                 // Log the advanced properties to satisfy the transmission/usage requirement
                 let _ = raw_activation_payload;
-                let redacted_data = server_lib::telemetry::redact_interface_pii(serde_json::from_str(&raw_activation_payload).unwrap_or(serde_json::Value::String(raw_activation_payload.to_string())));
-                tracing::info!("Advanced mode parameters: api_scope='{}', cron='{}', redacted_data='{}'", api_scope_override, cron_override, redacted_data);
+                let redacted_data = server_lib::telemetry::redact_interface_pii(
+                    serde_json::from_str(&raw_activation_payload).unwrap_or(
+                        serde_json::Value::String(raw_activation_payload.to_string()),
+                    ),
+                );
+                tracing::info!(
+                    "Advanced mode parameters: api_scope='{}', cron='{}', redacted_data='{}'",
+                    api_scope_override,
+                    cron_override,
+                    redacted_data
+                );
 
-                let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+                let url = std::env::var("OHC_HUB_URL")
+                    .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
                 match connect_with_interceptor(url).await {
                     Ok(mut client) => {
                         let mut capabilities = std::collections::HashMap::new();
                         capabilities.insert("can_reply".to_string(), can_reply);
                         capabilities.insert("can_social".to_string(), can_social);
-                        capabilities.insert("can_write_descriptions".to_string(), can_write_descriptions);
+                        capabilities
+                            .insert("can_write_descriptions".to_string(), can_write_descriptions);
                         capabilities.insert("can_send_updates".to_string(), can_send_updates);
 
                         let work_hours = match frequency.as_str() {
@@ -991,7 +1357,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(ui) = ui_handle_err.upgrade() {
                                     ui.set_show_toast(false);
                                 }
-                            }).unwrap();
+                            })
+                            .unwrap();
                         }
                     }
                     Err(e) => {
@@ -1000,7 +1367,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(ui) = ui_handle_err.upgrade() {
                                 ui.set_show_toast(false);
                             }
-                        }).unwrap();
+                        })
+                        .unwrap();
                     }
                 }
             });
@@ -1018,15 +1386,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }));
     let init_prompt_tuning_handle = prompt_tuning_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+        if let Ok(mut client) = connect_with_interceptor(
+            std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+        )
+        .await
+        {
+            if let Ok(resp) = client
+                .get_wizard_state(tonic::Request::new(
+                    ohc::orchestration::GetWizardStateRequest {},
+                ))
+                .await
+            {
                 let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
-                                let state = inner.state;
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_prompt_tuning_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(val) = state.get("is_advanced") {
+                            set_global_is_advanced(val == "true");
+                        }
                     }
-                }).unwrap();
+                })
+                .unwrap();
             }
         }
     });
@@ -1035,13 +1415,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
-            let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-            ]);
+            let state = std::collections::HashMap::from([(
+                "is_advanced".to_string(),
+                ui.get_is_advanced().to_string(),
+            )]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                if let Ok(mut client) = connect_with_interceptor(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
+                    let request =
+                        tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
             });
@@ -1058,16 +1445,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let state = std::collections::HashMap::from([
                 ("prompt_tone".to_string(), tone.to_string()),
-                ("prompt_focus_business".to_string(), focus_only_business.to_string()),
-                ("prompt_focus_competitors".to_string(), focus_avoid_competitors.to_string()),
-                ("prompt_focus_spanish".to_string(), focus_reply_spanish.to_string()),
+                (
+                    "prompt_focus_business".to_string(),
+                    focus_only_business.to_string(),
+                ),
+                (
+                    "prompt_focus_competitors".to_string(),
+                    focus_avoid_competitors.to_string(),
+                ),
+                (
+                    "prompt_focus_spanish".to_string(),
+                    focus_reply_spanish.to_string(),
+                ),
             ]);
             let ui_handle_err = ui_handle.clone();
             tokio::spawn(async move {
-                let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+                let url = std::env::var("OHC_HUB_URL")
+                    .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
                 match connect_with_interceptor(url).await {
                     Ok(mut client) => {
-                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                        let request =
+                            tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
+                                state,
+                            });
                         if let Err(e) = client.save_wizard_state(request).await {
                             tracing::error!("Failed to save wizard state: {}", e);
                             slint::invoke_from_event_loop(move || {
@@ -1075,19 +1475,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     ui.set_show_toast(false); // rollback optimistic UI
                                     // In a real app we might show an error toast here
                                 }
-                            }).unwrap();
+                            })
+                            .unwrap();
                             return;
                         }
 
                         let mut domain_focus = vec![];
-                        if focus_only_business { domain_focus.push("Only discuss business".to_string()); }
-                        if focus_avoid_competitors { domain_focus.push("Avoid competitors".to_string()); }
-                        if focus_reply_spanish { domain_focus.push("Always reply in Spanish".to_string()); }
+                        if focus_only_business {
+                            domain_focus.push("Only discuss business".to_string());
+                        }
+                        if focus_avoid_competitors {
+                            domain_focus.push("Avoid competitors".to_string());
+                        }
+                        if focus_reply_spanish {
+                            domain_focus.push("Always reply in Spanish".to_string());
+                        }
 
-                        let prompt_request = tonic::Request::new(ohc::orchestration::PromptTuningConfig {
-                            personality: tone.to_string(),
-                            domain_focus,
-                        });
+                        let prompt_request =
+                            tonic::Request::new(ohc::orchestration::PromptTuningConfig {
+                                personality: tone.to_string(),
+                                domain_focus,
+                            });
                         if let Err(e) = client.handle_prompt_tuning(prompt_request).await {
                             tracing::error!("Failed to handle prompt tuning: {}", e);
                             let ui_err_clone = ui_handle_err.clone();
@@ -1095,7 +1503,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(ui) = ui_err_clone.upgrade() {
                                     ui.set_show_toast(false); // rollback
                                 }
-                            }).unwrap();
+                            })
+                            .unwrap();
                         }
                     }
                     Err(e) => {
@@ -1104,7 +1513,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(ui) = ui_handle_err.upgrade() {
                                 ui.set_show_toast(false); // rollback optimistic UI
                             }
-                        }).unwrap();
+                        })
+                        .unwrap();
                     }
                 }
             });
@@ -1114,10 +1524,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let integrations_ui = app::Integrations::new()?;
     GLOBAL_INTEGRATIONS.with(|g| *g.borrow_mut() = Some(integrations_ui.as_weak()));
     integrations_ui.on_configure_integration(|id| {
-        let _id_clone = id.to_string(); tokio::spawn(async move { });
+        let _id_clone = id.to_string();
+        tokio::spawn(async move {});
     });
     integrations_ui.on_invoke_tool(|id| {
-        let _id_clone = id.to_string(); tokio::spawn(async move { });
+        let _id_clone = id.to_string();
+        tokio::spawn(async move {});
     });
     Box::leak(Box::new(integrations_ui));
 
@@ -1145,15 +1557,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }));
     let init_website_builder_handle = website_builder_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+        if let Ok(mut client) = connect_with_interceptor(
+            std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+        )
+        .await
+        {
+            if let Ok(resp) = client
+                .get_wizard_state(tonic::Request::new(
+                    ohc::orchestration::GetWizardStateRequest {},
+                ))
+                .await
+            {
                 let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
-                                let state = inner.state;
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_website_builder_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(val) = state.get("is_advanced") {
+                            set_global_is_advanced(val == "true");
+                        }
                     }
-                }).unwrap();
+                })
+                .unwrap();
             }
         }
     });
@@ -1162,19 +1586,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
-            let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-            ]);
+            let state = std::collections::HashMap::from([(
+                "is_advanced".to_string(),
+                ui.get_is_advanced().to_string(),
+            )]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                if let Ok(mut client) = connect_with_interceptor(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
+                    let request =
+                        tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
             });
         }
     });
-
 
     website_builder_ui.on_upload_logo(|| {
         // Simulate upload for test environment since file dialogs are hard to test
@@ -1187,7 +1617,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = ui_handle.upgrade() {
                 let name = ui.get_product_name().to_string();
                 tokio::spawn(async move {
-                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    if let Ok(mut client) = connect_with_interceptor(
+                        std::env::var("OHC_HUB_URL")
+                            .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                    )
+                    .await
+                    {
                         let prompt = format!("Generate a primary brand color code for {}.", name);
                         let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
                             prompt,
@@ -1196,12 +1631,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Ok(resp) = client.reason(request).await {
                             let color_res = resp.into_inner().content;
                             // Default to a green if AI fails to return a hex
-                            let hex = if color_res.starts_with('#') { color_res } else { "#34C759".to_string() };
+                            let hex = if color_res.starts_with('#') {
+                                color_res
+                            } else {
+                                "#34C759".to_string()
+                            };
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = ui_handle.upgrade() {
                                     ui.set_primary_color(hex.into());
                                 }
-                            }).unwrap();
+                            })
+                            .unwrap();
                         }
                     } else {
                         // Fallback for missing backend, e.g. tests
@@ -1209,7 +1649,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(ui) = ui_handle.upgrade() {
                                 ui.set_primary_color("#34C759".into());
                             }
-                        }).unwrap();
+                        })
+                        .unwrap();
                     }
                 });
             }
@@ -1223,8 +1664,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = ui_handle.upgrade() {
                 let name = ui.get_product_name().to_string();
                 tokio::spawn(async move {
-                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                        let prompt = format!("Write a short, engaging one-sentence product description for {}.", name);
+                    if let Ok(mut client) = connect_with_interceptor(
+                        std::env::var("OHC_HUB_URL")
+                            .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                    )
+                    .await
+                    {
+                        let prompt = format!(
+                            "Write a short, engaging one-sentence product description for {}.",
+                            name
+                        );
                         let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
                             prompt,
                             from_agent_id: "website_builder".into(),
@@ -1235,15 +1684,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(ui) = ui_handle.upgrade() {
                                     ui.set_product_description(desc.into());
                                 }
-                            }).unwrap();
+                            })
+                            .unwrap();
                         }
                     } else {
                         // Fallback for missing backend, e.g. tests
                         slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_handle.upgrade() {
-                                ui.set_product_description(format!("An AI-generated description for {}.", name).into());
+                                ui.set_product_description(
+                                    format!("An AI-generated description for {}.", name).into(),
+                                );
                             }
-                        }).unwrap();
+                        })
+                        .unwrap();
                     }
                 });
             }
@@ -1267,7 +1720,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                if let Ok(mut client) = connect_with_interceptor(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
                     let mut request = tonic::Request::new(ohc::orchestration::PublishSiteRequest {
                         template,
                         color,
@@ -1276,7 +1734,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         description,
                         domain_choice: domain,
                     });
-                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+                    request.metadata_mut().insert(
+                        "x-spiffe-id",
+                        "spiffe://onehumancorp.io/system".parse().unwrap(),
+                    );
 
                     if let Ok(resp) = client.publish_site(request).await {
                         let url = resp.into_inner().url;
@@ -1287,13 +1748,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 // In Slint <= 1.5 setting clipboard requires backend trait, avoiding for compat
                                 ui.invoke_copy_to_clipboard(url.into());
                             }
-                        }).unwrap();
+                        })
+                        .unwrap();
                     } else {
                         slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_handle_clone.upgrade() {
                                 ui.set_is_publishing(false);
                             }
-                        }).unwrap();
+                        })
+                        .unwrap();
                     }
                 }
             });
@@ -1313,8 +1776,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     website_builder_ui.on_copy_to_clipboard(|_text| {
         // Real implementations use wl-clipboard or similar, skipped for UI tests
     });
-
-
 
     let grow_business_ui = app::GrowBusiness::new()?;
     grow_business_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
@@ -1337,15 +1798,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }));
     let init_settings_handle = settings_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+        if let Ok(mut client) = connect_with_interceptor(
+            std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+        )
+        .await
+        {
+            if let Ok(resp) = client
+                .get_wizard_state(tonic::Request::new(
+                    ohc::orchestration::GetWizardStateRequest {},
+                ))
+                .await
+            {
                 let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
-                                let state = inner.state;
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_settings_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(val) = state.get("is_advanced") {
+                            set_global_is_advanced(val == "true");
+                        }
                     }
-                }).unwrap();
+                })
+                .unwrap();
             }
         }
     });
@@ -1354,13 +1827,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
-            let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-            ]);
+            let state = std::collections::HashMap::from([(
+                "is_advanced".to_string(),
+                ui.get_is_advanced().to_string(),
+            )]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                if let Ok(mut client) = connect_with_interceptor(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
+                    let request =
+                        tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
             });
@@ -1397,15 +1877,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let init_grow_business_handle = grow_business_handle.clone();
     tokio::spawn(async move {
-        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+        if let Ok(mut client) = connect_with_interceptor(
+            std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+        )
+        .await
+        {
+            if let Ok(resp) = client
+                .get_wizard_state(tonic::Request::new(
+                    ohc::orchestration::GetWizardStateRequest {},
+                ))
+                .await
+            {
                 let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
-                                let state = inner.state;
+                let state = inner.state;
                 slint::invoke_from_event_loop(move || {
                     if let Some(_ui) = init_grow_business_handle.upgrade() {
-                        if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
+                        if let Some(val) = state.get("is_advanced") {
+                            set_global_is_advanced(val == "true");
+                        }
                     }
-                }).unwrap();
+                })
+                .unwrap();
             }
         }
     });
@@ -1414,19 +1906,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
-            let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-            ]);
+            let state = std::collections::HashMap::from([(
+                "is_advanced".to_string(),
+                ui.get_is_advanced().to_string(),
+            )]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                if let Ok(mut client) = connect_with_interceptor(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
+                    let request =
+                        tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                     let _ = client.save_wizard_state(request).await;
                 }
             });
         }
     });
-
 
     let social_posting_ui = app::SocialPosting::new()?;
     let social_posting_handle = social_posting_ui.as_weak();
@@ -1558,17 +2056,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let product_model_rc = std::rc::Rc::new(product_model);
     business_manager_ui.set_products(product_model_rc.clone().into());
 
-    business_manager_ui.on_action_edit({
-        move |_id| {
+    business_manager_ui.on_action_edit({ move |_id| {} });
 
-        }
-    });
-
-    business_manager_ui.on_action_archive({
-        move |_id| {
-
-        }
-    });
+    business_manager_ui.on_action_archive({ move |_id| {} });
 
     let business_manager_handle = business_manager_ui.as_weak();
     Box::leak(Box::new(business_manager_ui));
@@ -1586,22 +2076,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(ui) = sp_handle_for_gb.upgrade() {
                     let _ = ui.show();
                 }
-                GLOBAL_DASHBOARD.with(|dash_ref| if let Some(dash) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
-                    let mut current_tasks = Vec::new();
-                    let current = dash.get_pending_approvals();
-                    for i in 0..current.row_count() {
-                        if let Some(item) = current.row_data(i) {
-                            current_tasks.push(item);
+                GLOBAL_DASHBOARD.with(|dash_ref| {
+                    if let Some(dash) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
+                        let mut current_tasks = Vec::new();
+                        let current = dash.get_pending_approvals();
+                        for i in 0..current.row_count() {
+                            if let Some(item) = current.row_data(i) {
+                                current_tasks.push(item);
+                            }
                         }
-                    }
 
-                    current_tasks.push(app::UiPendingApproval {
-                        helper_name: "The Promoter".into(),
-                        task_id: "ig-post-1".into(),
-                        title: "Drafted Instagram Post".into(),
-                        proposed_content: "Check out our new products! 🚀 #newarrival".into(),
-                    });
-                    dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks)));
+                        current_tasks.push(app::UiPendingApproval {
+                            helper_name: "The Promoter".into(),
+                            task_id: "ig-post-1".into(),
+                            title: "Drafted Instagram Post".into(),
+                            proposed_content: "Check out our new products! 🚀 #newarrival".into(),
+                        });
+                        dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(
+                            current_tasks,
+                        )));
+                    }
                 });
             } else if strategy == "Add 5 more products" {
                 if let Some(bm) = business_manager_handle_for_gb.upgrade() {
@@ -1611,11 +2105,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-
     let business_share_ui = app::BusinessShare::new()?;
     GLOBAL_BUSINESS_SHARE.with(|g| *g.borrow_mut() = Some(business_share_ui.as_weak()));
     let business_share_handle = business_share_ui.as_weak();
-
 
     let analytics_charts_ui = app::AnalyticsCharts::new()?;
     GLOBAL_ANALYTICS_CHARTS.with(|g| *g.borrow_mut() = Some(analytics_charts_ui.as_weak()));
@@ -1626,42 +2118,126 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         app::UiChartData {
             title: "Revenue Over Time".into(),
             points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Mon".into(), value: 40.0, display_value: "$400".into() },
-                app::UiDataPoint { label: "Tue".into(), value: 65.0, display_value: "$650".into() },
-                app::UiDataPoint { label: "Wed".into(), value: 30.0, display_value: "$300".into() },
-                app::UiDataPoint { label: "Thu".into(), value: 80.0, display_value: "$800".into() },
-                app::UiDataPoint { label: "Fri".into(), value: 120.0, display_value: "$1.2k".into() },
-                app::UiDataPoint { label: "Sat".into(), value: 150.0, display_value: "$1.5k".into() },
-                app::UiDataPoint { label: "Sun".into(), value: 100.0, display_value: "$1.0k".into() },
+                app::UiDataPoint {
+                    label: "Mon".into(),
+                    value: 40.0,
+                    display_value: "$400".into(),
+                },
+                app::UiDataPoint {
+                    label: "Tue".into(),
+                    value: 65.0,
+                    display_value: "$650".into(),
+                },
+                app::UiDataPoint {
+                    label: "Wed".into(),
+                    value: 30.0,
+                    display_value: "$300".into(),
+                },
+                app::UiDataPoint {
+                    label: "Thu".into(),
+                    value: 80.0,
+                    display_value: "$800".into(),
+                },
+                app::UiDataPoint {
+                    label: "Fri".into(),
+                    value: 120.0,
+                    display_value: "$1.2k".into(),
+                },
+                app::UiDataPoint {
+                    label: "Sat".into(),
+                    value: 150.0,
+                    display_value: "$1.5k".into(),
+                },
+                app::UiDataPoint {
+                    label: "Sun".into(),
+                    value: 100.0,
+                    display_value: "$1.0k".into(),
+                },
             ])),
         },
         app::UiChartData {
             title: "Orders by Day".into(),
             points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Mon".into(), value: 20.0, display_value: "10".into() },
-                app::UiDataPoint { label: "Tue".into(), value: 40.0, display_value: "20".into() },
-                app::UiDataPoint { label: "Wed".into(), value: 30.0, display_value: "15".into() },
-                app::UiDataPoint { label: "Thu".into(), value: 50.0, display_value: "25".into() },
-                app::UiDataPoint { label: "Fri".into(), value: 80.0, display_value: "40".into() },
-                app::UiDataPoint { label: "Sat".into(), value: 100.0, display_value: "50".into() },
-                app::UiDataPoint { label: "Sun".into(), value: 70.0, display_value: "35".into() },
+                app::UiDataPoint {
+                    label: "Mon".into(),
+                    value: 20.0,
+                    display_value: "10".into(),
+                },
+                app::UiDataPoint {
+                    label: "Tue".into(),
+                    value: 40.0,
+                    display_value: "20".into(),
+                },
+                app::UiDataPoint {
+                    label: "Wed".into(),
+                    value: 30.0,
+                    display_value: "15".into(),
+                },
+                app::UiDataPoint {
+                    label: "Thu".into(),
+                    value: 50.0,
+                    display_value: "25".into(),
+                },
+                app::UiDataPoint {
+                    label: "Fri".into(),
+                    value: 80.0,
+                    display_value: "40".into(),
+                },
+                app::UiDataPoint {
+                    label: "Sat".into(),
+                    value: 100.0,
+                    display_value: "50".into(),
+                },
+                app::UiDataPoint {
+                    label: "Sun".into(),
+                    value: 70.0,
+                    display_value: "35".into(),
+                },
             ])),
         },
         app::UiChartData {
             title: "Top Products".into(),
             points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Vegan Cake".into(), value: 100.0, display_value: "120".into() },
-                app::UiDataPoint { label: "Latte".into(), value: 75.0, display_value: "90".into() },
-                app::UiDataPoint { label: "Cookies".into(), value: 50.0, display_value: "60".into() },
+                app::UiDataPoint {
+                    label: "Vegan Cake".into(),
+                    value: 100.0,
+                    display_value: "120".into(),
+                },
+                app::UiDataPoint {
+                    label: "Latte".into(),
+                    value: 75.0,
+                    display_value: "90".into(),
+                },
+                app::UiDataPoint {
+                    label: "Cookies".into(),
+                    value: 50.0,
+                    display_value: "60".into(),
+                },
             ])),
         },
         app::UiChartData {
             title: "Traffic Sources".into(),
             points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Direct".into(), value: 80.0, display_value: "40%".into() },
-                app::UiDataPoint { label: "Social".into(), value: 60.0, display_value: "30%".into() },
-                app::UiDataPoint { label: "Search".into(), value: 40.0, display_value: "20%".into() },
-                app::UiDataPoint { label: "Referral".into(), value: 20.0, display_value: "10%".into() },
+                app::UiDataPoint {
+                    label: "Direct".into(),
+                    value: 80.0,
+                    display_value: "40%".into(),
+                },
+                app::UiDataPoint {
+                    label: "Social".into(),
+                    value: 60.0,
+                    display_value: "30%".into(),
+                },
+                app::UiDataPoint {
+                    label: "Search".into(),
+                    value: 40.0,
+                    display_value: "20%".into(),
+                },
+                app::UiDataPoint {
+                    label: "Referral".into(),
+                    value: 20.0,
+                    display_value: "10%".into(),
+                },
             ])),
         },
     ];
@@ -1718,7 +2294,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-
     let bs_copy_handle = business_share_handle.clone();
     business_share_ui.on_copy_link(move || {
         if let Some(ui) = bs_copy_handle.upgrade() {
@@ -1738,26 +2313,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     referrals_ui.on_send_invite_message({
         let ui_handle = referrals_handle.clone();
         move |link| {
-            let pre_filled_msg = format!("Share OHC with a friend, both get 1 month free Pro. {}", link);
+            let pre_filled_msg = format!(
+                "Share OHC with a friend, both get 1 month free Pro. {}",
+                link
+            );
             CLIPBOARD.with(|cb| {
                 if let Some(ctx) = cb.borrow_mut().as_mut() {
                     if let Err(_e) = ctx.set_contents(pre_filled_msg.clone()) {
-
                     } else {
-
                         if let Some(ui) = ui_handle.upgrade() {
                             ui.set_invite_copy_status("Invite message copied!".into());
 
                             let weak_ui = ui.as_weak();
-                            slint::Timer::single_shot(std::time::Duration::from_secs(3), move || {
-                                if let Some(ui) = weak_ui.upgrade() {
-                                    ui.set_invite_copy_status("".into());
-                                }
-                            });
+                            slint::Timer::single_shot(
+                                std::time::Duration::from_secs(3),
+                                move || {
+                                    if let Some(ui) = weak_ui.upgrade() {
+                                        ui.set_invite_copy_status("".into());
+                                    }
+                                },
+                            );
                         }
                     }
                 } else {
-
                 }
             });
         }
@@ -1768,39 +2346,61 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let handle = ui_handle.clone();
             tokio::spawn(async move {
-                match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                match GrowthServiceClient::connect(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
                     Ok(mut client) => {
-                        let response: Result<tonic::Response<_>, tonic::Status> = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let response: Result<tonic::Response<_>, tonic::Status> = client
+                            .get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {}))
+                            .await;
                         if let Ok(resp) = response {
                             let inner: ohc::orchestration::ReferralsResponse = resp.into_inner();
                             let referrals = inner.referrals;
                             let handle_clone = handle.clone();
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = handle_clone.upgrade() {
-                                    let ui_referrals: Vec<app::UiReferral> = referrals.into_iter().map(|r| {
-                                        app::UiReferral {
-                                            referral_code: r.referral_code.into(),
-                                            user_id: r.user_id.into(),
-                                            clicks: r.clicks,
-                                            conversions: r.conversions,
-                                            created_at: "".into(), // Simplified
-                                        }
-                                    }).collect();
-                                    ui.set_referrals(slint::ModelRc::new(slint::VecModel::from(ui_referrals)));
+                                    let ui_referrals: Vec<app::UiReferral> = referrals
+                                        .into_iter()
+                                        .map(|r| {
+                                            app::UiReferral {
+                                                referral_code: r.referral_code.into(),
+                                                user_id: r.user_id.into(),
+                                                clicks: r.clicks,
+                                                conversions: r.conversions,
+                                                created_at: "".into(), // Simplified
+                                            }
+                                        })
+                                        .collect();
+                                    ui.set_referrals(slint::ModelRc::new(slint::VecModel::from(
+                                        ui_referrals,
+                                    )));
                                 }
-                            }).unwrap();
+                            })
+                            .unwrap();
                         }
 
-                        let stats_response: Result<tonic::Response<_>, tonic::Status> = client.get_referral_stats(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let stats_response: Result<tonic::Response<_>, tonic::Status> = client
+                            .get_referral_stats(tonic::Request::new(
+                                ohc::orchestration::EmptyRequest {},
+                            ))
+                            .await;
                         if let Ok(stats_resp) = stats_response {
-                            let stats: ohc::orchestration::ReferralStatsResponse = stats_resp.into_inner();
+                            let stats: ohc::orchestration::ReferralStatsResponse =
+                                stats_resp.into_inner();
                             let handle_clone = handle.clone();
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = handle_clone.upgrade() {
                                     ui.set_total_referrals(stats.total_referrals);
                                     ui.set_click_count(stats.click_count);
                                     ui.set_conversion_rate(stats.conversion_rate as f32);
-                                    let formatted_balance = format!("${}.{:02}", stats.reward_balance_cents / 100, stats.reward_balance_cents % 100);
+                                    let formatted_balance = format!(
+                                        "${}.{:02}",
+                                        stats.reward_balance_cents / 100,
+                                        stats.reward_balance_cents % 100
+                                    );
                                     ui.set_reward_balance(formatted_balance.into());
                                     ui.set_bonus_credit(stats.bonus_credit);
                                     ui.set_download_count(stats.download_count);
@@ -1809,24 +2409,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     GLOBAL_BUSINESS_SHARE.with(|g| {
                                         if let Some(weak) = g.borrow().as_ref() {
                                             if let Some(bs_ui) = weak.upgrade() {
-                                                bs_ui.set_share_link(stats.business_share_url.into());
+                                                bs_ui.set_share_link(
+                                                    stats.business_share_url.into(),
+                                                );
                                                 bs_ui.set_business_name(stats.business_name.into());
                                             }
                                         }
                                     });
                                 }
-                            }).unwrap();
+                            })
+                            .unwrap();
                         }
 
-                        let vc_response: Result<tonic::Response<_>, tonic::Status> = client.get_viral_coefficient(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let vc_response: Result<tonic::Response<_>, tonic::Status> = client
+                            .get_viral_coefficient(tonic::Request::new(
+                                ohc::orchestration::EmptyRequest {},
+                            ))
+                            .await;
                         if let Ok(vc_resp) = vc_response {
-                            let vc: ohc::orchestration::ViralCoefficientResponse = vc_resp.into_inner();
+                            let vc: ohc::orchestration::ViralCoefficientResponse =
+                                vc_resp.into_inner();
                             let handle_clone = handle.clone();
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = handle_clone.upgrade() {
                                     ui.set_viral_coefficient(vc.k_factor as f32);
                                 }
-                            }).unwrap();
+                            })
+                            .unwrap();
                         }
                     }
                     Err(_) => {}
@@ -1843,32 +2452,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 CLIPBOARD.with(|cb| {
                     if let Some(ctx) = cb.borrow_mut().as_mut() {
                         if let Err(_e) = ctx.set_contents(link.into()) {
-
                         } else {
-
                             ui.set_link_copy_status("Copied!".into());
                             let weak_ui = ui.as_weak();
-                            slint::Timer::single_shot(std::time::Duration::from_secs(3), move || {
-                                if let Some(ui) = weak_ui.upgrade() {
-                                    ui.set_link_copy_status("".into());
-                                }
-                            });
+                            slint::Timer::single_shot(
+                                std::time::Duration::from_secs(3),
+                                move || {
+                                    if let Some(ui) = weak_ui.upgrade() {
+                                        ui.set_link_copy_status("".into());
+                                    }
+                                },
+                            );
                         }
                     } else {
-
                     }
                 });
             }
         }
     });
 
-    referrals_ui.on_export_data(|| {
+    referrals_ui.on_export_data(|| {});
 
-    });
-
-    referrals_ui.on_view_history(|| {
-
-    });
+    referrals_ui.on_view_history(|| {});
 
     referrals_ui.on_share_link({
         let ui_handle = referrals_handle.clone();
@@ -1926,7 +2531,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
-                        GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
+                GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
                 dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let dash_weak = dashboard.as_weak();
                 add_advanced_listener(Box::new(move |val| {
@@ -1946,7 +2551,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ui.hide().unwrap();
             }
             if let Ok(dashboard) = app::Dashboard::new() {
-                        GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
+                GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
                 dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let dash_weak = dashboard.as_weak();
                 add_advanced_listener(Box::new(move |val| {
@@ -1970,7 +2575,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
-
 
     let welcome_checklist_ui = app::WelcomeChecklist::new()?;
     let welcome_checklist_handle = welcome_checklist_ui.as_weak();
@@ -2984,7 +3588,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-
     let agent_hire_ui = app::AgentHire::new()?;
     let fix_agent_ui = app::FixAgent::new()?;
     let upgrade_ui = app::Upgrade::new()?;
@@ -3023,13 +3626,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             if let Some(ui) = ui_handle.upgrade() {
                 set_global_is_advanced(ui.get_is_advanced());
-                let state = std::collections::HashMap::from([
-                    ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-                ]);
+                let state = std::collections::HashMap::from([(
+                    "is_advanced".to_string(),
+                    ui.get_is_advanced().to_string(),
+                )]);
                 #[cfg(not(target_arch = "wasm32"))]
                 tokio::spawn(async move {
-                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    if let Ok(mut client) = connect_with_interceptor(
+                        std::env::var("OHC_HUB_URL")
+                            .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                    )
+                    .await
+                    {
+                        let request =
+                            tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
+                                state,
+                            });
                         let _ = client.save_wizard_state(request).await;
                     }
                 });
@@ -3042,13 +3654,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             if let Some(ui) = ui_handle.upgrade() {
                 set_global_is_advanced(ui.get_is_advanced());
-                let state = std::collections::HashMap::from([
-                    ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-                ]);
+                let state = std::collections::HashMap::from([(
+                    "is_advanced".to_string(),
+                    ui.get_is_advanced().to_string(),
+                )]);
                 #[cfg(not(target_arch = "wasm32"))]
                 tokio::spawn(async move {
-                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    if let Ok(mut client) = connect_with_interceptor(
+                        std::env::var("OHC_HUB_URL")
+                            .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                    )
+                    .await
+                    {
+                        let request =
+                            tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
+                                state,
+                            });
                         let _ = client.save_wizard_state(request).await;
                     }
                 });
@@ -3061,20 +3682,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             if let Some(ui) = ui_handle.upgrade() {
                 set_global_is_advanced(ui.get_is_advanced());
-                let state = std::collections::HashMap::from([
-                    ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
-                ]);
+                let state = std::collections::HashMap::from([(
+                    "is_advanced".to_string(),
+                    ui.get_is_advanced().to_string(),
+                )]);
                 #[cfg(not(target_arch = "wasm32"))]
                 tokio::spawn(async move {
-                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    if let Ok(mut client) = connect_with_interceptor(
+                        std::env::var("OHC_HUB_URL")
+                            .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                    )
+                    .await
+                    {
+                        let request =
+                            tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
+                                state,
+                            });
                         let _ = client.save_wizard_state(request).await;
                     }
                 });
             }
         }
     });
-
 
     let agents_ui_handle = agents_ui.as_weak();
     let _agent_hire_handle = agent_hire_ui.as_weak();
@@ -3148,12 +3777,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-
-
-
-
-
-        setup_wizard_ui.on_generate_instant_preview({
+    setup_wizard_ui.on_generate_instant_preview({
         let ui_weak = setup_wizard_handle.clone();
         move || {
             let ui_handle = ui_weak.clone();
@@ -3162,7 +3786,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let session_id = uuid::Uuid::new_v4().to_string();
 
                 tokio::spawn(async move {
-                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    if let Ok(mut client) = connect_with_interceptor(
+                        std::env::var("OHC_HUB_URL")
+                            .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                    )
+                    .await
+                    {
                         // Publish OnboardingStarted event
                         let payload = serde_json::json!({
                             "session_id": session_id,
@@ -3177,33 +3806,75 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             msg_id: uuid::Uuid::new_v4().to_string(),
                         };
 
-                        let req = tonic::Request::new(ohc::orchestration::PublishTeammateMeshEventRequest {
-                            channel: "promoter_inbox".to_string(),
-                            event: Some(event),
-                        });
+                        let req = tonic::Request::new(
+                            ohc::orchestration::PublishTeammateMeshEventRequest {
+                                channel: "promoter_inbox".to_string(),
+                                event: Some(event),
+                            },
+                        );
 
                         let _ = client.publish_teammate_mesh_event(req).await;
 
                         // Subscribe to results
-                        let stream_req = tonic::Request::new(ohc::orchestration::EventStreamRequest {
-                            topic: format!("onboarding_{}", session_id),
-                        });
+                        let stream_req =
+                            tonic::Request::new(ohc::orchestration::EventStreamRequest {
+                                topic: format!("onboarding_{}", session_id),
+                            });
 
                         if let Ok(resp) = client.stream_teammate_mesh(stream_req).await {
                             let mut stream = resp.into_inner();
                             while let Ok(Some(msg)) = stream.message().await {
-                                if msg.action == "StorefrontGenerated" && msg.status == "completed" {
+                                if msg.action == "StorefrontGenerated" && msg.status == "completed"
+                                {
                                     if let Ok(payload_str) = String::from_utf8(msg.payload) {
-                                        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&payload_str) {
-                                            let company_name = v.get("company_name").and_then(|n| n.as_str()).unwrap_or("AI Generated Store").to_string();
-                                            let business_type = v.get("business_type").and_then(|t| t.as_str()).unwrap_or("Online Store").to_string();
-                                            let product_name = v.get("product_name").and_then(|p| p.as_str()).unwrap_or("My First Product").to_string();
-                                            let product_price = v.get("product_price").and_then(|pr| pr.as_str()).unwrap_or("19.99").to_string();
-                                            let company_description = v.get("company_description").and_then(|d| d.as_str()).unwrap_or("A great AI-generated business.").to_string();
-                                            let domain_choice = v.get("domain_choice").and_then(|dc| dc.as_str()).unwrap_or("free").to_string();
-                                            let website_template = v.get("website_template").and_then(|wt| wt.as_str()).unwrap_or("Modern").to_string();
-                                            let admin_email = v.get("admin_email").and_then(|ae| ae.as_str()).unwrap_or("admin@ai-generated.test").to_string();
-                                            let payment_pref = v.get("payment_pref").and_then(|pp| pp.as_str()).unwrap_or("online").to_string();
+                                        if let Ok(v) =
+                                            serde_json::from_str::<serde_json::Value>(&payload_str)
+                                        {
+                                            let company_name = v
+                                                .get("company_name")
+                                                .and_then(|n| n.as_str())
+                                                .unwrap_or("AI Generated Store")
+                                                .to_string();
+                                            let business_type = v
+                                                .get("business_type")
+                                                .and_then(|t| t.as_str())
+                                                .unwrap_or("Online Store")
+                                                .to_string();
+                                            let product_name = v
+                                                .get("product_name")
+                                                .and_then(|p| p.as_str())
+                                                .unwrap_or("My First Product")
+                                                .to_string();
+                                            let product_price = v
+                                                .get("product_price")
+                                                .and_then(|pr| pr.as_str())
+                                                .unwrap_or("19.99")
+                                                .to_string();
+                                            let company_description = v
+                                                .get("company_description")
+                                                .and_then(|d| d.as_str())
+                                                .unwrap_or("A great AI-generated business.")
+                                                .to_string();
+                                            let domain_choice = v
+                                                .get("domain_choice")
+                                                .and_then(|dc| dc.as_str())
+                                                .unwrap_or("free")
+                                                .to_string();
+                                            let website_template = v
+                                                .get("website_template")
+                                                .and_then(|wt| wt.as_str())
+                                                .unwrap_or("Modern")
+                                                .to_string();
+                                            let admin_email = v
+                                                .get("admin_email")
+                                                .and_then(|ae| ae.as_str())
+                                                .unwrap_or("admin@ai-generated.test")
+                                                .to_string();
+                                            let payment_pref = v
+                                                .get("payment_pref")
+                                                .and_then(|pp| pp.as_str())
+                                                .unwrap_or("online")
+                                                .to_string();
 
                                             slint::invoke_from_event_loop(move || {
                                                 if let Some(ui) = ui_handle.upgrade() {
@@ -3211,15 +3882,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                     ui.set_business_type(business_type.into());
                                                     ui.set_product_name(product_name.into());
                                                     ui.set_product_price(product_price.into());
-                                                    ui.set_company_description(company_description.into());
+                                                    ui.set_company_description(
+                                                        company_description.into(),
+                                                    );
                                                     ui.set_domain_choice(domain_choice.into());
-                                                    ui.set_website_template(website_template.into());
+                                                    ui.set_website_template(
+                                                        website_template.into(),
+                                                    );
                                                     ui.set_admin_email(admin_email.into());
                                                     ui.set_payment_pref(payment_pref.into());
                                                     ui.set_is_generating_instant_preview(false);
                                                     ui.set_step(9); // Skip straight to Review & Launch
                                                 }
-                                            }).unwrap();
+                                            })
+                                            .unwrap();
                                             break;
                                         }
                                     }
@@ -3278,13 +3954,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let prod_name = prod_name.to_string();
             tokio::spawn(async move {
                 let mut description = format!("A premium {}.", prod_name);
-                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let prompt = format!("Generate a short, enticing product description for \"{}\".", prod_name);
+                if let Ok(mut client) = connect_with_interceptor(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
+                    let prompt = format!(
+                        "Generate a short, enticing product description for \"{}\".",
+                        prod_name
+                    );
                     let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
                         prompt,
                         from_agent_id: "setup_wizard".into(),
                     });
-                    let response: Result<tonic::Response<ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
+                    let response: Result<
+                        tonic::Response<ohc::orchestration::ReasonResponse>,
+                        tonic::Status,
+                    > = client.reason(request).await;
                     if let Ok(resp) = response {
                         let inner: ohc::orchestration::ReasonResponse = resp.into_inner();
                         description = inner.content.trim().to_string();
@@ -3295,7 +3982,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_product_description(description.into());
                         ui.set_is_generating_product_description(false);
                     }
-                }).unwrap();
+                })
+                .unwrap();
             });
         }
     });
@@ -3304,12 +3992,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         CLIPBOARD.with(|cb| {
             if let Some(ctx) = cb.borrow_mut().as_mut() {
                 if let Err(_e) = ctx.set_contents(link.to_string()) {
-
                 } else {
-
                 }
             } else {
-
             }
         });
     });
@@ -3486,7 +4171,10 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
     // Locale-based currency detection
-    let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
+    let detected_currency = if std::env::var("LANG")
+        .unwrap_or_default()
+        .starts_with("en_GB")
+    {
         "GBP"
     } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
         "EUR"
@@ -3510,32 +4198,86 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
             set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("step".to_string(), ui.get_step().to_string()),
-                ("business_type".to_string(), ui.get_business_type().to_string()),
-                ("company_name".to_string(), ui.get_company_name().to_string()),
-                ("company_description".to_string(), ui.get_company_description().to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                (
+                    "business_type".to_string(),
+                    ui.get_business_type().to_string(),
+                ),
+                (
+                    "company_name".to_string(),
+                    ui.get_company_name().to_string(),
+                ),
+                (
+                    "company_description".to_string(),
+                    ui.get_company_description().to_string(),
+                ),
+                (
+                    "sell_physical".to_string(),
+                    ui.get_sell_physical().to_string(),
+                ),
+                (
+                    "sell_digital".to_string(),
+                    ui.get_sell_digital().to_string(),
+                ),
+                (
+                    "sell_services".to_string(),
+                    ui.get_sell_services().to_string(),
+                ),
                 ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("sell_portfolios".to_string(), ui.get_sell_portfolios().to_string()),
-                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                (
+                    "sell_subscriptions".to_string(),
+                    ui.get_sell_subscriptions().to_string(),
+                ),
+                (
+                    "sell_portfolios".to_string(),
+                    ui.get_sell_portfolios().to_string(),
+                ),
+                (
+                    "payment_pref".to_string(),
+                    ui.get_payment_pref().to_string(),
+                ),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
-                ("website_template".to_string(), ui.get_website_template().to_string()),
-                ("product_name".to_string(), ui.get_product_name().to_string()),
-                ("product_price".to_string(), ui.get_product_price().to_string()),
-                ("product_currency".to_string(), ui.get_product_currency().to_string()),
+                (
+                    "website_template".to_string(),
+                    ui.get_website_template().to_string(),
+                ),
+                (
+                    "product_name".to_string(),
+                    ui.get_product_name().to_string(),
+                ),
+                (
+                    "product_price".to_string(),
+                    ui.get_product_price().to_string(),
+                ),
+                (
+                    "product_currency".to_string(),
+                    ui.get_product_currency().to_string(),
+                ),
                 ("price_type".to_string(), ui.get_price_type().to_string()),
-                ("is_cropping_photo".to_string(), ui.get_is_cropping_photo().to_string()),
-                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+                (
+                    "is_cropping_photo".to_string(),
+                    ui.get_is_cropping_photo().to_string(),
+                ),
+                (
+                    "domain_choice".to_string(),
+                    ui.get_domain_choice().to_string(),
+                ),
                 ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let mut request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
-                    request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+                if let Ok(mut client) = HubServiceClient::connect(
+                    std::env::var("OHC_HUB_URL")
+                        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+                )
+                .await
+                {
+                    let mut request =
+                        tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    request.metadata_mut().insert(
+                        "x-spiffe-id",
+                        "spiffe://onehumancorp.io/system".parse().unwrap(),
+                    );
                     let _ = client.save_wizard_state(request).await;
                 }
             });
@@ -3547,7 +4289,6 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let _ = setup_wizard_ui.hide();
-
 
     let setup_wizard_ui_from_login = setup_wizard_handle.clone();
     login_ui.on_start_setup_wizard({
@@ -3575,14 +4316,19 @@ mod growth_e2e_tests {
 
     #[test]
     fn test_start_setup_wizard_transitions() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_ui_handle = login_ui.as_weak();
 
         let setup_wizard_ui = app::SetupWizard::new().unwrap();
 
-        let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
+        let detected_currency = if std::env::var("LANG")
+            .unwrap_or_default()
+            .starts_with("en_GB")
+        {
             "GBP"
         } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
             "EUR"
@@ -3615,12 +4361,17 @@ mod growth_e2e_tests {
 
         login_ui.invoke_start_setup_wizard();
 
-        assert!(*transition_executed.borrow(), "The setup wizard transition closure should be executed");
+        assert!(
+            *transition_executed.borrow(),
+            "The setup wizard transition closure should be executed"
+        );
     }
 
     #[test]
     fn test_e2e_first_login_auto_launch_and_complete_wizard() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3667,7 +4418,10 @@ mod growth_e2e_tests {
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
 
-        assert!(*setup_wizard_launched.borrow(), "Setup wizard should auto-launch on first login");
+        assert!(
+            *setup_wizard_launched.borrow(),
+            "Setup wizard should auto-launch on first login"
+        );
 
         let ui = app::SetupWizard::new().unwrap();
 
@@ -3708,21 +4462,34 @@ mod growth_e2e_tests {
         let launch_called_clone = launch_called.clone();
         let ui_weak = ui.as_weak();
 
-        ui.on_launch(move |bt, cn, _cd, pp, ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password, _price_type| {
-            assert_eq!(bt, "Online Store");
-            assert_eq!(cn, "My Day One Store");
-            assert_eq!(pp, "online");
-            assert_eq!(ae, "dayone@test.com");
-            assert_eq!(website_template, "Modern");
-            assert_eq!(product_name, "Vegan Chocolate Cake");
-            assert_eq!(product_price, "45.00");
-            assert_eq!(domain_choice, "custom");
-            *launch_called_clone.borrow_mut() = true;
-            if let Some(u) = ui_weak.upgrade() {
-                u.set_launching(false);
-                u.set_step(100);
-            }
-        });
+        ui.on_launch(
+            move |bt,
+                  cn,
+                  _cd,
+                  pp,
+                  ae,
+                  website_template,
+                  product_name,
+                  product_price,
+                  domain_choice,
+                  _admin_name,
+                  _admin_password,
+                  _price_type| {
+                assert_eq!(bt, "Online Store");
+                assert_eq!(cn, "My Day One Store");
+                assert_eq!(pp, "online");
+                assert_eq!(ae, "dayone@test.com");
+                assert_eq!(website_template, "Modern");
+                assert_eq!(product_name, "Vegan Chocolate Cake");
+                assert_eq!(product_price, "45.00");
+                assert_eq!(domain_choice, "custom");
+                *launch_called_clone.borrow_mut() = true;
+                if let Some(u) = ui_weak.upgrade() {
+                    u.set_launching(false);
+                    u.set_step(100);
+                }
+            },
+        );
 
         ui.set_launching(true);
         ui.invoke_launch(
@@ -3737,16 +4504,21 @@ mod growth_e2e_tests {
             ui.get_domain_choice(),
             ui.get_admin_name(),
             ui.get_admin_password(),
-            "".into()
+            "".into(),
         );
 
-        assert!(*launch_called.borrow(), "Setup wizard launch function must be executed");
+        assert!(
+            *launch_called.borrow(),
+            "Setup wizard launch function must be executed"
+        );
         assert_eq!(ui.get_step(), 100);
     }
 
     #[test]
     fn test_e2e_first_login_auto_launch_setup_wizard() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3798,12 +4570,17 @@ mod growth_e2e_tests {
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
 
-        assert!(*setup_wizard_launched.borrow(), "Setup wizard should auto-launch on first login");
+        assert!(
+            *setup_wizard_launched.borrow(),
+            "Setup wizard should auto-launch on first login"
+        );
     }
 
     #[test]
     fn test_setup_wizard_resume_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         // Simulating the resume process
         let ui = app::SetupWizard::new().unwrap();
@@ -3832,10 +4609,22 @@ mod growth_e2e_tests {
         // Simulate saving state to hashmap, and verify
         let state = std::collections::HashMap::from([
             ("step".to_string(), ui.get_step().to_string()),
-            ("business_type".to_string(), ui.get_business_type().to_string()),
-            ("website_template".to_string(), ui.get_website_template().to_string()),
-            ("product_name".to_string(), ui.get_product_name().to_string()),
-            ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+            (
+                "business_type".to_string(),
+                ui.get_business_type().to_string(),
+            ),
+            (
+                "website_template".to_string(),
+                ui.get_website_template().to_string(),
+            ),
+            (
+                "product_name".to_string(),
+                ui.get_product_name().to_string(),
+            ),
+            (
+                "domain_choice".to_string(),
+                ui.get_domain_choice().to_string(),
+            ),
             ("instant_bio".to_string(), ui.get_instant_bio().to_string()),
         ]);
 
@@ -3847,7 +4636,9 @@ mod growth_e2e_tests {
 
     #[test]
     fn test_e2e_referral_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3860,19 +4651,20 @@ mod growth_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::Referrals::new().unwrap();
 
-        let referral_data = slint::ModelRc::new(slint::VecModel::from(vec![
-            app::UiReferral {
-                referral_code: "GROWTH2024".into(),
-                user_id: "user_123".into(),
-                clicks: 45,
-                conversions: 12,
-                created_at: "2024-01-01".into(),
-            }
-        ]));
+        let referral_data = slint::ModelRc::new(slint::VecModel::from(vec![app::UiReferral {
+            referral_code: "GROWTH2024".into(),
+            user_id: "user_123".into(),
+            clicks: 45,
+            conversions: 12,
+            created_at: "2024-01-01".into(),
+        }]));
 
         ui.set_referrals(referral_data.clone());
 
@@ -3885,7 +4677,9 @@ mod growth_e2e_tests {
 
     #[test]
     fn test_e2e_growth_referrals_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -3898,7 +4692,10 @@ mod growth_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
@@ -3917,15 +4714,13 @@ mod growth_e2e_tests {
         });
 
         // Initialize referrals data
-        let referral_data = slint::ModelRc::new(slint::VecModel::from(vec![
-            app::UiReferral {
-                referral_code: "DASHBOARD2024".into(),
-                user_id: "user_dash".into(),
-                clicks: 10,
-                conversions: 5,
-                created_at: "2024-05-01".into(),
-            }
-        ]));
+        let referral_data = slint::ModelRc::new(slint::VecModel::from(vec![app::UiReferral {
+            referral_code: "DASHBOARD2024".into(),
+            user_id: "user_dash".into(),
+            clicks: 10,
+            conversions: 5,
+            created_at: "2024-05-01".into(),
+        }]));
         referrals_ui.set_referrals(referral_data);
 
         // Test link generation simulate
@@ -3960,7 +4755,10 @@ mod growth_e2e_tests {
 
         // Trigger dashboard action
         dashboard_ui.invoke_action_open_referrals();
-        assert!(*share_store_called.borrow(), "action_open_referrals should be invoked");
+        assert!(
+            *share_store_called.borrow(),
+            "action_open_referrals should be invoked"
+        );
 
         // Assert UI state on referrals window
         assert_eq!(referrals_ui.get_referrals().row_count(), 1);
@@ -3971,18 +4769,26 @@ mod growth_e2e_tests {
 
         // Trigger interactions on referrals window
         referrals_ui.invoke_generate_new_link();
-        assert!(*new_link_generated.borrow(), "generate_new_link should be invoked");
+        assert!(
+            *new_link_generated.borrow(),
+            "generate_new_link should be invoked"
+        );
 
         referrals_ui.invoke_share_link(referrals_ui.get_my_referral_link());
         assert!(*link_shared.borrow(), "share_link should be invoked");
 
         referrals_ui.invoke_send_invite_message(referrals_ui.get_my_referral_link());
-        assert_eq!(referrals_ui.get_invite_copy_status(), "Invite message copied!");
+        assert_eq!(
+            referrals_ui.get_invite_copy_status(),
+            "Invite message copied!"
+        );
     }
 
     #[test]
     fn test_e2e_referral_share_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -3994,7 +4800,10 @@ mod growth_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::Referrals::new().unwrap();
 
@@ -4005,7 +4814,10 @@ mod growth_e2e_tests {
             *link_copied_clone.borrow_mut() = true;
         });
         ui.invoke_share_link("ohc://join?ref=DEFAULT".into());
-        assert!(*link_copied.borrow(), "Share link callback should be invoked");
+        assert!(
+            *link_copied.borrow(),
+            "Share link callback should be invoked"
+        );
     }
 }
 
@@ -4013,7 +4825,9 @@ mod growth_e2e_tests {
 mod e2e_tests {
     #[test]
     fn test_e2e_social_media_autopost_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -4026,7 +4840,10 @@ mod e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let gb_ui = app::GrowBusiness::new().unwrap();
@@ -4049,7 +4866,9 @@ mod e2e_tests {
                         title: "Drafted Instagram Post".into(),
                         proposed_content: "Check out our new products! 🚀 #newarrival".into(),
                     });
-                    dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks)));
+                    dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(
+                        current_tasks,
+                    )));
                 }
             }
         });
@@ -4071,14 +4890,12 @@ mod e2e_tests {
         assert_eq!(task.task_id, "ig-post-1");
     }
 
-    use slint::Model;
     use super::*;
+    use slint::Model;
 
     #[test]
     fn test_cuj_draft_for_review_flow() {
         crate::ui_tests::init();
-
-
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -4091,34 +4908,44 @@ mod e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
-
-        let pending_tasks = vec![
-            app::UiPendingApproval {
-                        helper_name: "The Promoter".into(),
-                task_id: "test-task-123".into(),
-                title: "Draft Confirmation for Maya".into(),
-                proposed_content: "Hi Maya, thank you for your custom order!".into(),
-            }
-        ];
+        let pending_tasks = vec![app::UiPendingApproval {
+            helper_name: "The Promoter".into(),
+            task_id: "test-task-123".into(),
+            title: "Draft Confirmation for Maya".into(),
+            proposed_content: "Hi Maya, thank you for your custom order!".into(),
+        }];
 
         let pending_model = std::rc::Rc::new(slint::VecModel::from(pending_tasks));
         ui.set_pending_approvals(pending_model.into());
@@ -4143,7 +4970,9 @@ mod e2e_tests {
 
     #[test]
     fn test_e2e_agent_activity_feed_approvals_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -4156,7 +4985,10 @@ mod e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
@@ -4177,14 +5009,12 @@ mod e2e_tests {
             }
         });
 
-        let pending_tasks = vec![
-            app::UiPendingApproval {
-                        helper_name: "The Promoter".into(),
-                task_id: "test-task-123".into(),
-                title: "Draft Confirmation for Maya".into(),
-                proposed_content: "Hi Maya, thank you for your custom order!".into(),
-            }
-        ];
+        let pending_tasks = vec![app::UiPendingApproval {
+            helper_name: "The Promoter".into(),
+            task_id: "test-task-123".into(),
+            title: "Draft Confirmation for Maya".into(),
+            proposed_content: "Hi Maya, thank you for your custom order!".into(),
+        }];
 
         let pending_model = std::rc::Rc::new(slint::VecModel::from(pending_tasks));
         dashboard_ui.set_pending_approvals(pending_model.into());
@@ -4198,7 +5028,9 @@ mod e2e_tests {
 
     #[test]
     fn test_login_password_visibility_toggle() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::Login::new().unwrap();
 
         // The toggle state in the encapsulated component is internal to Slint
@@ -4211,8 +5043,6 @@ mod e2e_tests {
     fn test_e2e_wizard_flow() {
         crate::ui_tests::init();
 
-
-
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -4224,7 +5054,10 @@ mod e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::SetupWizard::new().unwrap();
 
@@ -4274,7 +5107,6 @@ mod e2e_tests {
         assert_eq!(ui.get_sell_food(), false);
         assert_eq!(ui.get_sell_subscriptions(), false);
 
-
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
@@ -4284,18 +5116,31 @@ mod e2e_tests {
         ui.set_product_price("45.00".into());
         ui.set_domain_choice("custom".into());
 
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password, price_type| {
-            assert_eq!(website_template, "Modern");
-            assert_eq!(product_name, "Vegan Chocolate Cake");
-            assert_eq!(product_price, "45.00");
-            assert_eq!(domain_choice, "custom");
-            assert_eq!(price_type, "fixed");
-            *launch_called_clone.borrow_mut() = true;
-            if let Some(u) = ui_weak.upgrade() {
-                u.set_launching(false);
-                u.set_step(100);
-            }
-        });
+        ui.on_launch(
+            move |_bt,
+                  _cn,
+                  _cd,
+                  _pp,
+                  _ae,
+                  website_template,
+                  product_name,
+                  product_price,
+                  domain_choice,
+                  _admin_name,
+                  _admin_password,
+                  price_type| {
+                assert_eq!(website_template, "Modern");
+                assert_eq!(product_name, "Vegan Chocolate Cake");
+                assert_eq!(product_price, "45.00");
+                assert_eq!(domain_choice, "custom");
+                assert_eq!(price_type, "fixed");
+                *launch_called_clone.borrow_mut() = true;
+                if let Some(u) = ui_weak.upgrade() {
+                    u.set_launching(false);
+                    u.set_step(100);
+                }
+            },
+        );
 
         ui.set_launching(true);
         ui.invoke_launch(
@@ -4310,10 +5155,13 @@ mod e2e_tests {
             ui.get_domain_choice(),
             ui.get_admin_name(),
             ui.get_admin_password(),
-            ui.get_price_type()
+            ui.get_price_type(),
         );
 
-        assert!(*launch_called.borrow(), "Launch callback should be triggered");
+        assert!(
+            *launch_called.borrow(),
+            "Launch callback should be triggered"
+        );
         assert_eq!(ui.get_step(), 100);
         assert_eq!(ui.get_launching(), false);
 
@@ -4324,7 +5172,10 @@ mod e2e_tests {
         });
 
         ui.invoke_show_welcome_checklist();
-        assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
+        assert!(
+            *dashboard_opened.borrow(),
+            "Dashboard should be opened from Setup Wizard"
+        );
 
         let add_products_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_products_clone = add_products_clicked.clone();
@@ -4345,13 +5196,22 @@ mod e2e_tests {
         });
 
         ui.invoke_go_to_add_products();
-        assert!(*add_products_clicked.borrow(), "Add products callback should be triggered on SetupWizard");
+        assert!(
+            *add_products_clicked.borrow(),
+            "Add products callback should be triggered on SetupWizard"
+        );
 
         ui.invoke_go_to_connect_instagram();
-        assert!(*connect_instagram_clicked.borrow(), "Connect instagram callback should be triggered on SetupWizard");
+        assert!(
+            *connect_instagram_clicked.borrow(),
+            "Connect instagram callback should be triggered on SetupWizard"
+        );
 
         ui.invoke_go_to_share_link();
-        assert!(*share_link_clicked.borrow(), "Share link callback should be triggered on SetupWizard");
+        assert!(
+            *share_link_clicked.borrow(),
+            "Share link callback should be triggered on SetupWizard"
+        );
     }
 }
 
@@ -4360,7 +5220,9 @@ mod tests {
 
     #[test]
     fn test_e2e_cost_transparency_flow_1() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login = app::Login::new().unwrap();
         let logged_in = std::rc::Rc::new(std::cell::RefCell::new(false));
         let logged_in_clone = logged_in.clone();
@@ -4375,7 +5237,9 @@ mod tests {
 
     #[test]
     fn test_e2e_cost_transparency_flow_2() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login = app::Login::new().unwrap();
         let logged_in = std::rc::Rc::new(std::cell::RefCell::new(false));
         let logged_in_clone = logged_in.clone();
@@ -4392,7 +5256,9 @@ mod tests {
 
     #[test]
     fn test_e2e_cost_transparency_flow_3() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let cost_dash = app::CostDashboard::new().unwrap();
         cost_dash.set_total_spend("$5,000".into());
         cost_dash.set_total_spend("$1,500".into());
@@ -4401,7 +5267,9 @@ mod tests {
 
     #[test]
     fn test_e2e_cost_transparency_flow_4() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let pricing = app::Pricing::new().unwrap();
         pricing.set_is_annual(false);
         let toggle_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -4415,7 +5283,9 @@ mod tests {
 
     #[test]
     fn test_e2e_cost_transparency_flow_5() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let my_plan = app::MyPlan::new().unwrap();
         let upgrade_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let upgrade_clone = upgrade_called.clone();
@@ -4443,7 +5313,10 @@ mod tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::WelcomeChecklist::new().unwrap();
         crate::setup_welcome_checklist_routing(&ui);
@@ -4469,7 +5342,6 @@ mod tests {
     fn test_login_creation() {
         crate::ui_tests::init();
 
-
         let ui = app::Login::new().unwrap();
         assert_eq!(ui.get_username(), "");
         assert_eq!(ui.get_password(), "");
@@ -4479,17 +5351,14 @@ mod tests {
     fn test_agent_hire_next_button_disabled_by_default() {
         crate::ui_tests::init();
 
-
         let ui = app::AgentConfig::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_selected_agent(), "");
-
     }
 
     #[test]
     fn test_agent_hire_next_button_enabled_after_role_selection() {
         crate::ui_tests::init();
-
 
         let ui = app::AgentConfig::new().unwrap();
         assert_eq!(ui.get_step(), 0);
@@ -4500,54 +5369,71 @@ mod tests {
     fn test_landing_creation() {
         crate::ui_tests::init();
 
-
         let ui = app::Landing::new().unwrap();
         assert_eq!(ui.get_is_variant_b(), false);
     }
 
     #[test]
     fn test_agents_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Agents::new().unwrap();
     }
     #[test]
     fn test_chat_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Chat::new().unwrap();
     }
     #[test]
     fn test_channels_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Channels::new().unwrap();
     }
     #[test]
     fn test_integrations_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Integrations::new().unwrap();
     }
     #[test]
     fn test_security_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Security::new().unwrap();
     }
     #[test]
     fn test_meetings_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Meetings::new().unwrap();
     }
     #[test]
     fn test_logs_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Logs::new().unwrap();
     }
     #[test]
     fn test_pricing_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Pricing::new().unwrap();
     }
     #[test]
     fn test_pricing_select_plan() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::Pricing::new().unwrap();
         let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let plan_selected_clone = plan_selected.clone();
@@ -4559,7 +5445,9 @@ mod tests {
     }
     #[test]
     fn test_my_plan_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::MyPlan::new().unwrap();
         ui.set_tier("Starter".into());
         ui.set_total_actions("500".into());
@@ -4568,26 +5456,33 @@ mod tests {
     }
     #[test]
     fn test_cost_dashboard_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::CostDashboard::new().unwrap();
         ui.set_total_spend("$50.00".into());
         assert_eq!(ui.get_total_spend(), "$50.00");
     }
     #[test]
     fn test_scaling_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Scaling::new().unwrap();
     }
     #[test]
     fn test_swarm_memory_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::SwarmMemory::new().unwrap();
     }
 
-
     #[test]
     fn test_website_builder_full_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -4600,7 +5495,10 @@ mod tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::WebsiteBuilder::new().unwrap();
 
@@ -4630,11 +5528,16 @@ mod tests {
         let ui_handle2 = ui.as_weak();
         ui.on_generate_description(move || {
             if let Some(ui) = ui_handle2.upgrade() {
-                ui.set_product_description(format!("An AI-generated description for {}.", ui.get_product_name()).into());
+                ui.set_product_description(
+                    format!("An AI-generated description for {}.", ui.get_product_name()).into(),
+                );
             }
         });
         ui.invoke_generate_description();
-        assert_eq!(ui.get_product_description(), "An AI-generated description for My Custom Product.");
+        assert_eq!(
+            ui.get_product_description(),
+            "An AI-generated description for My Custom Product."
+        );
 
         let photo_uploaded = std::rc::Rc::new(std::cell::RefCell::new(false));
         let photo_uploaded_clone = photo_uploaded.clone();
@@ -4655,19 +5558,24 @@ mod tests {
         let publish_success_clone = publish_success.clone();
 
         let ui_weak = ui.as_weak();
-        ui.on_publish_site(move |template, color, product, price, description, domain| {
-            assert_eq!(template, "Modern");
-            assert_eq!(color, "#34C759");
-            assert_eq!(product, "My Custom Product");
-            assert_eq!(price, "19.99");
-            assert_eq!(description, "An AI-generated description for My Custom Product.");
-            assert_eq!(domain, "buy");
-            *publish_success_clone.borrow_mut() = true;
-            if let Some(u) = ui_weak.upgrade() {
-                u.set_is_publishing(false);
-                u.set_step(4);
-            }
-        });
+        ui.on_publish_site(
+            move |template, color, product, price, description, domain| {
+                assert_eq!(template, "Modern");
+                assert_eq!(color, "#34C759");
+                assert_eq!(product, "My Custom Product");
+                assert_eq!(price, "19.99");
+                assert_eq!(
+                    description,
+                    "An AI-generated description for My Custom Product."
+                );
+                assert_eq!(domain, "buy");
+                *publish_success_clone.borrow_mut() = true;
+                if let Some(u) = ui_weak.upgrade() {
+                    u.set_is_publishing(false);
+                    u.set_step(4);
+                }
+            },
+        );
 
         ui.set_is_publishing(true);
         ui.invoke_publish_site(
@@ -4676,23 +5584,30 @@ mod tests {
             ui.get_product_name(),
             ui.get_product_price(),
             ui.get_product_description(),
-            ui.get_domain_choice()
+            ui.get_domain_choice(),
         );
 
-        assert!(*publish_success.borrow(), "Site should publish successfully");
+        assert!(
+            *publish_success.borrow(),
+            "Site should publish successfully"
+        );
         assert_eq!(ui.get_is_publishing(), false);
         assert_eq!(ui.get_step(), 4);
     }
 
     #[test]
     fn test_website_builder_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::WebsiteBuilder::new().unwrap();
     }
 
     #[test]
     fn test_website_builder_viral_storefront_footer() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::WebsiteBuilder::new().unwrap();
         ui.set_step(4);
         assert_eq!(ui.get_step(), 4);
@@ -4705,20 +5620,26 @@ mod tests {
         });
 
         ui.invoke_open_ohc_signup();
-        assert!(*signup_opened.borrow(), "Clicking the viral storefront footer should open the OHC signup link");
+        assert!(
+            *signup_opened.borrow(),
+            "Clicking the viral storefront footer should open the OHC signup link"
+        );
     }
-
 
     #[test]
     fn test_setup_wizard_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::SetupWizard::new().unwrap();
     }
 
     #[test]
     fn test_e2e_prompt_tuning_flow() {
         crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -4730,7 +5651,10 @@ mod tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::PromptTuning::new().unwrap();
 
@@ -4777,32 +5701,45 @@ mod tests {
         });
 
         ui.invoke_save_prompt();
-        assert!(*save_prompt_called.borrow(), "on_save_prompt should be called");
+        assert!(
+            *save_prompt_called.borrow(),
+            "on_save_prompt should be called"
+        );
     }
 
     #[test]
     fn test_task_list_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::TaskList::new().unwrap();
     }
     #[test]
     fn test_fix_agent_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::FixAgent::new().unwrap();
     }
     #[test]
     fn test_upgrade_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Upgrade::new().unwrap();
     }
     #[test]
     fn test_billing_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::Billing::new().unwrap();
     }
     #[test]
     fn test_grow_business_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::GrowBusiness::new().unwrap();
     }
 }
@@ -4814,7 +5751,9 @@ mod docs_tests {
     #[test]
     fn test_e2e_instant_build_flow() {
         crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -4826,7 +5765,10 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         login_ui.invoke_start_setup_wizard();
         let ui = app::SetupWizard::new().unwrap();
@@ -4871,17 +5813,30 @@ mod docs_tests {
         ui.set_product_price("45.00".into());
         ui.set_domain_choice("custom".into());
 
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password, _price_type| {
-            assert_eq!(website_template, "Modern");
-            assert_eq!(product_name, "Vegan Chocolate Cake");
-            assert_eq!(product_price, "45.00");
-            assert_eq!(domain_choice, "custom");
-            *launch_called_clone.borrow_mut() = true;
-            if let Some(u) = ui_weak_launch.upgrade() {
-                u.set_launching(false);
-                u.set_step(100);
-            }
-        });
+        ui.on_launch(
+            move |_bt,
+                  _cn,
+                  _cd,
+                  _pp,
+                  _ae,
+                  website_template,
+                  product_name,
+                  product_price,
+                  domain_choice,
+                  _admin_name,
+                  _admin_password,
+                  _price_type| {
+                assert_eq!(website_template, "Modern");
+                assert_eq!(product_name, "Vegan Chocolate Cake");
+                assert_eq!(product_price, "45.00");
+                assert_eq!(domain_choice, "custom");
+                *launch_called_clone.borrow_mut() = true;
+                if let Some(u) = ui_weak_launch.upgrade() {
+                    u.set_launching(false);
+                    u.set_step(100);
+                }
+            },
+        );
 
         ui.set_launching(true);
         ui.invoke_launch(
@@ -4896,7 +5851,7 @@ mod docs_tests {
             ui.get_domain_choice(),
             ui.get_admin_name(),
             ui.get_admin_password(),
-            ui.get_price_type()
+            ui.get_price_type(),
         );
 
         assert_eq!(ui.get_step(), 100);
@@ -4908,13 +5863,18 @@ mod docs_tests {
             *dashboard_opened_clone.borrow_mut() = true;
         });
         ui.invoke_show_welcome_checklist();
-        assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
+        assert!(
+            *dashboard_opened.borrow(),
+            "Dashboard should be opened from Setup Wizard"
+        );
     }
 
     #[test]
     fn test_e2e_setup_wizard_flow() {
         crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -4926,7 +5886,10 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         login_ui.invoke_start_setup_wizard();
         let ui = app::SetupWizard::new().unwrap(); // Simulate that SetupWizard is now open
@@ -4977,7 +5940,6 @@ mod docs_tests {
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
-
         let link_copied = std::rc::Rc::new(std::cell::RefCell::new(false));
         let link_copied_clone = link_copied.clone();
         ui.on_copy_link(move |link| {
@@ -4992,19 +5954,32 @@ mod docs_tests {
         ui.set_product_price("10.0".into());
         ui.set_domain_choice("subdomain".into());
 
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password, _price_type| {
-            assert_eq!(website_template, "Classic");
-            assert_eq!(product_name, "My First Product");
-            assert_eq!(product_price, "10.0");
-            assert_eq!(domain_choice, "subdomain");
-            *launch_called_clone.borrow_mut() = true;
-            if let Some(u) = ui_weak.upgrade() {
-                let link = format!("https://{}.ohc.app", domain_choice);
-                u.invoke_copy_link(link.into());
-                u.set_launching(false);
-                u.set_step(100);
-            }
-        });
+        ui.on_launch(
+            move |_bt,
+                  _cn,
+                  _cd,
+                  _pp,
+                  _ae,
+                  website_template,
+                  product_name,
+                  product_price,
+                  domain_choice,
+                  _admin_name,
+                  _admin_password,
+                  _price_type| {
+                assert_eq!(website_template, "Classic");
+                assert_eq!(product_name, "My First Product");
+                assert_eq!(product_price, "10.0");
+                assert_eq!(domain_choice, "subdomain");
+                *launch_called_clone.borrow_mut() = true;
+                if let Some(u) = ui_weak.upgrade() {
+                    let link = format!("https://{}.ohc.app", domain_choice);
+                    u.invoke_copy_link(link.into());
+                    u.set_launching(false);
+                    u.set_step(100);
+                }
+            },
+        );
 
         ui.set_launching(true);
         // Step 9: Launch -> Step 10
@@ -5020,10 +5995,13 @@ mod docs_tests {
             ui.get_domain_choice(),
             ui.get_admin_name(),
             ui.get_admin_password(),
-            ui.get_price_type()
+            ui.get_price_type(),
         );
         assert!(*launch_called.borrow());
-        assert!(*link_copied.borrow(), "Shareable link should be automatically copied on launch completion");
+        assert!(
+            *link_copied.borrow(),
+            "Shareable link should be automatically copied on launch completion"
+        );
         assert_eq!(ui.get_launching(), false);
         assert_eq!(ui.get_step(), 100);
 
@@ -5034,7 +6012,10 @@ mod docs_tests {
             *dashboard_opened_clone.borrow_mut() = true;
         });
         ui.invoke_show_welcome_checklist();
-        assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
+        assert!(
+            *dashboard_opened.borrow(),
+            "Dashboard should be opened from Setup Wizard"
+        );
 
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
@@ -5042,13 +6023,14 @@ mod docs_tests {
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
-
     }
 
     #[test]
     fn test_e2e_website_builder_flow() {
         crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -5060,7 +6042,10 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::WebsiteBuilder::new().unwrap();
 
@@ -5068,19 +6053,24 @@ mod docs_tests {
         let publish_success_clone = publish_success.clone();
 
         let ui_weak_2 = ui.as_weak();
-        ui.on_publish_site(move |template, color, product, price, description, domain| {
-            assert_eq!(template, "Modern");
-            assert_eq!(color, "#34C759");
-            assert_eq!(product, "My E2E Store Product");
-            assert_eq!(price, "19.99");
-            assert_eq!(description, "An AI-generated description for My E2E Store Product.");
-            assert_eq!(domain, "custom");
-            *publish_success_clone.borrow_mut() = true;
-            if let Some(u) = ui_weak_2.upgrade() {
-                u.set_is_publishing(false);
-                u.set_step(4);
-            }
-        });
+        ui.on_publish_site(
+            move |template, color, product, price, description, domain| {
+                assert_eq!(template, "Modern");
+                assert_eq!(color, "#34C759");
+                assert_eq!(product, "My E2E Store Product");
+                assert_eq!(price, "19.99");
+                assert_eq!(
+                    description,
+                    "An AI-generated description for My E2E Store Product."
+                );
+                assert_eq!(domain, "custom");
+                *publish_success_clone.borrow_mut() = true;
+                if let Some(u) = ui_weak_2.upgrade() {
+                    u.set_is_publishing(false);
+                    u.set_step(4);
+                }
+            },
+        );
 
         let copied_link = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let copied_link_clone = copied_link.clone();
@@ -5107,7 +6097,10 @@ mod docs_tests {
             let ui_handle = ui.as_weak();
             move || {
                 if let Some(ui) = ui_handle.upgrade() {
-                    ui.set_product_description(format!("An AI-generated description for {}.", ui.get_product_name()).into());
+                    ui.set_product_description(
+                        format!("An AI-generated description for {}.", ui.get_product_name())
+                            .into(),
+                    );
                 }
             }
         });
@@ -5132,7 +6125,10 @@ mod docs_tests {
         ui.set_product_price("19.99".into());
         // Invoke AI to generate description
         ui.invoke_generate_description();
-        assert_eq!(ui.get_product_description(), "An AI-generated description for My E2E Store Product.");
+        assert_eq!(
+            ui.get_product_description(),
+            "An AI-generated description for My E2E Store Product."
+        );
         ui.set_step(3);
 
         ui.set_domain_choice("custom".into());
@@ -5150,22 +6146,31 @@ mod docs_tests {
             ui.get_product_name(),
             ui.get_product_price(),
             ui.get_product_description(),
-            ui.get_domain_choice()
+            ui.get_domain_choice(),
         );
         assert!(*publish_success.borrow(), "Publish should have been called");
-        assert_eq!(ui.get_is_publishing(), false, "Should not be publishing anymore after callback logic runs");
+        assert_eq!(
+            ui.get_is_publishing(),
+            false,
+            "Should not be publishing anymore after callback logic runs"
+        );
         assert_eq!(ui.get_step(), 4, "Should remain on step 4");
 
         ui.invoke_copy_to_clipboard("https://mybusiness.ohc.app".into());
         assert_eq!(*copied_link.borrow(), "https://mybusiness.ohc.app");
 
         ui.invoke_open_ohc_signup();
-        assert!(*signup_opened.borrow(), "Viral storefront footer click should be successfully invoked");
+        assert!(
+            *signup_opened.borrow(),
+            "Viral storefront footer click should be successfully invoked"
+        );
     }
 
     #[test]
     fn test_e2e_documentation_suite_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5178,33 +6183,48 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
-        dashboard_ui.on_open_help_center(move || { *help_center_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_help_center(move || {
+            *help_center_opened_clone.borrow_mut() = true;
+        });
 
         let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let ai_chat_opened_clone = ai_chat_opened.clone();
-        dashboard_ui.on_open_ai_chat(move || { *ai_chat_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_ai_chat(move || {
+            *ai_chat_opened_clone.borrow_mut() = true;
+        });
 
         let docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let docs_opened_clone = docs_opened.clone();
-        dashboard_ui.on_open_api_docs(move || { *docs_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_api_docs(move || {
+            *docs_opened_clone.borrow_mut() = true;
+        });
 
         let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let videos_opened_clone = videos_opened.clone();
-        dashboard_ui.on_open_video_tutorials(move || { *videos_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_video_tutorials(move || {
+            *videos_opened_clone.borrow_mut() = true;
+        });
 
         let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let walkthrough_opened_clone = walkthrough_opened.clone();
-        dashboard_ui.on_open_interactive_walkthrough(move || { *walkthrough_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_interactive_walkthrough(move || {
+            *walkthrough_opened_clone.borrow_mut() = true;
+        });
 
         let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let release_notes_opened_clone = release_notes_opened.clone();
-        dashboard_ui.on_open_release_notes(move || { *release_notes_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_release_notes(move || {
+            *release_notes_opened_clone.borrow_mut() = true;
+        });
 
         // Simulate clicking the buttons on the dashboard
         dashboard_ui.invoke_open_help_center();
@@ -5214,35 +6234,62 @@ mod docs_tests {
         dashboard_ui.invoke_open_interactive_walkthrough();
         dashboard_ui.invoke_open_release_notes();
 
-        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button");
-        assert!(*ai_chat_opened.borrow(), "AI Chat should be opened via the button");
-        assert!(*docs_opened.borrow(), "API Docs should be opened via the button");
-        assert!(*videos_opened.borrow(), "Video Tutorials should be opened via the button");
-        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened via the button");
-        assert!(*release_notes_opened.borrow(), "Release Notes should be opened via the button");
+        assert!(
+            *help_center_opened.borrow(),
+            "Help Center should be opened via the button"
+        );
+        assert!(
+            *ai_chat_opened.borrow(),
+            "AI Chat should be opened via the button"
+        );
+        assert!(
+            *docs_opened.borrow(),
+            "API Docs should be opened via the button"
+        );
+        assert!(
+            *videos_opened.borrow(),
+            "Video Tutorials should be opened via the button"
+        );
+        assert!(
+            *walkthrough_opened.borrow(),
+            "Interactive Walkthrough should be opened via the button"
+        );
+        assert!(
+            *release_notes_opened.borrow(),
+            "Release Notes should be opened via the button"
+        );
 
         // Verify the individual components instantiate correctly and have their basic properties
         let walkthrough = app::InteractiveWalkthrough::new().unwrap();
         walkthrough.set_current_step(1);
-        assert_eq!(walkthrough.get_current_step(), 1, "Walkthrough step should be updated");
+        assert_eq!(
+            walkthrough.get_current_step(),
+            1,
+            "Walkthrough step should be updated"
+        );
 
         let ai_chat = app::AiHelpChat::new().unwrap();
         ai_chat.set_user_input("How to add product".into());
         let send_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let send_called_clone = send_called.clone();
-        ai_chat.on_send_message(move || { *send_called_clone.borrow_mut() = true; });
+        ai_chat.on_send_message(move || {
+            *send_called_clone.borrow_mut() = true;
+        });
         ai_chat.invoke_send_message();
-        assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
+        assert!(
+            *send_called.borrow(),
+            "AI Chat send_message should be called via the button"
+        );
 
         let help_center = app::HelpCenter::new().unwrap();
         assert_eq!(help_center.get_search_query(), "");
     }
 
-
-
     #[test]
     fn test_e2e_ai_help_chat_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5255,7 +6302,10 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5266,7 +6316,10 @@ mod docs_tests {
         });
 
         dashboard_ui.invoke_open_ai_chat();
-        assert!(*ai_chat_opened.borrow(), "AI Chat should be opened from Dashboard");
+        assert!(
+            *ai_chat_opened.borrow(),
+            "AI Chat should be opened from Dashboard"
+        );
 
         let ai_chat = app::AiHelpChat::new().unwrap();
         ai_chat.set_user_input("How do I sell a product?".into());
@@ -5296,20 +6349,31 @@ mod docs_tests {
         });
 
         ai_chat.invoke_send_message();
-        assert!(*send_called.borrow(), "AI Chat send_message should be called via the button");
+        assert!(
+            *send_called.borrow(),
+            "AI Chat send_message should be called via the button"
+        );
 
         // Check if messages got updated
         let messages_count = ai_chat.get_messages().iter().count();
-        assert_eq!(messages_count, 2, "There should be two messages in the chat now");
+        assert_eq!(
+            messages_count, 2,
+            "There should be two messages in the chat now"
+        );
 
         // Simulate click on article link
         ai_chat.invoke_open_article("how-to-sell".into());
-        assert!(*article_opened.borrow(), "AI Chat open_article should be called via the link");
+        assert!(
+            *article_opened.borrow(),
+            "AI Chat open_article should be called via the link"
+        );
     }
 
     #[test]
     fn test_e2e_help_center_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         // Added comprehensive unit test check per constraints
         let _test_flag = true;
@@ -5325,12 +6389,17 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
@@ -5339,12 +6408,24 @@ mod docs_tests {
         });
 
         dashboard_ui.invoke_open_help_center();
-        assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
+        assert!(
+            *help_center_opened.borrow(),
+            "Help Center should be opened from Dashboard"
+        );
 
         let help_center = app::HelpCenter::new().unwrap();
         let all_articles = vec![
-            app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
-            app::HelpArticle { category: "Getting Started".into(), title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into() },
+            app::HelpArticle {
+                category: "My Store".into(),
+                title: "How to add products".into(),
+                description: "Learn how to list new items, add photos, and set prices.".into(),
+            },
+            app::HelpArticle {
+                category: "Getting Started".into(),
+                title: "Set up your store in 5 minutes".into(),
+                description: "Follow our simple guide to add your first product and go live."
+                    .into(),
+            },
         ];
         let all_articles_rc = std::rc::Rc::new(all_articles.clone());
         help_center.set_articles(slint::ModelRc::new(slint::VecModel::from(all_articles)));
@@ -5354,11 +6435,15 @@ mod docs_tests {
         help_center.on_execute_search(move || {
             if let Some(ui) = hc_weak_for_search.upgrade() {
                 let query = ui.get_search_query().to_string().to_lowercase();
-                let filtered: Vec<app::HelpArticle> = articles_for_search.iter().filter(|a| {
-                    a.title.to_lowercase().contains(&query) ||
-                    a.description.to_lowercase().contains(&query) ||
-                    a.category.to_lowercase().contains(&query)
-                }).cloned().collect();
+                let filtered: Vec<app::HelpArticle> = articles_for_search
+                    .iter()
+                    .filter(|a| {
+                        a.title.to_lowercase().contains(&query)
+                            || a.description.to_lowercase().contains(&query)
+                            || a.category.to_lowercase().contains(&query)
+                    })
+                    .cloned()
+                    .collect();
                 ui.set_articles(slint::ModelRc::new(slint::VecModel::from(filtered)));
             }
         });
@@ -5370,14 +6455,20 @@ mod docs_tests {
         help_center.set_search_query("add products".into());
         help_center.invoke_execute_search(); // Must invoke callback to execute search in test
         assert_eq!(help_center.get_search_query(), "add products");
-        assert_eq!(help_center.get_articles().row_count(), 1, "Articles should be filtered by search query");
+        assert_eq!(
+            help_center.get_articles().row_count(),
+            1,
+            "Articles should be filtered by search query"
+        );
 
         // Assert InteractiveWalkthrough creation/state behavior is validated elsewhere
     }
 
-#[test]
+    #[test]
     fn test_e2e_tooltip_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5390,34 +6481,50 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
-
-
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
         // Setup the tooltip text requester
-        dashboard_ui.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| { crate::get_tooltip_text(id.as_str()) });
+        dashboard_ui
+            .global::<app::TooltipRegistry>()
+            .on_request_tooltip_text(|id| crate::get_tooltip_text(id.as_str()));
 
         let tr = dashboard_ui.global::<app::TooltipRegistry>();
         tr.invoke_show_tooltip("ask_ai".into(), 10.0, 10.0);
         assert_eq!(tr.get_is_visible(), true);
-        assert_eq!(tr.get_active_text(), "Ask your helper to do things for you.");
+        assert_eq!(
+            tr.get_active_text(),
+            "Ask your helper to do things for you."
+        );
         tr.invoke_hide_tooltip();
         assert_eq!(tr.get_is_visible(), false);
 
@@ -5431,47 +6538,66 @@ mod docs_tests {
         // Simulate clicking the help center button.
         dashboard_ui.invoke_open_help_center();
 
-        assert!(*help_center_opened.borrow(), "Help Center should be opened via the button wrapped in TooltipElement");
+        assert!(
+            *help_center_opened.borrow(),
+            "Help Center should be opened via the button wrapped in TooltipElement"
+        );
     }
 
     #[test]
     fn test_help_center_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::HelpCenter::new().unwrap();
     }
     #[test]
     fn test_release_notes_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::ReleaseNotes::new().unwrap();
     }
     #[test]
     fn test_interactive_walkthrough_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::InteractiveWalkthrough::new().unwrap();
     }
     #[test]
     fn test_kairos_orchestration_walkthrough_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::KairosOrchestrationWalkthrough::new().unwrap();
     }
     #[test]
     fn test_ai_help_chat_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::AiHelpChat::new().unwrap();
     }
     #[test]
     fn test_video_tutorials_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::VideoTutorials::new().unwrap();
     }
     #[test]
     fn test_api_docs_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         app::ApiDocs::new().unwrap();
     }
     #[test]
     fn test_e2e_agent_config_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5484,7 +6610,10 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::AgentConfig::new().unwrap();
 
@@ -5493,15 +6622,25 @@ mod docs_tests {
         let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
         let publish_success_clone = publish_success.clone();
 
-        ui.on_activate_agent(move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency, _, _, _| {
-            assert_eq!(agent, "Customer Support");
-            assert_eq!(can_reply, true);
-            assert_eq!(can_social, false);
-            assert_eq!(can_write_descriptions, true);
-            assert_eq!(can_send_updates, false);
-            assert_eq!(frequency, "Daily");
-            *publish_success_clone.borrow_mut() = true;
-        });
+        ui.on_activate_agent(
+            move |agent,
+                  can_reply,
+                  can_social,
+                  can_write_descriptions,
+                  can_send_updates,
+                  frequency,
+                  _,
+                  _,
+                  _| {
+                assert_eq!(agent, "Customer Support");
+                assert_eq!(can_reply, true);
+                assert_eq!(can_social, false);
+                assert_eq!(can_write_descriptions, true);
+                assert_eq!(can_send_updates, false);
+                assert_eq!(frequency, "Daily");
+                *publish_success_clone.borrow_mut() = true;
+            },
+        );
 
         // Step 0: Choose Agent -> Step 1
         assert_eq!(ui.get_step(), 0);
@@ -5532,7 +6671,7 @@ mod docs_tests {
             ui.get_frequency(),
             ui.get_api_scope_override(),
             ui.get_cron_override(),
-            ui.get_raw_activation_payload()
+            ui.get_raw_activation_payload(),
         );
 
         assert_eq!(ui.get_step(), 3);
@@ -5547,7 +6686,9 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_video_tutorials_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5560,7 +6701,10 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
@@ -5571,7 +6715,10 @@ mod docs_tests {
         });
 
         dashboard_ui.invoke_open_video_tutorials();
-        assert!(*videos_opened.borrow(), "Video Tutorials should be opened from Dashboard");
+        assert!(
+            *videos_opened.borrow(),
+            "Video Tutorials should be opened from Dashboard"
+        );
 
         let video_tutorials = app::VideoTutorials::new().unwrap();
 
@@ -5580,28 +6727,31 @@ mod docs_tests {
         assert_eq!(video_tutorials.get_is_playing(), false);
 
         // Simulate getting video metadata
-        let models = vec![
-            app::VideoMetadata {
-                title: "How to add your first product".into(),
-                description: "desc".into(),
-                duration_sec: 60,
-                url: "url".into(),
-                thumbnail_url: "thumb".into(),
-            }
-        ];
+        let models = vec![app::VideoMetadata {
+            title: "How to add your first product".into(),
+            description: "desc".into(),
+            duration_sec: 60,
+            url: "url".into(),
+            thumbnail_url: "thumb".into(),
+        }];
         video_tutorials.set_videos(std::rc::Rc::new(slint::VecModel::from(models)).into());
 
         // Simulate selecting and playing a video
         video_tutorials.set_selected_video_title("How to add your first product".into());
         video_tutorials.set_is_playing(true);
 
-        assert_eq!(video_tutorials.get_selected_video_title(), "How to add your first product");
+        assert_eq!(
+            video_tutorials.get_selected_video_title(),
+            "How to add your first product"
+        );
         assert_eq!(video_tutorials.get_is_playing(), true);
     }
 
     #[test]
     fn test_e2e_interactive_walkthrough_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5614,7 +6764,10 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
@@ -5625,7 +6778,10 @@ mod docs_tests {
         });
 
         dashboard_ui.invoke_open_interactive_walkthrough();
-        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
+        assert!(
+            *walkthrough_opened.borrow(),
+            "Interactive Walkthrough should be opened from Dashboard"
+        );
 
         let walkthrough = app::InteractiveWalkthrough::new().unwrap();
 
@@ -5640,7 +6796,9 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_kairos_orchestration_walkthrough_flow_1() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -5650,13 +6808,21 @@ mod docs_tests {
             *login_successful_clone.borrow_mut() = true;
         });
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
         let dashboard_ui = app::Dashboard::new().unwrap();
         let kairos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let kairos_opened_clone = kairos_opened.clone();
-        dashboard_ui.on_action_open_kairos_orchestration(move || { *kairos_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_open_kairos_orchestration(move || {
+            *kairos_opened_clone.borrow_mut() = true;
+        });
         dashboard_ui.invoke_action_open_kairos_orchestration();
-        assert!(*kairos_opened.borrow(), "Kairos Orchestration should be opened");
+        assert!(
+            *kairos_opened.borrow(),
+            "Kairos Orchestration should be opened"
+        );
         let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
         assert_eq!(ui.get_current_step(), 0);
         ui.set_current_step(1);
@@ -5665,7 +6831,9 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_kairos_orchestration_walkthrough_flow_2() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -5675,13 +6843,21 @@ mod docs_tests {
             *login_successful_clone.borrow_mut() = true;
         });
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
         let dashboard_ui = app::Dashboard::new().unwrap();
         let kairos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let kairos_opened_clone = kairos_opened.clone();
-        dashboard_ui.on_action_open_kairos_orchestration(move || { *kairos_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_open_kairos_orchestration(move || {
+            *kairos_opened_clone.borrow_mut() = true;
+        });
         dashboard_ui.invoke_action_open_kairos_orchestration();
-        assert!(*kairos_opened.borrow(), "Kairos Orchestration should be opened");
+        assert!(
+            *kairos_opened.borrow(),
+            "Kairos Orchestration should be opened"
+        );
         let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
         ui.set_current_step(2);
         assert_eq!(ui.get_current_step(), 2);
@@ -5689,7 +6865,9 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_kairos_orchestration_walkthrough_flow_3() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -5699,22 +6877,31 @@ mod docs_tests {
             *login_successful_clone.borrow_mut() = true;
         });
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
         let dashboard_ui = app::Dashboard::new().unwrap();
         let kairos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let kairos_opened_clone = kairos_opened.clone();
-        dashboard_ui.on_action_open_kairos_orchestration(move || { *kairos_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_open_kairos_orchestration(move || {
+            *kairos_opened_clone.borrow_mut() = true;
+        });
         dashboard_ui.invoke_action_open_kairos_orchestration();
-        assert!(*kairos_opened.borrow(), "Kairos Orchestration should be opened");
+        assert!(
+            *kairos_opened.borrow(),
+            "Kairos Orchestration should be opened"
+        );
         let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
         ui.set_current_step(3);
         assert_eq!(ui.get_current_step(), 3);
     }
 
-
     #[test]
     fn test_e2e_kairos_orchestration_walkthrough_flow_5() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -5724,13 +6911,21 @@ mod docs_tests {
             *login_successful_clone.borrow_mut() = true;
         });
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
         let dashboard_ui = app::Dashboard::new().unwrap();
         let kairos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let kairos_opened_clone = kairos_opened.clone();
-        dashboard_ui.on_action_open_kairos_orchestration(move || { *kairos_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_open_kairos_orchestration(move || {
+            *kairos_opened_clone.borrow_mut() = true;
+        });
         dashboard_ui.invoke_action_open_kairos_orchestration();
-        assert!(*kairos_opened.borrow(), "Kairos Orchestration should be opened");
+        assert!(
+            *kairos_opened.borrow(),
+            "Kairos Orchestration should be opened"
+        );
         let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
         ui.set_current_step(1);
         assert_eq!(ui.get_current_step(), 1);
@@ -5742,7 +6937,9 @@ mod docs_tests {
 
     #[test]
     fn test_e2e_kairos_orchestration_walkthrough_flow_4() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
         let login_successful_clone = login_successful.clone();
@@ -5752,25 +6949,32 @@ mod docs_tests {
             *login_successful_clone.borrow_mut() = true;
         });
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
         let dashboard_ui = app::Dashboard::new().unwrap();
         let kairos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let kairos_opened_clone = kairos_opened.clone();
-        dashboard_ui.on_action_open_kairos_orchestration(move || { *kairos_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_open_kairos_orchestration(move || {
+            *kairos_opened_clone.borrow_mut() = true;
+        });
         dashboard_ui.invoke_action_open_kairos_orchestration();
-        assert!(*kairos_opened.borrow(), "Kairos Orchestration should be opened");
+        assert!(
+            *kairos_opened.borrow(),
+            "Kairos Orchestration should be opened"
+        );
         let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
         ui.set_current_step(3);
         ui.set_current_step(0);
         assert_eq!(ui.get_current_step(), 0);
     }
 
-
-
-
     #[test]
     fn test_e2e_email_marketing_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5783,47 +6987,53 @@ mod docs_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let grow_business_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let grow_business_opened_clone = grow_business_opened.clone();
 
+        let dashboard_handle_simulate = dashboard_ui.as_weak();
 
-                let dashboard_handle_simulate = dashboard_ui.as_weak();
+        dashboard_ui.on_action_simulate_order(move || {
+            let d_ui = dashboard_handle_simulate.unwrap();
 
-                dashboard_ui.on_action_simulate_order(move || {
-                    let d_ui = dashboard_handle_simulate.unwrap();
+            // Add activities to SwarmObservabilityPanel
+            let mut activities: Vec<app::SwarmActivity> =
+                d_ui.get_swarm_activities().iter().collect();
+            activities.push(app::SwarmActivity {
+                message: "Operations processed OrderReceived".into(),
+                time: "Just now".into(),
+            });
+            activities.push(app::SwarmActivity {
+                message: "Customer Success drafted confirmation".into(),
+                time: "Just now".into(),
+            });
+            d_ui.set_swarm_activities(slint::ModelRc::new(slint::VecModel::from(activities)));
 
-
-                    // Add activities to SwarmObservabilityPanel
-                    let mut activities: Vec<app::SwarmActivity> = d_ui.get_swarm_activities().iter().collect();
-                    activities.push(app::SwarmActivity {
-                        message: "Operations processed OrderReceived".into(),
-                        time: "Just now".into(),
-                    });
-                    activities.push(app::SwarmActivity {
-                        message: "Customer Success drafted confirmation".into(),
-                        time: "Just now".into(),
-                    });
-                    d_ui.set_swarm_activities(slint::ModelRc::new(slint::VecModel::from(activities)));
-
-                    // Add a draft to Pending Approvals
-                    let mut approvals: Vec<app::UiPendingApproval> = d_ui.get_pending_approvals().iter().collect();
-                    approvals.push(app::UiPendingApproval {
-                        task_id: "draft_1".into(),
-                        title: "Review SMS to Customer".into(),
-                        proposed_content: "Thank you for your order! Your cake is being prepared.".into(),
-                        helper_name: "The Ambassador (Customer Success)".into(),
-                    });
-                    d_ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(approvals)));
-                });
-dashboard_ui.on_action_grow_business(move || {
+            // Add a draft to Pending Approvals
+            let mut approvals: Vec<app::UiPendingApproval> =
+                d_ui.get_pending_approvals().iter().collect();
+            approvals.push(app::UiPendingApproval {
+                task_id: "draft_1".into(),
+                title: "Review SMS to Customer".into(),
+                proposed_content: "Thank you for your order! Your cake is being prepared.".into(),
+                helper_name: "The Ambassador (Customer Success)".into(),
+            });
+            d_ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(approvals)));
+        });
+        dashboard_ui.on_action_grow_business(move || {
             *grow_business_opened_clone.borrow_mut() = true;
         });
 
         dashboard_ui.invoke_action_grow_business();
-        assert!(*grow_business_opened.borrow(), "Grow Business should be opened from Dashboard");
+        assert!(
+            *grow_business_opened.borrow(),
+            "Grow Business should be opened from Dashboard"
+        );
 
         let gb_ui = app::GrowBusiness::new().unwrap();
         let em_ui = app::EmailMarketing::new().unwrap();
@@ -5850,7 +7060,10 @@ dashboard_ui.on_action_grow_business(move || {
         gb_ui.invoke_next_step();
 
         assert_eq!(gb_ui.get_step(), 2);
-        assert!(*em_shown.borrow(), "Email Marketing should be opened from Grow Business");
+        assert!(
+            *em_shown.borrow(),
+            "Email Marketing should be opened from Grow Business"
+        );
 
         // Verify EmailMarketing Flow
         let template_generated = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
@@ -5902,7 +7115,9 @@ dashboard_ui.on_action_grow_business(move || {
 
     #[test]
     fn test_e2e_grow_business_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5915,7 +7130,10 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let grow_business_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5926,7 +7144,10 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         dashboard_ui.invoke_action_grow_business();
-        assert!(*grow_business_opened.borrow(), "Grow Business should be opened from Dashboard");
+        assert!(
+            *grow_business_opened.borrow(),
+            "Grow Business should be opened from Dashboard"
+        );
 
         let ui = app::GrowBusiness::new().unwrap();
 
@@ -5967,11 +7188,11 @@ dashboard_ui.on_action_grow_business(move || {
         assert_eq!(ui.get_selected_strategy(), "");
     }
 
-
-
     #[test]
     fn test_e2e_agent_hire_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5984,7 +7205,10 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         // Here we simulate the dashboard launching the Agents view
         let agents_ui = app::Agents::new().unwrap();
@@ -5996,7 +7220,10 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         agents_ui.invoke_hire_agent();
-        assert!(*agent_config_opened.borrow(), "Agent Config should be opened from Agents screen");
+        assert!(
+            *agent_config_opened.borrow(),
+            "Agent Config should be opened from Agents screen"
+        );
 
         let ui = app::AgentConfig::new().unwrap();
         assert_eq!(ui.get_step(), 0);
@@ -6005,7 +7232,9 @@ dashboard_ui.on_action_grow_business(move || {
 
     #[test]
     fn test_e2e_soft_paywall_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6018,7 +7247,10 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         // Test dashboard product limit soft paywall
         let dashboard_ui = app::Dashboard::new().unwrap();
@@ -6032,9 +7264,15 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         dashboard_ui.invoke_action_add_product();
-        assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
+        assert!(
+            dashboard_ui.get_show_upgrade_prompt(),
+            "Upgrade prompt should show when adding product beyond free tier limit"
+        );
 
-        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.");
+        assert_eq!(
+            dashboard_ui.get_upgrade_prompt_message(),
+            "You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront."
+        );
         // Test agents limit soft paywall
         let agents_ui = app::Agents::new().unwrap();
         let agents_ui_handle = agents_ui.as_weak();
@@ -6046,12 +7284,17 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         agents_ui.invoke_hire_agent();
-        assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
+        assert!(
+            agents_ui.get_show_upgrade_prompt(),
+            "Upgrade prompt should show when hiring agent beyond free tier limit"
+        );
     }
 
     #[test]
     fn test_e2e_fix_agent_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6064,7 +7307,10 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         // Here we simulate the dashboard launching the Agents view
         let agents_ui = app::Agents::new().unwrap();
@@ -6077,7 +7323,10 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         agents_ui.invoke_fix_agent("agent_1".into());
-        assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
+        assert!(
+            *fix_agent_opened.borrow(),
+            "Fix Agent should be opened from Agents screen"
+        );
 
         let fix_agent_ui = app::FixAgent::new().unwrap();
         assert_eq!(fix_agent_ui.get_step(), 0);
@@ -6104,7 +7353,10 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         fix_agent_ui.invoke_return_to_agents();
-        assert!(*return_to_agents_called.borrow(), "Return to agents should be called");
+        assert!(
+            *return_to_agents_called.borrow(),
+            "Return to agents should be called"
+        );
 
         let tune_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let tune_agent_opened_clone = tune_agent_opened.clone();
@@ -6115,12 +7367,17 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         agents_ui.invoke_tune_agent("agent_1".into());
-        assert!(*tune_agent_opened.borrow(), "Prompt Tuning should be opened from Agents screen");
+        assert!(
+            *tune_agent_opened.borrow(),
+            "Prompt Tuning should be opened from Agents screen"
+        );
     }
 
     #[test]
     fn test_e2e_ai_config_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6133,25 +7390,37 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
-
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
         let add_provider_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_provider_called_clone = add_provider_called.clone();
@@ -6161,15 +7430,14 @@ dashboard_ui.on_action_grow_business(move || {
             let ui = app::AiConfig::new().unwrap();
             let provider_called = add_provider_called_clone.clone();
 
-            let providers = slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiAiConfigProvider {
+            let providers =
+                slint::ModelRc::new(slint::VecModel::from(vec![app::UiAiConfigProvider {
                     id: "openai".into(),
                     name: "OpenAI".into(),
                     base_url: "api.openai.com".into(),
                     is_official: true,
                     models: slint::ModelRc::new(slint::VecModel::from(vec!["gpt-4".into()])),
-                }
-            ]));
+                }]));
             ui.set_providers(providers);
 
             ui.on_add_provider(move || {
@@ -6184,9 +7452,11 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         dashboard_ui.invoke_open_ai_chat();
-        assert!(*add_provider_called.borrow(), "Add provider callback should have been triggered after navigating from Dashboard");
+        assert!(
+            *add_provider_called.borrow(),
+            "Add provider callback should have been triggered after navigating from Dashboard"
+        );
     }
-
 }
 
 #[cfg(test)]
@@ -6196,8 +7466,6 @@ mod dashboard_docs_tests {
     #[test]
     fn test_documentation_components_e2e_flow() {
         crate::ui_tests::init();
-
-
 
         // 1. Start from the home page after user login via the UI
         let login_ui = app::Login::new().unwrap();
@@ -6212,26 +7480,38 @@ mod dashboard_docs_tests {
 
         // Simulate user login
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         // 2. Load the main Dashboard
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
-
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
         // 3. Test opening Help Center from Dashboard
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6240,7 +7520,10 @@ mod dashboard_docs_tests {
             *help_center_opened_clone.borrow_mut() = true;
         });
         dashboard_ui.invoke_open_help_center();
-        assert!(*help_center_opened.borrow(), "Help Center should be opened from Dashboard");
+        assert!(
+            *help_center_opened.borrow(),
+            "Help Center should be opened from Dashboard"
+        );
 
         // 4. Test opening AI Help Chat from Dashboard
         let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6249,7 +7532,10 @@ mod dashboard_docs_tests {
             *ai_chat_opened_clone.borrow_mut() = true;
         });
         dashboard_ui.invoke_open_ai_chat();
-        assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
+        assert!(
+            *ai_chat_opened.borrow(),
+            "AI Help Chat should be opened from Dashboard"
+        );
 
         // 5. Test Interactive Walkthrough
         let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6258,7 +7544,10 @@ mod dashboard_docs_tests {
             *walkthrough_opened_clone.borrow_mut() = true;
         });
         dashboard_ui.invoke_open_interactive_walkthrough();
-        assert!(*walkthrough_opened.borrow(), "Interactive Walkthrough should be opened from Dashboard");
+        assert!(
+            *walkthrough_opened.borrow(),
+            "Interactive Walkthrough should be opened from Dashboard"
+        );
 
         // Test KAIROS Orchestration Walkthrough
         let kairos_walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6267,7 +7556,10 @@ mod dashboard_docs_tests {
             *kairos_walkthrough_opened_clone.borrow_mut() = true;
         });
         dashboard_ui.invoke_open_kairos_orchestration_walkthrough();
-        assert!(*kairos_walkthrough_opened.borrow(), "KAIROS Orchestration Walkthrough should be opened from Dashboard");
+        assert!(
+            *kairos_walkthrough_opened.borrow(),
+            "KAIROS Orchestration Walkthrough should be opened from Dashboard"
+        );
 
         // 6. Test Video Tutorials
         let video_tutorials_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6276,7 +7568,10 @@ mod dashboard_docs_tests {
             *video_tutorials_opened_clone.borrow_mut() = true;
         });
         dashboard_ui.invoke_open_video_tutorials();
-        assert!(*video_tutorials_opened.borrow(), "Video Tutorials should be opened from Dashboard");
+        assert!(
+            *video_tutorials_opened.borrow(),
+            "Video Tutorials should be opened from Dashboard"
+        );
 
         // 7. Test Release Notes
         let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6285,7 +7580,10 @@ mod dashboard_docs_tests {
             *release_notes_opened_clone.borrow_mut() = true;
         });
         dashboard_ui.invoke_open_release_notes();
-        assert!(*release_notes_opened.borrow(), "Release Notes should be opened from Dashboard");
+        assert!(
+            *release_notes_opened.borrow(),
+            "Release Notes should be opened from Dashboard"
+        );
 
         // 8. Test API Docs
         let api_docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6294,7 +7592,10 @@ mod dashboard_docs_tests {
             *api_docs_opened_clone.borrow_mut() = true;
         });
         dashboard_ui.invoke_open_api_docs();
-        assert!(*api_docs_opened.borrow(), "API Docs should be opened from Dashboard");
+        assert!(
+            *api_docs_opened.borrow(),
+            "API Docs should be opened from Dashboard"
+        );
     }
 }
 
@@ -6315,7 +7616,10 @@ mod remaining_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let social_posting_ui = app::SocialPosting::new().unwrap();
         let connect_instagram_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6326,7 +7630,10 @@ mod remaining_e2e_tests {
         });
 
         social_posting_ui.invoke_connect_instagram();
-        assert!(*connect_instagram_called.borrow(), "Connect Instagram should be invoked");
+        assert!(
+            *connect_instagram_called.borrow(),
+            "Connect Instagram should be invoked"
+        );
 
         let connect_facebook_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let connect_facebook_called_clone = connect_facebook_called.clone();
@@ -6334,7 +7641,10 @@ mod remaining_e2e_tests {
             *connect_facebook_called_clone.borrow_mut() = true;
         });
         social_posting_ui.invoke_connect_facebook();
-        assert!(*connect_facebook_called.borrow(), "Connect Facebook should be invoked");
+        assert!(
+            *connect_facebook_called.borrow(),
+            "Connect Facebook should be invoked"
+        );
 
         let approve_post_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let approve_post_called_clone = approve_post_called.clone();
@@ -6344,7 +7654,10 @@ mod remaining_e2e_tests {
         });
 
         social_posting_ui.invoke_approve_post();
-        assert!(*approve_post_called.borrow(), "Approve post should be invoked");
+        assert!(
+            *approve_post_called.borrow(),
+            "Approve post should be invoked"
+        );
     }
 
     #[test]
@@ -6362,7 +7675,10 @@ mod remaining_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let dashboard_handle_add_product = dashboard_ui.as_weak();
@@ -6375,8 +7691,14 @@ mod remaining_e2e_tests {
         });
 
         dashboard_ui.invoke_action_add_product();
-        assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
-        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.");
+        assert!(
+            dashboard_ui.get_show_upgrade_prompt(),
+            "Upgrade prompt should show when adding product beyond free tier limit"
+        );
+        assert_eq!(
+            dashboard_ui.get_upgrade_prompt_message(),
+            "You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront."
+        );
 
         let agents_ui = app::Agents::new().unwrap();
         let agents_ui_handle = agents_ui.as_weak();
@@ -6388,8 +7710,14 @@ mod remaining_e2e_tests {
         });
 
         agents_ui.invoke_hire_agent();
-        assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
-        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.");
+        assert!(
+            agents_ui.get_show_upgrade_prompt(),
+            "Upgrade prompt should show when hiring agent beyond free tier limit"
+        );
+        assert_eq!(
+            agents_ui.get_upgrade_prompt_message(),
+            "You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents."
+        );
 
         let wb_ui = app::WebsiteBuilder::new().unwrap();
         wb_ui.set_domain_choice("subdomain".into());
@@ -6408,7 +7736,9 @@ mod remaining_e2e_tests {
 
         let link_copied = std::rc::Rc::new(std::cell::RefCell::new(false));
         let link_copied_clone = link_copied.clone();
-        referrals_ui.on_copy_link(move || { *link_copied_clone.borrow_mut() = true; });
+        referrals_ui.on_copy_link(move || {
+            *link_copied_clone.borrow_mut() = true;
+        });
         referrals_ui.invoke_copy_link();
         assert!(*link_copied.borrow());
 
@@ -6419,7 +7749,9 @@ mod remaining_e2e_tests {
 
         let ig_shared = std::rc::Rc::new(std::cell::RefCell::new(false));
         let ig_shared_clone = ig_shared.clone();
-        business_share_ui.on_share_to_instagram(move || { *ig_shared_clone.borrow_mut() = true; });
+        business_share_ui.on_share_to_instagram(move || {
+            *ig_shared_clone.borrow_mut() = true;
+        });
         business_share_ui.invoke_share_to_instagram();
         assert!(*ig_shared.borrow());
 
@@ -6429,14 +7761,18 @@ mod remaining_e2e_tests {
 
         let ig_connected = std::rc::Rc::new(std::cell::RefCell::new(false));
         let ig_connected_clone = ig_connected.clone();
-        social_ui.on_connect_instagram(move || { *ig_connected_clone.borrow_mut() = true; });
+        social_ui.on_connect_instagram(move || {
+            *ig_connected_clone.borrow_mut() = true;
+        });
         social_ui.invoke_connect_instagram();
         assert!(*ig_connected.borrow());
 
         social_ui.set_post_content("Check out our new sale!".into());
         let post_approved = std::rc::Rc::new(std::cell::RefCell::new(false));
         let post_approved_clone = post_approved.clone();
-        social_ui.on_approve_post(move || { *post_approved_clone.borrow_mut() = true; });
+        social_ui.on_approve_post(move || {
+            *post_approved_clone.borrow_mut() = true;
+        });
         social_ui.invoke_approve_post();
         assert!(*post_approved.borrow());
 
@@ -6445,13 +7781,17 @@ mod remaining_e2e_tests {
         email_ui.set_total_subscribers(250);
         let template_generated = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let template_generated_clone = template_generated.clone();
-        email_ui.on_generate_template(move |tmpl| { *template_generated_clone.borrow_mut() = tmpl.to_string(); });
+        email_ui.on_generate_template(move |tmpl| {
+            *template_generated_clone.borrow_mut() = tmpl.to_string();
+        });
         email_ui.invoke_generate_template("Flash sale".into());
         assert_eq!(*template_generated.borrow(), "Flash sale");
 
         let campaign_sent = std::rc::Rc::new(std::cell::RefCell::new(false));
         let campaign_sent_clone = campaign_sent.clone();
-        email_ui.on_send_campaign(move || { *campaign_sent_clone.borrow_mut() = true; });
+        email_ui.on_send_campaign(move || {
+            *campaign_sent_clone.borrow_mut() = true;
+        });
         email_ui.invoke_send_campaign();
         assert!(*campaign_sent.borrow());
 
@@ -6460,7 +7800,10 @@ mod remaining_e2e_tests {
         dashboard_ui.set_show_upgrade_prompt(true);
         dashboard_ui.set_upgrade_prompt_message("You've reached your free tier limit.".into());
         assert!(dashboard_ui.get_show_upgrade_prompt());
-        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit.");
+        assert_eq!(
+            dashboard_ui.get_upgrade_prompt_message(),
+            "You've reached your free tier limit."
+        );
 
         // 6. Viral Storefront (Website Builder)
         let wb_ui = app::WebsiteBuilder::new().unwrap();
@@ -6471,11 +7814,16 @@ mod remaining_e2e_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         dashboard_ui.set_show_milestone(true);
         dashboard_ui.set_milestone_title("🎉 You just got your 10th order!".into());
-        assert_eq!(dashboard_ui.get_milestone_title(), "🎉 You just got your 10th order!");
+        assert_eq!(
+            dashboard_ui.get_milestone_title(),
+            "🎉 You just got your 10th order!"
+        );
 
         let milestone_dismissed = std::rc::Rc::new(std::cell::RefCell::new(false));
         let milestone_dismissed_clone = milestone_dismissed.clone();
-        dashboard_ui.on_dismiss_milestone(move || { *milestone_dismissed_clone.borrow_mut() = true; });
+        dashboard_ui.on_dismiss_milestone(move || {
+            *milestone_dismissed_clone.borrow_mut() = true;
+        });
         dashboard_ui.invoke_dismiss_milestone();
         assert!(*milestone_dismissed.borrow());
     }
@@ -6495,7 +7843,10 @@ mod remaining_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
 
@@ -6506,7 +7857,10 @@ mod remaining_e2e_tests {
 
         assert!(dashboard_ui.get_show_milestone());
         assert_eq!(dashboard_ui.get_milestone_title(), "First Sale!");
-        assert_eq!(dashboard_ui.get_milestone_message(), "You just got your first customer!");
+        assert_eq!(
+            dashboard_ui.get_milestone_message(),
+            "You just got your first customer!"
+        );
 
         let milestone_dismissed = std::rc::Rc::new(std::cell::RefCell::new(false));
         let milestone_dismissed_clone = milestone_dismissed.clone();
@@ -6515,13 +7869,22 @@ mod remaining_e2e_tests {
         });
 
         dashboard_ui.invoke_dismiss_milestone();
-        assert!(*milestone_dismissed.borrow(), "Milestone should be dismissed");
+        assert!(
+            *milestone_dismissed.borrow(),
+            "Milestone should be dismissed"
+        );
 
         dashboard_ui.set_milestone_title("🎉 You just got your 10th order!".into());
-        assert_eq!(dashboard_ui.get_milestone_title(), "🎉 You just got your 10th order!");
+        assert_eq!(
+            dashboard_ui.get_milestone_title(),
+            "🎉 You just got your 10th order!"
+        );
 
         dashboard_ui.set_milestone_title("🚀 Your store has 100 visitors today!".into());
-        assert_eq!(dashboard_ui.get_milestone_title(), "🚀 Your store has 100 visitors today!");
+        assert_eq!(
+            dashboard_ui.get_milestone_title(),
+            "🚀 Your store has 100 visitors today!"
+        );
     }
 
     #[test]
@@ -6539,7 +7902,10 @@ mod remaining_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let ui = app::WebsiteBuilder::new().unwrap();
         ui.set_step(4);
@@ -6553,7 +7919,10 @@ mod remaining_e2e_tests {
         });
 
         ui.invoke_open_ohc_signup();
-        assert!(*signup_opened.borrow(), "Clicking the viral storefront footer should open the OHC signup link");
+        assert!(
+            *signup_opened.borrow(),
+            "Clicking the viral storefront footer should open the OHC signup link"
+        );
     }
 
     use super::*;
@@ -6566,7 +7935,9 @@ mod remaining_e2e_tests {
         // Use backend logic to circumvent winit display panic in headless env
         let display_var = std::env::var("DISPLAY").unwrap_or_default();
         let wayland_var = std::env::var("WAYLAND_DISPLAY").unwrap_or_default();
-        if display_var.is_empty() && wayland_var.is_empty() { return; }
+        if display_var.is_empty() && wayland_var.is_empty() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6579,24 +7950,37 @@ mod remaining_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
         // Assert properties to make sure new plain-language labels exist and work
         dashboard_ui.set_todays_sales("$125.50".into());
@@ -6614,14 +7998,12 @@ mod remaining_e2e_tests {
         dashboard_ui.set_show_quick_actions_hint(true);
         assert!(dashboard_ui.get_show_quick_actions_hint());
 
-        let pending_tasks = vec![
-            app::UiPendingApproval {
-                        helper_name: "The Promoter".into(),
-                task_id: "test-task-123".into(),
-                title: "Draft Confirmation for Maya".into(),
-                proposed_content: "Review the custom cake order details.".into(),
-            }
-        ];
+        let pending_tasks = vec![app::UiPendingApproval {
+            helper_name: "The Promoter".into(),
+            task_id: "test-task-123".into(),
+            title: "Draft Confirmation for Maya".into(),
+            proposed_content: "Review the custom cake order details.".into(),
+        }];
         let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
         dashboard_ui.set_pending_approvals(pending_model.into());
     }
@@ -6629,7 +8011,9 @@ mod remaining_e2e_tests {
     #[test]
 
     fn test_e2e_business_share_and_milestones_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6642,24 +8026,37 @@ mod remaining_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
         // Assert milestones defaults and logic
         assert!(!dashboard_ui.get_show_milestone());
@@ -6669,7 +8066,10 @@ mod remaining_e2e_tests {
 
         assert!(dashboard_ui.get_show_milestone());
         assert_eq!(dashboard_ui.get_milestone_title(), "First Sale!");
-        assert_eq!(dashboard_ui.get_milestone_message(), "You just got your first customer!");
+        assert_eq!(
+            dashboard_ui.get_milestone_message(),
+            "You just got your first customer!"
+        );
 
         let milestone_dismissed = std::rc::Rc::new(std::cell::RefCell::new(false));
         let milestone_dismissed_clone = milestone_dismissed.clone();
@@ -6678,33 +8078,49 @@ mod remaining_e2e_tests {
         });
 
         dashboard_ui.invoke_dismiss_milestone();
-        assert!(*milestone_dismissed.borrow(), "Milestone should be dismissed");
+        assert!(
+            *milestone_dismissed.borrow(),
+            "Milestone should be dismissed"
+        );
 
         dashboard_ui.invoke_action_share_store();
-        assert!(*share_store_called.borrow(), "Share Store should be invoked from Dashboard");
+        assert!(
+            *share_store_called.borrow(),
+            "Share Store should be invoked from Dashboard"
+        );
 
         // Verify BusinessShare Component
         let business_share_ui = app::BusinessShare::new().unwrap();
 
         let copy_link_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let copy_link_called_clone = copy_link_called.clone();
-        business_share_ui.on_copy_link(move || { *copy_link_called_clone.borrow_mut() = true; });
+        business_share_ui.on_copy_link(move || {
+            *copy_link_called_clone.borrow_mut() = true;
+        });
 
         let share_to_ig_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_to_ig_called_clone = share_to_ig_called.clone();
-        business_share_ui.on_share_to_instagram(move || { *share_to_ig_called_clone.borrow_mut() = true; });
+        business_share_ui.on_share_to_instagram(move || {
+            *share_to_ig_called_clone.borrow_mut() = true;
+        });
 
         let share_to_x_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_to_x_called_clone = share_to_x_called.clone();
-        business_share_ui.on_share_to_x(move || { *share_to_x_called_clone.borrow_mut() = true; });
+        business_share_ui.on_share_to_x(move || {
+            *share_to_x_called_clone.borrow_mut() = true;
+        });
 
         let share_to_wa_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_to_wa_called_clone = share_to_wa_called.clone();
-        business_share_ui.on_share_to_whatsapp(move || { *share_to_wa_called_clone.borrow_mut() = true; });
+        business_share_ui.on_share_to_whatsapp(move || {
+            *share_to_wa_called_clone.borrow_mut() = true;
+        });
 
         let close_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let close_called_clone = close_called.clone();
-        business_share_ui.on_close(move || { *close_called_clone.borrow_mut() = true; });
+        business_share_ui.on_close(move || {
+            *close_called_clone.borrow_mut() = true;
+        });
 
         assert_eq!(business_share_ui.get_business_name(), "My Awesome Store");
         business_share_ui.set_business_name("Maya's Cakes".into());
@@ -6726,7 +8142,10 @@ mod remaining_e2e_tests {
         assert!(*share_to_x_called.borrow());
 
         business_share_ui.invoke_share_to_whatsapp();
-        assert!(*share_to_wa_called.borrow(), "Share to WhatsApp should be called");
+        assert!(
+            *share_to_wa_called.borrow(),
+            "Share to WhatsApp should be called"
+        );
 
         business_share_ui.invoke_close();
         assert!(*close_called.borrow());
@@ -6734,7 +8153,9 @@ mod remaining_e2e_tests {
 
     #[test]
     fn test_e2e_progressive_disclosure_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6747,7 +8168,10 @@ mod remaining_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         // Manually implement listener logic here to prove pub-sub state
         let setup_wizard = app::SetupWizard::new().unwrap();
@@ -6815,7 +8239,9 @@ mod remaining_e2e_tests {
 
     #[test]
     fn test_e2e_cost_transparency_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6828,24 +8254,37 @@ mod remaining_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_add_product(move || {
+            *add_product_called_clone.borrow_mut() = true;
+        });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_view_orders(move || {
+            *view_orders_called_clone.borrow_mut() = true;
+        });
         let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let check_messages_called_clone = check_messages_called.clone();
-        dashboard_ui.on_action_check_messages(move || { *check_messages_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_check_messages(move || {
+            *check_messages_called_clone.borrow_mut() = true;
+        });
         let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let see_analytics_called_clone = see_analytics_called.clone();
-        dashboard_ui.on_action_see_analytics(move || { *see_analytics_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_see_analytics(move || {
+            *see_analytics_called_clone.borrow_mut() = true;
+        });
         let share_store_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let share_store_called_clone = share_store_called.clone();
-        dashboard_ui.on_action_share_store(move || { *share_store_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_share_store(move || {
+            *share_store_called_clone.borrow_mut() = true;
+        });
 
         let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let billing_opened_clone = billing_opened.clone();
@@ -6854,7 +8293,10 @@ mod remaining_e2e_tests {
         });
 
         dashboard_ui.invoke_open_billing();
-        assert!(*billing_opened.borrow(), "Billing should be opened from Dashboard");
+        assert!(
+            *billing_opened.borrow(),
+            "Billing should be opened from Dashboard"
+        );
 
         let my_plan_ui = app::MyPlan::new().unwrap();
         let upgrade_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6863,7 +8305,10 @@ mod remaining_e2e_tests {
             *upgrade_opened_clone.borrow_mut() = true;
         });
         my_plan_ui.invoke_upgrade();
-        assert!(*upgrade_opened.borrow(), "Upgrade should be opened from MyPlan");
+        assert!(
+            *upgrade_opened.borrow(),
+            "Upgrade should be opened from MyPlan"
+        );
 
         let view_details_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_details_opened_clone = view_details_opened.clone();
@@ -6871,7 +8316,10 @@ mod remaining_e2e_tests {
             *view_details_opened_clone.borrow_mut() = true;
         });
         my_plan_ui.invoke_view_details();
-        assert!(*view_details_opened.borrow(), "View Cost Details should be opened from MyPlan");
+        assert!(
+            *view_details_opened.borrow(),
+            "View Cost Details should be opened from MyPlan"
+        );
 
         my_plan_ui.on_view_history(move || {});
         my_plan_ui.on_cancel_subscription(move || {});
@@ -6884,28 +8332,46 @@ mod remaining_e2e_tests {
         my_plan_ui.invoke_download_invoice();
 
         let pricing_ui = app::Pricing::new().unwrap();
-    let pricing_handle_fetch = pricing_ui.as_weak();
-    tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
-            if let Ok(token) = std::env::var("OHC_TOKEN") {
-                req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+        let pricing_handle_fetch = pricing_ui.as_weak();
+        tokio::spawn(async move {
+            if let Ok(mut client) = HubServiceClient::connect(
+                std::env::var("OHC_HUB_URL")
+                    .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+            )
+            .await
+            {
+                let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+                if let Ok(token) = std::env::var("OHC_TOKEN") {
+                    req.metadata_mut().insert(
+                        "authorization",
+                        format!("Bearer {}", token).parse().unwrap(),
+                    );
+                }
+                if let Ok(res) = client.get_my_plan(req).await {
+                    let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = pricing_handle_fetch.upgrade() {
+                            let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
+                            let used = plan.ai_actions_used as f32;
+                            let progress = if limit > 0.0 { used / limit } else { 0.0 };
+                            ui.set_usage_progress(progress);
+                            ui.set_current_usage(
+                                format!(
+                                    "{} / {} AI Actions",
+                                    plan.ai_actions_used,
+                                    plan.ai_actions_limit.unwrap_or(0)
+                                )
+                                .into(),
+                            );
+                            ui.set_projected_cost(
+                                format!("${:.2} / month", plan.next_bill_estimated as f64).into(),
+                            );
+                        }
+                    })
+                    .unwrap();
+                }
             }
-            if let Ok(res) = client.get_my_plan(req).await {
-                let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
-                slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = pricing_handle_fetch.upgrade() {
-                        let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
-                        let used = plan.ai_actions_used as f32;
-                        let progress = if limit > 0.0 { used / limit } else { 0.0 };
-                        ui.set_usage_progress(progress);
-                        ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
-                        ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
-                    }
-                }).unwrap();
-            }
-        }
-    });
+        });
         let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let plan_selected_clone = plan_selected.clone();
         pricing_ui.on_select_plan(move |plan| {
@@ -6948,16 +8414,20 @@ mod remaining_e2e_tests {
         let agent_costs = slint::ModelRc::new(slint::VecModel::from(vec![
             app::UiAgentCost {
                 name: "Customer Support Agent".into(),
-                cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 tok/$".into(),
+                cost: "$25.00".into(),
+                roi: "150%".into(),
+                efficiency: "100 tok/$".into(),
                 storage_usage: "150MB".into(),
                 pct: 0.55,
             },
             app::UiAgentCost {
                 name: "Marketing Agent".into(),
-                cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 tok/$".into(),
+                cost: "$20.50".into(),
+                roi: "0%".into(),
+                efficiency: "0 tok/$".into(),
                 storage_usage: "2.1GB".into(),
                 pct: 0.45,
-            }
+            },
         ]));
 
         cost_ui.set_agent_costs(agent_costs.clone());
@@ -6969,12 +8439,16 @@ mod remaining_e2e_tests {
         assert_eq!(retrieved_costs.row_count(), 2);
         let first_agent = retrieved_costs.row_data(0).unwrap();
         assert_eq!(first_agent.name, "Customer Support Agent");
-        assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
+        assert_eq!(first_agent.cost, "$25.00");
+        assert_eq!(first_agent.roi, "150%");
+        assert_eq!(first_agent.efficiency, "100 tok/$");
     }
 
     #[test]
     fn test_e2e_cost_dashboard_refresh_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -6987,7 +8461,10 @@ mod remaining_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let cost_ui = app::CostDashboard::new().unwrap();
         let cost_ui_handle = cost_ui.as_weak();
@@ -7006,7 +8483,9 @@ mod remaining_e2e_tests {
 
     #[test]
     fn test_e2e_pricing_upgrade_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -7019,7 +8498,10 @@ mod remaining_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let my_plan_ui = app::MyPlan::new().unwrap();
         let upgrade_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -7028,31 +8510,52 @@ mod remaining_e2e_tests {
             *upgrade_opened_clone.borrow_mut() = true;
         });
         my_plan_ui.invoke_upgrade();
-        assert!(*upgrade_opened.borrow(), "Upgrade should be opened from MyPlan");
+        assert!(
+            *upgrade_opened.borrow(),
+            "Upgrade should be opened from MyPlan"
+        );
 
         let pricing_ui = app::Pricing::new().unwrap();
-    let pricing_handle_fetch = pricing_ui.as_weak();
-    tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
-            if let Ok(token) = std::env::var("OHC_TOKEN") {
-                req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+        let pricing_handle_fetch = pricing_ui.as_weak();
+        tokio::spawn(async move {
+            if let Ok(mut client) = HubServiceClient::connect(
+                std::env::var("OHC_HUB_URL")
+                    .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+            )
+            .await
+            {
+                let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+                if let Ok(token) = std::env::var("OHC_TOKEN") {
+                    req.metadata_mut().insert(
+                        "authorization",
+                        format!("Bearer {}", token).parse().unwrap(),
+                    );
+                }
+                if let Ok(res) = client.get_my_plan(req).await {
+                    let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = pricing_handle_fetch.upgrade() {
+                            let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
+                            let used = plan.ai_actions_used as f32;
+                            let progress = if limit > 0.0 { used / limit } else { 0.0 };
+                            ui.set_usage_progress(progress);
+                            ui.set_current_usage(
+                                format!(
+                                    "{} / {} AI Actions",
+                                    plan.ai_actions_used,
+                                    plan.ai_actions_limit.unwrap_or(0)
+                                )
+                                .into(),
+                            );
+                            ui.set_projected_cost(
+                                format!("${:.2} / month", plan.next_bill_estimated as f64).into(),
+                            );
+                        }
+                    })
+                    .unwrap();
+                }
             }
-            if let Ok(res) = client.get_my_plan(req).await {
-                let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
-                slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = pricing_handle_fetch.upgrade() {
-                        let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
-                        let used = plan.ai_actions_used as f32;
-                        let progress = if limit > 0.0 { used / limit } else { 0.0 };
-                        ui.set_usage_progress(progress);
-                        ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
-                        ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
-                    }
-                }).unwrap();
-            }
-        }
-    });
+        });
         let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let plan_selected_clone = plan_selected.clone();
         pricing_ui.on_select_plan(move |plan| {
@@ -7064,7 +8567,9 @@ mod remaining_e2e_tests {
 
     #[test]
     fn test_e2e_pricing_annual_discount_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -7077,31 +8582,52 @@ mod remaining_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let pricing_ui = app::Pricing::new().unwrap();
-    let pricing_handle_fetch = pricing_ui.as_weak();
-    tokio::spawn(async move {
-        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-            let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
-            if let Ok(token) = std::env::var("OHC_TOKEN") {
-                req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+        let pricing_handle_fetch = pricing_ui.as_weak();
+        tokio::spawn(async move {
+            if let Ok(mut client) = HubServiceClient::connect(
+                std::env::var("OHC_HUB_URL")
+                    .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()),
+            )
+            .await
+            {
+                let mut req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+                if let Ok(token) = std::env::var("OHC_TOKEN") {
+                    req.metadata_mut().insert(
+                        "authorization",
+                        format!("Bearer {}", token).parse().unwrap(),
+                    );
+                }
+                if let Ok(res) = client.get_my_plan(req).await {
+                    let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = pricing_handle_fetch.upgrade() {
+                            let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
+                            let used = plan.ai_actions_used as f32;
+                            let progress = if limit > 0.0 { used / limit } else { 0.0 };
+                            ui.set_usage_progress(progress);
+                            ui.set_current_usage(
+                                format!(
+                                    "{} / {} AI Actions",
+                                    plan.ai_actions_used,
+                                    plan.ai_actions_limit.unwrap_or(0)
+                                )
+                                .into(),
+                            );
+                            ui.set_projected_cost(
+                                format!("${:.2} / month", plan.next_bill_estimated as f64).into(),
+                            );
+                        }
+                    })
+                    .unwrap();
+                }
             }
-            if let Ok(res) = client.get_my_plan(req).await {
-                let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
-                slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = pricing_handle_fetch.upgrade() {
-                        let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
-                        let used = plan.ai_actions_used as f32;
-                        let progress = if limit > 0.0 { used / limit } else { 0.0 };
-                        ui.set_usage_progress(progress);
-                        ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
-                        ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
-                    }
-                }).unwrap();
-            }
-        }
-    });
+        });
         let pricing_ui_toggle_handle = pricing_ui.as_weak();
         pricing_ui.on_toggle_billing_cycle(move || {
             if let Some(ui) = pricing_ui_toggle_handle.upgrade() {
@@ -7125,7 +8651,9 @@ mod remaining_e2e_tests {
 
     #[test]
     fn test_e2e_my_plan_billing_history_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -7138,7 +8666,10 @@ mod remaining_e2e_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         let my_plan_ui = app::MyPlan::new().unwrap();
 
@@ -7168,10 +8699,6 @@ mod remaining_e2e_tests {
         assert!(*payment_updated.borrow(), "Payment should be updated");
         assert!(*invoice_downloaded.borrow(), "Invoice should be downloaded");
     }
-
-
-
-
 }
 
 #[cfg(test)]
@@ -7180,7 +8707,9 @@ mod e2e_hybrid_blob_tests {
 
     #[test]
     fn test_e2e_hybrid_blob_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         let login_ui = app::Login::new().unwrap();
         let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -7193,7 +8722,10 @@ mod e2e_hybrid_blob_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         // Navigate to dashboard and then to WebsiteBuilder where we upload an image (simulated by blob tool)
         let dashboard_ui = app::Dashboard::new().unwrap();
@@ -7204,7 +8736,10 @@ mod e2e_hybrid_blob_tests {
             *website_builder_opened_clone.borrow_mut() = true;
         });
         dashboard_ui.invoke_action_add_product();
-        assert!(*website_builder_opened.borrow(), "Website builder should be opened from Dashboard");
+        assert!(
+            *website_builder_opened.borrow(),
+            "Website builder should be opened from Dashboard"
+        );
 
         let builder_ui = app::WebsiteBuilder::new().unwrap();
         let builder_published = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -7212,22 +8747,24 @@ mod e2e_hybrid_blob_tests {
 
         // When publish is called, it simulates the backend writing a blob and responding.
         let builder_weak = builder_ui.as_weak();
-        builder_ui.on_publish_site(move |template, color, product, price, description, domain| {
-            assert_eq!(template, "Modern");
-            assert_eq!(color, "#34C759");
-            assert_eq!(product, "My Custom Product");
-            assert_eq!(price, "19.99");
-            assert_eq!(description, "A great custom product.");
-            assert_eq!(domain, "mycustomstore.com");
+        builder_ui.on_publish_site(
+            move |template, color, product, price, description, domain| {
+                assert_eq!(template, "Modern");
+                assert_eq!(color, "#34C759");
+                assert_eq!(product, "My Custom Product");
+                assert_eq!(price, "19.99");
+                assert_eq!(description, "A great custom product.");
+                assert_eq!(domain, "mycustomstore.com");
 
-            // At this point the UI would call the Rust backend, which invokes the HybridBlobManager
-            // to store the website assets (images/blobs).
-            *builder_published_clone.borrow_mut() = true;
-            if let Some(u) = builder_weak.upgrade() {
-                u.set_is_publishing(false);
-                u.set_step(4);
-            }
-        });
+                // At this point the UI would call the Rust backend, which invokes the HybridBlobManager
+                // to store the website assets (images/blobs).
+                *builder_published_clone.borrow_mut() = true;
+                if let Some(u) = builder_weak.upgrade() {
+                    u.set_is_publishing(false);
+                    u.set_step(4);
+                }
+            },
+        );
 
         builder_ui.set_step(4); // Advance to the publish step
         builder_ui.set_is_publishing(true);
@@ -7237,16 +8774,21 @@ mod e2e_hybrid_blob_tests {
             "My Custom Product".into(),
             "19.99".into(),
             "A great custom product.".into(),
-            "mycustomstore.com".into()
+            "mycustomstore.com".into(),
         );
 
-        assert!(*builder_published.borrow(), "Website builder published successfully after simulated blob ops");
+        assert!(
+            *builder_published.borrow(),
+            "Website builder published successfully after simulated blob ops"
+        );
         assert_eq!(builder_ui.get_is_publishing(), false);
     }
 
     #[test]
     fn test_e2e_wizard_copy_shareable_link_on_launch() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::SetupWizard::new().unwrap();
         ui.set_launch_success(true);
         ui.set_shareable_link("https://mybusiness.ohc.app".into());
@@ -7266,612 +8808,745 @@ mod e2e_hybrid_blob_tests {
     }
 }
 
-    #[test]
-    fn test_stat_card_properties() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::StatCardWindow::new().unwrap();
-        ui.set_label("Test Label".into());
-        ui.set_value("123".into());
-        assert_eq!(ui.get_label(), "Test Label");
-        assert_eq!(ui.get_value(), "123");
+#[test]
+fn test_stat_card_properties() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::StatCardWindow::new().unwrap();
+    ui.set_label("Test Label".into());
+    ui.set_value("123".into());
+    assert_eq!(ui.get_label(), "Test Label");
+    assert_eq!(ui.get_value(), "123");
+}
+
+#[test]
+fn test_dashboard_loading_state() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::Dashboard::new().unwrap();
+    assert!(!ui.get_is_loading());
+    ui.set_is_loading(true);
+    assert!(ui.get_is_loading());
+}
+
+#[test]
+fn test_e2e_wizard_flow_step_1_business_type() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(1);
+    ui.set_business_type("Online Store".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 2);
+}
+
+#[test]
+fn test_e2e_wizard_flow_step_2_company_info() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(2);
+    ui.set_company_name("My Bakery".into());
+    ui.set_company_description("Fresh breads".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 3);
+}
+
+#[test]
+fn test_e2e_wizard_flow_step_3_selling_categories() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(3);
+    ui.set_sell_physical(true);
+    ui.set_sell_food(true);
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 4);
+}
+
+#[test]
+fn test_e2e_wizard_flow_step_4_template_selection() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(4);
+    ui.set_website_template("Dark Mode".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 5);
+}
+
+#[test]
+fn test_e2e_wizard_flow_step_4_payment_skip() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(4);
+    ui.invoke_select_payment_pref("skip".into());
+    assert_eq!(ui.get_step(), 5);
+    assert_eq!(ui.get_payment_pref(), "skip");
+}
+
+#[test]
+fn test_e2e_wizard_flow_step_6_product_details_pricing_type() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(6);
+    ui.set_product_name("Custom Handyman Job".into());
+    ui.set_price_type("request_quote".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 7);
+    assert_eq!(ui.get_price_type(), "request_quote");
+}
+
+#[test]
+fn test_e2e_wizard_flow_step_6_product_details() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::SetupWizard::new().unwrap();
+    ui.set_step(6);
+    ui.set_product_name("Bread".into());
+    ui.set_product_price("5.00".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 7);
+}
+
+#[test]
+fn test_e2e_login_ui_friction_fixes_subtitle() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::Login::new().unwrap();
+
+    ui.set_is_sign_up(false);
+    // We cannot directly read properties not exposed, but we can verify it runs without crashing
+    // Slint testing typically validates properties if exposed.
+    assert_eq!(ui.get_is_sign_up(), false);
+
+    ui.set_is_sign_up(true);
+    assert_eq!(ui.get_is_sign_up(), true);
+}
+
+#[test]
+fn test_e2e_login_ui_friction_fixes_settings_button() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::Login::new().unwrap();
+    // Triggering the open_settings callback to make sure it's wired correctly
+    let settings_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let settings_opened_clone = settings_opened.clone();
+
+    ui.on_open_settings(move || {
+        *settings_opened_clone.borrow_mut() = true;
+    });
+    ui.invoke_open_settings();
+    assert!(*settings_opened.borrow(), "Settings should open from Login");
+}
+
+#[test]
+fn test_e2e_dashboard_dejargon_health() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::Dashboard::new().unwrap();
+    // Since we changed text in UI, properties are untouched.
+    // We ensure telemetry_chart_placeholder can still be fetched.
+    assert_eq!(
+        ui.get_telemetry_chart_placeholder(),
+        "[ Dynamic Hybrid Correlation Chart ]"
+    );
+}
+
+#[test]
+fn test_e2e_dashboard_dejargon_metrics() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::Dashboard::new().unwrap();
+
+    ui.set_telemetry_cache_hits("99%".into());
+    ui.set_telemetry_rag_latency("10ms".into());
+
+    assert_eq!(ui.get_telemetry_cache_hits(), "99%");
+    assert_eq!(ui.get_telemetry_rag_latency(), "10ms");
+}
+
+#[test]
+fn test_e2e_settings_ui_friction_fixes() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    let ui = app::Settings::new().unwrap();
+
+    ui.set_standalone_mode(true);
+    assert_eq!(ui.get_standalone_mode(), true);
+
+    // Trigger run_doctor to ensure callback isn't broken
+    let doctor_run = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let doctor_run_clone = doctor_run.clone();
+
+    ui.on_run_doctor(move || {
+        *doctor_run_clone.borrow_mut() = true;
+    });
+    ui.invoke_run_doctor();
+    assert!(*doctor_run.borrow(), "Doctor should run from Settings");
+}
+
+#[test]
+fn test_e2e_telemetry_visualization_flow() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
     }
 
-    #[test]
-    fn test_dashboard_loading_state() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::Dashboard::new().unwrap();
-        assert!(!ui.get_is_loading());
-        ui.set_is_loading(true);
-        assert!(ui.get_is_loading());
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
+
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
+
+    let dashboard_ui = app::Dashboard::new().unwrap();
+
+    // Validate initial values match the wireframe requirements
+    assert_eq!(dashboard_ui.get_telemetry_cache_hits(), "84%");
+    assert_eq!(dashboard_ui.get_telemetry_rag_latency(), "120ms");
+    assert_eq!(
+        dashboard_ui.get_telemetry_chart_placeholder(),
+        "[ Dynamic Hybrid Correlation Chart ]"
+    );
+    assert!(dashboard_ui.get_show_telemetry_visualization());
+}
+
+#[test]
+fn test_e2e_telemetry_visualization_initial_state() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
     }
 
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
 
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
 
-    #[test]
-    fn test_e2e_wizard_flow_step_1_business_type() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(1);
-        ui.set_business_type("Online Store".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 2);
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
+
+    let dashboard_ui = app::Dashboard::new().unwrap();
+    // verify it is displayed by default
+    assert!(dashboard_ui.get_show_telemetry_visualization());
+}
+
+#[test]
+fn test_e2e_telemetry_visualization_update_data() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
     }
 
-    #[test]
-    fn test_e2e_wizard_flow_step_2_company_info() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(2);
-        ui.set_company_name("My Bakery".into());
-        ui.set_company_description("Fresh breads".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 3);
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
+
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
+
+    let dashboard_ui = app::Dashboard::new().unwrap();
+    dashboard_ui.set_telemetry_cache_hits("92%".into());
+    assert_eq!(dashboard_ui.get_telemetry_cache_hits(), "92%");
+
+    dashboard_ui.set_telemetry_rag_latency("105ms".into());
+    assert_eq!(dashboard_ui.get_telemetry_rag_latency(), "105ms");
+}
+
+#[test]
+fn test_e2e_telemetry_visualization_update_chart() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
     }
 
-    #[test]
-    fn test_e2e_wizard_flow_step_3_selling_categories() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(3);
-        ui.set_sell_physical(true);
-        ui.set_sell_food(true);
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 4);
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
+
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
+
+    let dashboard_ui = app::Dashboard::new().unwrap();
+    dashboard_ui.set_telemetry_chart_placeholder("Rendering custom chart data...".into());
+    assert_eq!(
+        dashboard_ui.get_telemetry_chart_placeholder(),
+        "Rendering custom chart data..."
+    );
+}
+
+#[test]
+fn test_e2e_telemetry_visualization_visibility_toggle() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
     }
 
-    #[test]
-    fn test_e2e_wizard_flow_step_4_template_selection() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(4);
-        ui.set_website_template("Dark Mode".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 5);
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
+
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
+
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
+
+    let dashboard_ui = app::Dashboard::new().unwrap();
+    assert!(dashboard_ui.get_show_telemetry_visualization());
+
+    dashboard_ui.set_show_telemetry_visualization(false);
+    assert!(!dashboard_ui.get_show_telemetry_visualization());
+}
+
+#[test]
+fn test_e2e_onboarding_wizard_data_flow() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
     }
 
-    #[test]
-    fn test_e2e_wizard_flow_step_4_payment_skip() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(4);
-        ui.invoke_select_payment_pref("skip".into());
-        assert_eq!(ui.get_step(), 5);
-        assert_eq!(ui.get_payment_pref(), "skip");
-    }
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
 
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
 
-    #[test]
-    fn test_e2e_wizard_flow_step_6_product_details_pricing_type() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(6);
-        ui.set_product_name("Custom Handyman Job".into());
-        ui.set_price_type("request_quote".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 7);
-        assert_eq!(ui.get_price_type(), "request_quote");
-    }
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
 
-    #[test]
-    fn test_e2e_wizard_flow_step_6_product_details() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::SetupWizard::new().unwrap();
-        ui.set_step(6);
-        ui.set_product_name("Bread".into());
-        ui.set_product_price("5.00".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 7);
-    }
+    login_ui.invoke_start_setup_wizard();
+    let ui = app::SetupWizard::new().unwrap();
 
-    #[test]
-    fn test_e2e_login_ui_friction_fixes_subtitle() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::Login::new().unwrap();
+    // Step 0: Welcome
+    assert_eq!(ui.get_step(), 0);
+    ui.invoke_next_step();
 
-        ui.set_is_sign_up(false);
-        // We cannot directly read properties not exposed, but we can verify it runs without crashing
-        // Slint testing typically validates properties if exposed.
-        assert_eq!(ui.get_is_sign_up(), false);
+    // Step 1: Business Type
+    assert_eq!(ui.get_step(), 1);
+    ui.invoke_select_business_type("Online Store".into());
+    assert_eq!(ui.get_business_type(), "Online Store");
+    assert_eq!(ui.get_step(), 2);
 
-        ui.set_is_sign_up(true);
-        assert_eq!(ui.get_is_sign_up(), true);
-    }
+    // Step 2: Name & Description
+    ui.set_company_name("Maya's Bakery".into());
+    ui.set_company_description("Delicious vegan cakes".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 3);
 
-    #[test]
-    fn test_e2e_login_ui_friction_fixes_settings_button() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::Login::new().unwrap();
-        // Triggering the open_settings callback to make sure it's wired correctly
-        let settings_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let settings_opened_clone = settings_opened.clone();
+    // Step 3: What do you sell
+    ui.invoke_toggle_sell_physical();
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 4);
 
-        ui.on_open_settings(move || {
-            *settings_opened_clone.borrow_mut() = true;
-        });
-        ui.invoke_open_settings();
-        assert!(*settings_opened.borrow(), "Settings should open from Login");
-    }
+    // Step 4: Payments
+    ui.invoke_select_payment_pref("online".into());
+    assert_eq!(ui.get_step(), 5);
 
-    #[test]
-    fn test_e2e_dashboard_dejargon_health() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::Dashboard::new().unwrap();
-        // Since we changed text in UI, properties are untouched.
-        // We ensure telemetry_chart_placeholder can still be fetched.
-        assert_eq!(ui.get_telemetry_chart_placeholder(), "[ Dynamic Hybrid Correlation Chart ]");
-    }
+    // Step 5: Admin Account
+    ui.set_admin_name("Maya".into());
+    ui.set_admin_email("maya@example.com".into());
+    ui.set_admin_password("securepassword".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 6);
 
-    #[test]
-    fn test_e2e_dashboard_dejargon_metrics() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::Dashboard::new().unwrap();
+    // Step 6: Choose a Template
+    ui.invoke_select_template("Modern".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 7);
 
-        ui.set_telemetry_cache_hits("99%".into());
-        ui.set_telemetry_rag_latency("10ms".into());
+    // Step 7: Add your first product
+    ui.set_product_name("Vegan Chocolate Cake".into());
+    ui.set_product_price("45.00".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 8);
 
-        assert_eq!(ui.get_telemetry_cache_hits(), "99%");
-        assert_eq!(ui.get_telemetry_rag_latency(), "10ms");
-    }
+    // Step 8: Choose a Domain
+    ui.invoke_select_domain("custom".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 9);
 
-    #[test]
-    fn test_e2e_settings_ui_friction_fixes() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::Settings::new().unwrap();
+    // In a real E2E environment we would click through all the UI buttons
+    // Here we just test the propagation mechanism by invoking the callback
+    // The implementation we added to src/app/main.rs actually binds this.
+    let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let launch_called_clone = launch_called.clone();
 
-        ui.set_standalone_mode(true);
-        assert_eq!(ui.get_standalone_mode(), true);
-
-        // Trigger run_doctor to ensure callback isn't broken
-        let doctor_run = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let doctor_run_clone = doctor_run.clone();
-
-        ui.on_run_doctor(move || {
-            *doctor_run_clone.borrow_mut() = true;
-        });
-        ui.invoke_run_doctor();
-        assert!(*doctor_run.borrow(), "Doctor should run from Settings");
-    }
-
-    #[test]
-    fn test_e2e_telemetry_visualization_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-
-        // Validate initial values match the wireframe requirements
-        assert_eq!(dashboard_ui.get_telemetry_cache_hits(), "84%");
-        assert_eq!(dashboard_ui.get_telemetry_rag_latency(), "120ms");
-        assert_eq!(dashboard_ui.get_telemetry_chart_placeholder(), "[ Dynamic Hybrid Correlation Chart ]");
-        assert!(dashboard_ui.get_show_telemetry_visualization());
-    }
-
-    #[test]
-    fn test_e2e_telemetry_visualization_initial_state() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        // verify it is displayed by default
-        assert!(dashboard_ui.get_show_telemetry_visualization());
-    }
-
-    #[test]
-    fn test_e2e_telemetry_visualization_update_data() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        dashboard_ui.set_telemetry_cache_hits("92%".into());
-        assert_eq!(dashboard_ui.get_telemetry_cache_hits(), "92%");
-
-        dashboard_ui.set_telemetry_rag_latency("105ms".into());
-        assert_eq!(dashboard_ui.get_telemetry_rag_latency(), "105ms");
-    }
-
-    #[test]
-    fn test_e2e_telemetry_visualization_update_chart() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        dashboard_ui.set_telemetry_chart_placeholder("Rendering custom chart data...".into());
-        assert_eq!(dashboard_ui.get_telemetry_chart_placeholder(), "Rendering custom chart data...");
-    }
-
-    #[test]
-    fn test_e2e_telemetry_visualization_visibility_toggle() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        assert!(dashboard_ui.get_show_telemetry_visualization());
-
-        dashboard_ui.set_show_telemetry_visualization(false);
-        assert!(!dashboard_ui.get_show_telemetry_visualization());
-    }
-
-    #[test]
-    fn test_e2e_onboarding_wizard_data_flow() {
-        crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        login_ui.invoke_start_setup_wizard();
-        let ui = app::SetupWizard::new().unwrap();
-
-        // Step 0: Welcome
-        assert_eq!(ui.get_step(), 0);
-        ui.invoke_next_step();
-
-        // Step 1: Business Type
-        assert_eq!(ui.get_step(), 1);
-        ui.invoke_select_business_type("Online Store".into());
-        assert_eq!(ui.get_business_type(), "Online Store");
-        assert_eq!(ui.get_step(), 2);
-
-        // Step 2: Name & Description
-        ui.set_company_name("Maya's Bakery".into());
-        ui.set_company_description("Delicious vegan cakes".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 3);
-
-        // Step 3: What do you sell
-        ui.invoke_toggle_sell_physical();
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 4);
-
-        // Step 4: Payments
-        ui.invoke_select_payment_pref("online".into());
-        assert_eq!(ui.get_step(), 5);
-
-        // Step 5: Admin Account
-        ui.set_admin_name("Maya".into());
-        ui.set_admin_email("maya@example.com".into());
-        ui.set_admin_password("securepassword".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 6);
-
-        // Step 6: Choose a Template
-        ui.invoke_select_template("Modern".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 7);
-
-        // Step 7: Add your first product
-        ui.set_product_name("Vegan Chocolate Cake".into());
-        ui.set_product_price("45.00".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 8);
-
-        // Step 8: Choose a Domain
-        ui.invoke_select_domain("custom".into());
-        ui.invoke_next_step();
-        assert_eq!(ui.get_step(), 9);
-
-        // In a real E2E environment we would click through all the UI buttons
-        // Here we just test the propagation mechanism by invoking the callback
-        // The implementation we added to src/app/main.rs actually binds this.
-        let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let launch_called_clone = launch_called.clone();
-
-        ui.on_launch(move |_business_type, _company_name, _company_description, _payment_pref, _admin_email, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password, _price_type| {
+    ui.on_launch(
+        move |_business_type,
+              _company_name,
+              _company_description,
+              _payment_pref,
+              _admin_email,
+              website_template,
+              product_name,
+              product_price,
+              domain_choice,
+              _admin_name,
+              _admin_password,
+              _price_type| {
             assert_eq!(website_template, "Modern");
             assert_eq!(product_name, "Vegan Chocolate Cake");
             assert_eq!(product_price, "45.00");
             assert_eq!(domain_choice, "custom");
             *launch_called_clone.borrow_mut() = true;
-        });
+        },
+    );
 
-        ui.invoke_launch(
-            ui.get_business_type(),
-            ui.get_company_name(),
-            ui.get_company_description(),
-            ui.get_payment_pref(),
-            ui.get_admin_email(),
-            "Modern".into(),
-            "Vegan Chocolate Cake".into(),
-            "45.00".into(),
-            "custom".into(),
-            ui.get_admin_name(),
-            ui.get_admin_password(),
-            ui.get_price_type()
-        );
+    ui.invoke_launch(
+        ui.get_business_type(),
+        ui.get_company_name(),
+        ui.get_company_description(),
+        ui.get_payment_pref(),
+        ui.get_admin_email(),
+        "Modern".into(),
+        "Vegan Chocolate Cake".into(),
+        "45.00".into(),
+        "custom".into(),
+        ui.get_admin_name(),
+        ui.get_admin_password(),
+        ui.get_price_type(),
+    );
 
-        assert!(*launch_called.borrow(), "Launch should be called with updated properties");
-    }
-
-
-    #[test]
-    fn test_e2e_unified_inbox_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
-        let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let view_orders_called_clone = view_orders_called.clone();
-        dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
-        let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let check_messages_called_clone = check_messages_called.clone();
-
-        let unified_inbox_ui = app::UnifiedInbox::new().unwrap();
-        let conversations = vec![
-            app::UiConversation {
-                id: "conv-1".into(),
-                customer_name: "Maya".into(),
-                channel_icon: "📷".into(), // Instagram
-                last_message: "Do you do vegan cakes?".into(),
-                unread: true,
-                time: "2m ago".into(),
-            }
-        ];
-        unified_inbox_ui.set_conversations(slint::ModelRc::new(slint::VecModel::from(conversations)));
-
-        let unified_inbox_handle = unified_inbox_ui.as_weak();
-        dashboard_ui.on_action_check_messages(move || {
-            *check_messages_called_clone.borrow_mut() = true;
-            if let Some(ui) = unified_inbox_handle.upgrade() {
-                let _ = ui.show();
-            }
-        });
-
-        // Simulating the backend logic setting active conversation & AI replies when selected
-        let unified_inbox_handle_select = unified_inbox_ui.as_weak();
-        unified_inbox_ui.on_select_conversation(move |id| {
-            if let Some(ui) = unified_inbox_handle_select.upgrade() {
-                ui.set_active_conversation_id(id.clone());
-                if id == "conv-1" {
-                    let msgs = vec![
-                        app::UiInboxMessage {
-                            id: "msg-1".into(),
-                            author_name: "Maya".into(),
-                            body: "Do you do vegan cakes?".into(),
-                            is_me: false,
-                            time: "2m ago".into(),
-
-                            is_quote: false,
-                            quote_amount: "".into(),
-                            quote_status: "".into(),
-                        }
-                    ];
-                    ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(msgs)));
-                    let replies = vec![
-                        app::UiQuickReply { id: "qr-1".into(), text: "Yes, we have 3 vegan options!".into() }
-                    ];
-                    ui.set_suggested_replies(slint::ModelRc::new(slint::VecModel::from(replies)));
-                }
-            }
-        });
-
-        let unified_inbox_handle_draft = unified_inbox_ui.as_weak();
-        unified_inbox_ui.on_request_ai_draft(move || {
-            if let Some(ui) = unified_inbox_handle_draft.upgrade() {
-                ui.set_new_message("Sure, we have plenty of vegan options!".into());
-            }
-        });
-
-        let unified_inbox_handle_reply = unified_inbox_ui.as_weak();
-        unified_inbox_ui.on_use_quick_reply(move |reply_text| {
-            if let Some(ui) = unified_inbox_handle_reply.upgrade() {
-                let mut current_msgs: Vec<app::UiInboxMessage> = ui.get_current_messages().iter().collect();
-                current_msgs.push(app::UiInboxMessage {
-                    id: "msg-2".into(),
-                    author_name: "Me".into(),
-                    body: reply_text,
-                    is_me: true,
-                    time: "Just now".into(),
-
-                            is_quote: false,
-                            quote_amount: "".into(),
-                            quote_status: "".into(),
-                        });
-                ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(current_msgs)));
-                ui.set_suggested_replies(slint::ModelRc::new(slint::VecModel::from(vec![])));
-            }
-        });
-
-        // 1. Open the Inbox from Dashboard
-        dashboard_ui.invoke_action_check_messages();
-        assert!(*check_messages_called.borrow(), "Inbox should be opened from Dashboard");
-
-        use slint::Model;
-
-        // 2. Select conversation "conv-1"
-        unified_inbox_ui.invoke_select_conversation("conv-1".into());
-        assert_eq!(unified_inbox_ui.get_active_conversation_id(), "conv-1");
-        assert_eq!(unified_inbox_ui.get_current_messages().row_count(), 1, "Should load 1 message");
-        assert_eq!(unified_inbox_ui.get_suggested_replies().row_count(), 1, "Should load 1 AI reply");
-
-        // 3. Use AI Quick Reply
-        let ai_reply_text = unified_inbox_ui.get_suggested_replies().row_data(0).unwrap().text;
-        unified_inbox_ui.invoke_use_quick_reply(ai_reply_text.clone());
-
-        // 4. Assert outcome
-        assert_eq!(unified_inbox_ui.get_current_messages().row_count(), 2, "Should have 2 messages now");
-        assert_eq!(unified_inbox_ui.get_suggested_replies().row_count(), 0, "AI replies should be cleared");
-        let last_msg = unified_inbox_ui.get_current_messages().row_data(1).unwrap();
-        assert_eq!(last_msg.body, ai_reply_text, "Last message should be the AI reply");
-        assert!(last_msg.is_me, "The AI reply should be marked as sent by 'me'");
-
-        // 5. Use AI Draft
-        unified_inbox_ui.invoke_request_ai_draft();
-
-        // 6. Assert outcome
-        assert_eq!(unified_inbox_ui.get_new_message(), "Sure, we have plenty of vegan options!");
-    }
+    assert!(
+        *launch_called.borrow(),
+        "Launch should be called with updated properties"
+    );
+}
 
 #[test]
-    fn test_login_start_setup_cuj() {
-        crate::ui_tests::init();
-        let login_ui = app::Login::new().unwrap();
-        let start_setup_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let start_setup_called_clone = start_setup_called.clone();
-        login_ui.on_start_setup_wizard(move || {
-            *start_setup_called_clone.borrow_mut() = true;
-        });
-        login_ui.invoke_start_setup_wizard();
-        assert!(*start_setup_called.borrow(), "Start setup wizard should be invoked from Login UI");
+fn test_e2e_unified_inbox_flow() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
     }
 
-    #[test]
-    fn test_login_open_settings_cuj() {
-        crate::ui_tests::init();
-        let login_ui = app::Login::new().unwrap();
-        let open_settings_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let open_settings_called_clone = open_settings_called.clone();
-        login_ui.on_open_settings(move || {
-            *open_settings_called_clone.borrow_mut() = true;
-        });
-        login_ui.invoke_open_settings();
-        assert!(*open_settings_called.borrow(), "Open settings should be invoked from Login UI");
-    }
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
 
-    #[test]
-    fn test_login_oauth_cuj() {
-        crate::ui_tests::init();
-        let login_ui = app::Login::new().unwrap();
-        let oauth_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let oauth_called_clone = oauth_called.clone();
-        login_ui.on_oauth_login(move |provider| {
-            assert_eq!(provider, "SSO");
-            *oauth_called_clone.borrow_mut() = true;
-        });
-        login_ui.invoke_oauth_login("SSO".into());
-        assert!(*oauth_called.borrow(), "OAuth login should be invoked from Login UI");
-    }
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
 
-    #[test]
-    fn test_landing_continue_to_dashboard_cuj() {
-        crate::ui_tests::init();
-        let landing_ui = app::Landing::new().unwrap();
-        let continue_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let continue_called_clone = continue_called.clone();
-        landing_ui.on_continue_to_dashboard(move || {
-            *continue_called_clone.borrow_mut() = true;
-        });
-        landing_ui.invoke_continue_to_dashboard();
-        assert!(*continue_called.borrow(), "Continue to dashboard should be invoked");
-    }
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
 
-    #[test]
-    fn test_landing_download_cuj() {
-        crate::ui_tests::init();
-        let landing_ui = app::Landing::new().unwrap();
-        let download_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let download_called_clone = download_called.clone();
-        landing_ui.on_download(move |os| {
-            assert_eq!(os, "Mac");
-            *download_called_clone.borrow_mut() = true;
-        });
-        landing_ui.invoke_download("Mac".into());
-        assert!(*download_called.borrow(), "Download should be invoked");
-    }
+    let dashboard_ui = app::Dashboard::new().unwrap();
+    let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let add_product_called_clone = add_product_called.clone();
+    dashboard_ui.on_action_add_product(move || {
+        *add_product_called_clone.borrow_mut() = true;
+    });
+    let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let view_orders_called_clone = view_orders_called.clone();
+    dashboard_ui.on_action_view_orders(move || {
+        *view_orders_called_clone.borrow_mut() = true;
+    });
+    let check_messages_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let check_messages_called_clone = check_messages_called.clone();
 
-    #[test]
-    fn test_landing_cuj() {
-        crate::ui_tests::init();
-        let landing_ui = app::Landing::new().unwrap();
-        let start_setup_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let start_setup_called_clone = start_setup_called.clone();
-        landing_ui.on_start_business_setup(move || {
-            *start_setup_called_clone.borrow_mut() = true;
-        });
-        landing_ui.invoke_start_business_setup();
-        assert!(*start_setup_called.borrow(), "Start business setup should be invoked");
-    }
+    let unified_inbox_ui = app::UnifiedInbox::new().unwrap();
+    let conversations = vec![app::UiConversation {
+        id: "conv-1".into(),
+        customer_name: "Maya".into(),
+        channel_icon: "📷".into(), // Instagram
+        last_message: "Do you do vegan cakes?".into(),
+        unread: true,
+        time: "2m ago".into(),
+    }];
+    unified_inbox_ui.set_conversations(slint::ModelRc::new(slint::VecModel::from(conversations)));
+
+    let unified_inbox_handle = unified_inbox_ui.as_weak();
+    dashboard_ui.on_action_check_messages(move || {
+        *check_messages_called_clone.borrow_mut() = true;
+        if let Some(ui) = unified_inbox_handle.upgrade() {
+            let _ = ui.show();
+        }
+    });
+
+    // Simulating the backend logic setting active conversation & AI replies when selected
+    let unified_inbox_handle_select = unified_inbox_ui.as_weak();
+    unified_inbox_ui.on_select_conversation(move |id| {
+        if let Some(ui) = unified_inbox_handle_select.upgrade() {
+            ui.set_active_conversation_id(id.clone());
+            if id == "conv-1" {
+                let msgs = vec![app::UiInboxMessage {
+                    id: "msg-1".into(),
+                    author_name: "Maya".into(),
+                    body: "Do you do vegan cakes?".into(),
+                    is_me: false,
+                    time: "2m ago".into(),
+
+                    is_quote: false,
+                    quote_amount: "".into(),
+                    quote_status: "".into(),
+                }];
+                ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(msgs)));
+                let replies = vec![app::UiQuickReply {
+                    id: "qr-1".into(),
+                    text: "Yes, we have 3 vegan options!".into(),
+                }];
+                ui.set_suggested_replies(slint::ModelRc::new(slint::VecModel::from(replies)));
+            }
+        }
+    });
+
+    let unified_inbox_handle_draft = unified_inbox_ui.as_weak();
+    unified_inbox_ui.on_request_ai_draft(move || {
+        if let Some(ui) = unified_inbox_handle_draft.upgrade() {
+            ui.set_new_message("Sure, we have plenty of vegan options!".into());
+        }
+    });
+
+    let unified_inbox_handle_reply = unified_inbox_ui.as_weak();
+    unified_inbox_ui.on_use_quick_reply(move |reply_text| {
+        if let Some(ui) = unified_inbox_handle_reply.upgrade() {
+            let mut current_msgs: Vec<app::UiInboxMessage> =
+                ui.get_current_messages().iter().collect();
+            current_msgs.push(app::UiInboxMessage {
+                id: "msg-2".into(),
+                author_name: "Me".into(),
+                body: reply_text,
+                is_me: true,
+                time: "Just now".into(),
+
+                is_quote: false,
+                quote_amount: "".into(),
+                quote_status: "".into(),
+            });
+            ui.set_current_messages(slint::ModelRc::new(slint::VecModel::from(current_msgs)));
+            ui.set_suggested_replies(slint::ModelRc::new(slint::VecModel::from(vec![])));
+        }
+    });
+
+    // 1. Open the Inbox from Dashboard
+    dashboard_ui.invoke_action_check_messages();
+    assert!(
+        *check_messages_called.borrow(),
+        "Inbox should be opened from Dashboard"
+    );
+
+    use slint::Model;
+
+    // 2. Select conversation "conv-1"
+    unified_inbox_ui.invoke_select_conversation("conv-1".into());
+    assert_eq!(unified_inbox_ui.get_active_conversation_id(), "conv-1");
+    assert_eq!(
+        unified_inbox_ui.get_current_messages().row_count(),
+        1,
+        "Should load 1 message"
+    );
+    assert_eq!(
+        unified_inbox_ui.get_suggested_replies().row_count(),
+        1,
+        "Should load 1 AI reply"
+    );
+
+    // 3. Use AI Quick Reply
+    let ai_reply_text = unified_inbox_ui
+        .get_suggested_replies()
+        .row_data(0)
+        .unwrap()
+        .text;
+    unified_inbox_ui.invoke_use_quick_reply(ai_reply_text.clone());
+
+    // 4. Assert outcome
+    assert_eq!(
+        unified_inbox_ui.get_current_messages().row_count(),
+        2,
+        "Should have 2 messages now"
+    );
+    assert_eq!(
+        unified_inbox_ui.get_suggested_replies().row_count(),
+        0,
+        "AI replies should be cleared"
+    );
+    let last_msg = unified_inbox_ui.get_current_messages().row_data(1).unwrap();
+    assert_eq!(
+        last_msg.body, ai_reply_text,
+        "Last message should be the AI reply"
+    );
+    assert!(
+        last_msg.is_me,
+        "The AI reply should be marked as sent by 'me'"
+    );
+
+    // 5. Use AI Draft
+    unified_inbox_ui.invoke_request_ai_draft();
+
+    // 6. Assert outcome
+    assert_eq!(
+        unified_inbox_ui.get_new_message(),
+        "Sure, we have plenty of vegan options!"
+    );
+}
+
+#[test]
+fn test_login_start_setup_cuj() {
+    crate::ui_tests::init();
+    let login_ui = app::Login::new().unwrap();
+    let start_setup_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let start_setup_called_clone = start_setup_called.clone();
+    login_ui.on_start_setup_wizard(move || {
+        *start_setup_called_clone.borrow_mut() = true;
+    });
+    login_ui.invoke_start_setup_wizard();
+    assert!(
+        *start_setup_called.borrow(),
+        "Start setup wizard should be invoked from Login UI"
+    );
+}
+
+#[test]
+fn test_login_open_settings_cuj() {
+    crate::ui_tests::init();
+    let login_ui = app::Login::new().unwrap();
+    let open_settings_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let open_settings_called_clone = open_settings_called.clone();
+    login_ui.on_open_settings(move || {
+        *open_settings_called_clone.borrow_mut() = true;
+    });
+    login_ui.invoke_open_settings();
+    assert!(
+        *open_settings_called.borrow(),
+        "Open settings should be invoked from Login UI"
+    );
+}
+
+#[test]
+fn test_login_oauth_cuj() {
+    crate::ui_tests::init();
+    let login_ui = app::Login::new().unwrap();
+    let oauth_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let oauth_called_clone = oauth_called.clone();
+    login_ui.on_oauth_login(move |provider| {
+        assert_eq!(provider, "SSO");
+        *oauth_called_clone.borrow_mut() = true;
+    });
+    login_ui.invoke_oauth_login("SSO".into());
+    assert!(
+        *oauth_called.borrow(),
+        "OAuth login should be invoked from Login UI"
+    );
+}
+
+#[test]
+fn test_landing_continue_to_dashboard_cuj() {
+    crate::ui_tests::init();
+    let landing_ui = app::Landing::new().unwrap();
+    let continue_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let continue_called_clone = continue_called.clone();
+    landing_ui.on_continue_to_dashboard(move || {
+        *continue_called_clone.borrow_mut() = true;
+    });
+    landing_ui.invoke_continue_to_dashboard();
+    assert!(
+        *continue_called.borrow(),
+        "Continue to dashboard should be invoked"
+    );
+}
+
+#[test]
+fn test_landing_download_cuj() {
+    crate::ui_tests::init();
+    let landing_ui = app::Landing::new().unwrap();
+    let download_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let download_called_clone = download_called.clone();
+    landing_ui.on_download(move |os| {
+        assert_eq!(os, "Mac");
+        *download_called_clone.borrow_mut() = true;
+    });
+    landing_ui.invoke_download("Mac".into());
+    assert!(*download_called.borrow(), "Download should be invoked");
+}
+
+#[test]
+fn test_landing_cuj() {
+    crate::ui_tests::init();
+    let landing_ui = app::Landing::new().unwrap();
+    let start_setup_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let start_setup_called_clone = start_setup_called.clone();
+    landing_ui.on_start_business_setup(move || {
+        *start_setup_called_clone.borrow_mut() = true;
+    });
+    landing_ui.invoke_start_business_setup();
+    assert!(
+        *start_setup_called.borrow(),
+        "Start business setup should be invoked"
+    );
+}
 
 #[test]
 fn test_business_share_flow() {
@@ -7895,219 +9570,271 @@ fn test_business_share_flow() {
     });
 
     dashboard_ui.invoke_action_share_store();
-    assert!(*share_store_called.borrow(), "Share Store should be invoked from Dashboard");
+    assert!(
+        *share_store_called.borrow(),
+        "Share Store should be invoked from Dashboard"
+    );
 }
 
-    #[test]
-    fn test_e2e_api_docs_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let _main_app = app::AppWindow::new().unwrap();
-
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
-
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
-
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
-
-        let dashboard_ui = app::Dashboard::new().unwrap();
-
-        let api_docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let api_docs_opened_clone = api_docs_opened.clone();
-        dashboard_ui.on_open_api_docs(move || {
-            *api_docs_opened_clone.borrow_mut() = true;
-        });
-
-        dashboard_ui.invoke_open_api_docs();
-        assert!(*api_docs_opened.borrow(), "API Docs UI should be opened");
-
-        let ui = app::ApiDocs::new().unwrap();
-        assert_eq!(ui.get_api_key(), "sk_live_...");
-        assert_eq!(ui.get_endpoint_url(), "https://api.ohc.io");
-
-        // Advanced Mode Progressive Disclosure Check
-        assert_eq!(ui.get_is_advanced(), false);
-        ui.set_is_advanced(true);
-        assert_eq!(ui.get_is_advanced(), true);
-        ui.set_is_advanced(false);
-        assert_eq!(ui.get_is_advanced(), false);
+#[test]
+fn test_e2e_api_docs_flow() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
     }
 
-    #[test]
-    fn test_e2e_release_notes_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let _main_app = app::AppWindow::new().unwrap();
 
-        let login_ui = app::Login::new().unwrap();
-        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let login_successful_clone = login_successful.clone();
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
 
-        login_ui.on_login(move |email, password| {
-            assert_eq!(email, "test@example.com");
-            assert_eq!(password, "password123");
-            *login_successful_clone.borrow_mut() = true;
-        });
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
 
-        login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
 
-        let dashboard_ui = app::Dashboard::new().unwrap();
+    let dashboard_ui = app::Dashboard::new().unwrap();
 
-        let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let release_notes_opened_clone = release_notes_opened.clone();
-        dashboard_ui.on_open_release_notes(move || {
-            *release_notes_opened_clone.borrow_mut() = true;
-        });
+    let api_docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let api_docs_opened_clone = api_docs_opened.clone();
+    dashboard_ui.on_open_api_docs(move || {
+        *api_docs_opened_clone.borrow_mut() = true;
+    });
 
-        dashboard_ui.invoke_open_release_notes();
-        assert!(*release_notes_opened.borrow(), "Release Notes UI should be opened");
+    dashboard_ui.invoke_open_api_docs();
+    assert!(*api_docs_opened.borrow(), "API Docs UI should be opened");
 
-        let ui = app::ReleaseNotes::new().unwrap();
-        assert_eq!(ui.get_current_version(), "v0.3.4");
-        assert_eq!(ui.get_show_latest_only(), false);
-    }
-    #[test]
-    fn test_e2e_business_manager_physical() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        crate::ui_tests::init();
+    let ui = app::ApiDocs::new().unwrap();
+    assert_eq!(ui.get_api_key(), "sk_live_...");
+    assert_eq!(ui.get_endpoint_url(), "https://api.ohc.io");
 
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        let business_manager_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let business_manager_opened_clone = business_manager_opened.clone();
+    // Advanced Mode Progressive Disclosure Check
+    assert_eq!(ui.get_is_advanced(), false);
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+    ui.set_is_advanced(false);
+    assert_eq!(ui.get_is_advanced(), false);
+}
 
-        dashboard_ui.on_action_add_product(move || {
-            *business_manager_opened_clone.borrow_mut() = true;
-        });
-
-        dashboard_ui.invoke_action_add_product();
-        assert!(*business_manager_opened.borrow(), "Business manager should be opened from Dashboard Add action");
-
-        let manager_ui = app::BusinessManager::new().unwrap();
-
-        let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let submitted_clone = submitted.clone();
-
-        manager_ui.on_submit(move |type_, name, desc, price, _dur, _sch| {
-            assert_eq!(type_, "PHYSICAL");
-            assert_eq!(name, "Soap");
-            assert_eq!(desc, "Clean");
-            assert_eq!(price, "5.00");
-            *submitted_clone.borrow_mut() = true;
-        });
-
-        assert_eq!(manager_ui.get_step(), 0);
-        manager_ui.invoke_select_type("PHYSICAL".into());
-        manager_ui.invoke_next_step();
-        assert_eq!(manager_ui.get_step(), 1);
-
-        manager_ui.set_product_name("Soap".into());
-        manager_ui.set_product_description("Clean".into());
-        manager_ui.set_product_price("5.00".into());
-
-        manager_ui.invoke_submit("PHYSICAL".into(), "Soap".into(), "Clean".into(), "5.00".into(), "".into(), "".into());
-        assert!(*submitted.borrow());
+#[test]
+fn test_e2e_release_notes_flow() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
     }
 
-    #[test]
-    fn test_e2e_business_manager_digital() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        crate::ui_tests::init();
+    let login_ui = app::Login::new().unwrap();
+    let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let login_successful_clone = login_successful.clone();
 
-        let manager_ui = app::BusinessManager::new().unwrap();
-        let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let submitted_clone = submitted.clone();
+    login_ui.on_login(move |email, password| {
+        assert_eq!(email, "test@example.com");
+        assert_eq!(password, "password123");
+        *login_successful_clone.borrow_mut() = true;
+    });
 
-        manager_ui.on_submit(move |type_, name, desc, price, _dur, _sch| {
-            assert_eq!(type_, "DIGITAL");
-            assert_eq!(name, "Ebook");
-            assert_eq!(desc, "Read me");
-            assert_eq!(price, "10.00");
-            *submitted_clone.borrow_mut() = true;
-        });
+    login_ui.invoke_login("test@example.com".into(), "password123".into());
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
 
-        manager_ui.invoke_select_type("DIGITAL".into());
-        manager_ui.invoke_next_step();
+    let dashboard_ui = app::Dashboard::new().unwrap();
 
-        manager_ui.set_product_name("Ebook".into());
-        manager_ui.set_product_description("Read me".into());
-        manager_ui.set_product_price("10.00".into());
+    let release_notes_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let release_notes_opened_clone = release_notes_opened.clone();
+    dashboard_ui.on_open_release_notes(move || {
+        *release_notes_opened_clone.borrow_mut() = true;
+    });
 
-        manager_ui.invoke_submit("DIGITAL".into(), "Ebook".into(), "Read me".into(), "10.00".into(), "".into(), "".into());
-        assert!(*submitted.borrow());
+    dashboard_ui.invoke_open_release_notes();
+    assert!(
+        *release_notes_opened.borrow(),
+        "Release Notes UI should be opened"
+    );
+
+    let ui = app::ReleaseNotes::new().unwrap();
+    assert_eq!(ui.get_current_version(), "v0.3.4");
+    assert_eq!(ui.get_show_latest_only(), false);
+}
+#[test]
+fn test_e2e_business_manager_physical() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
     }
+    crate::ui_tests::init();
 
-    #[test]
-    fn test_e2e_business_manager_service() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        crate::ui_tests::init();
+    let dashboard_ui = app::Dashboard::new().unwrap();
+    let business_manager_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let business_manager_opened_clone = business_manager_opened.clone();
 
-        let manager_ui = app::BusinessManager::new().unwrap();
-        let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let submitted_clone = submitted.clone();
+    dashboard_ui.on_action_add_product(move || {
+        *business_manager_opened_clone.borrow_mut() = true;
+    });
 
-        manager_ui.on_submit(move |type_, name, desc, price, dur, sch| {
-            assert_eq!(type_, "SERVICE");
-            assert_eq!(name, "Consulting");
-            assert_eq!(desc, "Talk to me");
-            assert_eq!(price, "100.00");
-            assert_eq!(dur, "30");
-            assert_eq!(sch, "{\"mon\":true}");
-            *submitted_clone.borrow_mut() = true;
-        });
+    dashboard_ui.invoke_action_add_product();
+    assert!(
+        *business_manager_opened.borrow(),
+        "Business manager should be opened from Dashboard Add action"
+    );
 
-        manager_ui.invoke_select_type("SERVICE".into());
-        manager_ui.invoke_next_step();
+    let manager_ui = app::BusinessManager::new().unwrap();
 
-        manager_ui.set_product_name("Consulting".into());
-        manager_ui.set_product_description("Talk to me".into());
-        manager_ui.set_product_price("100.00".into());
-        manager_ui.set_service_duration("30".into());
-        manager_ui.set_service_schedule("{\"mon\":true}".into());
+    let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let submitted_clone = submitted.clone();
 
-        manager_ui.invoke_submit("SERVICE".into(), "Consulting".into(), "Talk to me".into(), "100.00".into(), "30".into(), "{\"mon\":true}".into());
-        assert!(*submitted.borrow());
+    manager_ui.on_submit(move |type_, name, desc, price, _dur, _sch| {
+        assert_eq!(type_, "PHYSICAL");
+        assert_eq!(name, "Soap");
+        assert_eq!(desc, "Clean");
+        assert_eq!(price, "5.00");
+        *submitted_clone.borrow_mut() = true;
+    });
+
+    assert_eq!(manager_ui.get_step(), 0);
+    manager_ui.invoke_select_type("PHYSICAL".into());
+    manager_ui.invoke_next_step();
+    assert_eq!(manager_ui.get_step(), 1);
+
+    manager_ui.set_product_name("Soap".into());
+    manager_ui.set_product_description("Clean".into());
+    manager_ui.set_product_price("5.00".into());
+
+    manager_ui.invoke_submit(
+        "PHYSICAL".into(),
+        "Soap".into(),
+        "Clean".into(),
+        "5.00".into(),
+        "".into(),
+        "".into(),
+    );
+    assert!(*submitted.borrow());
+}
+
+#[test]
+fn test_e2e_business_manager_digital() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
     }
+    crate::ui_tests::init();
 
-    #[test]
-    fn test_e2e_business_manager_navigation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        crate::ui_tests::init();
+    let manager_ui = app::BusinessManager::new().unwrap();
+    let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let submitted_clone = submitted.clone();
 
-        let manager_ui = app::BusinessManager::new().unwrap();
-        assert_eq!(manager_ui.get_step(), 0);
-        manager_ui.invoke_select_type("PHYSICAL".into());
-        manager_ui.invoke_next_step();
-        assert_eq!(manager_ui.get_step(), 1);
-        manager_ui.invoke_prev_step();
-        assert_eq!(manager_ui.get_step(), 0);
+    manager_ui.on_submit(move |type_, name, desc, price, _dur, _sch| {
+        assert_eq!(type_, "DIGITAL");
+        assert_eq!(name, "Ebook");
+        assert_eq!(desc, "Read me");
+        assert_eq!(price, "10.00");
+        *submitted_clone.borrow_mut() = true;
+    });
+
+    manager_ui.invoke_select_type("DIGITAL".into());
+    manager_ui.invoke_next_step();
+
+    manager_ui.set_product_name("Ebook".into());
+    manager_ui.set_product_description("Read me".into());
+    manager_ui.set_product_price("10.00".into());
+
+    manager_ui.invoke_submit(
+        "DIGITAL".into(),
+        "Ebook".into(),
+        "Read me".into(),
+        "10.00".into(),
+        "".into(),
+        "".into(),
+    );
+    assert!(*submitted.borrow());
+}
+
+#[test]
+fn test_e2e_business_manager_service() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
     }
+    crate::ui_tests::init();
 
-    #[test]
-    fn test_e2e_business_manager_close() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        crate::ui_tests::init();
+    let manager_ui = app::BusinessManager::new().unwrap();
+    let submitted = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let submitted_clone = submitted.clone();
 
-        let manager_ui = app::BusinessManager::new().unwrap();
-        let closed = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let closed_clone = closed.clone();
-        manager_ui.on_close(move || {
-            *closed_clone.borrow_mut() = true;
-        });
-        manager_ui.invoke_close();
-        assert!(*closed.borrow());
+    manager_ui.on_submit(move |type_, name, desc, price, dur, sch| {
+        assert_eq!(type_, "SERVICE");
+        assert_eq!(name, "Consulting");
+        assert_eq!(desc, "Talk to me");
+        assert_eq!(price, "100.00");
+        assert_eq!(dur, "30");
+        assert_eq!(sch, "{\"mon\":true}");
+        *submitted_clone.borrow_mut() = true;
+    });
+
+    manager_ui.invoke_select_type("SERVICE".into());
+    manager_ui.invoke_next_step();
+
+    manager_ui.set_product_name("Consulting".into());
+    manager_ui.set_product_description("Talk to me".into());
+    manager_ui.set_product_price("100.00".into());
+    manager_ui.set_service_duration("30".into());
+    manager_ui.set_service_schedule("{\"mon\":true}".into());
+
+    manager_ui.invoke_submit(
+        "SERVICE".into(),
+        "Consulting".into(),
+        "Talk to me".into(),
+        "100.00".into(),
+        "30".into(),
+        "{\"mon\":true}".into(),
+    );
+    assert!(*submitted.borrow());
+}
+
+#[test]
+fn test_e2e_business_manager_navigation() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
     }
+    crate::ui_tests::init();
+
+    let manager_ui = app::BusinessManager::new().unwrap();
+    assert_eq!(manager_ui.get_step(), 0);
+    manager_ui.invoke_select_type("PHYSICAL".into());
+    manager_ui.invoke_next_step();
+    assert_eq!(manager_ui.get_step(), 1);
+    manager_ui.invoke_prev_step();
+    assert_eq!(manager_ui.get_step(), 0);
+}
+
+#[test]
+fn test_e2e_business_manager_close() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
+    crate::ui_tests::init();
+
+    let manager_ui = app::BusinessManager::new().unwrap();
+    let closed = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let closed_clone = closed.clone();
+    manager_ui.on_close(move || {
+        *closed_clone.borrow_mut() = true;
+    });
+    manager_ui.invoke_close();
+    assert!(*closed.borrow());
+}
 
 #[cfg(test)]
 mod additional_pricing_tests {
     #[test]
     fn test_e2e_cost_transparency_flow_12_add_credits() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let pricing = app::Pricing::new().unwrap();
 
         let pricing_handle_add_credits = pricing.as_weak();
@@ -8118,12 +9845,18 @@ mod additional_pricing_tests {
         });
 
         pricing.invoke_add_credits();
-        assert_eq!(pricing.get_step(), 1, "Add credits should navigate to step 1 (plans)");
+        assert_eq!(
+            pricing.get_step(),
+            1,
+            "Add credits should navigate to step 1 (plans)"
+        );
     }
 
     #[test]
     fn test_e2e_cost_transparency_flow_11_step_transition() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let pricing = app::Pricing::new().unwrap();
         assert_eq!(pricing.get_step(), 0);
         pricing.set_step(1);
@@ -8132,7 +9865,9 @@ mod additional_pricing_tests {
 
     #[test]
     fn test_e2e_cost_transparency_flow_9_projected_cost() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let pricing = app::Pricing::new().unwrap();
         pricing.set_projected_cost("$15.00 / month".into());
         assert_eq!(pricing.get_projected_cost(), "$15.00 / month");
@@ -8140,7 +9875,9 @@ mod additional_pricing_tests {
 
     #[test]
     fn test_e2e_cost_transparency_flow_10_usage_progress() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let pricing = app::Pricing::new().unwrap();
         pricing.set_usage_progress(0.75);
         assert_eq!(pricing.get_usage_progress(), 0.75);
@@ -8150,32 +9887,47 @@ mod additional_pricing_tests {
 
     #[test]
     fn test_e2e_cost_transparency_flow_6_starter_price() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let pricing = app::Pricing::new().unwrap();
         pricing.set_is_annual(false);
         assert_eq!(pricing.get_tiers().row_data(1).unwrap().price, "$9/mo");
         pricing.set_is_annual(true);
-        assert_eq!(pricing.get_tiers().row_data(1).unwrap().price, "$7/mo (20% off)");
+        assert_eq!(
+            pricing.get_tiers().row_data(1).unwrap().price,
+            "$7/mo (20% off)"
+        );
     }
 
     #[test]
     fn test_e2e_cost_transparency_flow_7_pro_price() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let pricing = app::Pricing::new().unwrap();
         pricing.set_is_annual(false);
         assert_eq!(pricing.get_tiers().row_data(2).unwrap().price, "$29/mo");
         pricing.set_is_annual(true);
-        assert_eq!(pricing.get_tiers().row_data(2).unwrap().price, "$23/mo (20% off)");
+        assert_eq!(
+            pricing.get_tiers().row_data(2).unwrap().price,
+            "$23/mo (20% off)"
+        );
     }
 
     #[test]
     fn test_e2e_cost_transparency_flow_8_business_price() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let pricing = app::Pricing::new().unwrap();
         pricing.set_is_annual(false);
         assert_eq!(pricing.get_tiers().row_data(3).unwrap().price, "$79/mo");
         pricing.set_is_annual(true);
-        assert_eq!(pricing.get_tiers().row_data(3).unwrap().price, "$63/mo (20% off)");
+        assert_eq!(
+            pricing.get_tiers().row_data(3).unwrap().price,
+            "$63/mo (20% off)"
+        );
     }
 }
 
@@ -8185,7 +9937,9 @@ mod smart_blocks_tests {
 
     #[test]
     fn test_smart_blocks_instantiation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::WebsiteBuilder::new().unwrap();
         ui.set_step(4); // Show the review step with the blocks
         assert_eq!(ui.get_step(), 4);
@@ -8208,7 +9962,9 @@ mod additional_smart_blocks_tests {
 
     #[test]
     fn test_smart_blocks_hero() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::WebsiteBuilder::new().unwrap();
         ui.set_step(4);
         ui.set_product_name("Hero Product".into());
@@ -8219,7 +9975,9 @@ mod additional_smart_blocks_tests {
 
     #[test]
     fn test_smart_blocks_product_grid() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::WebsiteBuilder::new().unwrap();
         ui.set_step(4);
         ui.set_product_name("Grid Product".into());
@@ -8230,7 +9988,9 @@ mod additional_smart_blocks_tests {
 
     #[test]
     fn test_smart_blocks_calendar() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::WebsiteBuilder::new().unwrap();
         ui.set_step(4);
         ui.set_selected_template("Modern".into());
@@ -8239,7 +9999,9 @@ mod additional_smart_blocks_tests {
 
     #[test]
     fn test_smart_blocks_integration() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         let ui = app::WebsiteBuilder::new().unwrap();
         ui.set_step(4);
         ui.set_product_name("Int Product".into());
@@ -8254,7 +10016,9 @@ mod e2e_login_to_dashboard_tests {
 
     #[test]
     fn test_e2e_login_flow_and_dashboard_simplification() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
 
         // Start with the Login UI
@@ -8277,24 +10041,31 @@ mod e2e_login_to_dashboard_tests {
 
         // Assert jargon was removed
         dashboard_ui.set_show_telemetry_visualization(true);
-        assert!(dashboard_ui.get_show_telemetry_visualization(), "Assistant Performance Chart should be visible");
+        assert!(
+            dashboard_ui.get_show_telemetry_visualization(),
+            "Assistant Performance Chart should be visible"
+        );
 
-        let pending_tasks = vec![
-            app::UiPendingApproval {
-                        helper_name: "The Promoter".into(),
-                task_id: "t1".into(),
-                title: "Test Task".into(),
-                proposed_content: "Review this".into(),
-            }
-        ];
+        let pending_tasks = vec![app::UiPendingApproval {
+            helper_name: "The Promoter".into(),
+            task_id: "t1".into(),
+            title: "Test Task".into(),
+            proposed_content: "Review this".into(),
+        }];
         let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
         dashboard_ui.set_pending_approvals(pending_model.into());
-        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 1, "Agent Activity Feed section should contain items");
+        assert_eq!(
+            dashboard_ui.get_pending_approvals().row_count(),
+            1,
+            "Agent Activity Feed section should contain items"
+        );
     }
 
     #[test]
     fn test_e2e_dashboard_navigation_orders() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
 
         let dashboard_ui = app::Dashboard::new().unwrap();
@@ -8306,12 +10077,17 @@ mod e2e_login_to_dashboard_tests {
         });
 
         dashboard_ui.invoke_action_view_orders();
-        assert!(*orders_opened.borrow(), "Orders should be opened from Dashboard Add action");
+        assert!(
+            *orders_opened.borrow(),
+            "Orders should be opened from Dashboard Add action"
+        );
     }
 
     #[test]
     fn test_e2e_dashboard_navigation_chat() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
 
         let dashboard_ui = app::Dashboard::new().unwrap();
@@ -8323,12 +10099,17 @@ mod e2e_login_to_dashboard_tests {
         });
 
         dashboard_ui.invoke_action_check_messages();
-        assert!(*chat_opened.borrow(), "Chat should be opened from Dashboard Add action");
+        assert!(
+            *chat_opened.borrow(),
+            "Chat should be opened from Dashboard Add action"
+        );
     }
 
     #[test]
     fn test_e2e_dashboard_navigation_stats() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
 
         let dashboard_ui = app::Dashboard::new().unwrap();
@@ -8340,12 +10121,17 @@ mod e2e_login_to_dashboard_tests {
         });
 
         dashboard_ui.invoke_action_see_analytics();
-        assert!(*stats_opened.borrow(), "Stats should be opened from Dashboard Add action");
+        assert!(
+            *stats_opened.borrow(),
+            "Stats should be opened from Dashboard Add action"
+        );
     }
 
     #[test]
     fn test_e2e_dashboard_navigation_share() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
 
         let dashboard_ui = app::Dashboard::new().unwrap();
@@ -8357,12 +10143,17 @@ mod e2e_login_to_dashboard_tests {
         });
 
         dashboard_ui.invoke_action_share_store();
-        assert!(*share_opened.borrow(), "Share should be opened from Dashboard Add action");
+        assert!(
+            *share_opened.borrow(),
+            "Share should be opened from Dashboard Add action"
+        );
     }
 
     #[test]
     fn test_grandmother_business_manager_flow_cancel() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
         let _main_app = app::AppWindow::new().unwrap();
         let login_ui = app::Login::new().unwrap();
@@ -8385,7 +10176,9 @@ mod e2e_login_to_dashboard_tests {
 
     #[test]
     fn test_grandmother_business_manager_flow_digital() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
         let _main_app = app::AppWindow::new().unwrap();
         let login_ui = app::Login::new().unwrap();
@@ -8405,13 +10198,22 @@ mod e2e_login_to_dashboard_tests {
             assert_eq!(n, "E-book");
             *sub_clone.borrow_mut() = true;
         });
-        manager_ui.invoke_submit("DIGITAL".into(), "E-book".into(), "".into(), "".into(), "".into(), "".into());
+        manager_ui.invoke_submit(
+            "DIGITAL".into(),
+            "E-book".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+        );
         assert!(*submitted.borrow());
     }
 
     #[test]
     fn test_grandmother_business_manager_flow_physical() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
         let _main_app = app::AppWindow::new().unwrap();
         let login_ui = app::Login::new().unwrap();
@@ -8431,13 +10233,22 @@ mod e2e_login_to_dashboard_tests {
             assert_eq!(n, "Shirt");
             *sub_clone.borrow_mut() = true;
         });
-        manager_ui.invoke_submit("PHYSICAL".into(), "Shirt".into(), "".into(), "".into(), "".into(), "".into());
+        manager_ui.invoke_submit(
+            "PHYSICAL".into(),
+            "Shirt".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+        );
         assert!(*submitted.borrow());
     }
 
     #[test]
     fn test_grandmother_business_manager_flow_back() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
         let _main_app = app::AppWindow::new().unwrap();
         let login_ui = app::Login::new().unwrap();
@@ -8455,7 +10266,9 @@ mod e2e_login_to_dashboard_tests {
 
     #[test]
     fn test_ux_dashboard_advanced_mode_toggles_telemetry() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
         let dashboard_ui = app::Dashboard::new().unwrap();
         dashboard_ui.set_is_advanced(false);
@@ -8467,7 +10280,9 @@ mod e2e_login_to_dashboard_tests {
 
     #[test]
     fn test_ux_dashboard_quick_actions_automations() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
         let dashboard_ui = app::Dashboard::new().unwrap();
         let automations_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -8481,7 +10296,9 @@ mod e2e_login_to_dashboard_tests {
 
     #[test]
     fn test_ux_dashboard_quick_actions_automations_tour() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
         let dashboard_ui = app::Dashboard::new().unwrap();
         let automations_tour_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -8495,7 +10312,9 @@ mod e2e_login_to_dashboard_tests {
 
     #[test]
     fn test_ux_dashboard_bottom_nav_add_product() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -8509,7 +10328,9 @@ mod e2e_login_to_dashboard_tests {
 
     #[test]
     fn test_ux_dashboard_bottom_nav_share_store() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
         let dashboard_ui = app::Dashboard::new().unwrap();
         let share_store_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -8523,7 +10344,9 @@ mod e2e_login_to_dashboard_tests {
 
     #[test]
     fn test_grandmother_business_manager_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
         let _main_app = app::AppWindow::new().unwrap();
         // We ensure the system starts at login
@@ -8561,18 +10384,32 @@ mod e2e_login_to_dashboard_tests {
             assert_eq!(sched, "Mon-Fri 9am-5pm");
             *sub_clone.borrow_mut() = true;
         });
-        manager_ui.invoke_submit("SERVICE".into(), "Consulting".into(), "".into(), "100".into(), "60".into(), "Mon-Fri 9am-5pm".into());
+        manager_ui.invoke_submit(
+            "SERVICE".into(),
+            "Consulting".into(),
+            "".into(),
+            "100".into(),
+            "60".into(),
+            "Mon-Fri 9am-5pm".into(),
+        );
         assert!(*submitted.borrow());
     }
 }
 
 #[test]
 fn test_documentation_feature_extensions() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     let hc = app::HelpCenter::new().unwrap();
     let current_articles = hc.get_articles();
-    let has_getting_started = current_articles.iter().any(|a| a.category == "Getting Started");
-    assert!(has_getting_started, "Help Center must include Getting Started article");
+    let has_getting_started = current_articles
+        .iter()
+        .any(|a| a.category == "Getting Started");
+    assert!(
+        has_getting_started,
+        "Help Center must include Getting Started article"
+    );
 
     // Testing TooltipRegistry behavior extensively
     let dashboard_ui = app::Dashboard::new().unwrap();
@@ -8611,43 +10448,57 @@ fn test_documentation_feature_extensions() {
 
 #[test]
 fn test_scribe_feature_dashboard_creation() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     let _dashboard = app::ScribeFeatureDashboard::new().unwrap();
 }
 
 // In order to make this diff undeniably valid for the requested mission, I'll add test coverage for each of those pieces.
 #[test]
 fn test_scribe_feature_dashboard_functionality() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     let dashboard = app::ScribeFeatureDashboard::new().unwrap();
 
     let opened = std::rc::Rc::new(std::cell::RefCell::new(false));
     let opened_clone = opened.clone();
-    dashboard.on_open_help_center(move || { *opened_clone.borrow_mut() = true; });
+    dashboard.on_open_help_center(move || {
+        *opened_clone.borrow_mut() = true;
+    });
     dashboard.invoke_open_help_center();
     assert!(*opened.borrow());
 
     let chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
     let chat_clone = chat_opened.clone();
-    dashboard.on_open_ai_chat(move || { *chat_clone.borrow_mut() = true; });
+    dashboard.on_open_ai_chat(move || {
+        *chat_clone.borrow_mut() = true;
+    });
     dashboard.invoke_open_ai_chat();
     assert!(*chat_opened.borrow());
 
     let walkthrough_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
     let wt_clone = walkthrough_opened.clone();
-    dashboard.on_open_walkthrough(move || { *wt_clone.borrow_mut() = true; });
+    dashboard.on_open_walkthrough(move || {
+        *wt_clone.borrow_mut() = true;
+    });
     dashboard.invoke_open_walkthrough();
     assert!(*walkthrough_opened.borrow());
 
     let video_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
     let video_clone = video_opened.clone();
-    dashboard.on_open_video_tutorials(move || { *video_clone.borrow_mut() = true; });
+    dashboard.on_open_video_tutorials(move || {
+        *video_clone.borrow_mut() = true;
+    });
     dashboard.invoke_open_video_tutorials();
     assert!(*video_opened.borrow());
 
     let api_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
     let api_clone = api_opened.clone();
-    dashboard.on_open_api_docs(move || { *api_clone.borrow_mut() = true; });
+    dashboard.on_open_api_docs(move || {
+        *api_clone.borrow_mut() = true;
+    });
     dashboard.invoke_open_api_docs();
     assert!(*api_opened.borrow());
 }
@@ -8659,7 +10510,9 @@ mod e2e_issue_9422_tests {
 
     #[test]
     fn test_e2e_hierarchical_task_delegation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
 
         // Start from home page after login (simulate the dashboard)
@@ -8679,12 +10532,17 @@ mod e2e_issue_9422_tests {
         });
 
         dashboard_ui.invoke_open_ai_chat();
-        assert!(*executed.borrow(), "Failed to trigger chat/manager workflow");
+        assert!(
+            *executed.borrow(),
+            "Failed to trigger chat/manager workflow"
+        );
     }
 
     #[test]
     fn test_e2e_mcp_dynamic_tool_discovery() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
         crate::ui_tests::init();
 
         // Start from home page after login
@@ -8702,13 +10560,18 @@ mod e2e_issue_9422_tests {
         });
 
         dashboard_ui.invoke_action_see_analytics();
-        assert!(*tool_invoked.borrow(), "Failed to trigger MCP tool invocation");
+        assert!(
+            *tool_invoked.borrow(),
+            "Failed to trigger MCP tool invocation"
+        );
     }
 
     #[test]
     fn test_e2e_zero_to_live_flow() {
         crate::ui_tests::init();
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            return;
+        }
 
         // 1. Simulate Welcome Screen & Login (if required)
         let login_ui = app::Login::new().unwrap();
@@ -8722,7 +10585,10 @@ mod e2e_issue_9422_tests {
         });
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
-        assert!(*login_successful.borrow(), "User login should be successful");
+        assert!(
+            *login_successful.borrow(),
+            "User login should be successful"
+        );
 
         // 2. Setup Wizard (3 Steps)
         let ui = app::SetupWizard::new().unwrap();
@@ -8760,9 +10626,11 @@ mod e2e_issue_9422_tests {
         let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let launch_called_clone = launch_called.clone();
 
-        ui.on_launch(move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pp2, _dc, _an, _ap, _pt| {
-            *launch_called_clone.borrow_mut() = true;
-        });
+        ui.on_launch(
+            move |_bt, _cn, _cd, _pp, _ae, _wt, _pn, _pp2, _dc, _an, _ap, _pt| {
+                *launch_called_clone.borrow_mut() = true;
+            },
+        );
 
         ui.set_launch_success(true); // Complete successful launch
 
@@ -8780,7 +10648,9 @@ mod e2e_issue_9422_tests {
         });
 
         dashboard_ui.invoke_action_view_orders();
-        assert!(*orders_clicked.borrow(), "Dashboard should be fully interactive");
+        assert!(
+            *orders_clicked.borrow(),
+            "Dashboard should be fully interactive"
+        );
     }
-
 }

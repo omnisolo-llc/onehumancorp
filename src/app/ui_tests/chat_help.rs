@@ -1,27 +1,35 @@
 use crate::app;
 use slint::Model;
 
-fn create() -> app::AiHelpChat { crate::ui_tests::init(); app::AiHelpChat::new().unwrap() }
+fn create() -> app::AiHelpChat {
+    crate::ui_tests::init();
+    app::AiHelpChat::new().unwrap()
+}
 
 // --- Specialized / Flow Tests ---
 
-#[test] fn chat_help_flow_send_callback() {
+#[test]
+fn chat_help_flow_send_callback() {
     let ui = create();
     let called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c = called.clone();
-    ui.on_send_message(move || { *c.borrow_mut() = true; });
+    ui.on_send_message(move || {
+        *c.borrow_mut() = true;
+    });
     ui.invoke_send_message();
     assert!(*called.borrow());
 }
 
-#[test] fn chat_help_xss_input() {
+#[test]
+fn chat_help_xss_input() {
     let ui = create();
     let xss = "<script>alert('chat_help')</script>";
     ui.set_user_input(xss.into());
     assert_eq!(ui.get_user_input(), xss);
 }
 
-#[test] fn chat_help_injection_input() {
+#[test]
+fn chat_help_injection_input() {
     let ui = create();
     let inj = "Help'); DROP TABLE history; --";
     ui.set_user_input(inj.into());
@@ -45,7 +53,9 @@ fn create_verify_user_input() {
 
 #[test]
 fn test_e2e_ai_help_chat_ask_anything_button_click() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
 
     let login_ui = app::Login::new().unwrap();
@@ -57,7 +67,10 @@ fn test_e2e_ai_help_chat_ask_anything_button_click() {
     });
 
     login_ui.invoke_login("test@example.com".into(), "password123".into());
-    assert!(*login_successful.borrow(), "User login should be successful");
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
 
     let dashboard_ui = app::Dashboard::new().unwrap();
     let ai_chat_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -68,12 +81,17 @@ fn test_e2e_ai_help_chat_ask_anything_button_click() {
     });
 
     dashboard_ui.invoke_open_ai_chat();
-    assert!(*ai_chat_opened.borrow(), "AI Chat should be opened from Dashboard");
+    assert!(
+        *ai_chat_opened.borrow(),
+        "AI Chat should be opened from Dashboard"
+    );
 }
 
 #[test]
 fn test_e2e_ai_help_chat_send_message_updates_ui() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
 
     let login_ui = app::Login::new().unwrap();
@@ -85,7 +103,10 @@ fn test_e2e_ai_help_chat_send_message_updates_ui() {
     });
 
     login_ui.invoke_login("test@example.com".into(), "password123".into());
-    assert!(*login_successful.borrow(), "User login should be successful");
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
 
     let ui = app::AiHelpChat::new().unwrap();
     ui.set_user_input("Testing input".into());
@@ -102,7 +123,9 @@ fn test_e2e_ai_help_chat_send_message_updates_ui() {
 
 #[test]
 fn test_e2e_ai_help_chat_open_article_link() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
 
     let login_ui = app::Login::new().unwrap();
@@ -114,7 +137,10 @@ fn test_e2e_ai_help_chat_open_article_link() {
     });
 
     login_ui.invoke_login("test@example.com".into(), "password123".into());
-    assert!(*login_successful.borrow(), "User login should be successful");
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
 
     let ui = app::AiHelpChat::new().unwrap();
 
@@ -132,7 +158,9 @@ fn test_e2e_ai_help_chat_open_article_link() {
 
 #[test]
 fn test_e2e_ai_help_chat_message_list_verification() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
 
     let login_ui = app::Login::new().unwrap();
@@ -144,7 +172,10 @@ fn test_e2e_ai_help_chat_message_list_verification() {
     });
 
     login_ui.invoke_login("test@example.com".into(), "password123".into());
-    assert!(*login_successful.borrow(), "User login should be successful");
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
 
     let ui = app::AiHelpChat::new().unwrap();
 
@@ -165,7 +196,9 @@ fn test_e2e_ai_help_chat_message_list_verification() {
 
 #[test]
 fn test_e2e_ai_help_chat_initial_message_content() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     crate::ui_tests::init();
 
     let login_ui = app::Login::new().unwrap();
@@ -177,7 +210,10 @@ fn test_e2e_ai_help_chat_initial_message_content() {
     });
 
     login_ui.invoke_login("test@example.com".into(), "password123".into());
-    assert!(*login_successful.borrow(), "User login should be successful");
+    assert!(
+        *login_successful.borrow(),
+        "User login should be successful"
+    );
 
     let ui = app::AiHelpChat::new().unwrap();
 
