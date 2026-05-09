@@ -35,6 +35,7 @@ pub struct CostAuditor {
     llm_cost_counter: Counter<f64>,
     storage_savings_counter: Counter<f64>,
     compute_cost_counter: Counter<f64>,
+    caching_savings_counter: Counter<f64>,
 }
 
 impl CostAuditor {
@@ -43,6 +44,7 @@ impl CostAuditor {
         let llm_cost_counter = meter.f64_counter("ohc_llm_cost_total").build();
         let storage_savings_counter = meter.f64_counter("ohc_storage_savings_total").build();
         let compute_cost_counter = meter.f64_counter("ohc_compute_cost_total").build();
+        let caching_savings_counter = meter.f64_counter("ohc_caching_savings_total").build();
 
         CostAuditor {
             config,
@@ -59,6 +61,7 @@ impl CostAuditor {
             llm_cost_counter,
             storage_savings_counter,
             compute_cost_counter,
+            caching_savings_counter,
         }
     }
 
@@ -115,6 +118,19 @@ impl CostAuditor {
         let mut caching_savings = self.caching_savings.lock().unwrap();
         *caching_savings += saved_cost;
 
+        self.caching_savings_counter.add(saved_cost, &[]);
+
+        tokio::spawn(async move {
+            let pool = crate::db::get_pool();
+            let _ = crate::telemetry::buffer_metric(
+                &pool,
+                "ohc_caching_savings_total",
+                "counter",
+                saved_cost as f32,
+                serde_json::json!({})
+            ).await;
+        });
+
         saved_cost
     }
 
@@ -135,6 +151,17 @@ impl CostAuditor {
         *storage_savings += savings;
         
         self.storage_savings_counter.add(savings, &[]);
+
+        tokio::spawn(async move {
+            let pool = crate::db::get_pool();
+            let _ = crate::telemetry::buffer_metric(
+                &pool,
+                "ohc_storage_savings_total",
+                "counter",
+                savings as f32,
+                serde_json::json!({})
+            ).await;
+        });
 
         savings
     }
@@ -276,8 +303,8 @@ mod tests {
     use super::*;
     use crate::pricing::calculator::CostConfig;
 
-    #[test]
-    fn test_cost_auditor() {
+    #[tokio::test]
+    async fn test_cost_auditor() {
         let config = CostConfig {
             cost_per_input_token: 0.001,
             cost_per_output_token: 0.002,
@@ -308,8 +335,8 @@ mod tests {
         assert!(report.contains("OVER BUDGET"));
     }
 
-    #[test]
-    fn test_record_cache_hit() {
+    #[tokio::test]
+    async fn test_record_cache_hit() {
         let config = CostConfig {
             cost_per_input_token: 0.001,
             cost_per_output_token: 0.002,
@@ -331,8 +358,8 @@ mod tests {
         assert_eq!(auditor.get_total_savings(), savings);
     }
 
-    #[test]
-    fn test_record_storage_compression() {
+    #[tokio::test]
+    async fn test_record_storage_compression() {
         let config = CostConfig {
             cost_per_gb_month: 0.1,
             ..Default::default()

@@ -54,7 +54,7 @@ export component MyPlan inherits Window {
             VerticalBox {
                 padding: 16px;
                 spacing: 8px;
-                Text { text: "Current Plan"; font-family: "Inter"; color: #94a3b8; }
+                Text { text: "current plan"; font-family: "Inter"; color: #94a3b8; }
                 Text { text: tier; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; }
                 Text { text: plan_status; color: #22c55e; }
                 Text { text: "Renews on: " + renewal_date; color: #94a3b8; }
@@ -76,9 +76,9 @@ export component MyPlan inherits Window {
                 padding: 16px;
                 spacing: 8px;
                 Text { text: "Usage This Month"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
-                Text { text: "AI Actions: " + total_actions + " / " + action_limit; color: white; }
-                Text { text: "Storage Used: " + used_storage + " / " + limit_storage; color: white; }
-                Text { text: "Estimated Next Bill: " + estimated_bill; color: white; }
+                Text { text: "AI actions used this month: " + total_actions + " / " + action_limit; color: white; }
+                Text { text: "storage used: " + used_storage + " / " + limit_storage; color: white; }
+                Text { text: "estimated next bill: " + estimated_bill; color: white; }
 
                 Button { text: "View Cost Details"; height: 44px; clicked => { view_details(); } }
             }

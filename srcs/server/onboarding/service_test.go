@@ -22,6 +22,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			owner_email TEXT,
 			tier TEXT,
+			state TEXT,
 			name TEXT,
 			category TEXT,
 			description TEXT,

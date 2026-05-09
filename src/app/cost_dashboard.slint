@@ -31,8 +31,38 @@ export component CostDashboard inherits Window {
         HorizontalBox {
             Text { text: "Cost & AI Usage"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
+            Button { text: "Upgrade"; height: 44px; clicked => { refresh_data(); } }
             Button { text: "Refresh"; height: 44px; clicked => { refresh_data(); } }
         }
+
+        // Plan Summary Banner
+        GlassCard {
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+
+            HorizontalBox {
+                padding: 16px;
+                spacing: 16px;
+                VerticalBox {
+                    Text { text: "current plan"; color: #94a3b8; }
+                    Text { text: "Pro"; font-family: "Outfit"; font-weight: 700; color: white; }
+                }
+                VerticalBox {
+                    Text { text: "AI actions used this month"; color: #94a3b8; }
+                    Text { text: total_tokens; font-family: "Outfit"; font-weight: 700; color: white; }
+                }
+                VerticalBox {
+                    Text { text: "storage used"; color: #94a3b8; }
+                    Text { text: "1.2 GB"; font-family: "Outfit"; font-weight: 700; color: white; }
+                }
+                VerticalBox {
+                    Text { text: "estimated next bill"; color: #94a3b8; }
+                    Text { text: total_spend; font-family: "Outfit"; font-weight: 700; color: white; }
+                }
+            }
+        }
+
 
         // Summary Cards
         VerticalBox {

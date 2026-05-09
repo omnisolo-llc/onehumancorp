@@ -177,8 +177,26 @@ impl Tracker {
     }
 
     pub async fn get_subscription(&self, subscription_id: &str) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
+        let _ = crate::telemetry::record_api_call_cost(&crate::db::get_pool(), "system", "stripe_get_subscription", 0.01).await;
         if let Some(ref client) = self.stripe_client {
             client.get_subscription(subscription_id).await
+        } else {
+            Err("Stripe client not configured".to_string())
+        }
+    }
+
+
+    pub async fn create_checkout_session(&self, price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
+        let payment_method = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount_usd);
+
+        let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount_usd);
+        if savings > 0.0 {
+            tracing::info!("Transaction optimization realized ${:.2} by using ACH over default", savings);
+            let _ = crate::telemetry::buffer_metric(&crate::db::get_pool(), "ohc_payment_routing_savings", "counter", savings as f32, serde_json::json!({})).await;
+        }
+
+        if let Some(ref client) = self.stripe_client {
+            client.create_checkout_session(price_id, customer_id, Some(payment_method)).await
         } else {
             Err("Stripe client not configured".to_string())
         }
