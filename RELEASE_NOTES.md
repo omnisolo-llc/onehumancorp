@@ -1,3 +1,11 @@
+## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🗺️ Guide: [new onboarding feature] (#12919)
+
+### Privacy/Offline Improvements
+- 🗺️ Guide: [new onboarding feature] (#12919)
+
 ## v0.4.40 (Cloud) / v0.4.40+1 (Standalone)
 
 ### Cloud Scaling Improvements
