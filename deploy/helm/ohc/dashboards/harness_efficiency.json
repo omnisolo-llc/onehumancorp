@@ -24,6 +24,22 @@
   "panels": [
     {
       "type": "text",
+      "title": "",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "id": 999999,
+      "options": {
+        "content": "<style>\n.panel-container {\n  backdrop-filter: blur(20px) saturate(200%);\n  background-color: rgba(0, 0, 0, 0.2) !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "transparent": true
+    },
+    {
+      "type": "text",
       "title": "OHC Aesthetics",
       "gridPos": {
         "h": 2,
@@ -35,7 +51,10 @@
         "mode": "html",
         "content": "<style>.panel-container { backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>\n<style>\n  .grafana-app {\n      backdrop-filter: blur(15px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
       },
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdropFilter": "blur(20px) saturate(200%)"
+      }
     },
     {
       "type": "text",
@@ -50,7 +69,10 @@
         "mode": "html",
         "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(15px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n  .grafana-app {\n    background-color: #0b0c10 !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"padding: 20px; text-align: center;\">\n  <h1 style=\"color: #00d3ff; font-weight: 800; letter-spacing: 2px;\">HARNESS EFFICIENCY</h1>\n  <p style=\"color: #a9a9a9; font-size: 14px;\">Telemetry for Agent Harness Cloud vs Standalone Modes</p>\n</div>\n<style>\n  .grafana-app {\n      backdrop-filter: blur(15px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
       },
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdropFilter": "blur(20px) saturate(200%)"
+      }
     },
     {
       "datasource": {
@@ -142,7 +164,10 @@
       ],
       "title": "Harness Init Latency (P95)",
       "type": "timeseries",
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdropFilter": "blur(20px) saturate(200%)"
+      }
     },
     {
       "datasource": {
@@ -234,7 +259,10 @@
       ],
       "title": "Harness DB I/O Latency (P95)",
       "type": "timeseries",
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdropFilter": "blur(20px) saturate(200%)"
+      }
     }
   ],
   "schemaVersion": 38,

@@ -26,6 +26,22 @@
   "liveNow": false,
   "panels": [
     {
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "id": 999999,
+      "options": {
+        "content": "<style>\n.panel-container {\n  backdrop-filter: blur(20px) saturate(200%);\n  background-color: rgba(0, 0, 0, 0.2) !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "transparent": true
+    },
+    {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
@@ -106,7 +122,11 @@
         }
       ],
       "title": "OHC CPU Usage",
-      "type": "timeseries"
+      "type": "timeseries",
+      "style": {
+        "backdropFilter": "blur(20px) saturate(200%)"
+      },
+      "transparent": true
     },
     {
       "type": "text",
@@ -121,7 +141,11 @@
       "options": {
         "content": "<div style=\"backdrop-filter: blur(15px) saturate(200%); font-family: Outfit, Inter; padding: 10px; border-radius: 8px; color: #fff; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);\">OHC Premium Infrastructure Dashboard</div>",
         "mode": "html"
-      }
+      },
+      "style": {
+        "backdropFilter": "blur(20px) saturate(200%)"
+      },
+      "transparent": true
     }
   ],
   "refresh": false,

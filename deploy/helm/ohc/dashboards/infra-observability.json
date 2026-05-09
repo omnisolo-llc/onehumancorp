@@ -45,6 +45,22 @@
   "panels": [
     {
       "type": "text",
+      "title": "",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "id": 999999,
+      "options": {
+        "content": "<style>\n.panel-container {\n  backdrop-filter: blur(20px) saturate(200%);\n  background-color: rgba(0, 0, 0, 0.2) !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "transparent": true
+    },
+    {
+      "type": "text",
       "title": "OHC Aesthetics",
       "gridPos": {
         "h": 2,
@@ -56,7 +72,10 @@
         "mode": "html",
         "content": "<style>.panel-container { backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>\n<style>\n  .grafana-app {\n      backdrop-filter: blur(15px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
       },
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdropFilter": "blur(20px) saturate(200%)"
+      }
     },
     {
       "datasource": {
@@ -76,7 +95,10 @@
       },
       "pluginVersion": "10.0.0",
       "transparent": true,
-      "type": "text"
+      "type": "text",
+      "style": {
+        "backdropFilter": "blur(20px) saturate(200%)"
+      }
     },
     {
       "datasource": {
@@ -167,7 +189,10 @@
       ],
       "title": "API Request Rate (5m avg)",
       "type": "timeseries",
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdropFilter": "blur(20px) saturate(200%)"
+      }
     },
     {
       "datasource": {
@@ -258,7 +283,10 @@
       ],
       "title": "API Request Latency (5m avg)",
       "type": "timeseries",
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdropFilter": "blur(20px) saturate(200%)"
+      }
     }
   ],
   "refresh": "10s",

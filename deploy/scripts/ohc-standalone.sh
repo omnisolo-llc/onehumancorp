@@ -19,11 +19,11 @@ echo ""
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
-export TOKIO_WORKER_THREADS=2
-export RAYON_NUM_THREADS=2
+export TOKIO_WORKER_THREADS=${TOKIO_WORKER_THREADS:-2}
+export RAYON_NUM_THREADS=${RAYON_NUM_THREADS:-2}
 export OHC_STANDALONE=true
-export LOG_FORMAT="json"
-export LOG_LEVEL="info"
+export LOG_FORMAT=${LOG_FORMAT:-"json"}
+export LOG_LEVEL=${LOG_LEVEL:-"info"}
 export OHC_RUNTIME_DIR=".ohc/runtime"
 export OHC_MEMORY_DIR="${OHC_RUNTIME_DIR}/memory"
 export OHC_STATUS_DIR="${OHC_RUNTIME_DIR}/status"
@@ -69,6 +69,10 @@ echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 if [ "$OHC_TELEMETRY_ENABLED" = "true" ]; then
   docker rm -f ohc-prometheus-agent >/dev/null 2>&1 || true
   docker run -d --name ohc-prometheus-agent \
+    -e TOKIO_WORKER_THREADS=${TOKIO_WORKER_THREADS} \
+    -e RAYON_NUM_THREADS=${RAYON_NUM_THREADS} \
+    -e LOG_FORMAT=${LOG_FORMAT} \
+    -e LOG_LEVEL=${LOG_LEVEL} \
     --memory="64m" --cpus="0.05" \
     --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
     --network host \
