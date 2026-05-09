@@ -719,10 +719,9 @@ mod tests {
         });
         let start2 = std::time::Instant::now();
         let _res2 = service.get_dashboard(request2).await.unwrap().into_inner();
-        let elapsed2 = start2.elapsed();
+        let _elapsed2 = start2.elapsed();
 
         // The second call might be faster, but we just verify it works properly via caching
         // without panicking.
-        assert!(elapsed2.as_millis() >= 0);
     }
 }
