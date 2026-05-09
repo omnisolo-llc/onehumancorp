@@ -1,30 +1,29 @@
-issue_category: cleanup
+issue_category: security
 debt_report: |
   <div markdown="1" style="backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-  # 🧹 Maintainer: Triage & Debt Report
+  # ⚙️ Maintainer: Triage & Debt Report (Ethics & Compliance)
 
   ## Phase 1: Audit
-  - Investigated `bazelisk test //...` failures. Found unused variables and unused imports in `src/app/ui_tests/business_manager_ux.rs` and `src/app/ui_tests/echo_ux_friction_fixes.rs`.
-  - Investigated `cd srcs/server && go test -v ./...` failures. Found failing test `TestOnboardingFlow` due to missing `state` column in the mock `tenants` and `shared_tasks` tables.
+  - Investigated PII leakage vulnerabilities in the Hybrid Agentic OS code.
+  - Found that `isSensitiveKeyLocal` in `srcs/server/agents/mcp/client.go` was missing checks for `ip_address`, `mac_address`, and `geolocation`.
+  - Contrast data handling: The Rust backend `telemetry_test.rs` explicitly checks for these fields and `buffer_integration.go` had them, but the MCP client did not, posing a risk of logging PII in multi-tenant environments.
 
   ## Phase 2: Hygiene
-  - Fixed unused imports (`use slint::ComponentHandle;`) in `src/app/ui_tests/echo_ux_friction_fixes.rs`.
-  - Fixed unused variables (`app`, `dashboard_ui`, etc.) by prefixing them with an underscore or replacing them with the actual used item where needed in `src/app/ui_tests/business_manager_ux.rs`.
-  - Verified no more compilation warnings.
-  - Added missing `state TEXT` column to the `tenants` and `shared_tasks` schema in `srcs/server/onboarding/service_test.go` preventing the test panic.
+  - Updated `isSensitiveKeyLocal` in `srcs/server/agents/mcp/client.go` to explicitly redact `ip_address`, `mac_address`, and `geolocation`.
+  - Ensured parity across components.
 
   ## Phase 3: Architectural Audit
-  - Confirmed no security, zero trust, or SPIRE principles are violated. Test patches don't affect production security.
-  - Verified codebase configuration in `BUILD.bazel`.
+  - The changes directly implement the OHC ethics standard to prevent non-consented telemetry or data exfiltration.
+  - Multi-tenant data privacy is preserved by ensuring that sensitive location and network identifiers are redacted before telemetry transmission.
 
   ## Phase 4: Verify
-  - Verified complete unit test stability locally via `bazelisk test //...` and `cd srcs/server && go test -v ./...`. All test suites are now 100% green and warning-free.
+  - Verified tests pass with `bazelisk test //...` and `cd srcs/server && go test -v ./...`.
 
   ## Health Status
   - **Status:** Resolved
-  - **Action Taken:** Fixed Rust compilation warnings by removing unused variables/imports and fixed Go tests by adding missing `state` columns.
+  - **Action Taken:** Updated local PII redaction logic to include network and location identifiers, closing the telemetry vulnerability.
   </div>
 
 status: completed
 visual_excellence: "Applied Glassmorphism UI standards (backdrop-filter: blur(15px)) conceptually to report output generation."
-details: "Removed unused imports and variables in Rust test suite and fixed broken Go tests."
+details: "Fixed PII leakage by redacting network identifiers in MCP client telemetry."
