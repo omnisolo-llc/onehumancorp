@@ -1,9 +1,10 @@
 package onboarding
 
 import (
-	"encoding/json"
 	"context"
+	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 
@@ -112,13 +113,18 @@ func (h *APIHandler) HandleGetState(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
-// TenantAuthMiddleware extracts the X-Tenant-Id header and injects it into the request context.
-// In a real application, this would validate a session token, but this provides a secure extraction path.
+// TenantAuthMiddleware extracts the tenant ID from the Authorization Bearer token and injects it into the request context.
 func TenantAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := r.Header.Get("X-Tenant-Id")
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			http.Error(w, "Missing or invalid Authorization header", http.StatusUnauthorized)
+			return
+		}
+
+		tenantID := strings.TrimPrefix(authHeader, "Bearer ")
 		if tenantID == "" {
-			http.Error(w, "Missing X-Tenant-Id header", http.StatusUnauthorized)
+			http.Error(w, "Missing tenant ID in token", http.StatusUnauthorized)
 			return
 		}
 		// Inject into context

@@ -31,7 +31,7 @@ class ApiService {
         url,
         headers: {
           'Content-Type': 'application/json',
-          'X-Tenant-Id': tenantId,
+          'Authorization': 'Bearer $tenantId',
         },
         body: json.encode({'state': json.encode(state)}),
       );
@@ -48,7 +48,7 @@ class ApiService {
     try {
       final response = await http.get(
         url,
-        headers: {'X-Tenant-Id': tenantId},
+        headers: {'Authorization': 'Bearer $tenantId'},
       );
       if (response.statusCode == 200) {
         final body = json.decode(response.body);
