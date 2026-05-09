@@ -47,6 +47,7 @@ impl std::fmt::Display for DepartmentType {
 pub struct DepartmentConfig {
     pub tone_of_voice: String,
     pub auto_approve_limits: f64,
+    pub requires_review: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

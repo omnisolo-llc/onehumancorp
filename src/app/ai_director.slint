@@ -1,0 +1,98 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export struct UiDepartmentConfig {
+    id: string,
+    name: string,
+    requires_review: bool,
+}
+
+export component AiDirector inherits Window {
+    width: 600px;
+    height: 700px;
+    title: "My Team";
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    in property <[UiDepartmentConfig]> departments;
+    in-out property <string> intent_input: "";
+
+    callback submit_intent(string);
+    callback toggle_department_review(string);
+
+    VerticalBox {
+        spacing: 24px;
+        padding: 24px;
+
+        Text {
+            text: "My Team";
+            font-size: 32px;
+            font-family: "Outfit";
+            font-weight: 700;
+            color: white;
+        }
+
+        GlassCard {
+            padding: 16px;
+            VerticalBox {
+                spacing: 12px;
+                Text {
+                    text: "What do you want the team to do?";
+                    font-size: 16px;
+                    font-family: "Outfit";
+                    font-weight: 700;
+                    color: white;
+                }
+                Text {
+                    text: "E.g., 'Get me more cake orders for Valentine's Day', 'Draft a refund policy', or 'Update inventory for all items'.";
+                    font-size: 14px;
+                    font-family: "Inter";
+                    color: #cbd5e1;
+                    wrap: word-wrap;
+                }
+                HorizontalBox {
+                    spacing: 8px;
+                    LineEdit {
+                        placeholder-text: "Type your instruction here...";
+                        text <=> root.intent_input;
+                        height: 44px;
+                        accepted => { root.submit_intent(root.intent_input); root.intent_input = ""; }
+                    }
+                    Button {
+                        text: "Submit";
+                        height: 44px;
+                        clicked => { root.submit_intent(root.intent_input); root.intent_input = ""; }
+                    }
+                }
+            }
+        }
+
+        Text {
+            text: "Team Settings";
+            font-size: 20px;
+            font-family: "Outfit";
+            font-weight: 700;
+            color: white;
+        }
+
+        VerticalBox {
+            spacing: 12px;
+            for dep in departments : GlassCard {
+                padding: 16px;
+                HorizontalBox {
+                    alignment: space-between;
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: dep.name; font-size: 16px; font-family: "Inter"; font-weight: 700; color: white; }
+                    }
+                    Rectangle {} // Spacer
+                    Button {
+                        text: dep.requires_review ? "Needs Review" : "Auto-Execute";
+                        height: 36px;
+                        clicked => { root.toggle_department_review(dep.id); }
+                    }
+                }
+            }
+        }
+    }
+}

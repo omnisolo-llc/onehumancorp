@@ -2673,9 +2673,111 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+                let ai_director_ui = app::AiDirector::new().unwrap();
 
+                let deps_model = std::rc::Rc::new(slint::VecModel::from(vec![
+                    app::UiDepartmentConfig { id: "marketing".into(), name: "Marketing".into(), requires_review: true },
+                    app::UiDepartmentConfig { id: "operations".into(), name: "Operations".into(), requires_review: false },
+                    app::UiDepartmentConfig { id: "customer_success".into(), name: "Customer Success".into(), requires_review: true },
+                ]));
+                ai_director_ui.set_departments(deps_model.clone().into());
 
+                let deps_model_clone = deps_model.clone();
+                ai_director_ui.on_toggle_department_review(move |dep_id| {
+                    let mut found = false;
+                    let mut idx = 0;
+                    let mut new_item = app::UiDepartmentConfig { id: "".into(), name: "".into(), requires_review: false };
 
+                    for i in 0..deps_model_clone.row_count() {
+                        if let Some(item) = deps_model_clone.row_data(i) {
+                            if item.id == dep_id {
+                                found = true;
+                                idx = i;
+                                new_item = item;
+                                new_item.requires_review = !new_item.requires_review;
+                                break;
+                            }
+                        }
+                    }
+                    if found {
+                        deps_model_clone.set_row_data(idx, new_item);
+                    }
+                });
+
+                let dashboard_handle_for_intent = dashboard_handle.clone();
+                let deps_model_for_intent = deps_model.clone();
+                ai_director_ui.on_submit_intent(move |intent| {
+                    let intent_lower = intent.to_lowercase();
+                    let dep_id = if intent_lower.contains("post") || intent_lower.contains("campaign") || intent_lower.contains("promote") {
+                        "marketing"
+                    } else if intent_lower.contains("order") || intent_lower.contains("inventory") || intent_lower.contains("ship") {
+                        "operations"
+                    } else if intent_lower.contains("customer") || intent_lower.contains("support") || intent_lower.contains("reply") {
+                        "customer_success"
+                    } else {
+                        "operations" // Default
+                    };
+
+                    let mut requires_review = true;
+                    for i in 0..deps_model_for_intent.row_count() {
+                        if let Some(item) = deps_model_for_intent.row_data(i) {
+                            if item.id == dep_id {
+                                requires_review = item.requires_review;
+                                break;
+                            }
+                        }
+                    }
+
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        let dash_handle = dashboard_handle_for_intent.clone();
+                        let intent_clone = intent.clone();
+                        tokio::spawn(async move {
+                            if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                                let req = tonic::Request::new(ohc::orchestration::SubmitIntentRequest {
+                                    organization_id: "default_org".into(),
+                                    intent: intent_clone.to_string(),
+                                    requires_review,
+                                });
+
+                                // Directly bypass interceptor for mock test, or extract metadata logic
+                                // Since this is internal desktop code, we can just send it
+                                let _ = client.submit_intent(req).await;
+
+                                if requires_review {
+                                    // After submitting, fetch pending approvals to refresh UI
+                                    let req_tasks = tonic::Request::new(ohc::orchestration::GetPendingApprovalsRequest {
+                                        organization_id: "default_org".into(),
+                                    });
+                                    if let Ok(resp) = client.get_pending_approvals(req_tasks).await {
+                                        let tasks = resp.into_inner().tasks;
+                                        let ui_tasks: Vec<app::UiPendingApproval> = tasks.into_iter().map(|t| {
+                                            app::UiPendingApproval {
+                                                task_id: t.id.into(),
+                                                title: t.title.into(),
+                                                proposed_content: t.description.into(),
+                                                helper_name: t.assigned_agent_id.into(), // Simplified mock mapping
+                                            }
+                                        }).collect();
+
+                                        let _ = slint::invoke_from_event_loop(move || {
+                                            if let Some(ui) = dash_handle.upgrade() {
+                                                ui.set_pending_approvals(std::rc::Rc::new(slint::VecModel::from(ui_tasks)).into());
+                                            }
+                                        });
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+
+                let ai_director_handle = ai_director_ui.as_weak();
+                dashboard.on_action_open_ai_director(move || {
+                    if let Some(ui) = ai_director_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
 
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
                 let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();

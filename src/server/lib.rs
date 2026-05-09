@@ -159,6 +159,7 @@ pub struct MyHubService {
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
     onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
+    ai_director: Arc<crate::orchestration::departments::director::AiDirector>,
 }
 
 impl MyHubService {
@@ -166,8 +167,21 @@ impl MyHubService {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
-        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db);
-        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent }
+        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone());
+
+        let orchestrator = Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone()));
+        let ai_director = Arc::new(crate::orchestration::departments::director::AiDirector::new(orchestrator.clone()));
+
+        // Mock setup once
+        let orch_clone = orchestrator.clone();
+        tokio::spawn(async move {
+            crate::orchestration::departments::director::setup_mock_departments(
+                orch_clone,
+                "default_org"
+            ).await;
+        });
+
+        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent, ai_director }
     }
 }
 
@@ -1170,6 +1184,45 @@ impl HubService for MyHubService {
     ) -> Result<Response<GetMeetingsResponse>, Status> {
         let meetings = self.hub.get_meetings();
         Ok(Response::new(GetMeetingsResponse { meetings: meetings.to_vec() }))
+    }
+
+    async fn submit_intent(
+        &self,
+        request: Request<SubmitIntentRequest>,
+    ) -> Result<Response<SubmitIntentResponse>, Status> {
+        let req = request.into_inner();
+
+        self.ai_director.submit_intent(&req.organization_id, &req.intent)
+            .await
+            .map_err(|e| Status::internal(e))?;
+
+        if req.requires_review {
+            let approvals = self.ai_director.orchestrator.get_pending_approvals(&req.organization_id).await;
+            for approval in approvals {
+                let intent = req.intent.clone();
+                let helper_name = match approval.department {
+                    crate::orchestration::departments::types::DepartmentType::Marketing => "The Promoter",
+                    crate::orchestration::departments::types::DepartmentType::Operations => "The Manager",
+                    crate::orchestration::departments::types::DepartmentType::CustomerSuccess => "The Ambassador",
+                    _ => "The Manager",
+                };
+
+                let description = format!("{} proposes to handle: {}", helper_name, intent);
+
+                self.hub.task_manager().create_task(
+                    req.organization_id.clone(),
+                    "default".to_string(),
+                    format!("Execute: {}", intent),
+                    description,
+                    "HIGH".to_string(), // Forces PENDING approval in TaskManager
+                ).map_err(|e| Status::internal(e))?;
+            }
+        } else {
+            // Auto-execute logic mock
+            // Just return success without requiring approval
+        }
+
+        Ok(Response::new(SubmitIntentResponse { success: true }))
     }
 
     async fn start_onboarding(
