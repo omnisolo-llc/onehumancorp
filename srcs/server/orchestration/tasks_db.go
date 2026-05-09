@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -404,12 +405,12 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 	}
 
     // Simplistic time parsing for SQLite timestamp strings
-    if t, err := time.Parse(time.RFC3339, createdAtStr); err == nil {
-        task.CreatedAt = t
-    }
-    if t, err := time.Parse(time.RFC3339, updatedAtStr); err == nil {
-        task.UpdatedAt = t
-    }
+    if t, err := parseSQLiteTime(createdAtStr); err == nil {
+		task.CreatedAt = t
+	}
+    if t, err := parseSQLiteTime(updatedAtStr); err == nil {
+		task.UpdatedAt = t
+	}
 
 	if len(payloadBytes) > 0 {
 		raw := json.RawMessage(payloadBytes)
@@ -547,12 +548,12 @@ func (s *SqliteTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]
 		if err != nil {
 			return nil, err
 		}
-		if t, err := time.Parse(time.RFC3339, createdAtStr); err == nil {
-			task.CreatedAt = t
-		}
-		if t, err := time.Parse(time.RFC3339, updatedAtStr); err == nil {
-			task.UpdatedAt = t
-		}
+		if t, err := parseSQLiteTime(createdAtStr); err == nil {
+		task.CreatedAt = t
+	}
+		if t, err := parseSQLiteTime(updatedAtStr); err == nil {
+		task.UpdatedAt = t
+	}
 		if len(payloadBytes) > 0 {
 			raw := json.RawMessage(payloadBytes)
 			task.Payload = &raw
@@ -613,12 +614,12 @@ func (s *SqliteTaskStore) GetTask(ctx context.Context, id string) (*SharedTask, 
         return nil, err
     }
 
-    if t, err := time.Parse(time.RFC3339, createdAtStr); err == nil {
-        task.CreatedAt = t
-    }
-    if t, err := time.Parse(time.RFC3339, updatedAtStr); err == nil {
-        task.UpdatedAt = t
-    }
+    if t, err := parseSQLiteTime(createdAtStr); err == nil {
+		task.CreatedAt = t
+	}
+    if t, err := parseSQLiteTime(updatedAtStr); err == nil {
+		task.UpdatedAt = t
+	}
 
     if len(payloadBytes) > 0 {
         raw := json.RawMessage(payloadBytes)
@@ -673,12 +674,12 @@ func (s *SqliteTaskStore) GetTasksByOrganization(ctx context.Context, organizati
 		if err != nil {
 			return nil, err
 		}
-		if t, err := time.Parse(time.RFC3339, createdAtStr); err == nil {
-			task.CreatedAt = t
-		}
-		if t, err := time.Parse(time.RFC3339, updatedAtStr); err == nil {
-			task.UpdatedAt = t
-		}
+		if t, err := parseSQLiteTime(createdAtStr); err == nil {
+		task.CreatedAt = t
+	}
+		if t, err := parseSQLiteTime(updatedAtStr); err == nil {
+		task.UpdatedAt = t
+	}
 		if len(payloadBytes) > 0 {
 			raw := json.RawMessage(payloadBytes)
 			task.Payload = &raw
@@ -690,4 +691,17 @@ func (s *SqliteTaskStore) GetTasksByOrganization(ctx context.Context, organizati
 	}
 
 	return tasks, nil
+}
+
+func parseSQLiteTime(timeStr string) (time.Time, error) {
+	if t, err := time.Parse(time.RFC3339, timeStr); err == nil {
+		return t, nil
+	}
+	if t, err := time.Parse("2006-01-02 15:04:05", timeStr); err == nil {
+		return t, nil
+	}
+    if t, err := time.Parse("2006-01-02 15:04:05.999999999Z07:00", timeStr); err == nil {
+        return t, nil
+    }
+	return time.Time{}, fmt.Errorf("could not parse time: %s", timeStr)
 }
