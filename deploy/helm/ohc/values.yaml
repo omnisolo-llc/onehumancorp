@@ -37,8 +37,6 @@ backend:
       memory: "80Gi"
       ephemeralStorage: "100Gi"
       pods: "50"
-  networkPolicy:
-    enabled: true
 
 # OHC Core — Rust library (settings · agent scheduler · meeting rooms · chat)
 # In cloud-native mode the core runs as a dedicated micro-service.
