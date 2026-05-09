@@ -723,7 +723,7 @@ impl Hub {
 
         let pool4 = self.pool.clone();
         let sync_errors_future = tokio::task::spawn(async move {
-            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE sync_error IS NOT NULL AND synced_to_cloud = false").fetch_one(&pool4).await
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE sync_error IS NOT NULL AND sync_error != '' AND synced_to_cloud = false").fetch_one(&pool4).await
         });
 
         let (db_ping_res, sync_queue_res_res, sync_errors_res_res) = tokio::join!(ping_future, sync_queue_future, sync_errors_future);

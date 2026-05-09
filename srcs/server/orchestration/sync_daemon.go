@@ -207,6 +207,11 @@ func StartSyncDaemon(ctx context.Context, localDB SQLiteProvider, cloudDB Postgr
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			if _, err := localDB.GetDB().ExecContext(ctx, "UPDATE shared_tasks SET status = 'FAILED' WHERE status = 'STUCK'"); err != nil {
+				if syncDaemonErrorTotal != nil {
+					syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", getSyncMode()), attribute.String("error", "DB_UPDATE_STUCK_ERROR")))
+				}
+			}
 			syncPendingEscalations(ctx, localDB, cloudDB)
 			syncCompletedEscalations(ctx, localDB, cloudDB)
 		}
@@ -246,7 +251,6 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 			if syncDaemonErrorTotal != nil {
 				syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "DB_ITERATION_ERROR")))
 			}
-			log.Printf("Error scanning local task: %v", err)
 			continue
 		}
 
@@ -256,7 +260,6 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 				if syncDaemonErrorTotal != nil {
 					syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "SANITIZE_ERROR")))
 				}
-				log.Printf("Error sanitizing task %s", task.ID)
 				continue
 			}
 			sanitizedRaw := json.RawMessage(sanitized)
@@ -275,7 +278,6 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 			if syncDaemonErrorTotal != nil {
 				syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "CLOUD_SYNC_ERROR")))
 			}
-			log.Printf("Error creating task in cloud DB: %v", err)
 			continue
 		}
 
@@ -324,7 +326,6 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			log.Printf("Error scanning local task ID: %v", err)
 			continue
 		}
 		taskIDs = append(taskIDs, id)
@@ -337,9 +338,6 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 		// Check cloud DB
 		cloudTask, err := cloudDB.GetTask(ctx, id)
 		if err != nil {
-			if err != sql.ErrNoRows {
-				log.Printf("Error getting task from cloud DB: %v", err)
-			}
 			continue
 		}
 
