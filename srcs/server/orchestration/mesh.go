@@ -3,7 +3,7 @@ package orchestration
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+
 	"fmt"
 	"net/http"
 	"sync"
@@ -11,14 +11,6 @@ import (
 
 	"onehumancorp/srcs/server/pb"
 )
-
-// MeshMessage represents an OHC-SIP compliant message over the mesh.
-type MeshMessage struct {
-	AgentID   string           `json:"agent_id"`
-	EventType string           `json:"event_type"`
-	Data      *json.RawMessage `json:"data,omitempty"`
-	Channel   string           `json:"channel,omitempty"`
-}
 
 // MeshTransport defines the interface for the highly available realtime communication layer.
 type MeshTransport interface {

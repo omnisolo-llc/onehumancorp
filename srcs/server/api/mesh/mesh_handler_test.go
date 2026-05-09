@@ -32,16 +32,8 @@ func TestMeshHandler_Broadcast(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	dataPayload := json.RawMessage(`{"status": "PENDING"}`)
-	msg := orchestration.MeshMessage{
-		AgentID:   "agent-1",
-		EventType: "DO_WORK",
-		Channel:   "mesh:broadcast",
-		Data:      &dataPayload,
-	}
-	body, _ := json.Marshal(msg)
-
-	req, err := http.NewRequest("POST", "/api/mesh/broadcast", bytes.NewBuffer(body))
+	body := []byte("raw_protobuf_bytes")
+	req, err := http.NewRequest("POST", "/api/mesh/broadcast?channel=mesh:broadcast", bytes.NewBuffer(body))
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()
@@ -51,12 +43,7 @@ func TestMeshHandler_Broadcast(t *testing.T) {
 
 	select {
 	case <-ch:
-		var receivedMsg orchestration.MeshMessage
-		err = json.Unmarshal(receivedData, &receivedMsg)
-		require.NoError(t, err)
-		assert.Equal(t, msg.AgentID, receivedMsg.AgentID)
-		assert.Equal(t, msg.EventType, receivedMsg.EventType)
-		assert.JSONEq(t, string(*msg.Data), string(*receivedMsg.Data))
+		assert.Equal(t, body, receivedData)
 	case <-time.After(1 * time.Second):
 		t.Fatal("Timeout waiting for message")
 	}

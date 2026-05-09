@@ -28,26 +28,21 @@ func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var msg orchestration.MeshMessage
-	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	if msg.AgentID == "" || msg.EventType == "" || msg.Channel == "" || msg.Data == nil {
-		http.Error(w, "Missing required OHC-SIP fields (agent_id, channel, event_type, data)", http.StatusBadRequest)
-		return
-	}
-
-	channel := msg.Channel
-
-	data, err := json.Marshal(msg)
+	// Read body as raw protobuf bytes directly, bypassing JSON serialization.
+	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Failed to marshal message", http.StatusInternalServerError)
+		http.Error(w, "Failed to read body", http.StatusInternalServerError)
 		return
 	}
 
-	if err := h.Transport.Publish(r.Context(), channel, data); err != nil {
+	channel := r.URL.Query().Get("channel")
+	if channel == "" {
+		http.Error(w, "Missing channel parameter", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.Transport.Publish(r.Context(), channel, body); err != nil {
 		http.Error(w, "Failed to publish message", http.StatusInternalServerError)
 		return
 	}
@@ -100,7 +95,7 @@ func (h *MeshHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 
 	// Subscribe to the channel
 	err = h.Transport.Subscribe(ctx, channel, func(data []byte) {
-		if writeErr := conn.WriteMessage(websocket.TextMessage, data); writeErr != nil {
+		if writeErr := conn.WriteMessage(websocket.BinaryMessage, data); writeErr != nil {
 			// Write failed, client might have disconnected.
 		}
 	})
@@ -109,7 +104,6 @@ func (h *MeshHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Keep connection open until client disconnects or error occurs
-	// Blocking the HTTP handler to keep context active
 	for {
 		_, _, readErr := conn.ReadMessage()
 		if readErr != nil {
@@ -137,5 +131,9 @@ func (h *MeshHandler) Capabilities(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(agents)
+
+	responseBytes, err := json.Marshal(agents)
+	if err == nil {
+		w.Write(responseBytes)
+	}
 }
