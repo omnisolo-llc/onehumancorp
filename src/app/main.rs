@@ -8243,7 +8243,7 @@ fn test_business_share_flow() {
         assert!(*release_notes_opened.borrow(), "Release Notes UI should be opened");
 
         let ui = app::ReleaseNotes::new().unwrap();
-        assert_eq!(ui.get_current_version(), "v0.3.4");
+        assert_eq!(ui.get_current_version(), "v0.4.40");
         assert_eq!(ui.get_show_latest_only(), false);
     }
     #[test]

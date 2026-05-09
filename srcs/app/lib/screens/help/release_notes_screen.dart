@@ -22,6 +22,12 @@ class ReleaseNotesScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                _buildReleaseCard('v0.4.40', 'May 2026', [
+                  'Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.',
+                  'Implemented KAIROS Shared Task List Backend supporting multi-tenant Postgres schema and tenant isolation for cloud deployments.',
+                  'Implement offline-first local vector embeddings cache for the OHC Swarm.',
+                  'Implemented KAIROS Shared Task List Backend with full in-memory and local SQLite capabilities for standalone isolation.',
+                ]),
                 _buildReleaseCard('v0.4.39', 'May 2026', [
                   'Enhance multi-tenant onboarding flow tests for the Welcome Checklist to ensure reliable scaling.',
                   'Bolster Standalone Wizard state test coverage for improved offline reliability and progressive disclosure validation.',

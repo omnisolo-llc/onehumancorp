@@ -9,10 +9,11 @@
 
 ### Cloud Scaling Improvements
 - Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
+- 🔨 Forge: Implemented KAIROS Shared Task List Backend supporting multi-tenant Postgres schema and tenant isolation for cloud deployments (#12855).
 
 ### Privacy/Offline Improvements
 - Implement offline-first local vector embeddings cache for the OHC Swarm.
-
+- 🔨 Forge: Implemented KAIROS Shared Task List Backend with full in-memory and local SQLite capabilities for standalone isolation (#12855).
 
 ## v0.4.39 (Cloud) / v0.4.39+1 (Standalone)
 
