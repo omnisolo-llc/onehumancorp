@@ -38,7 +38,7 @@ impl DepartmentService {
             }
         });
 
-        self.bus.subscribe("system:order_received".to_string(), handler).await?;
+        let _ =         self.bus.subscribe("system:order_received".to_string(), handler).await?;
 
         Ok(())
     }

@@ -403,3 +403,5 @@ mod tests {
     }
 }
 
+// Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
+// UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK'

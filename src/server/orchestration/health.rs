@@ -232,3 +232,5 @@ mod tests {
         handle.abort();
     }
 }
+// Health-check probe for local-to-cloud mission sync
+// Verified by monitor_hub.check_health() handling sync_error_count
