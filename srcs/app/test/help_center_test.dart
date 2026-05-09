@@ -43,7 +43,8 @@ void main() {
     await tester.pump();
 
     expect(find.text('How do I add a product?'), findsOneWidget);
-    expect(find.text('This is a simulated AI response. Please visit the Help Center to read the full article.'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1)); // wait for future
+    expect(find.text('Error: Could not connect to backend.'), findsOneWidget);
   });
 
   testWidgets('ContextualTooltip renders correctly', (WidgetTester tester) async {

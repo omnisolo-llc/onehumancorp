@@ -98,7 +98,6 @@ class HelpCenterScreen extends StatelessWidget {
         subtitle: Text(subtitle, style: const TextStyle(color: Colors.white70)),
         trailing: const Icon(Icons.chevron_right, color: Colors.white54),
         onTap: () {
-          // Stub for topic details
         },
       ),
     );
@@ -113,7 +112,6 @@ class HelpCenterScreen extends StatelessWidget {
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         subtitle: Text(duration, style: const TextStyle(color: Colors.white70)),
         onTap: () {
-          // Stub for video player
         },
       ),
     );

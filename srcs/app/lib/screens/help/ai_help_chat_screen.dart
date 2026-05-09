@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AiHelpChatScreen extends StatefulWidget {
   const AiHelpChatScreen({super.key});
@@ -16,13 +18,44 @@ class _AiHelpChatScreenState extends State<AiHelpChatScreen> {
   ];
   final TextEditingController _controller = TextEditingController();
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     if (_controller.text.trim().isEmpty) return;
+
+    final userMessage = _controller.text;
+
     setState(() {
-      _messages.add({'role': 'user', 'text': _controller.text});
-      _messages.add({'role': 'assistant', 'text': 'This is a simulated AI response. Please visit the Help Center to read the full article.'});
+      _messages.add({'role': 'user', 'text': userMessage});
     });
+
     _controller.clear();
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/api/mesh/broadcast'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'agent_id': 'support_agent',
+          'action': 'help_query',
+          'status': 'query',
+          'payload': {'query': userMessage}
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _messages.add({'role': 'assistant', 'text': data['reply'] ?? 'Response received.'});
+        });
+      } else {
+        setState(() {
+          _messages.add({'role': 'assistant', 'text': 'Failed to reach support agent.'});
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _messages.add({'role': 'assistant', 'text': 'Error: Could not connect to backend.'});
+      });
+    }
   }
 
   @override
