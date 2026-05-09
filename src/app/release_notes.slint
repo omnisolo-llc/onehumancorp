@@ -7,7 +7,7 @@ export component ReleaseNotes inherits Window {
     min-width: 375px;
     title: "What's New";
     background: #0f172a;
-    in-out property <string> current_version: "v0.4.33";
+    in-out property <string> current_version: "v0.4.37";
     in-out property <bool> show_latest_only: false;
 
     HorizontalBox {
@@ -27,7 +27,24 @@ export component ReleaseNotes inherits Window {
 
             ScrollView {
                 VerticalBox {
+
+                    VerticalBox {
+                        spacing: 8px;
+                        Text { text: "Version 0.4.37 (Cloud) / v0.4.37+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
+                        GlassCard {
+                            VerticalBox {
+                                padding: 16px; spacing: 12px;
+                                Text { text: "🔗 Interop Mesh Upgrades"; font-weight: 700; font-size: 18px; color: white; }
+                                Text { text: "Verified stability and resilience of the OHC Swarm Interoperability Protocol by adding extensive unit test coverage for critical edge cases in the teammate mesh communication layer."; color: white; wrap: word-wrap; }
+                                Text { text: "Ensured the protocol handles offline malformed payloads gracefully without crashing the standalone mode, preventing downstream actions or panicking."; color: white; wrap: word-wrap; }
+                            }
+                        }
+                    }
+
                     spacing: 24px;
+
+
+
 
                     VerticalBox {
                         spacing: 8px;

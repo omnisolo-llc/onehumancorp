@@ -1,3 +1,14 @@
+# Release Notes
+
+
+## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🔗 Link: Interop Mesh Comprehensive Test Coverage - Verified stability and resilience of the OHC Swarm Interoperability Protocol by adding extensive unit test coverage for critical edge cases in the teammate mesh communication layer.
+
+### Privacy/Offline Improvements
+- 🔗 Link: Interop Mesh Comprehensive Test Coverage - Ensured the protocol handles offline malformed payloads gracefully without crashing the standalone mode, preventing downstream actions or panicking.
+
 ## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
 
 - Scaling (Cloud): Fix orchestration mesh tests that failed due to multiple declarations and invalid imports.
