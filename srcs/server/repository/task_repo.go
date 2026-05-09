@@ -118,17 +118,15 @@ func (r *sqlTaskRepository) UpdateTaskStatus(ctx context.Context, taskID string,
 		UPDATE tasks
 		SET status = $1, updated_at = $2
 		WHERE id = $3 AND organization_id = $4
+		RETURNING id
 	`
-	res, err := r.db.ExecContext(ctx, query, status, time.Now(), taskID, orgID)
+	var updatedID string
+	err := r.db.QueryRowContext(ctx, query, status, time.Now(), taskID, orgID).Scan(&updatedID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrTaskNotFound
+		}
 		return err
-	}
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rowsAffected == 0 {
-		return ErrTaskNotFound
 	}
 	return nil
 }

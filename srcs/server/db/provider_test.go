@@ -124,9 +124,9 @@ func TestProvider_ClaimTask_SQLite(t *testing.T) {
 	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).
 		WithArgs("task-1").
 		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
-	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING'`).
+	mock.ExpectQuery(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING' RETURNING id`).
 		WithArgs("task-1").
-		WillReturnResult(sqlmock.NewResult(1, 1))
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("task-1"))
 
 	err = provider.ClaimTask(context.Background(), "task-1")
 	assert.NoError(t, err)
@@ -136,9 +136,9 @@ func TestProvider_ClaimTask_SQLite(t *testing.T) {
 	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).
 		WithArgs("task-1").
 		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
-	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING'`).
+	mock.ExpectQuery(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING' RETURNING id`).
 		WithArgs("task-1").
-		WillReturnResult(sqlmock.NewResult(1, 0)) // 0 rows affected
+		WillReturnError(sql.ErrNoRows)
 
 	err = provider.ClaimTask(context.Background(), "task-1")
 	assert.Error(t, err)
@@ -214,9 +214,9 @@ func TestProvider_ClaimTask_SQLite_Errors(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "already claimed")
 
-    // exec error
+    // query error on update
 	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
-	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING'`).WillReturnError(errors.New("exec error"))
+	mock.ExpectQuery(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING' RETURNING id`).WillReturnError(errors.New("update error"))
 	err = provider.ClaimTask(context.Background(), "task-1")
 	assert.Error(t, err)
 }
@@ -301,26 +301,6 @@ func TestProvider_ClaimTask_Postgres_RedisError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestProvider_ClaimTask_SQLite_RowsAffectedError(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
-
-	db, mock, err := sqlmock.New()
-	require.NoError(t, err)
-	defer db.Close()
-
-	provider := &Provider{DB: db}
-
-	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).
-		WithArgs("task-1").
-		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
-	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING'`).
-		WithArgs("task-1").
-		WillReturnResult(sqlmock.NewErrorResult(errors.New("rows affected error")))
-
-	err = provider.ClaimTask(context.Background(), "task-1")
-	assert.Error(t, err)
-}
 
 func TestProvider_CreateTask_NilDB(t *testing.T) {
     provider := &Provider{}

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"onehumancorp/srcs/server/onboarding"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -46,10 +47,12 @@ func TestAPIHandler(t *testing.T) {
 	handler := NewAPIHandler(svc)
 
 	// Valid Request
-	req, err := http.NewRequest("GET", "/api/tiers/check?tenant_id="+tenantID+"&metric=products", nil)
+	req, err := http.NewRequest("GET", "/api/tiers/check?metric=products", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := context.WithValue(req.Context(), onboarding.TenantContextKey, tenantID)
+	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
 	handler.HandleCheckLimit(rr, req)
@@ -74,10 +77,12 @@ func TestAPIHandler(t *testing.T) {
 		t.Fatalf("failed to update usage")
 	}
 
-	req2, err := http.NewRequest("GET", "/api/tiers/check?tenant_id="+tenantID+"&metric=products", nil)
+	req2, err := http.NewRequest("GET", "/api/tiers/check?metric=products", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx2 := context.WithValue(req2.Context(), onboarding.TenantContextKey, tenantID)
+	req2 = req2.WithContext(ctx2)
 	rr2 := httptest.NewRecorder()
 	handler.HandleCheckLimit(rr2, req2)
 
@@ -99,12 +104,14 @@ func TestAPIHandler(t *testing.T) {
 	req3, _ := http.NewRequest("GET", "/api/tiers/check?metric=products", nil)
 	rr3 := httptest.NewRecorder()
 	handler.HandleCheckLimit(rr3, req3)
-	if status := rr3.Code; status != http.StatusBadRequest {
-		t.Errorf("handler returned wrong status code for missing param: got %v want %v", status, http.StatusBadRequest)
+	if status := rr3.Code; status != http.StatusUnauthorized {
+		t.Errorf("handler returned wrong status code for missing param: got %v want %v", status, http.StatusUnauthorized)
 	}
 
 	// Test missing parameter metric
-	req4, _ := http.NewRequest("GET", "/api/tiers/check?tenant_id="+tenantID, nil)
+	req4, _ := http.NewRequest("GET", "/api/tiers/check", nil)
+	ctx4 := context.WithValue(req4.Context(), onboarding.TenantContextKey, tenantID)
+	req4 = req4.WithContext(ctx4)
 	rr4 := httptest.NewRecorder()
 	handler.HandleCheckLimit(rr4, req4)
 	if status := rr4.Code; status != http.StatusBadRequest {
@@ -112,7 +119,9 @@ func TestAPIHandler(t *testing.T) {
 	}
 
 	// Test invalid method
-	req5, _ := http.NewRequest("POST", "/api/tiers/check?tenant_id="+tenantID+"&metric=products", nil)
+	req5, _ := http.NewRequest("POST", "/api/tiers/check?metric=products", nil)
+	ctx5 := context.WithValue(req5.Context(), onboarding.TenantContextKey, tenantID)
+	req5 = req5.WithContext(ctx5)
 	rr5 := httptest.NewRecorder()
 	handler.HandleCheckLimit(rr5, req5)
 	if status := rr5.Code; status != http.StatusMethodNotAllowed {
@@ -121,7 +130,9 @@ func TestAPIHandler(t *testing.T) {
 
 	// Test service error (simulate db close)
 	db.Close()
-	req6, _ := http.NewRequest("GET", "/api/tiers/check?tenant_id="+tenantID+"&metric=products", nil)
+	req6, _ := http.NewRequest("GET", "/api/tiers/check?metric=products", nil)
+	ctx6 := context.WithValue(req6.Context(), onboarding.TenantContextKey, tenantID)
+	req6 = req6.WithContext(ctx6)
 	rr6 := httptest.NewRecorder()
 	handler.HandleCheckLimit(rr6, req6)
 	if status := rr6.Code; status != http.StatusInternalServerError {

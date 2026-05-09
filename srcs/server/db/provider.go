@@ -59,16 +59,13 @@ func (p *Provider) ClaimTask(ctx context.Context, taskID string) error {
 			return errors.New("task already claimed or completed")
 		}
 
-		res, err := p.DB.ExecContext(ctx, "UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'PENDING'", taskID)
+		var updatedID string
+		err = p.DB.QueryRowContext(ctx, "UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'PENDING' RETURNING id", taskID).Scan(&updatedID)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.New("failed to claim task: concurrent modification")
+			}
 			return err
-		}
-		rowsAffected, err := res.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if rowsAffected == 0 {
-			return errors.New("failed to claim task: concurrent modification")
 		}
 		return nil
 	}
