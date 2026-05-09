@@ -101,3 +101,4 @@ pub mod booking_quote_e2e;
 pub mod echo_dashboard;
 pub mod miser_e2e;
 pub mod guide_onboarding_e2e;
+pub mod guide_extra_e2e;
