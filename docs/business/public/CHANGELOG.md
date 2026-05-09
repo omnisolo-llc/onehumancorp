@@ -1,3 +1,14 @@
+
+## v0.4.40 (Cloud) / v0.4.40+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
+
+### Privacy/Offline Improvements
+- Implement offline-first local vector embeddings cache for the OHC Swarm.
+
+
+
 ## v0.4.34 (Cloud) / v0.4.34+2 (Standalone)
 
 - Scaling (Cloud): Fix compiler warnings in UI tests and app main to improve reliability and multi-tenant scaling (#11933).
