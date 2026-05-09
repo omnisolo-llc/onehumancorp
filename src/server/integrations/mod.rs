@@ -12,3 +12,8 @@ pub mod stripe;
 pub mod twilio;
 pub mod mcp_gateway;
 pub mod mercadopago;
+pub mod meta;
+pub mod cal_com;
+pub mod resend;
+pub mod easypost;
+pub mod google_meet;

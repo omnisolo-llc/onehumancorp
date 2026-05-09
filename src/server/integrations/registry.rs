@@ -18,6 +18,11 @@ pub struct IntegrationsRegistry {
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
+    pub meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::client::MetaClient>>>,
+    pub cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::client::CalComClient>>>,
+    pub resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::client::ResendClient>>>,
+    pub easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::client::EasyPostClient>>>,
+    pub google_meet_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_meet::client::GoogleMeetClient>>>,
 }
 
 impl IntegrationsRegistry {
@@ -42,6 +47,11 @@ impl IntegrationsRegistry {
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
+            meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            google_meet_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -144,6 +154,26 @@ impl IntegrationsRegistry {
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
+        }
+        if integration_id == "meta" {
+            let mut clients = self.meta_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::client::MetaClient::new(creds.api_token.clone())));
+        }
+        if integration_id == "cal_com" {
+            let mut clients = self.cal_com_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::cal_com::client::CalComClient::new(creds.api_token.clone())));
+        }
+        if integration_id == "resend" {
+            let mut clients = self.resend_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::resend::client::ResendClient::new(creds.api_token.clone())));
+        }
+        if integration_id == "easypost" {
+            let mut clients = self.easypost_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::easypost::client::EasyPostClient::new(creds.api_token.clone())));
+        }
+        if integration_id == "google_meet" {
+            let mut clients = self.google_meet_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_meet::client::GoogleMeetClient::new(creds.api_token.clone())));
         }
         if integration_id == "nats" {
             let base_url_clone = base_url.to_string();
