@@ -2281,3 +2281,169 @@ mod determine_conflict_winner_tests {
     }
 }
 // Trigger PR for Memory Consolidation Feature
+
+#[cfg(test)]
+mod comprehensive_consolidation_e2e_tests {
+    use super::*;
+    use std::str::FromStr;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use chrono::Utc;
+
+    #[tokio::test]
+    async fn test_full_consolidation_lifecycle() {
+        // 1. Initialize Persistent Memory Layer
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let tenant = "maya_bakery_org";
+
+        // 2. Cross-Department Context Sharing
+        let maya_cs = EmbeddingRecord {
+            id: "cs_maya_1".to_string(),
+            tenant_id: tenant.to_string(),
+            agent_id: "customer_success".to_string(),
+            content: "Customer Maya wants vegan cake orders.".to_string(),
+            embedding: vec![1.0, 0.0, 0.0],
+            source_type: "CS_TICKET".to_string(),
+            created_at: Utc::now(),
+            last_referenced_at: Utc::now(),
+            reference_count: 1,
+            reliability_score: 80,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let maya_ops = EmbeddingRecord {
+            id: "ops_maya_1".to_string(),
+            tenant_id: tenant.to_string(),
+            agent_id: "operations".to_string(),
+            content: "Vegan cakes take 2 extra hours to bake.".to_string(),
+            embedding: vec![0.0, 1.0, 0.0],
+            source_type: "OPS_REPORT".to_string(),
+            created_at: Utc::now(),
+            last_referenced_at: Utc::now(),
+            reference_count: 1,
+            reliability_score: 75,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&maya_cs).await.unwrap();
+        repo.upsert(&maya_ops).await.unwrap();
+
+        // 3. Conflict Resolution
+        // Two conflicting facts about the price of Maya's cakes
+        let maya_price_loser = EmbeddingRecord {
+            id: "price_loser".to_string(),
+            tenant_id: tenant.to_string(),
+            agent_id: "sales".to_string(),
+            content: "Maya's vegan cake price is $50.".to_string(),
+            embedding: vec![0.9, 0.9, 0.9], // Same exact vector triggers conflict
+            source_type: "NOTES".to_string(),
+            created_at: Utc::now() - chrono::Duration::days(5),
+            last_referenced_at: Utc::now(),
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let maya_price_winner = EmbeddingRecord {
+            id: "price_winner".to_string(),
+            tenant_id: tenant.to_string(),
+            agent_id: "advisory".to_string(),
+            content: "Maya's vegan cake price is $55.".to_string(),
+            embedding: vec![0.9, 0.9, 0.9], // Same exact vector
+            source_type: "NOTES".to_string(),
+            created_at: Utc::now() - chrono::Duration::days(2), // Newer
+            last_referenced_at: Utc::now(),
+            reference_count: 2,
+            reliability_score: 95, // Higher reliability
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&maya_price_loser).await.unwrap();
+        repo.upsert(&maya_price_winner).await.unwrap();
+
+        // Run auto resolve (simulates the background worker)
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve exactly one conflict pair");
+
+        // Verify the conflict loser is gone and winner inherited reference counts
+        use sqlx::Row;
+        let query = "SELECT id, reference_count FROM consolidated_memory WHERE id LIKE 'price_%'";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+        assert_eq!(rows.len(), 1, "Only the winner should remain");
+        let id: String = rows[0].try_get("id").unwrap();
+        let ref_count: i32 = rows[0].try_get("reference_count").unwrap();
+        assert_eq!(id, "price_winner");
+        // winner count (2) + loser count (1) + 1 = 4
+        assert_eq!(ref_count, 4);
+
+        // 4. Stale Context Pruning
+        let stale_product = EmbeddingRecord {
+            id: "stale_discontinued".to_string(),
+            tenant_id: tenant.to_string(),
+            agent_id: "sales".to_string(),
+            content: "Product discontinued 6 months ago.".to_string(),
+            embedding: vec![0.1, 0.2, 0.3],
+            source_type: "TASK_SUMMARY".to_string(), // Matches pruning condition
+            created_at: Utc::now() - chrono::Duration::days(200),
+            last_referenced_at: Utc::now() - chrono::Duration::days(200),
+            reference_count: 2, // Less than 5, matches pruning condition
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let override_stale_product = EmbeddingRecord {
+            id: "stale_override".to_string(),
+            tenant_id: tenant.to_string(),
+            agent_id: "sales".to_string(),
+            content: "Old but owner explicitly wants it kept.".to_string(),
+            embedding: vec![0.1, 0.2, 0.4],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: Utc::now() - chrono::Duration::days(200),
+            last_referenced_at: Utc::now() - chrono::Duration::days(200),
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true, // Prevents pruning
+            metadata: None,
+        };
+
+        repo.upsert(&stale_product).await.unwrap();
+        repo.upsert(&override_stale_product).await.unwrap();
+
+        // Run prune stale
+        repo.prune_stale(Utc::now() - chrono::Duration::days(180)).await.unwrap();
+
+        let query = "SELECT id FROM consolidated_memory WHERE id LIKE 'stale_%'";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+        assert_eq!(rows.len(), 1, "Only the overridden stale record should remain");
+        let id: String = rows[0].try_get("id").unwrap();
+        assert_eq!(id, "stale_override");
+
+        // Verify total final state count: CS (1) + Ops (1) + Price Winner (1) + Stale Override (1) = 4 records
+        let final_count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory").fetch_one(&pool).await.unwrap();
+        assert_eq!(final_count.0, 4);
+    }
+}
