@@ -13,6 +13,7 @@ name = "ohc-builtin-agent"
 path = "src/agents/builtin/main.rs"
 
 [dependencies]
+image = { version = "0.25", features = ["webp"] }
 tokio = { workspace = true, features = ["full"] }
 tokio-stream = { version = "0.1", features = ["full"] }
 tonic = { workspace = true, features = ["transport"] }

@@ -2142,11 +2142,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let tier = plan.current_plan.clone();
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = pricing_handle_fetch.upgrade() {
-                        let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
                         let used = plan.ai_actions_used as f32;
-                        let progress = if limit > 0.0 { used / limit } else { 0.0 };
-                        ui.set_usage_progress(progress);
-                        ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
+                        if let Some(limit_val) = plan.ai_actions_limit {
+                            let limit = limit_val as f32;
+                            let progress = if limit > 0.0 { used / limit } else { 0.0 };
+                            ui.set_usage_progress(progress);
+                            ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, limit_val).into());
+                        } else {
+                            ui.set_usage_progress(0.0);
+                            ui.set_current_usage(format!("{} / Unlimited AI Actions", plan.ai_actions_used).into());
+                        }
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
                     }
                     GLOBAL_WEBSITE_BUILDER.with(|g| {
@@ -7106,11 +7111,16 @@ mod remaining_e2e_tests {
                 let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = pricing_handle_fetch.upgrade() {
-                        let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
                         let used = plan.ai_actions_used as f32;
-                        let progress = if limit > 0.0 { used / limit } else { 0.0 };
-                        ui.set_usage_progress(progress);
-                        ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
+                        if let Some(limit_val) = plan.ai_actions_limit {
+                            let limit = limit_val as f32;
+                            let progress = if limit > 0.0 { used / limit } else { 0.0 };
+                            ui.set_usage_progress(progress);
+                            ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, limit_val).into());
+                        } else {
+                            ui.set_usage_progress(0.0);
+                            ui.set_current_usage(format!("{} / Unlimited AI Actions", plan.ai_actions_used).into());
+                        }
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
                     }
                 }).unwrap();
@@ -7253,11 +7263,16 @@ mod remaining_e2e_tests {
                 let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = pricing_handle_fetch.upgrade() {
-                        let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
                         let used = plan.ai_actions_used as f32;
-                        let progress = if limit > 0.0 { used / limit } else { 0.0 };
-                        ui.set_usage_progress(progress);
-                        ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
+                        if let Some(limit_val) = plan.ai_actions_limit {
+                            let limit = limit_val as f32;
+                            let progress = if limit > 0.0 { used / limit } else { 0.0 };
+                            ui.set_usage_progress(progress);
+                            ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, limit_val).into());
+                        } else {
+                            ui.set_usage_progress(0.0);
+                            ui.set_current_usage(format!("{} / Unlimited AI Actions", plan.ai_actions_used).into());
+                        }
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
                     }
                 }).unwrap();
@@ -7302,11 +7317,16 @@ mod remaining_e2e_tests {
                 let plan: ohc::orchestration::MyPlanResponse = res.into_inner();
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = pricing_handle_fetch.upgrade() {
-                        let limit = plan.ai_actions_limit.unwrap_or(1000) as f32;
                         let used = plan.ai_actions_used as f32;
-                        let progress = if limit > 0.0 { used / limit } else { 0.0 };
-                        ui.set_usage_progress(progress);
-                        ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
+                        if let Some(limit_val) = plan.ai_actions_limit {
+                            let limit = limit_val as f32;
+                            let progress = if limit > 0.0 { used / limit } else { 0.0 };
+                            ui.set_usage_progress(progress);
+                            ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, limit_val).into());
+                        } else {
+                            ui.set_usage_progress(0.0);
+                            ui.set_current_usage(format!("{} / Unlimited AI Actions", plan.ai_actions_used).into());
+                        }
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
                     }
                 }).unwrap();

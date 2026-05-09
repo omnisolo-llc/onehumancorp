@@ -107,34 +107,51 @@ impl Provider for LocalProvider {
     }
 
     async fn write_blob(&self, key: &str, data: &[u8]) -> io::Result<()> {
-        let path = self.get_local_path(key)?;
+        let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") || key.ends_with(".webp");
+        let (final_key, final_data, reported_size) = if is_image {
+            let original_size = data.len();
+            if let Ok(img) = image::load_from_memory(data) {
+                // Image auto-resizing
+                let resized = img.resize(800, 800, image::imageops::FilterType::Lanczos3);
+
+                let mut webp_data = std::io::Cursor::new(Vec::new());
+                if resized.write_to(&mut webp_data, image::ImageFormat::WebP).is_ok() {
+                    let compressed = webp_data.into_inner();
+                    let compressed_size = compressed.len();
+                    tracing::info!(
+                        key = %key,
+                        original = original_size,
+                        actual_compressed = compressed_size,
+                        "Auto-optimized image to WebP and resized"
+                    );
+
+                    // Update key to ensure proper mime type via extension
+                    let mut final_key_str = key.to_string();
+                    if let Some(pos) = final_key_str.rfind('.') {
+                        final_key_str.truncate(pos);
+                    }
+                    final_key_str.push_str(".webp");
+
+                    (final_key_str, compressed, compressed_size)
+                } else {
+                    (key.to_string(), data.to_vec(), data.len())
+                }
+            } else {
+                (key.to_string(), data.to_vec(), data.len())
+            }
+        } else {
+            (key.to_string(), data.to_vec(), data.len())
+        };
+
+        // Use final_key below
+        let path = self.get_local_path(&final_key)?;
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
 
-        let final_data = data.to_vec();
-
-        // Auto-compression to WebP mock for images
-        let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") || key.ends_with(".webp");
-        let reported_size = if is_image && data.len() > 100 {
-            let original_size = data.len();
-            // Mock compression: simulate 80% reduction for quota reporting
-            let compressed_size = original_size / 5;
-            let saved = original_size - compressed_size;
-            tracing::info!(
-                key = %key,
-                original = original_size,
-                simulated_compressed = compressed_size,
-                saved = saved,
-                "Auto-optimized image to WebP (simulated for quota)"
-            );
-            compressed_size
-        } else {
-            data.len()
-        };
 
         // Quota Enforcement
-        let t_id = key.split('/').next().unwrap_or("default");
+        let t_id = final_key.split('/').next().unwrap_or("default");
         if let Ok(status) = self.tracker.track_storage_usage(t_id, reported_size as i64).await {
             if status.soft_limit_reached {
                 if let Some(msg) = status.user_message {
