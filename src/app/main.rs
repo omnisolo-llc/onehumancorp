@@ -444,6 +444,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let my_plan_ui = app::MyPlan::new().unwrap();
                                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
+                                        let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
+                                        my_plan_ui.on_view_details(move || {
+                                            if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
                                         let billing_ui = app::Billing::new().unwrap();
                                         let billing_handle_clone = billing_ui.as_weak();
                                         dashboard.on_open_billing(move || {
@@ -2607,6 +2613,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 let billing_ui_inner = app::Billing::new().unwrap();
+                let cost_dashboard_handle_clone_dashboard = cost_dashboard_ui.as_weak();
+                my_plan_ui.on_view_details(move || {
+                    if let Some(ui) = cost_dashboard_handle_clone_dashboard.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
                 let billing_handle_clone_dashboard = billing_ui_inner.as_weak();
                 dashboard.on_open_billing(move || {
                     if let Some(ui) = billing_handle_clone_dashboard.upgrade() {
