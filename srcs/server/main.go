@@ -97,6 +97,15 @@ func main() {
 
 	mux.HandleFunc("/api/dashboard/onboarding/metrics", dashboard.HandleOnboardingMetrics)
 
+	// Initialize Shared Task List APIs
+	dbTaskRepo := orchestration.NewDBTaskRepository(db)
+	localMesh := orchestration.NewLocalTeammateMesh()
+	taskHandler := orchestration.NewTaskHandler(dbTaskRepo, localMesh)
+
+	mux.HandleFunc("/api/tasks/create", onboarding.TenantAuthMiddleware(taskHandler.HandleCreateTask))
+	mux.HandleFunc("/api/tasks/list", onboarding.TenantAuthMiddleware(taskHandler.HandleListTasks))
+	mux.HandleFunc("/api/tasks/update/", onboarding.TenantAuthMiddleware(taskHandler.HandleUpdateTask))
+
 	go func() {
 		log.Println("Listening on :8080...")
 		if err := http.ListenAndServe(":8080", mux); err != nil {

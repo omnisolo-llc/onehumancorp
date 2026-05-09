@@ -6,6 +6,10 @@ go_library(
         "autodream.go",
         "mesh.go",
         "tasks_db.go",
+        "task.go",
+        "task_repository.go",
+        "task_handler.go",
+        "mesh_redis.go",
         "state_machine.go",
         "sip.go",
         "sub_agent.go",
@@ -21,6 +25,8 @@ go_library(
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//:metric",
+        "@com_github_google_uuid//:uuid",
+        "@com_github_redis_go_redis_v9//:go-redis",
     ],
 )
 
@@ -30,6 +36,7 @@ go_test(
         "autodream_test.go",
         "mesh_test.go",
         "tasks_db_test.go",
+        "task_repository_test.go",
         "state_machine_test.go",
         "state_machine_coverage_test.go",
         "sip_test.go",
