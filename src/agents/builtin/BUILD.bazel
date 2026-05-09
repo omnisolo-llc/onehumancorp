@@ -13,6 +13,7 @@ rust_library(
         "memory.rs",
         "pubsub.rs",
         "output_parser.rs",
+        "masking.rs",
         "types.rs",
     ],
     crate_name = "ohc_builtin_agent_core",
