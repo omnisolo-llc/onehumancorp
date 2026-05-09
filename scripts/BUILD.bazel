@@ -1,3 +1,12 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
 exports_files([
     "run-playwright.mjs",
 ])
+
+sh_test(
+    name = "lint_pii",
+    srcs = ["lint/lint_pii.sh"],
+    data = ["//srcs/server:all_go_files"],
+    size = "small",
+)
