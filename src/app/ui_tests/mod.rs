@@ -106,3 +106,8 @@ pub mod guide_onboarding_e2e;
 pub mod guide_onboarding_e2e_extended;
 pub mod website_builder_e2e_tests;
 pub mod echo_agents_ux_test;
+pub mod fix_issue_wizard_e2e_tests;
+pub mod agent_config_e2e_tests;
+pub mod prompt_tuning_e2e_tests;
+pub mod pricing_wizard_e2e_tests;
+pub mod website_builder_full_e2e_tests;
