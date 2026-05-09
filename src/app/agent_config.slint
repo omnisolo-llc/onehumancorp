@@ -1,6 +1,7 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit, Slider, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { AdvancedToggle } from "advanced_toggle.slint";
+import { ToggleSwitch } from "toggle_switch.slint";
 
 export component AgentConfig inherits Window {
     width: 600px;
@@ -57,75 +58,65 @@ export component AgentConfig inherits Window {
                 height: 300px;
                 VerticalBox {
                     spacing: 12px;
-                    GlassCard {
-                        height: 90px;
-                        background: selected_agent == "Customer Support" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        HorizontalBox {
-                            padding: 16px; spacing: 16px; alignment: center;
-                            Text { text: "🎧"; font-size: 32px; }
+                    HorizontalBox {
+                        spacing: 12px;
+                        GlassCard {
+                            height: 120px;
+                            background: selected_agent == "Customer Support" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                             VerticalBox {
-                                alignment: center;
-                                Text { text: "Customer Support"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                                Text { text: "Customer Support — keeps customers happy"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                                padding: 12px; spacing: 8px; alignment: center;
+                                Text { text: "🎧"; font-size: 32px; horizontal-alignment: center; }
+                                Text { text: "Customer Support"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
+                                ToggleSwitch { label: "Add to my team"; checked: selected_agent == "Customer Support"; toggled => { selected_agent = "Customer Support"; selected_agent_display = "Customer Support"; } }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "Customer Support"; selected_agent_display = "Customer Support"; } }
+                        GlassCard {
+                            height: 120px;
+                            background: selected_agent == "Social Media Manager" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                            VerticalBox {
+                                padding: 12px; spacing: 8px; alignment: center;
+                                Text { text: "📱"; font-size: 32px; horizontal-alignment: center; }
+                                Text { text: "Social Media Manager"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
+                                ToggleSwitch { label: "Add to my team"; checked: selected_agent == "Social Media Manager"; toggled => { selected_agent = "Social Media Manager"; selected_agent_display = "Social Media Manager"; } }
+                            }
+                        }
                     }
-                    GlassCard {
-                        height: 90px;
-                        background: selected_agent == "Social Media Manager" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        HorizontalBox {
-                            padding: 16px; spacing: 16px; alignment: center;
-                            Text { text: "📱"; font-size: 32px; }
+                    HorizontalBox {
+                        spacing: 12px;
+                        GlassCard {
+                            height: 120px;
+                            background: selected_agent == "SEO Booster" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                             VerticalBox {
-                                alignment: center;
-                                Text { text: "Social Media Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                                Text { text: "Social Media Manager — gets the word out"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                                padding: 12px; spacing: 8px; alignment: center;
+                                Text { text: "🚀"; font-size: 32px; horizontal-alignment: center; }
+                                Text { text: "SEO Booster"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
+                                ToggleSwitch { label: "Add to my team"; checked: selected_agent == "SEO Booster"; toggled => { selected_agent = "SEO Booster"; selected_agent_display = "SEO Booster"; } }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "Social Media Manager"; selected_agent_display = "Social Media Manager"; } }
+                        GlassCard {
+                            height: 120px;
+                            background: selected_agent == "Order Manager" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                            VerticalBox {
+                                padding: 12px; spacing: 8px; alignment: center;
+                                Text { text: "📦"; font-size: 32px; horizontal-alignment: center; }
+                                Text { text: "Order Manager"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
+                                ToggleSwitch { label: "Add to my team"; checked: selected_agent == "Order Manager"; toggled => { selected_agent = "Order Manager"; selected_agent_display = "Order Manager"; } }
+                            }
+                        }
                     }
-                    GlassCard {
-                        height: 90px;
-                        background: selected_agent == "SEO Booster" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        HorizontalBox {
-                            padding: 16px; spacing: 16px; alignment: center;
-                            Text { text: "🚀"; font-size: 32px; }
+                    HorizontalBox {
+                        spacing: 12px;
+                        GlassCard {
+                            height: 120px;
+                            background: selected_agent == "Email Marketer" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                             VerticalBox {
-                                alignment: center;
-                                Text { text: "SEO Booster"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                                Text { text: "SEO Booster — drives traffic"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                                padding: 12px; spacing: 8px; alignment: center;
+                                Text { text: "✉️"; font-size: 32px; horizontal-alignment: center; }
+                                Text { text: "Email Marketer"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
+                                ToggleSwitch { label: "Add to my team"; checked: selected_agent == "Email Marketer"; toggled => { selected_agent = "Email Marketer"; selected_agent_display = "Email Marketer"; } }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "SEO Booster"; selected_agent_display = "SEO Booster"; } }
-                    }
-                    GlassCard {
-                        height: 90px;
-                        background: selected_agent == "Order Manager" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        HorizontalBox {
-                            padding: 16px; spacing: 16px; alignment: center;
-                            Text { text: "📦"; font-size: 32px; }
-                            VerticalBox {
-                                alignment: center;
-                                Text { text: "Order Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                                Text { text: "Order Manager — handles daily operations"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
-                            }
-                        }
-                        TouchArea { clicked => { selected_agent = "Order Manager"; selected_agent_display = "Order Manager"; } }
-                    }
-                    GlassCard {
-                        height: 90px;
-                        background: selected_agent == "Email Marketer" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                        HorizontalBox {
-                            padding: 16px; spacing: 16px; alignment: center;
-                            Text { text: "✉️"; font-size: 32px; }
-                            VerticalBox {
-                                alignment: center;
-                                Text { text: "Email Marketer"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
-                                Text { text: "Email Marketer — runs email campaigns"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
-                            }
-                        }
-                        TouchArea { clicked => { selected_agent = "Email Marketer"; selected_agent_display = "Email Marketer"; } }
+                        Rectangle { } // Empty space to fill grid
                     }
                 }
             }
@@ -142,22 +133,10 @@ export component AgentConfig inherits Window {
             spacing: 16px;
             Text { text: "What should this helper do?"; color: white; font-family: "Inter"; }
             
-            HorizontalBox {
-                Text { text: "Reply to customer messages"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
-            }
-            HorizontalBox {
-                Text { text: "Post to Instagram & Facebook"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
-            }
-            HorizontalBox {
-                Text { text: "Write product descriptions"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_write_descriptions; toggled => { can_write_descriptions = !can_write_descriptions; } }
-            }
-            HorizontalBox {
-                Text { text: "Send order updates"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_send_updates; toggled => { can_send_updates = !can_send_updates; } }
-            }
+            ToggleSwitch { label: "Reply to customer messages"; checked <=> can_reply; toggled => { } }
+            ToggleSwitch { label: "Post to Instagram & Facebook"; checked <=> can_social; toggled => { } }
+            ToggleSwitch { label: "Write product descriptions"; checked <=> can_write_descriptions; toggled => { } }
+            ToggleSwitch { label: "Send order updates"; checked <=> can_send_updates; toggled => { } }
         }
 
         // Step 2: Frequency

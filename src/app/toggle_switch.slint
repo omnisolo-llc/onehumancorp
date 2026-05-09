@@ -1,0 +1,49 @@
+import { HorizontalBox } from "std-widgets.slint";
+
+export component ToggleSwitch {
+    in property <string> label: "";
+    in-out property <bool> checked: false;
+    callback toggled();
+
+    min-height: 24px;
+    width: 100%;
+
+    HorizontalBox {
+        padding: 0;
+        spacing: 12px;
+        alignment: space-between;
+
+        Text {
+            text: root.label;
+            font-family: "Inter";
+            font-size: 14px;
+            color: white;
+            vertical-alignment: center;
+        }
+
+        Rectangle {
+            width: 44px;
+            height: 24px;
+            border-radius: 12px;
+            background: root.checked ? #a855f7 : rgba(255, 255, 255, 0.2);
+            animate background { duration: 200ms; }
+
+            Rectangle {
+                width: 20px;
+                height: 20px;
+                border-radius: 10px;
+                background: white;
+                x: root.checked ? 22px : 2px;
+                y: 2px;
+                animate x { duration: 200ms; easing: cubic-bezier(0.4, 0, 0.2, 1); }
+            }
+
+            TouchArea {
+                clicked => {
+                    root.checked = !root.checked;
+                    root.toggled();
+                }
+            }
+        }
+    }
+}
