@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type SIPDB struct {
@@ -58,4 +59,72 @@ func (s *SIPDB) ReportMissionHandover(ctx context.Context, missionID string, blo
 ' END || $1
 		WHERE id = $2`, blockers, missionID)
 	return err
+}
+
+type MissionExecutor interface {
+	Execute(ctx context.Context, payload []byte) error
+}
+
+type MissionDrainer struct {
+	sipDB    *SIPDB
+	executor MissionExecutor
+}
+
+func NewMissionDrainer(sipDB *SIPDB, executor MissionExecutor) *MissionDrainer {
+	return &MissionDrainer{
+		sipDB:    sipDB,
+		executor: executor,
+	}
+}
+
+func (m *MissionDrainer) Start(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				m.pollAndExecute(ctx)
+			}
+		}
+	}()
+}
+
+func (m *MissionDrainer) pollAndExecute(ctx context.Context) {
+	rows, err := m.sipDB.db.QueryContext(ctx, "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' LIMIT 1")
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return
+	}
+
+	var id string
+	var payloadStr string
+	if err := rows.Scan(&id, &payloadStr); err != nil {
+		return
+	}
+	rows.Close()
+
+	// Atomic lock via update
+	res, err := m.sipDB.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'PROCESSING' WHERE id = $1 AND status = 'PENDING'", id)
+	if err != nil {
+		return
+	}
+	affected, err := res.RowsAffected()
+	if err != nil || affected == 0 {
+		return // Another instance grabbed it
+	}
+
+	err = m.executor.Execute(ctx, []byte(payloadStr))
+	if err != nil {
+		_ = m.sipDB.ReportMissionHandover(ctx, id, err.Error())
+	} else {
+		_, _ = m.sipDB.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = $1", id)
+	}
 }

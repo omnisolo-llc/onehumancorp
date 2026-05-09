@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -180,4 +181,61 @@ func TestDelegateMission_DatabaseError(t *testing.T) {
 
 	err = sipdb.DelegateMission(context.Background(), mission)
 	assert.Error(t, err)
+}
+
+type mockMissionExecutor struct {
+	shouldFail bool
+}
+
+func (m *mockMissionExecutor) Execute(ctx context.Context, payload []byte) error {
+	if m.shouldFail {
+		return fmt.Errorf("mock error")
+	}
+	return nil
+}
+
+func TestMissionDrainer_Success(t *testing.T) {
+	db, cleanup := setupSIPDB(t)
+	defer cleanup()
+
+	// Need to add mission_log column for ReportMissionHandover
+	_, err := db.Exec(`ALTER TABLE agent_missions ADD COLUMN mission_log TEXT`)
+	require.NoError(t, err)
+
+	sipdb := NewSIPDB(db)
+	executor := &mockMissionExecutor{shouldFail: false}
+	drainer := NewMissionDrainer(sipdb, executor)
+
+	_, err = db.Exec(`INSERT INTO agent_missions (id, status, payload) VALUES ('m1', 'PENDING', '{"foo":"bar"}')`)
+	require.NoError(t, err)
+
+	drainer.pollAndExecute(context.Background())
+
+	var status string
+	err = db.QueryRow("SELECT status FROM agent_missions WHERE id = 'm1'").Scan(&status)
+	require.NoError(t, err)
+	assert.Equal(t, "COMPLETED", status)
+}
+
+func TestMissionDrainer_Failure(t *testing.T) {
+	db, cleanup := setupSIPDB(t)
+	defer cleanup()
+
+	_, err := db.Exec(`ALTER TABLE agent_missions ADD COLUMN mission_log TEXT`)
+	require.NoError(t, err)
+
+	sipdb := NewSIPDB(db)
+	executor := &mockMissionExecutor{shouldFail: true}
+	drainer := NewMissionDrainer(sipdb, executor)
+
+	_, err = db.Exec(`INSERT INTO agent_missions (id, status, payload) VALUES ('m2', 'PENDING', '{"foo":"bar"}')`)
+	require.NoError(t, err)
+
+	drainer.pollAndExecute(context.Background())
+
+	var status, missionLog string
+	err = db.QueryRow("SELECT status, mission_log FROM agent_missions WHERE id = 'm2'").Scan(&status, &missionLog)
+	require.NoError(t, err)
+	assert.Equal(t, "blocked", status)
+	assert.Contains(t, missionLog, "mock error")
 }
