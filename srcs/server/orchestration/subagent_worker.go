@@ -53,51 +53,47 @@ func (w *SubAgentWorker) Poll(ctx context.Context) {
 			w.mu.Lock()
 		}
 
-		tx, err := w.db.BeginTx(ctx, nil)
-		if err != nil {
-			if w.isSQLite {
-				w.mu.Unlock()
-			}
-			log.Printf("Failed to begin tx: %v", err)
-			return
-		}
-
 		// Find a pending job
 		var id, taskID string
-		query := "SELECT id, task_id FROM sub_agent_jobs WHERE status = 'PENDING' LIMIT 1"
+
 		if !w.isSQLite {
-			query += " FOR UPDATE SKIP LOCKED"
-		}
-
-		err = tx.QueryRowContext(ctx, query).Scan(&id, &taskID)
-		if err != nil {
-			tx.Rollback()
-			if w.isSQLite {
+			query := "UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_jobs WHERE status = 'PENDING' LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, task_id"
+			err := w.db.QueryRowContext(ctx, query).Scan(&id, &taskID)
+			if err != nil {
+				if err != sql.ErrNoRows {
+					log.Printf("Failed to poll jobs: %v", err)
+				}
+				return
+			}
+		} else {
+			tx, err := w.db.BeginTx(ctx, nil)
+			if err != nil {
 				w.mu.Unlock()
+				log.Printf("Failed to begin tx: %v", err)
+				return
 			}
-			if err != sql.ErrNoRows {
-				log.Printf("Failed to poll jobs: %v", err)
-			}
-			return
-		}
-
-		// Update to RUNNING
-		_, err = tx.ExecContext(ctx, "UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = $1", id)
-		if err != nil {
-			tx.Rollback()
-			if w.isSQLite {
+			query := "SELECT id, task_id FROM sub_agent_jobs WHERE status = 'PENDING' LIMIT 1"
+			err = tx.QueryRowContext(ctx, query).Scan(&id, &taskID)
+			if err != nil {
+				tx.Rollback()
 				w.mu.Unlock()
+				if err != sql.ErrNoRows {
+					log.Printf("Failed to poll jobs: %v", err)
+				}
+				return
 			}
-			log.Printf("Failed to update job status: %v", err)
-			return
-		}
-
-		if err := tx.Commit(); err != nil {
-			if w.isSQLite {
+			_, err = tx.ExecContext(ctx, "UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = $1", id)
+			if err != nil {
+				tx.Rollback()
 				w.mu.Unlock()
+				log.Printf("Failed to update job status: %v", err)
+				return
 			}
-			log.Printf("Failed to commit job claim: %v", err)
-			return
+			if err := tx.Commit(); err != nil {
+				w.mu.Unlock()
+				log.Printf("Failed to commit job claim: %v", err)
+				return
+			}
 		}
 
 		if w.isSQLite {

@@ -5,11 +5,11 @@ use tonic::{Request, Response, Status};
 
 use std::collections::HashMap;
 use std::sync::OnceLock;
-use std::sync::RwLock;
+use dashmap::DashMap;
 
-static PRODUCTS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::organization::Product>>>> =
+static PRODUCTS_CACHE: OnceLock<DashMap<String, Vec<crate::ohc::organization::Product>>> =
     OnceLock::new();
-static ORDERS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::app::Order>>>> =
+static ORDERS_CACHE: OnceLock<DashMap<String, Vec<crate::ohc::app::Order>>> =
     OnceLock::new();
 
 pub struct MyDashboardService {
@@ -91,11 +91,9 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(guard) = cache.read() {
-                    if let Some(products) = guard.get(&org_id) {
-                        return Ok::<_, String>(products.clone());
-                    }
+                let cache = PRODUCTS_CACHE.get_or_init(|| DashMap::new());
+                if let Some(products) = cache.get(&org_id) {
+                    return Ok::<_, String>(products.clone());
                 }
 
                 let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
@@ -156,10 +154,8 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(mut guard) = cache.write() {
-                    guard.insert(org_id, results.clone());
-                }
+                let cache = PRODUCTS_CACHE.get_or_init(|| DashMap::new());
+                cache.insert(org_id, results.clone());
                 Ok::<_, String>(results)
             },
             async {
@@ -177,11 +173,9 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                let cache = ORDERS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(guard) = cache.read() {
-                    if let Some(orders) = guard.get(&org_id) {
-                        return Ok::<_, String>(orders.clone());
-                    }
+                let cache = ORDERS_CACHE.get_or_init(|| DashMap::new());
+                if let Some(orders) = cache.get(&org_id) {
+                    return Ok::<_, String>(orders.clone());
                 }
                 let q = "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10";
                 use sqlx::Row;
@@ -235,10 +229,8 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                let cache = ORDERS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(mut guard) = cache.write() {
-                    guard.insert(org_id, results.clone());
-                }
+                let cache = ORDERS_CACHE.get_or_init(|| DashMap::new());
+                cache.insert(org_id, results.clone());
                 Ok::<_, String>(results)
             },
             async {
