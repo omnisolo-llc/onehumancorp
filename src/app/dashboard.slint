@@ -29,6 +29,7 @@ export component Dashboard inherits Window { // milestones
 
     in property <string> todays_sales: "$0.00";
     in property <int> new_orders_count: 0;
+    in property <int> new_messages_count: 0;
     in property <int> active_helpers_count: 0;
     in property <int> tasks_in_progress_count: 0;
     in property <string> generative_score: "85";
@@ -309,6 +310,27 @@ export component Dashboard inherits Window { // milestones
                     }
                 }
             }
+        }
+
+        // Messages Inbox
+        VerticalBox {
+            spacing: 12px;
+            Text { text: "Customer Messages"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            if (new_messages_count > 0) : GlassCard {
+                border-color: #f59e0b;
+                border-width: 1px;
+                background: rgba(245, 158, 11, 0.1);
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "You have " + new_messages_count + " new messages in your unified inbox."; font-size: 16px; color: white; wrap: word-wrap; }
+                    HorizontalBox {
+                        alignment: end;
+                        Button { text: "View Inbox"; height: 44px; clicked => { action_check_messages(); } }
+                    }
+                }
+            }
+            if (new_messages_count == 0) : Text { text: "No new messages."; color: #cbd5e1; font-size: 14px; }
         }
 
         // Pending Orders/Bookings (Middle)

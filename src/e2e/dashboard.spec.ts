@@ -61,6 +61,41 @@ test.describe('Dashboard Core', () => {
     await expect(page.locator('text=Messages')).toBeVisible();
   });
 
+  test('should display customer messages inbox section', async ({ page }) => {
+    // 1. Log in to access the dashboard
+    await page.goto('/');
+
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
+
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
+
+    // 2. Ensure the new Customer Messages section is visible on the dashboard
+    await expect(page.locator('text=Customer Messages').first()).toBeVisible();
+    await expect(page.locator('button:has-text("View Inbox")')).toBeVisible();
+
+    // 3. Click the View Inbox button to open the Unified Inbox modal
+    await page.click('button:has-text("View Inbox")');
+    await expect(page.locator('text="Customer Inbox"')).toBeVisible();
+
+    // 4. Verify that we can interact with a Chatwoot unified conversation
+    await expect(page.locator('text="Select a conversation"')).toBeVisible();
+
+    // Click on a contact from the inbox list
+    await page.click('text="Maya"');
+    await expect(page.locator('text="Do you do vegan cakes?"')).toBeVisible();
+
+    // 5. Test AI Draft integration on the Chatwoot inbox UI
+    await page.click('button:has-text("✨ AI Draft")');
+    await expect(page.locator('input[placeholder="Type a message..."]')).toHaveValue(/vegan/i, { timeout: 10000 });
+
+    // 6. Send the message and verify it appears in the chat
+    await page.fill('input[placeholder="Type a message..."]', 'Yes, we have 3 vegan options!');
+    await page.click('button:has-text("Send")');
+    await expect(page.locator('text="Yes, we have 3 vegan options!"').last()).toBeVisible();
+  });
+
   test('should display analytics quick action', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('text=Analytics')).toBeVisible();

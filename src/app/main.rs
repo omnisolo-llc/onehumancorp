@@ -8553,6 +8553,9 @@ mod e2e_login_to_dashboard_tests {
         dashboard_ui.set_show_telemetry_visualization(true);
         assert!(dashboard_ui.get_show_telemetry_visualization(), "Assistant Performance Chart should be visible");
 
+        dashboard_ui.set_new_messages_count(5);
+        assert_eq!(dashboard_ui.get_new_messages_count(), 5, "New messages count should update");
+
         let pending_tasks = vec![
             app::UiPendingApproval {
                         helper_name: "The Promoter".into(),
