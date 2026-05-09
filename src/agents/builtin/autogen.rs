@@ -227,6 +227,85 @@ Provide your response, which will be passed to the next agent in the sequence.",
     }
 }
 
+/// The Orchestrator that manages a Concurrent Fan-out/Fan-in flow of agents.
+pub struct ConcurrentChatManager {
+    pub workers: Vec<ChatAgent>,
+    pub reducer: ChatAgent,
+}
+
+impl ConcurrentChatManager {
+    pub fn new(workers: Vec<ChatAgent>, reducer: ChatAgent) -> Self {
+        Self { workers, reducer }
+    }
+
+    /// Run the concurrent fan-out/fan-in loop.
+    pub async fn run_concurrent(&self, initial_task: &str) -> Result<Message, String> {
+        tracing::info!("Concurrent Step: Starting {} workers for fan-out...", self.workers.len());
+
+        let mut futures = Vec::new();
+
+        for worker in &self.workers {
+            let prompt_context = format!(
+                "You are participating in a concurrent workflow as {}. Your task is: {}",
+                worker.name, initial_task
+            );
+
+            let mut run_cfg = worker.run_config.clone();
+            run_cfg.server_system_message =
+                format!("You are {}. {}", worker.name, worker.description);
+
+            let agent = worker.agent.clone();
+            let name = worker.name.clone();
+
+            futures.push(async move {
+                let mut on_event = |_| {};
+                match agent.run(&run_cfg, &prompt_context, &mut on_event).await {
+                    Ok(response_text) => Ok(format!("{}: {}", name, response_text)),
+                    Err(e) => Err(format!("Worker {} failed: {}", name, e)),
+                }
+            });
+        }
+
+        // Fan-out: Execute all workers concurrently
+        let results = futures::future::join_all(futures).await;
+
+        let mut aggregated_results = String::new();
+        for res in results {
+            match res {
+                Ok(text) => aggregated_results.push_str(&format!("{}\n\n", text)),
+                Err(e) => return Err(e),
+            }
+        }
+
+        tracing::info!("Concurrent Step: Fan-in to reducer agent...");
+
+        let reducer_prompt = format!(
+            "You are the reducer in a concurrent workflow.
+The following are the results from the parallel workers for the initial task: '{}'
+
+Worker Results:
+{}
+
+Synthesize these results into a single final coherent output.",
+            initial_task, aggregated_results
+        );
+
+        let mut reducer_cfg = self.reducer.run_config.clone();
+        reducer_cfg.server_system_message = format!("You are {}. {}", self.reducer.name, self.reducer.description);
+
+        let mut on_event = |_| {};
+        let final_response = self
+            .reducer
+            .agent
+            .run(&reducer_cfg, &reducer_prompt, &mut on_event)
+            .await
+            .map_err(|e| format!("Reducer failed: {}", e))?;
+
+        let final_formatted = format!("{}: {}", self.reducer.name, final_response);
+        Ok(Message::assistant(final_formatted))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -276,6 +355,58 @@ mod tests {
         assert!(transcript[2]
             .content
             .contains("Agent2: I am Agent2. I received the output and did Output 2"));
+    }
+
+    #[tokio::test]
+    async fn test_autogen_concurrent_chat() {
+        let worker1_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec!["Worker1 finding A".to_string()]),
+        });
+        let worker1 = Arc::new(Agent::new(worker1_llm, vec![]));
+
+        let worker2_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec!["Worker2 finding B".to_string()]),
+        });
+        let worker2 = Arc::new(Agent::new(worker2_llm, vec![]));
+
+        let reducer_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                "I have synthesized A and B into final C".to_string(),
+            ]),
+        });
+        let reducer = Arc::new(Agent::new(reducer_llm, vec![]));
+
+        let cfg = AgentRunConfig::default();
+
+        let chat_worker1 = ChatAgent {
+            name: "Worker1".to_string(),
+            description: "First worker.".to_string(),
+            agent: worker1,
+            run_config: cfg.clone(),
+        };
+
+        let chat_worker2 = ChatAgent {
+            name: "Worker2".to_string(),
+            description: "Second worker.".to_string(),
+            agent: worker2,
+            run_config: cfg.clone(),
+        };
+
+        let chat_reducer = ChatAgent {
+            name: "Reducer".to_string(),
+            description: "Synthesizer.".to_string(),
+            agent: reducer,
+            run_config: cfg.clone(),
+        };
+
+        let manager = ConcurrentChatManager::new(vec![chat_worker1, chat_worker2], chat_reducer);
+
+        let result = manager.run_concurrent("Initial task").await;
+        assert!(result.is_ok());
+
+        let msg = result.unwrap();
+
+        assert!(msg.content.contains("Reducer: I have synthesized A and B into final C"));
     }
 
     use super::*;
