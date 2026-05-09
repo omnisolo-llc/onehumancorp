@@ -142,6 +142,8 @@ struct AnthropicRequest {
     messages: Vec<AnthropicMessage>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     tools: Vec<AnthropicToolDef>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -312,6 +314,7 @@ impl LlmClient for AnthropicClient {
             system,
             messages,
             tools,
+            stream: Some(false), // Disable streaming by default in chat since we aren't using SSE decoders
         };
 
         let resp = self

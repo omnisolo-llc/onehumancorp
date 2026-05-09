@@ -114,8 +114,20 @@ impl Provider for LocalProvider {
         // Auto-compression to WebP mock for images
         let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") || key.ends_with(".webp");
         if is_image && data.len() > 100 {
-            // Mock compression: reduce size by 80% (truncate to 20%) to simulate WebP conversion
-            final_data.truncate(data.len() / 5);
+            // Auto-resize images larger than 2048x2048
+            if let Ok(mut img) = image::load_from_memory(data) {
+                if img.width() > 2048 || img.height() > 2048 {
+                    img = img.resize(2048, 2048, image::imageops::FilterType::Lanczos3);
+                }
+
+                // Convert to WebP format if possible
+                if let Ok(enc) = webp::Encoder::from_image(&img) {
+                    let webp = enc.encode(75.0);
+                    final_data = webp.to_vec();
+                    // We INTENTIONALLY DO NOT change the file extension here so as to not
+                    // break file retrieval.
+                }
+            }
         }
 
         // Quota Enforcement

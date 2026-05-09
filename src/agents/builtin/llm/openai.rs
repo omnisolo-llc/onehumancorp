@@ -142,6 +142,8 @@ struct OpenAIRequest {
     max_tokens: Option<i32>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     tools: Vec<OpenAIToolDef>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -284,6 +286,7 @@ impl LlmClient for OpenAIClient {
             messages,
             max_tokens,
             tools,
+            stream: Some(false), // Disable streaming by default in chat since we aren't using SSE decoders
         };
 
         // Enable prompt caching for supported models (gpt-4o, gpt-4o-mini)

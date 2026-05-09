@@ -60,6 +60,8 @@ rust_library(
         "@crates//:tracing-subscriber",
         "@crates//:uuid",
         "@crates//:walkdir",
+        "@crates//:image",
+        "@crates//:webp",
     ],
 )
 
@@ -138,7 +140,9 @@ rust_test(
         "@crates//:axum",
         "@crates//:async-nats",
         "@crates//:walkdir",
-            "@crates//:temp-env",
+        "@crates//:image",
+        "@crates//:webp",
+        "@crates//:temp-env",
 ],
 )
 
