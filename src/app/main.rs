@@ -334,7 +334,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("sell_services".to_string(), ui.get_sell_services().to_string()),
                 ("sell_food".to_string(), ui.get_sell_food().to_string()),
                 ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("sell_portfolios".to_string(), ui.get_sell_portfolios().to_string()),
                 ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
@@ -932,7 +931,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("sell_services".to_string(), ui.get_sell_services().to_string()),
                 ("sell_food".to_string(), ui.get_sell_food().to_string()),
                 ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("sell_portfolios".to_string(), ui.get_sell_portfolios().to_string()),
                 ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
@@ -3541,7 +3539,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("sell_services".to_string(), ui.get_sell_services().to_string()),
                 ("sell_food".to_string(), ui.get_sell_food().to_string()),
                 ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("sell_portfolios".to_string(), ui.get_sell_portfolios().to_string()),
                 ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), admin_name.to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
@@ -3572,7 +3569,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_services() { req_selling_categories.push("services".to_string()); }
             if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
-            if ui.get_sell_portfolios() { req_selling_categories.push("portfolios".to_string()); }
 
             // Assign from closure parameters instead of ui.get_*() calls
             let req_website_template = website_template.to_string();
@@ -3749,7 +3745,6 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
                 ("sell_services".to_string(), ui.get_sell_services().to_string()),
                 ("sell_food".to_string(), ui.get_sell_food().to_string()),
                 ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("sell_portfolios".to_string(), ui.get_sell_portfolios().to_string()),
                 ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),

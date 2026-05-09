@@ -466,8 +466,9 @@ impl HubService for MyHubService {
         let user_id = auth_info.spiffe_id.clone();
 
         let req = request.into_inner();
-        let state = req.state;
         
+        let mut state = req.state;
+        state.remove("admin_password");
         let current_step = state.get("step").and_then(|s| s.parse::<i32>().ok()).unwrap_or(0);
         let state_json = serde_json::to_value(&state).unwrap_or(serde_json::json!({}));
 
