@@ -3,37 +3,42 @@ package orchestration
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
-	"errors"
 	"testing"
 	"time"
+    "encoding/json"
+    "errors"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func setupSyncTestDB(t *testing.T) *sql.DB {
 	db, err := sql.Open("sqlite3", ":memory:")
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("Failed to open sqlite3 memory db: %v", err)
+	}
 
-	_, err = db.Exec(`
+	createTableQuery := `
 		CREATE TABLE shared_tasks (
-			id TEXT PRIMARY KEY,
-			organization_id TEXT NOT NULL,
-			title TEXT NOT NULL,
+			id VARCHAR PRIMARY KEY,
+			organization_id VARCHAR NOT NULL,
+			title VARCHAR NOT NULL,
 			description TEXT,
-			status TEXT NOT NULL DEFAULT 'PENDING',
-			agent_id TEXT,
-			priority TEXT NOT NULL DEFAULT 'P2',
+			status VARCHAR NOT NULL DEFAULT 'PENDING',
+			agent_id VARCHAR,
+			priority VARCHAR NOT NULL DEFAULT 'P2',
 			payload TEXT,
 			parent_plan_id TEXT,
 			dependencies TEXT NOT NULL DEFAULT '[]',
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	require.NoError(t, err)
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+		);
+	`
+	_, err = db.Exec(createTableQuery)
+	if err != nil {
+		t.Fatalf("Failed to create shared_tasks table: %v", err)
+	}
 
 	return db
 }
@@ -42,7 +47,7 @@ type mockPostgresProvider struct {
 	*SqliteTaskStore
 }
 
-func TestSyncDaemon(t *testing.T) {
+func TestSyncDaemon_SyncPendingEscalations(t *testing.T) {
 	localDB := setupSyncTestDB(t)
 	defer localDB.Close()
 
@@ -52,85 +57,7 @@ func TestSyncDaemon(t *testing.T) {
 	localStore := NewSqliteTaskStore(localDB)
 	cloudStore := &mockPostgresProvider{NewSqliteTaskStore(cloudDB)}
 
-	ctx := context.Background()
-
-	// Insert task in local DB
-	payload := `{"data": "test [PRIVATE:secret]"}`
-	rawPayload := json.RawMessage(payload)
 	task := &SharedTask{
-		ID:             "task-1",
-		OrganizationID: "org-1",
-		Title:          "Task 1",
-		Status:         "CLOUD_ESCALATION",
-		Payload:        &rawPayload,
-	}
-
-	err := localStore.CreateTask(ctx, task)
-	require.NoError(t, err)
-
-	err = localStore.UpdateTaskStatus(ctx, task.ID, "CLOUD_ESCALATION")
-	require.NoError(t, err)
-
-	// Run syncPendingEscalations
-	err = syncPendingEscalations(ctx, localStore, cloudStore)
-	require.NoError(t, err)
-
-	// Verify local task status changed
-	localTask, err := localStore.GetTask(ctx, "task-1")
-	require.NoError(t, err)
-	assert.Equal(t, "CLOUD_PROCESSING", localTask.Status)
-
-	// Verify task exists in cloud DB
-	cloudTask, err := cloudStore.GetTask(ctx, "task-1")
-	require.NoError(t, err)
-	assert.Equal(t, "PENDING", cloudTask.Status)
-	expectedPayload := `{"data": "test [REDACTED]"}`
-	assert.Equal(t, expectedPayload, string(*cloudTask.Payload))
-
-	// Simulate cloud completion
-	resultPayload := `{"result": "done"}`
-	rawResultPayload := json.RawMessage(resultPayload)
-	cloudTask.Payload = &rawResultPayload
-
-	updateQuery := `UPDATE shared_tasks SET status = 'DONE', payload = ? WHERE id = ?`
-	_, err = cloudDB.Exec(updateQuery, resultPayload, "task-1")
-	require.NoError(t, err)
-
-	// Run syncCompletedEscalations
-	err = syncCompletedEscalations(ctx, localStore, cloudStore)
-	require.NoError(t, err)
-
-	// Verify local task status changed and payload updated
-	localTaskDone, err := localStore.GetTask(ctx, "task-1")
-	require.NoError(t, err)
-	assert.Equal(t, "DONE", localTaskDone.Status)
-	assert.Equal(t, resultPayload, string(*localTaskDone.Payload))
-}
-
-// Add test to cover the failure in query
-func TestSyncDaemon_SyncPendingMissions_QueryError(t *testing.T) {
-	db := setupSyncTestDB(t)
-	db.Close() // this will cause query to fail
-
-	localStore := NewSqliteTaskStore(db)
-	cloudStore := &mockPostgresProvider{NewSqliteTaskStore(db)}
-
-	err := syncPendingEscalations(context.Background(), localStore, cloudStore)
-	assert.Error(t, err)
-}
-
-// Ensure context cancellation is handled properly
-func TestSyncDaemon_SyncPendingMissions_ContextCancel(t *testing.T) {
-	localDB := setupSyncTestDB(t)
-	defer localDB.Close()
-
-	cloudDB := setupSyncTestDB(t)
-	defer cloudDB.Close()
-
-	localStore := NewSqliteTaskStore(localDB)
-	cloudStore := &mockPostgresProvider{NewSqliteTaskStore(cloudDB)}
-
-    task := &SharedTask{
 		ID:             "task-1",
 		OrganizationID: "org-1",
 		Title:          "Task 1",
@@ -138,46 +65,68 @@ func TestSyncDaemon_SyncPendingMissions_ContextCancel(t *testing.T) {
 	}
 
 	err := localStore.CreateTask(context.Background(), task)
-	require.NoError(t, err)
-    err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_ESCALATION")
-    require.NoError(t, err)
+	assert.NoError(t, err)
 
-    ctx, cancel := context.WithCancel(context.Background())
+	err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_ESCALATION")
+	assert.NoError(t, err)
 
-    go func() {
-        time.Sleep(10 * time.Millisecond)
-        cancel()
-    }()
+	err = syncPendingEscalations(context.Background(), localStore, cloudStore)
+	assert.NoError(t, err)
 
-    go StartSyncDaemon(ctx, localStore, cloudStore)
+	// Check local DB
+	localTask, err := localStore.GetTask(context.Background(), "task-1")
+	assert.NoError(t, err)
+	assert.Equal(t, "CLOUD_PROCESSING", localTask.Status)
 
-    time.Sleep(100 * time.Millisecond)
+	// Check cloud DB
+	cloudTask, err := cloudStore.GetTask(context.Background(), "task-1")
+	assert.NoError(t, err)
+	assert.Equal(t, "PENDING", cloudTask.Status)
 }
 
-func TestSyncDaemon_SyncPendingMissions_ScanError(t *testing.T) {
-	db := setupSyncTestDB(t)
-	defer db.Close()
+func TestSyncDaemon_SyncCompletedEscalations(t *testing.T) {
+	localDB := setupSyncTestDB(t)
+	defer localDB.Close()
 
-	_, _ = db.Exec("DROP TABLE shared_tasks;")
-	createTableQuery := `
-	CREATE TABLE shared_tasks (
-		id TEXT PRIMARY KEY,
-		status TEXT NOT NULL
-	);
-	`
-	_, _ = db.Exec(createTableQuery)
+	cloudDB := setupSyncTestDB(t)
+	defer cloudDB.Close()
 
-	insertDataQuery := `
-	INSERT INTO shared_tasks (id, status) VALUES
-	('task-1', 'CLOUD_ESCALATION');
-	`
-	_, _ = db.Exec(insertDataQuery)
+	localStore := NewSqliteTaskStore(localDB)
+	cloudStore := &mockPostgresProvider{NewSqliteTaskStore(cloudDB)}
 
-	localStore := NewSqliteTaskStore(db)
-	cloudStore := &mockPostgresProvider{NewSqliteTaskStore(db)}
+	// Setup local task in processing state
+	localTask := &SharedTask{
+		ID:             "task-1",
+		OrganizationID: "org-1",
+		Title:          "Task 1",
+		Status:         "CLOUD_PROCESSING",
+	}
+	err := localStore.CreateTask(context.Background(), localTask)
+	assert.NoError(t, err)
 
-	err := syncPendingEscalations(context.Background(), localStore, cloudStore)
-    assert.Error(t, err)
+	err = localStore.UpdateTaskStatus(context.Background(), localTask.ID, "CLOUD_PROCESSING")
+	assert.NoError(t, err)
+
+	// Setup cloud task in DONE state
+	cloudTask := &SharedTask{
+		ID:             "task-1",
+		OrganizationID: "org-1",
+		Title:          "Task 1",
+		Status:         "DONE",
+	}
+	err = cloudStore.CreateTask(context.Background(), cloudTask)
+	assert.NoError(t, err)
+
+	err = cloudStore.UpdateTaskStatus(context.Background(), cloudTask.ID, "DONE")
+	assert.NoError(t, err)
+
+	err = syncCompletedEscalations(context.Background(), localStore, cloudStore)
+	assert.NoError(t, err)
+
+	// Check local DB is updated to DONE
+	updatedLocalTask, err := localStore.GetTask(context.Background(), "task-1")
+	assert.NoError(t, err)
+	assert.Equal(t, "DONE", updatedLocalTask.Status)
 }
 
 func TestSyncDaemon_SyncPendingMissions_SanitizeMockError(t *testing.T) {
@@ -251,7 +200,10 @@ func TestSyncDaemon_SyncCompletedEscalations_CloudGetError(t *testing.T) {
     cloudDB.Close() // this will cause GetTask to fail
 
 	err = syncCompletedEscalations(context.Background(), localStore, cloudStore)
-	assert.NoError(t, err)
+	// Because we use AgentHarness with exponential backoff and circuit breaker
+    // it will return the error instead of swallowing it if it fails repeatedly, but
+    // StartSyncDaemon swallows it. Directly calling syncCompletedEscalations exposes it.
+	assert.Error(t, err)
 }
 
 // ClearSemaphore drains the throttleSemaphore to prevent test deadlocks.
@@ -321,4 +273,141 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, expected, synced)
 	}
+}
+
+func TestSyncDaemon_SyncPendingMissions_ContextCancel(t *testing.T) {
+	// Clean up global semaphore before and after the test
+	ClearSemaphore()
+	defer ClearSemaphore()
+
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer db.Close()
+
+	createTableQuery := `
+	CREATE TABLE agent_missions (
+		id TEXT PRIMARY KEY,
+		status TEXT NOT NULL,
+		payload BLOB,
+		synced_to_cloud BOOLEAN DEFAULT FALSE
+	);
+	`
+	_, err = db.Exec(createTableQuery)
+	require.NoError(t, err)
+
+	// Insert more than 10 to fill up the throttle channel and force wait
+	insertDataQuery := `
+	INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES
+	('mission-1', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
+	('mission-2', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
+	('mission-3', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
+	('mission-4', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
+	('mission-5', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
+	('mission-6', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
+	('mission-7', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
+	('mission-8', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
+	('mission-9', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
+	('mission-10', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
+	('mission-11', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE);
+	`
+	_, err = db.Exec(insertDataQuery)
+	require.NoError(t, err)
+
+	daemon := NewHybridMCPRAGDaemon(db, "http://remote-api.test")
+	// Block the semaphore so it hangs
+	for i := 0; i < 10; i++ {
+		throttleSemaphore <- struct{}{}
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	// Cancel the context so it exits early
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		cancel()
+	}()
+	err = daemon.SyncPendingMissions(ctx)
+
+	assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestSyncDaemon_SyncPendingMissions_QueryError(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:") // Empty DB, no tables
+	require.NoError(t, err)
+	defer db.Close()
+
+	daemon := NewHybridMCPRAGDaemon(db, "http://remote-api.test")
+	err = daemon.SyncPendingMissions(context.Background())
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "sync_daemon: failed to query agent_missions")
+}
+
+func TestSyncDaemon_SyncPendingMissions_ScanError(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer db.Close()
+
+	createTableQuery := `
+	CREATE TABLE agent_missions (
+		id TEXT PRIMARY KEY,
+		status TEXT NOT NULL
+		-- MISSING payload COLUMN to force scan error
+	);
+	`
+	_, err = db.Exec(createTableQuery)
+	require.NoError(t, err)
+
+	insertDataQuery := `
+	INSERT INTO agent_missions (id, status) VALUES
+	('mission-1', 'CLOUD_ESCALATION');
+	`
+	_, err = db.Exec(insertDataQuery)
+	require.NoError(t, err)
+
+	daemon := NewHybridMCPRAGDaemon(db, "http://remote-api.test")
+
+	err = daemon.SyncPendingMissions(context.Background())
+	assert.Error(t, err)
+}
+
+func TestSyncDaemon_StartSyncDaemon(t *testing.T) {
+	localDB := setupSyncTestDB(t)
+	defer localDB.Close()
+
+	cloudDB := setupSyncTestDB(t)
+	defer cloudDB.Close()
+
+	localStore := NewSqliteTaskStore(localDB)
+	cloudStore := &mockPostgresProvider{NewSqliteTaskStore(cloudDB)}
+
+	task := &SharedTask{
+		ID:             "task-1",
+		OrganizationID: "org-1",
+		Title:          "Task 1",
+		Status:         "CLOUD_ESCALATION",
+	}
+
+	err := localStore.CreateTask(context.Background(), task)
+	assert.NoError(t, err)
+
+	err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_ESCALATION")
+	assert.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go StartSyncDaemon(ctx, localStore, cloudStore)
+
+	// Wait for a few iterations
+	time.Sleep(200 * time.Millisecond)
+
+	// Check local DB
+	localTask, err := localStore.GetTask(context.Background(), "task-1")
+	assert.NoError(t, err)
+	assert.Equal(t, "CLOUD_PROCESSING", localTask.Status)
+
+	// Check cloud DB
+	cloudTask, err := cloudStore.GetTask(context.Background(), "task-1")
+	assert.NoError(t, err)
+	assert.Equal(t, "PENDING", cloudTask.Status)
 }

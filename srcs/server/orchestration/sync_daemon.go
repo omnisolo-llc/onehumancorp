@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"onehumancorp/srcs/server/orchestration/harness"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -57,6 +58,7 @@ func (s *SqliteTaskStore) Unlock() {
 type HybridMCPRAGDaemon struct {
 	db          *sql.DB
 	remoteURL   string
+	circuit     *harness.CircuitBreaker
 }
 
 // NewHybridMCPRAGDaemon creates a new instance of HybridMCPRAGDaemon
@@ -64,6 +66,7 @@ func NewHybridMCPRAGDaemon(db *sql.DB, remoteURL string) *HybridMCPRAGDaemon {
 	return &HybridMCPRAGDaemon{
 		db:          db,
 		remoteURL:   remoteURL,
+		circuit:     harness.NewCircuitBreaker(3, 30*time.Second),
 	}
 }
 
@@ -107,8 +110,13 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 			return ctx.Err()
 		}
 
-		// Simulate syncing to remote cloud
-		err = d.syncToCloud(ctx, m.id, m.payload)
+		// Simulate syncing to remote cloud with circuit breaker
+		err = d.circuit.Execute(func() error {
+			agentHarness := harness.NewAgentHarness()
+			return agentHarness.ExecuteJob(ctx, func(jobCtx context.Context) error {
+				return d.syncToCloud(jobCtx, m.id, m.payload)
+			})
+		}, nil)
 
 		if err != nil {
 			// Release semaphore on error
@@ -147,13 +155,23 @@ func StartSyncDaemon(ctx context.Context, localDB SQLiteProvider, cloudDB Postgr
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
+	circuit := harness.NewCircuitBreaker(3, 30*time.Second)
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			syncPendingEscalations(ctx, localDB, cloudDB)
-			syncCompletedEscalations(ctx, localDB, cloudDB)
+			circuit.Execute(func() error {
+				return syncPendingEscalations(ctx, localDB, cloudDB)
+			}, func() error {
+				return nil // Swallow circuit error to prevent crash
+			})
+			circuit.Execute(func() error {
+				return syncCompletedEscalations(ctx, localDB, cloudDB)
+			}, func() error {
+				return nil // Swallow circuit error to prevent crash
+			})
 		}
 	}
 }
@@ -174,6 +192,7 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 	defer rows.Close()
 
 	var tasksToUpdate []SharedTask
+	var firstErr error
 
 	for rows.Next() {
 		var task SharedTask
@@ -202,11 +221,19 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 
 		// Change status to PENDING for cloud
 		task.Status = "PENDING"
-		// Insert into cloud DB
-		err = cloudDB.CreateTask(ctx, &task)
+
+		// Use AgentHarness with timeout/retries for db call
+		agentHarness := harness.NewAgentHarness()
+		err = agentHarness.ExecuteJob(ctx, func(jobCtx context.Context) error {
+			return cloudDB.CreateTask(jobCtx, &task)
+		})
+
 		if err != nil {
 			log.Printf("Error creating task in cloud DB: %v", err)
-			continue
+			if firstErr == nil {
+				firstErr = err // Record error for circuit breaker
+			}
+			continue // Continue processing other tasks instead of returning
 		}
 
 		tasksToUpdate = append(tasksToUpdate, task)
@@ -224,7 +251,7 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 		localDB.GetDB().ExecContext(ctx, updateQuery, task.ID)
 	}
 
-	return nil
+	return firstErr // Return any recorded error to trip the circuit breaker
 }
 
 func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB PostgresProvider) error {
@@ -255,14 +282,30 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 		return err
 	}
 
+	var firstErr error
+
 	for _, id := range taskIDs {
-		// Check cloud DB
-		cloudTask, err := cloudDB.GetTask(ctx, id)
+		// Use AgentHarness with timeout/retries for db call
+		agentHarness := harness.NewAgentHarness()
+		var cloudTask *SharedTask
+
+		err = agentHarness.ExecuteJob(ctx, func(jobCtx context.Context) error {
+			t, getErr := cloudDB.GetTask(jobCtx, id)
+			if getErr != nil {
+				return getErr
+			}
+			cloudTask = t
+			return nil
+		})
+
 		if err != nil {
 			if err != sql.ErrNoRows {
 				log.Printf("Error getting task from cloud DB: %v", err)
+				if firstErr == nil {
+					firstErr = err // Record error for circuit breaker
+				}
 			}
-			continue
+			continue // Continue processing other tasks
 		}
 
 		if cloudTask.Status == "DONE" {
@@ -275,5 +318,5 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 			localDB.GetDB().ExecContext(ctx, updateQuery, payloadBytes, id)
 		}
 	}
-	return nil
+	return firstErr // Return any recorded error to trip the circuit breaker
 }
