@@ -34,6 +34,44 @@ class WizardState {
     this.domainChoice,
   });
 
+  Map<String, dynamic> toJson() {
+    return {
+      'currentStep': currentStep,
+      'companyName': companyName,
+      'industry': industry,
+      'size': size,
+      'goals': goals,
+      'templateSelection': templateSelection,
+      'deploymentPreference': deploymentPreference,
+      'adminName': adminName,
+      'adminEmail': adminEmail,
+      'adminPassword': adminPassword,
+      'productName': productName,
+      'productDescription': productDescription,
+      'productPrice': productPrice,
+      'domainChoice': domainChoice,
+    };
+  }
+
+  factory WizardState.fromJson(Map<String, dynamic> json) {
+    return WizardState(
+      currentStep: json['currentStep'] ?? 0,
+      companyName: json['companyName'],
+      industry: json['industry'],
+      size: json['size'],
+      goals: List<String>.from(json['goals'] ?? []),
+      templateSelection: json['templateSelection'],
+      deploymentPreference: json['deploymentPreference'],
+      adminName: json['adminName'],
+      adminEmail: json['adminEmail'],
+      adminPassword: json['adminPassword'],
+      productName: json['productName'],
+      productDescription: json['productDescription'],
+      productPrice: json['productPrice'],
+      domainChoice: json['domainChoice'],
+    );
+  }
+
   WizardState copyWith({
     int? currentStep,
     String? companyName,
@@ -77,15 +115,31 @@ class WizardNotifier extends Notifier<WizardState> {
     return WizardState();
   }
 
+  Future<String> generateProductDescription(String name) async {
+    return await _apiService.generateDescription(name);
+  }
+
+  void goToProductStep() {
+    state = state.copyWith(currentStep: 7);
+    _apiService.saveState(state.toJson());
+  }
+
+  void goToInstagramStep() {
+    state = state.copyWith(currentStep: 3);
+    _apiService.saveState(state.toJson());
+  }
+
   void nextStep() {
     if (state.currentStep < 11) {
       state = state.copyWith(currentStep: state.currentStep + 1);
+      _apiService.saveState(state.toJson());
     }
   }
 
   void prevStep() {
     if (state.currentStep > 0) {
       state = state.copyWith(currentStep: state.currentStep - 1);
+      _apiService.saveState(state.toJson());
     }
   }
 
@@ -95,6 +149,7 @@ class WizardNotifier extends Notifier<WizardState> {
       industry: industry ?? state.industry,
       size: size ?? state.size,
     );
+    _apiService.saveState(state.toJson());
   }
 
   void toggleGoal(String goal) {
@@ -105,14 +160,17 @@ class WizardNotifier extends Notifier<WizardState> {
       currentGoals.add(goal);
     }
     state = state.copyWith(goals: currentGoals);
+    _apiService.saveState(state.toJson());
   }
 
   void setTemplateSelection(String template) {
     state = state.copyWith(templateSelection: template);
+    _apiService.saveState(state.toJson());
   }
 
   void setDeploymentPreference(String preference) {
     state = state.copyWith(deploymentPreference: preference);
+    _apiService.saveState(state.toJson());
   }
 
   void updateAdminAccount({String? name, String? email, String? password}) {
@@ -121,6 +179,7 @@ class WizardNotifier extends Notifier<WizardState> {
       adminEmail: email ?? state.adminEmail,
       adminPassword: password ?? state.adminPassword,
     );
+    _apiService.saveState(state.toJson());
   }
 
   void updateProductDetails({String? name, String? description, String? price}) {
@@ -129,30 +188,18 @@ class WizardNotifier extends Notifier<WizardState> {
       productDescription: description ?? state.productDescription,
       productPrice: price ?? state.productPrice,
     );
+    _apiService.saveState(state.toJson());
   }
 
   void setDomainChoice(String? domain) {
     state = state.copyWith(domainChoice: domain);
+    _apiService.saveState(state.toJson());
   }
 
   Future<void> submitWizard() async {
-    final data = {
-      'companyName': state.companyName,
-      'industry': state.industry,
-      'size': state.size,
-      'goals': state.goals,
-      'templateSelection': state.templateSelection,
-      'deploymentPreference': state.deploymentPreference,
-      'adminName': state.adminName,
-      'adminEmail': state.adminEmail,
-      'adminPassword': state.adminPassword,
-      'productName': state.productName,
-      'productDescription': state.productDescription,
-      'productPrice': state.productPrice,
-      'domainChoice': state.domainChoice,
-    };
-
+    final data = state.toJson();
     await _apiService.submitBusinessData(data);
+    _apiService.saveState(state.toJson());
 
     // Proceed to the dashboard
     nextStep();

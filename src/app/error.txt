@@ -1,0 +1,1817 @@
+warning: app@0.4.37: warning: Window elements as children do not create separate windows (this may change in the future)
+warning: app@0.4.37:          Consider using a PopupWindow instead
+warning: app@0.4.37:          (Note: VectorMemoryVisualizer inherits Window)
+warning: app@0.4.37:    --> /app/src/app/swarm_memory.slint:104:21
+warning: app@0.4.37:     |
+warning: app@0.4.37: 104 |                     VectorMemoryVisualizer {
+warning: app@0.4.37:     |                     ^^^^^^^^^^^^^^^^^^^^^^^
+warning: app@0.4.37:     |
+warning: app@0.4.37: warning: Exported component 'AdvancedToggle' doesn't inherit Window. No code will be generated for it
+warning: app@0.4.37:    --> /app/src/app/app.slint:1:10
+warning: app@0.4.37:     |
+warning: app@0.4.37:   1 | export { AdvancedToggle } from "./advanced_toggle.slint";
+warning: app@0.4.37:     |          ^^^^^^^^^^^^^^
+warning: app@0.4.37: warning: Exported component 'SwarmObservabilityPanel' doesn't inherit Window. No code will be generated for it
+warning: app@0.4.37:    --> /app/src/app/app.slint:27:10
+warning: app@0.4.37:     |
+warning: app@0.4.37:  27 | export { SwarmObservabilityPanel, SwarmActivity, SwarmAgentStatus } from "./swarm_observability_panel.slint";
+warning: app@0.4.37:     |          ^^^^^^^^^^^^^^^^^^^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/ai_config.slint:68:38
+warning: app@0.4.37:     |
+warning: app@0.4.37:  68 | ...                   padding: 4px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/api_docs.slint:84:46
+warning: app@0.4.37:     |
+warning: app@0.4.37:  84 | ...                   padding: 8px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/business_manager.slint:87:46
+warning: app@0.4.37:     |
+warning: app@0.4.37:  87 | ...                   padding: 4px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/business_manager.slint:93:46
+warning: app@0.4.37:     |
+warning: app@0.4.37:  93 | ...                   padding: 4px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/business_manager.slint:99:46
+warning: app@0.4.37:     |
+warning: app@0.4.37:  99 | ...                   padding: 4px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/business_share.slint:39:22
+warning: app@0.4.37:     |
+warning: app@0.4.37:  39 |             padding: 0px;
+warning: app@0.4.37:     |                      ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:5:14
+warning: app@0.4.37:     |
+warning: app@0.4.37:   5 |     padding: 16px;
+warning: app@0.4.37:     |              ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:28:26
+warning: app@0.4.37:     |
+warning: app@0.4.37:  28 |                 padding: 12px;
+warning: app@0.4.37:     |                          ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:58:26
+warning: app@0.4.37:     |
+warning: app@0.4.37:  58 |                 padding: 12px;
+warning: app@0.4.37:     |                          ^^^^^
+warning: app@0.4.37: warning: padding-bottom only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/task_list.slint:82:53
+warning: app@0.4.37:     |
+warning: app@0.4.37:  82 | ...                   padding-bottom: 4px;
+warning: app@0.4.37:     |                                       ^^^^
+warning: app@0.4.37: warning: padding-left only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/task_list.slint:79:51
+warning: app@0.4.37:     |
+warning: app@0.4.37:  79 | ...                   padding-left: 8px;
+warning: app@0.4.37:     |                                     ^^^^
+warning: app@0.4.37: warning: padding-right only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/task_list.slint:80:52
+warning: app@0.4.37:     |
+warning: app@0.4.37:  80 | ...                   padding-right: 8px;
+warning: app@0.4.37:     |                                      ^^^^
+warning: app@0.4.37: warning: padding-top only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/task_list.slint:81:50
+warning: app@0.4.37:     |
+warning: app@0.4.37:  81 | ...                   padding-top: 4px;
+warning: app@0.4.37:     |                                    ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/unified_inbox.slint:164:58
+warning: app@0.4.37:     |
+warning: app@0.4.37: 164 | ...                   padding: 12px;
+warning: app@0.4.37:     |                                ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:5:14
+warning: app@0.4.37:     |
+warning: app@0.4.37:   5 |     padding: 16px;
+warning: app@0.4.37:     |              ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:28:26
+warning: app@0.4.37:     |
+warning: app@0.4.37:  28 |                 padding: 12px;
+warning: app@0.4.37:     |                          ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:58:26
+warning: app@0.4.37:     |
+warning: app@0.4.37:  58 |                 padding: 12px;
+warning: app@0.4.37:     |                          ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/website_builder.slint:76:124
+warning: app@0.4.37:     |
+warning: app@0.4.37:  76 | ...   if (selected_template == "Modern") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use thi...
+warning: app@0.4.37:     |                                                                                                          ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/website_builder.slint:90:125
+warning: app@0.4.37:     |
+warning: app@0.4.37:  90 | ...   if (selected_template == "Classic") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use th...
+warning: app@0.4.37:     |                                                                                                           ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/website_builder.slint:104:122
+warning: app@0.4.37:     |
+warning: app@0.4.37: 104 | ...   if (selected_template == "Bold") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use this ...
+warning: app@0.4.37:     |                                                                                                        ^^^^
+   Compiling app v0.4.37 (/app/src/app)
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `hub_proto`
+  --> src/app/main.rs:43:17
+   |
+43 |         pub use hub_proto::ohc::orchestration::*;
+   |                 ^^^^^^^^^ use of unresolved module or unlinked crate `hub_proto`
+   |
+   = help: if you wanted to use a crate named `hub_proto`, use `cargo add hub_proto` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `billing_proto`
+  --> src/app/main.rs:46:17
+   |
+46 |         pub use billing_proto::ohc::billing::*;
+   |                 ^^^^^^^^^^^^^ use of unresolved module or unlinked crate `billing_proto`
+   |
+   = help: if you wanted to use a crate named `billing_proto`, use `cargo add billing_proto` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `app_proto`
+  --> src/app/main.rs:50:21
+   |
+50 |             pub use app_proto::ohc::api::v1::*;
+   |                     ^^^^^^^^^ use of unresolved module or unlinked crate `app_proto`
+   |
+   = help: if you wanted to use a crate named `app_proto`, use `cargo add app_proto` to add it to your `Cargo.toml`
+
+error[E0432]: unresolved import `ohc::orchestration::hub_service_client`
+ --> src/app/main.rs:3:25
+  |
+3 | use ohc::orchestration::hub_service_client::HubServiceClient;
+  |                         ^^^^^^^^^^^^^^^^^^ could not find `hub_service_client` in `orchestration`
+
+error[E0432]: unresolved import `ohc::orchestration::org_service_client`
+ --> src/app/main.rs:5:25
+  |
+5 | use ohc::orchestration::org_service_client::OrgServiceClient;
+  |                         ^^^^^^^^^^^^^^^^^^ could not find `org_service_client` in `orchestration`
+
+error[E0432]: unresolved import `ohc::orchestration::growth_service_client`
+ --> src/app/main.rs:7:25
+  |
+7 | use ohc::orchestration::growth_service_client::GrowthServiceClient;
+  |                         ^^^^^^^^^^^^^^^^^^^^^ could not find `growth_service_client` in `orchestration`
+
+error[E0432]: unresolved import `ohc::orchestration::RegisterAgentRequest`
+ --> src/app/main.rs:9:5
+  |
+9 | use ohc::orchestration::RegisterAgentRequest;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `RegisterAgentRequest` in `ohc::orchestration`
+
+error[E0432]: unresolved import `ohc::orchestration::Agent`
+  --> src/app/main.rs:11:5
+   |
+11 | use ohc::orchestration::Agent;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^ no `Agent` in `ohc::orchestration`
+
+error[E0432]: unresolved import `ohc::api::v1::dashboard_service_client`
+   --> src/app/main.rs:565:75
+    |
+565 | ...se ohc::api::v1::dashboard_service_client::DashboardServiceClient;
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^ could not find `dashboard_service_client` in `v1`
+
+error[E0432]: unresolved import `ohc::api::v1::GetVideoTutorialsRequest`
+   --> src/app/main.rs:566:61
+    |
+566 | ...                   use ohc::api::v1::GetVideoTutorialsRequest;
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `GetVideoTutorialsRequest` in `ohc::api::v1`
+
+error[E0432]: unresolved import `ohc::api::v1::dashboard_service_client`
+    --> src/app/main.rs:1619:27
+     |
+1619 | ...se ohc::api::v1::dashboard_service_client::DashboardServiceClient;
+     |                     ^^^^^^^^^^^^^^^^^^^^^^^^ could not find `dashboard_service_client` in `v1`
+
+error[E0432]: unresolved import `ohc::api::v1::GetDashboardRequest`
+    --> src/app/main.rs:1620:13
+     |
+1620 |         use ohc::api::v1::GetDashboardRequest;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `GetDashboardRequest` in `ohc::api::v1`
+
+error[E0433]: failed to resolve: could not find `hub_service_client` in `orchestration`
+  --> src/app/main.rs:35:78
+   |
+35 | ...<ohc::orchestration::hub_service_client::HubServiceClient<tonic::code...
+   |                         ^^^^^^^^^^^^^^^^^^ could not find `hub_service_client` in `orchestration`
+
+error[E0433]: failed to resolve: could not find `hub_service_client` in `orchestration`
+  --> src/app/main.rs:37:28
+   |
+37 | ...(ohc::orchestration::hub_service_client::HubServiceClient::with_inter...
+   |                         ^^^^^^^^^^^^^^^^^^ could not find `hub_service_client` in `orchestration`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `server_lib`
+    --> src/app/main.rs:1011:37
+     |
+1011 | ...   let redacted_data = server_lib::telemetry::redact_interface_pii(...
+     |                           ^^^^^^^^^^ use of unresolved module or unlinked crate `server_lib`
+     |
+     = help: if you wanted to use a crate named `server_lib`, use `cargo add server_lib` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: could not find `org_service_client` in `orchestration`
+    --> src/app/main.rs:1743:53
+     |
+1743 | ...hc::orchestration::org_service_client::OrgServiceClient::connect(st...
+     |                       ^^^^^^^^^^^^^^^^^^ could not find `org_service_client` in `orchestration`
+
+error[E0433]: failed to resolve: could not find `billing_service_client` in `billing`
+    --> src/app/main.rs:2171:47
+     |
+2171 | ... = ohc::billing::billing_service_client::BillingServiceClient::conn...
+     |                     ^^^^^^^^^^^^^^^^^^^^^^ could not find `billing_service_client` in `billing`
+
+error[E0433]: failed to resolve: could not find `billing_service_client` in `billing`
+    --> src/app/main.rs:2214:51
+     |
+2214 | ... = ohc::billing::billing_service_client::BillingServiceClient::conn...
+     |                     ^^^^^^^^^^^^^^^^^^^^^^ could not find `billing_service_client` in `billing`
+
+error[E0433]: failed to resolve: could not find `billing_service_client` in `billing`
+    --> src/app/main.rs:2336:47
+     |
+2336 | ... = ohc::billing::billing_service_client::BillingServiceClient::conn...
+     |                     ^^^^^^^^^^^^^^^^^^^^^^ could not find `billing_service_client` in `billing`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `uuid`
+    --> src/app/main.rs:3356:34
+     |
+3356 |                 let session_id = uuid::Uuid::new_v4().to_string();
+     |                                  ^^^^ use of unresolved module or unlinked crate `uuid`
+     |
+     = help: if you wanted to use a crate named `uuid`, use `cargo add uuid` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `uuid`
+    --> src/app/main.rs:3371:37
+     |
+3371 | ...                   msg_id: uuid::Uuid::new_v4().to_string(),
+     |                               ^^^^ use of unresolved module or unlinked crate `uuid`
+     |
+     = help: if you wanted to use a crate named `uuid`, use `cargo add uuid` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `uuid`
+    --> src/app/main.rs:3598:41
+     |
+3598 | ...                   msg_id: uuid::Uuid::new_v4().to_string(),
+     |                               ^^^^ use of unresolved module or unlinked crate `uuid`
+     |
+     = help: if you wanted to use a crate named `uuid`, use `cargo add uuid` to add it to your `Cargo.toml`
+
+error[E0422]: cannot find struct, variant or union type `SaveWizardStateRequest` in module `ohc::orchestration`
+   --> src/app/main.rs:132:67
+    |
+132 | ...tion::SaveWizardStateRequest { state });
+    |          ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `SaveWizardStateRequest` in module `ohc::orchestration`
+   --> src/app/main.rs:353:79
+    |
+353 | ...tion::SaveWizardStateRequest { state });
+    |          ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `GetWizardStateRequest` in module `ohc::orchestration`
+   --> src/app/main.rs:370:95
+    |
+370 | ...tion::GetWizardStateRequest {})).await {
+    |          ^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `GetWizardStateResponse` in module `ohc::orchestration`
+   --> src/app/main.rs:371:48
+    |
+371 | ...tion::GetWizardStateResponse = resp.into_inner();
+    |          ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `GetWizardStateRequest` in module `ohc::orchestration`
+   --> src/app/main.rs:403:75
+    |
+403 | ...tion::GetWizardStateRequest {});
+    |          ^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `GetWizardStateResponse` in module `ohc::orchestration`
+   --> src/app/main.rs:405:60
+    |
+405 | ...tion::GetWizardStateResponse = resp.into_inner();
+    |          ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `GetWizardStateRequest` in module `ohc::orchestration`
+   --> src/app/main.rs:465:79
+    |
+465 | ...tion::GetWizardStateRequest {});
+    |          ^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `GetWizardStateResponse` in module `ohc::orchestration`
+   --> src/app/main.rs:467:64
+    |
+467 | ...tion::GetWizardStateResponse = resp.into_inner();
+    |          ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `GetPendingApprovalsRequest` in module `ohc::orchestration`
+   --> src/app/main.rs:675:99
+    |
+675 | ...on::GetPendingApprovalsRequest { organization_id: "default_org".into...
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `GetWizardStateRequest` in module `ohc::orchestration`
+   --> src/app/main.rs:731:79
+    |
+731 | ...tion::GetWizardStateRequest {});
+    |          ^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `GetWizardStateResponse` in module `ohc::orchestration`
+   --> src/app/main.rs:733:64
+    |
+733 | ...tion::GetWizardStateResponse = resp.into_inner();
+    |          ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `GetWizardStateRequest` in module `ohc::orchestration`
+   --> src/app/main.rs:881:95
+    |
+881 | ...tion::GetWizardStateRequest {})).await {
+    |          ^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `GetWizardStateResponse` in module `ohc::orchestration`
+   --> src/app/main.rs:882:48
+    |
+882 | ...tion::GetWizardStateResponse = resp.into_inner();
+    |          ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `SaveWizardStateRequest` in module `ohc::orchestration`
+   --> src/app/main.rs:956:75
+    |
+956 | ...tion::SaveWizardStateRequest { state });
+    |          ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `GetWizardStateRequest` in module `ohc::orchestration`
+   --> src/app/main.rs:976:95
+    |
+976 | ...tion::GetWizardStateRequest {})).await {
+    |          ^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `GetWizardStateResponse` in module `ohc::orchestration`
+   --> src/app/main.rs:977:48
+    |
+977 | ...tion::GetWizardStateResponse = resp.into_inner();
+    |          ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `SaveWizardStateRequest` in module `ohc::orchestration`
+   --> src/app/main.rs:998:75
+    |
+998 | ...tion::SaveWizardStateRequest { state });
+    |          ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `AgentConfig` in module `ohc::orchestration`
+    --> src/app/main.rs:1031:75
+     |
+1031 | ...estration::AgentConfig {
+     |               ^^^^^^^^^^^ not found in `ohc::orchestration`
+     |
+help: consider importing this struct through its public re-export
+     |
+   2 + use crate::app::AgentConfig;
+     |
+help: if you import `AgentConfig`, refer to it directly
+     |
+1031 -                         let req = tonic::Request::new(ohc::orchestration::AgentConfig {
+1031 +                         let req = tonic::Request::new(AgentConfig {
+     |
+
+error[E0422]: cannot find struct, variant or union type `GetWizardStateRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1071:95
+     |
+1071 | ...tion::GetWizardStateRequest {})).await {
+     |          ^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `GetWizardStateResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:1072:48
+     |
+1072 | ...ion::GetWizardStateResponse = resp.into_inner();
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `SaveWizardStateRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1093:75
+     |
+1093 | ...ion::SaveWizardStateRequest { state });
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `SaveWizardStateRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1119:79
+     |
+1119 | ...ion::SaveWizardStateRequest { state });
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `PromptTuningConfig` in module `ohc::orchestration`
+    --> src/app/main.rs:1136:86
+     |
+1136 | ...ation::PromptTuningConfig {
+     |           ^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `GetWizardStateRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1230:95
+     |
+1230 | ...tion::GetWizardStateRequest {})).await {
+     |          ^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `GetWizardStateResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:1231:48
+     |
+1231 | ...ion::GetWizardStateResponse = resp.into_inner();
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `SaveWizardStateRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1252:75
+     |
+1252 | ...ion::SaveWizardStateRequest { state });
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `ReasonRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1273:79
+     |
+1273 | ...stration::ReasonRequest {
+     |              ^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `ReasonRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1309:79
+     |
+1309 | ...stration::ReasonRequest {
+     |              ^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `PublishSiteRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1352:79
+     |
+1352 | ...ation::PublishSiteRequest {
+     |           ^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `GetWizardStateRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1422:95
+     |
+1422 | ...tion::GetWizardStateRequest {})).await {
+     |          ^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `GetWizardStateResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:1423:48
+     |
+1423 | ...ion::GetWizardStateResponse = resp.into_inner();
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `SaveWizardStateRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1444:75
+     |
+1444 | ...ion::SaveWizardStateRequest { state });
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `GetWizardStateRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1482:95
+     |
+1482 | ...tion::GetWizardStateRequest {})).await {
+     |          ^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `GetWizardStateResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:1483:48
+     |
+1483 | ...ion::GetWizardStateResponse = resp.into_inner();
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `SaveWizardStateRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1504:75
+     |
+1504 | ...ion::SaveWizardStateRequest { state });
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `ReasonRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1583:75
+     |
+1583 | ...stration::ReasonRequest {
+     |              ^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `EmptyRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1744:67
+     |
+1744 | ...stration::EmptyRequest {});
+     |              ^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `AnalyticsSummaryResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:1750:52
+     |
+1750 | ...on::AnalyticsSummaryResponse = resp.into_inner();
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `EmptyRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1912:144
+     |
+1912 | ...stration::EmptyRequest {})).await;
+     |              ^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `ReferralsResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:1914:60
+     |
+1914 | ...ration::ReferralsResponse = resp.into_inner();
+     |            ^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `EmptyRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1933:155
+     |
+1933 | ...stration::EmptyRequest {})).await;
+     |              ^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `ReferralStatsResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:1935:60
+     |
+1935 | ...tion::ReferralStatsResponse = stats_resp.into_inner();
+     |          ^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `EmptyRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:1960:155
+     |
+1960 | ...stration::EmptyRequest {})).await;
+     |              ^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `ViralCoefficientResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:1962:57
+     |
+1962 | ...on::ViralCoefficientResponse = vc_resp.into_inner();
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `CreateReferralRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:2040:55
+     |
+2040 | ...tion::CreateReferralRequest {
+     |          ^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `EmptyRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:2136:67
+     |
+2136 | ...stration::EmptyRequest {});
+     |              ^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `MyPlanResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:2141:47
+     |
+2141 | ...tration::MyPlanResponse = res.into_inner();
+     |             ^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `TokenUsage` in module `ohc::billing`
+    --> src/app/main.rs:2172:57
+     |
+2172 |             let req = tonic::Request::new(ohc::billing::TokenUsage {
+     |                                                         ^^^^^^^^^^ not found in `ohc::billing`
+
+error[E0422]: cannot find struct, variant or union type `TokenUsage` in module `ohc::billing`
+    --> src/app/main.rs:2215:61
+     |
+2215 |                 let req = tonic::Request::new(ohc::billing::TokenUsage {
+     |                                                             ^^^^^^^^^^ not found in `ohc::billing`
+
+error[E0422]: cannot find struct, variant or union type `EmptyRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:2303:67
+     |
+2303 | ...stration::EmptyRequest {});
+     |              ^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `MyPlanResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:2308:47
+     |
+2308 | ...tration::MyPlanResponse = res.into_inner();
+     |             ^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `TokenUsage` in module `ohc::billing`
+    --> src/app/main.rs:2337:61
+     |
+2337 |             let mut req = tonic::Request::new(ohc::billing::TokenUsage {
+     |                                                             ^^^^^^^^^^ not found in `ohc::billing`
+
+error[E0422]: cannot find struct, variant or union type `SelectPlanRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:2374:71
+     |
+2374 | ...ration::SelectPlanRequest {
+     |            ^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `CancelSubscriptionRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:2401:75
+     |
+2401 | ...on::CancelSubscriptionRequest {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `DownloadInvoiceRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:2424:71
+     |
+2424 | ...ion::DownloadInvoiceRequest {
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `GetQuotaRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:2461:140
+     |
+2461 | ...tration::GetQuotaRequest { user_id: "current_user".into() })).await;
+     |             ^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `QuotaMetrics` in module `ohc::orchestration`
+    --> src/app/main.rs:2463:64
+     |
+2463 | ...stration::QuotaMetrics = resp.into_inner();
+     |              ^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `ReasonRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:2628:87
+     |
+2628 | ...stration::ReasonRequest {
+     |              ^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `ReasonResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:2632:90
+     |
+2632 | ...tration::ReasonResponse>, tonic::Status> = client.reason(request).a...
+     |             ^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `ReasonResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:2634:68
+     |
+2634 | ...tration::ReasonResponse = resp.into_inner();
+     |             ^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `SaveWizardStateRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:3226:79
+     |
+3226 | ...ion::SaveWizardStateRequest { state });
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `SaveWizardStateRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:3245:79
+     |
+3245 | ...ion::SaveWizardStateRequest { state });
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `SaveWizardStateRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:3264:79
+     |
+3264 | ...ion::SaveWizardStateRequest { state });
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `EmptyRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:3292:132
+     |
+3292 | ...stration::EmptyRequest {})).await;
+     |              ^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `AnalyticsSummaryResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:3294:56
+     |
+3294 | ...on::AnalyticsSummaryResponse = resp.into_inner();
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `TeammateMeshEvent` in module `ohc::orchestration`
+    --> src/app/main.rs:3366:57
+     |
+3366 | ...ration::TeammateMeshEvent {
+     |            ^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `PublishTeammateMeshEventRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:3374:75
+     |
+3374 | ...orchestration::PublishTeammateMeshEventRequest {
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `EventStreamRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:3382:82
+     |
+3382 | ...ation::EventStreamRequest {
+     |           ^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `ReasonRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:3439:75
+     |
+3439 | ...stration::ReasonRequest {
+     |              ^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `ReasonResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:3443:78
+     |
+3443 | ...tration::ReasonResponse>, tonic::Status> = client.reason(request).a...
+     |             ^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `ReasonResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:3445:56
+     |
+3445 | ...tration::ReasonResponse = resp.into_inner();
+     |             ^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `ReasonRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:3477:75
+     |
+3477 | ...stration::ReasonRequest {
+     |              ^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `ReasonResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:3481:78
+     |
+3481 | ...tration::ReasonResponse>, tonic::Status> = client.reason(request).a...
+     |             ^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `ReasonResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:3483:56
+     |
+3483 | ...tration::ReasonResponse = resp.into_inner();
+     |             ^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `StartOnboardingRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:3567:90
+     |
+3567 | ...ion::StartOnboardingRequest {
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `PublishTeammateMeshEventRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:3588:108
+     |
+3588 | ...orchestration::PublishTeammateMeshEventRequest {
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `TeammateMeshEvent` in module `ohc::orchestration`
+    --> src/app/main.rs:3590:61
+     |
+3590 | ...                   event: Some(ohc::orchestration::TeammateMeshEvent {
+     |                                                       ^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `StartOnboardingResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:3602:82
+     |
+3602 | ...ion::StartOnboardingResponse>, tonic::Status> = client.start_onboar...
+     |         ^^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `StartOnboardingResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:3605:60
+     |
+3605 | ...ion::StartOnboardingResponse = resp.into_inner();
+     |         ^^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `SaveWizardStateRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:3635:79
+     |
+3635 | ...ion::SaveWizardStateRequest {
+     |         ^^^^^^^^^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `EmptyRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:7101:67
+     |
+7101 | ...stration::EmptyRequest {});
+     |              ^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `MyPlanResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:7106:47
+     |
+7106 | ...tration::MyPlanResponse = res.into_inner();
+     |             ^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `EmptyRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:7248:67
+     |
+7248 | ...stration::EmptyRequest {});
+     |              ^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `MyPlanResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:7253:47
+     |
+7253 | ...tration::MyPlanResponse = res.into_inner();
+     |             ^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0422]: cannot find struct, variant or union type `EmptyRequest` in module `ohc::orchestration`
+    --> src/app/main.rs:7297:67
+     |
+7297 | ...stration::EmptyRequest {});
+     |              ^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0425]: cannot find type `MyPlanResponse` in module `ohc::orchestration`
+    --> src/app/main.rs:7302:47
+     |
+7302 | ...tration::MyPlanResponse = res.into_inner();
+     |             ^^^^^^^^^^^^^^ not found in `ohc::orchestration`
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:133:21
+    |
+133 |             let _ = client.save_wizard_state(request).await;
+    |                     ^^^^^^ cannot infer type
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `server_lib`
+   --> src/app/main.rs:248:29
+    |
+248 |             if let Err(e) = server_lib::run_server().await {
+    |                             ^^^^^^^^^^ use of unresolved module or unlinked crate `server_lib`
+    |
+    = help: if you wanted to use a crate named `server_lib`, use `cargo add server_lib` to add it to your `Cargo.toml`
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:270:23
+    |
+270 |                 match client.register_agent(request).await {
+    |                       ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:355:29
+    |
+355 |                     let _ = client.save_wizard_state(request).await;
+    |                             ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:370:31
+    |
+370 | ...   if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc...
+    |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:371:73
+    |
+371 | ...tWizardStateResponse = resp.into_inner();
+    |                           ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:376:80
+    |
+376 | ...tep") { if let Ok(s) = step.parse() { ui.set_step(s); } }
+    |                           ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:377:94
+    |
+377 | ...{ ui.set_business_type(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:378:92
+    |
+378 | ... { ui.set_company_name(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:379:106
+    |
+379 | ...et_company_description(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:385:92
+    |
+385 | ... { ui.set_payment_pref(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:386:88
+    |
+386 | ...") { ui.set_admin_name(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:387:90
+    |
+387 | ...) { ui.set_admin_email(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:404:43
+    |
+404 | ...   if let Ok(resp) = client.get_wizard_state(req).await {
+    |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:405:85
+    |
+405 | ...tWizardStateResponse = resp.into_inner();
+    |                           ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:409:91
+    |
+409 | ...tep") { if let Ok(s) = val.parse::<i32>() { ui.set_step(s); } }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:410:106
+    |
+410 | ...{ ui.set_business_type(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:411:104
+    |
+411 | ... { ui.set_company_name(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:412:118
+    |
+412 | ...et_company_description(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:418:104
+    |
+418 | ... { ui.set_payment_pref(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:419:100
+    |
+419 | ...") { ui.set_admin_name(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:420:102
+    |
+420 | ...) { ui.set_admin_email(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:421:112
+    |
+421 | ...i.set_website_template(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:422:104
+    |
+422 | ... { ui.set_product_name(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:423:106
+    |
+423 | ...{ ui.set_product_price(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:424:112
+    |
+424 | ...i.set_product_currency(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:425:100
+    |
+425 | ...") { ui.set_price_type(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:427:102
+    |
+427 | ...) { ui.set_product_sku(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:428:114
+    |
+428 | ....set_product_inventory(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:429:106
+    |
+429 | ...{ ui.set_domain_choice(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:430:114
+    |
+430 | ....set_custom_dns_target(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:432:102
+    |
+432 | ...) { ui.set_instant_bio(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:466:47
+    |
+466 | ...   if let Ok(resp) = client.get_wizard_state(req).await {
+    |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:467:89
+    |
+467 | ...tWizardStateResponse = resp.into_inner();
+    |                           ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:472:52
+    |
+472 | ...                   if let Ok(s) = step.parse::<i32>() {
+    |                                      ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:571:76
+    |
+571 | ...                   let resp = response.into_inner();
+    |                                  ^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:676:67
+    |
+676 | ...   if let Ok(resp) = client.get_pending_approvals(req).await {
+    |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:677:65
+    |
+677 | ...                   let tasks = resp.into_inner().tasks;
+    |                                   ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:732:47
+    |
+732 | ...   if let Ok(resp) = client.get_wizard_state(req).await {
+    |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:733:89
+    |
+733 | ...tWizardStateResponse = resp.into_inner();
+    |                           ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:736:52
+    |
+736 | ...                   if let Ok(s) = step.parse::<i32>() {
+    |                                      ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:881:31
+    |
+881 | ...   if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc...
+    |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:882:73
+    |
+882 | ...tWizardStateResponse = resp.into_inner();
+    |                           ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:887:47
+    |
+887 | ...                   if let Ok(step) = step_str.parse::<i32>() {
+    |                                         ^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:891:94
+    |
+891 | ...{ ui.set_business_type(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:892:92
+    |
+892 | ... { ui.set_company_name(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:893:106
+    |
+893 | ...et_company_description(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:899:92
+    |
+899 | ... { ui.set_payment_pref(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:900:88
+    |
+900 | ...") { ui.set_admin_name(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:901:90
+    |
+901 | ...) { ui.set_admin_email(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:903:100
+    |
+903 | ...i.set_website_template(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:904:92
+    |
+904 | ... { ui.set_product_name(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:905:94
+    |
+905 | ...{ ui.set_product_price(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:906:100
+    |
+906 | ...i.set_product_currency(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:907:88
+    |
+907 | ...") { ui.set_price_type(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:909:90
+    |
+909 | ...) { ui.set_product_sku(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:910:102
+    |
+910 | ....set_product_inventory(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:911:94
+    |
+911 | ...{ ui.set_domain_choice(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:912:102
+    |
+912 | ....set_custom_dns_target(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:913:90
+    |
+913 | ...) { ui.set_instant_bio(val.into()); }
+    |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:957:29
+    |
+957 |                     let _ = client.save_wizard_state(request).await;
+    |                             ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:976:31
+    |
+976 | ...   if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc...
+    |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:977:73
+    |
+977 | ...tWizardStateResponse = resp.into_inner();
+    |                           ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> src/app/main.rs:999:29
+    |
+999 |                     let _ = client.save_wizard_state(request).await;
+    |                             ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1037:41
+     |
+1037 | ...   if let Err(e) = client.handle_config_wizard(req).await {
+     |                       ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1071:31
+     |
+1071 | ...   if let Ok(resp) = client.get_wizard_state(tonic::Request::new(oh...
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1072:73
+     |
+1072 | ...WizardStateResponse = resp.into_inner();
+     |                          ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1094:29
+     |
+1094 |                     let _ = client.save_wizard_state(request).await;
+     |                             ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1120:41
+     |
+1120 | ...   if let Err(e) = client.save_wizard_state(request).await {
+     |                       ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1230:31
+     |
+1230 | ...   if let Ok(resp) = client.get_wizard_state(tonic::Request::new(oh...
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1231:73
+     |
+1231 | ...WizardStateResponse = resp.into_inner();
+     |                          ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1253:29
+     |
+1253 |                     let _ = client.save_wizard_state(request).await;
+     |                             ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1277:43
+     |
+1277 |                         if let Ok(resp) = client.reason(request).await {
+     |                                           ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1278:45
+     |
+1278 | ...                   let color_res = resp.into_inner().content;
+     |                                       ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1313:43
+     |
+1313 |                         if let Ok(resp) = client.reason(request).await {
+     |                                           ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1314:40
+     |
+1314 | ...                   let desc = resp.into_inner().content;
+     |                                  ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1362:39
+     |
+1362 | ...   if let Ok(resp) = client.publish_site(request).await {
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1363:35
+     |
+1363 |                         let url = resp.into_inner().url;
+     |                                   ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1422:31
+     |
+1422 | ...   if let Ok(resp) = client.get_wizard_state(tonic::Request::new(oh...
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1423:73
+     |
+1423 | ...WizardStateResponse = resp.into_inner();
+     |                          ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1445:29
+     |
+1445 |                     let _ = client.save_wizard_state(request).await;
+     |                             ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1482:31
+     |
+1482 | ...   if let Ok(resp) = client.get_wizard_state(tonic::Request::new(oh...
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1483:73
+     |
+1483 | ...WizardStateResponse = resp.into_inner();
+     |                          ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1505:29
+     |
+1505 |                     let _ = client.save_wizard_state(request).await;
+     |                             ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1587:29
+     |
+1587 |                     let _ = client.reason(request).await;
+     |                             ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1633:36
+     |
+1633 |                     let snapshot = res.into_inner();
+     |                                    ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1748:67
+     |
+1748 | ..._>, tonic::Status> = client.get_analytics(req).await;
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:1912:83
+     |
+1912 | ..._>, tonic::Status> = client.get_referrals(tonic::Request::new(ohc::...
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2044:83
+     |
+2044 | ..._>, tonic::Status> = client.create_referral(tonic::Request::new(req...
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2140:30
+     |
+2140 |             if let Ok(res) = client.get_my_plan(req).await {
+     |                              ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2141:64
+     |
+2141 | ...tion::MyPlanResponse = res.into_inner();
+     |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2177:67
+     |
+2177 | ..._>, tonic::Status> = client.get_cost_summary(req).await;
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2220:71
+     |
+2220 | ..._>, tonic::Status> = client.get_cost_summary(req).await;
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2307:30
+     |
+2307 |             if let Ok(res) = client.get_my_plan(req).await {
+     |                              ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2308:64
+     |
+2308 | ...tion::MyPlanResponse = res.into_inner();
+     |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2314:45
+     |
+2314 |                         ui.set_action_limit(limit.to_string().into());
+     |                                             ^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2346:31
+     |
+2346 |             if let Ok(resp) = client.get_cost_summary(req).await {
+     |                               ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2347:31
+     |
+2347 |                 let summary = resp.into_inner();
+     |                               ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2380:35
+     |
+2380 |                 if let Ok(resp) = client.select_plan(req).await {
+     |                                   ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2381:40
+     |
+2381 |                     let checkout_url = resp.into_inner().checkout_url;
+     |                                        ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2407:36
+     |
+2407 | ...   if let Ok(_) = client.cancel_subscription(req).await {
+     |                      ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2430:35
+     |
+2430 |                 if let Ok(resp) = client.download_invoice(req).await {
+     |                                   ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2431:31
+     |
+2431 |                     open_url(&resp.into_inner().pdf_url);
+     |                               ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2461:83
+     |
+2461 | ..._>, tonic::Status> = client.get_quota(tonic::Request::new(ohc::orch...
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2632:124
+     |
+2632 | ...e>, tonic::Status> = client.reason(request).await;
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:2634:85
+     |
+2634 | ...ion::ReasonResponse = resp.into_inner();
+     |                          ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:3227:33
+     |
+3227 |                         let _ = client.save_wizard_state(request).await;
+     |                                 ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:3246:33
+     |
+3246 |                         let _ = client.save_wizard_state(request).await;
+     |                                 ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:3265:33
+     |
+3265 |                         let _ = client.save_wizard_state(request).await;
+     |                                 ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:3292:71
+     |
+3292 | ..._>, tonic::Status> = client.get_analytics(tonic::Request::new(ohc::...
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:3379:33
+     |
+3379 | ...   let _ = client.publish_teammate_mesh_event(req).await;
+     |               ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:3387:46
+     |
+3387 | ...                   let mut stream = resp.into_inner();
+     |                                        ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:3443:112
+     |
+3443 | ...e>, tonic::Status> = client.reason(request).await;
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:3445:73
+     |
+3445 | ...ion::ReasonResponse = resp.into_inner();
+     |                          ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:3481:112
+     |
+3481 | ...e>, tonic::Status> = client.reason(request).await;
+     |                         ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:3483:73
+     |
+3483 | ...ion::ReasonResponse = resp.into_inner();
+     |                          ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:3588:33
+     |
+3588 | ...   let _ = client.publish_teammate_mesh_event(tonic::Request::new(o...
+     |               ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:3605:86
+     |
+3605 | ...tOnboardingResponse = resp.into_inner();
+     |                          ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:3619:50
+     |
+3619 | ...   let err_msg = if e.code() == tonic::Code::DeadlineExceeded {
+     |                        ^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:7105:30
+     |
+7105 |             if let Ok(res) = client.get_my_plan(req).await {
+     |                              ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:7106:64
+     |
+7106 | ...tion::MyPlanResponse = res.into_inner();
+     |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:7252:30
+     |
+7252 |             if let Ok(res) = client.get_my_plan(req).await {
+     |                              ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:7253:64
+     |
+7253 | ...tion::MyPlanResponse = res.into_inner();
+     |                           ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:7301:30
+     |
+7301 |             if let Ok(res) = client.get_my_plan(req).await {
+     |                              ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/app/main.rs:7302:64
+     |
+7302 | ...tion::MyPlanResponse = res.into_inner();
+     |                           ^^^ cannot infer type
+
+Some errors have detailed explanations: E0282, E0422, E0425, E0432, E0433.
+For more information about an error, try `rustc --explain E0282`.
+warning: app@0.4.37: warning: Window elements as children do not create separate windows (this may change in the future)
+warning: app@0.4.37:          Consider using a PopupWindow instead
+warning: app@0.4.37:          (Note: VectorMemoryVisualizer inherits Window)
+warning: app@0.4.37:    --> /app/src/app/swarm_memory.slint:104:21
+warning: app@0.4.37:     |
+warning: app@0.4.37: 104 |                     VectorMemoryVisualizer {
+warning: app@0.4.37:     |                     ^^^^^^^^^^^^^^^^^^^^^^^
+warning: app@0.4.37:     |
+warning: app@0.4.37: warning: Exported component 'AdvancedToggle' doesn't inherit Window. No code will be generated for it
+warning: app@0.4.37:    --> /app/src/app/app.slint:1:10
+warning: app@0.4.37:     |
+warning: app@0.4.37:   1 | export { AdvancedToggle } from "./advanced_toggle.slint";
+warning: app@0.4.37:     |          ^^^^^^^^^^^^^^
+warning: app@0.4.37: warning: Exported component 'SwarmObservabilityPanel' doesn't inherit Window. No code will be generated for it
+warning: app@0.4.37:    --> /app/src/app/app.slint:27:10
+warning: app@0.4.37:     |
+warning: app@0.4.37:  27 | export { SwarmObservabilityPanel, SwarmActivity, SwarmAgentStatus } from "./swarm_observability_panel.slint";
+warning: app@0.4.37:     |          ^^^^^^^^^^^^^^^^^^^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/ai_config.slint:68:38
+warning: app@0.4.37:     |
+warning: app@0.4.37:  68 | ...                   padding: 4px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/api_docs.slint:84:46
+warning: app@0.4.37:     |
+warning: app@0.4.37:  84 | ...                   padding: 8px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/business_manager.slint:87:46
+warning: app@0.4.37:     |
+warning: app@0.4.37:  87 | ...                   padding: 4px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/business_manager.slint:93:46
+warning: app@0.4.37:     |
+warning: app@0.4.37:  93 | ...                   padding: 4px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/business_manager.slint:99:46
+warning: app@0.4.37:     |
+warning: app@0.4.37:  99 | ...                   padding: 4px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/business_share.slint:39:22
+warning: app@0.4.37:     |
+warning: app@0.4.37:  39 |             padding: 0px;
+warning: app@0.4.37:     |                      ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:5:14
+warning: app@0.4.37:     |
+warning: app@0.4.37:   5 |     padding: 16px;
+warning: app@0.4.37:     |              ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:28:26
+warning: app@0.4.37:     |
+warning: app@0.4.37:  28 |                 padding: 12px;
+warning: app@0.4.37:     |                          ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:58:26
+warning: app@0.4.37:     |
+warning: app@0.4.37:  58 |                 padding: 12px;
+warning: app@0.4.37:     |                          ^^^^^
+warning: app@0.4.37: warning: padding-bottom only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/task_list.slint:82:53
+warning: app@0.4.37:     |
+warning: app@0.4.37:  82 | ...                   padding-bottom: 4px;
+warning: app@0.4.37:     |                                       ^^^^
+warning: app@0.4.37: warning: padding-left only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/task_list.slint:79:51
+warning: app@0.4.37:     |
+warning: app@0.4.37:  79 | ...                   padding-left: 8px;
+warning: app@0.4.37:     |                                     ^^^^
+warning: app@0.4.37: warning: padding-right only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/task_list.slint:80:52
+warning: app@0.4.37:     |
+warning: app@0.4.37:  80 | ...                   padding-right: 8px;
+warning: app@0.4.37:     |                                      ^^^^
+warning: app@0.4.37: warning: padding-top only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/task_list.slint:81:50
+warning: app@0.4.37:     |
+warning: app@0.4.37:  81 | ...                   padding-top: 4px;
+warning: app@0.4.37:     |                                    ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/unified_inbox.slint:164:58
+warning: app@0.4.37:     |
+warning: app@0.4.37: 164 | ...                   padding: 12px;
+warning: app@0.4.37:     |                                ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:5:14
+warning: app@0.4.37:     |
+warning: app@0.4.37:   5 |     padding: 16px;
+warning: app@0.4.37:     |              ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:28:26
+warning: app@0.4.37:     |
+warning: app@0.4.37:  28 |                 padding: 12px;
+warning: app@0.4.37:     |                          ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:58:26
+warning: app@0.4.37:     |
+warning: app@0.4.37:  58 |                 padding: 12px;
+warning: app@0.4.37:     |                          ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/website_builder.slint:76:124
+warning: app@0.4.37:     |
+warning: app@0.4.37:  76 | ...   if (selected_template == "Modern") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use thi...
+warning: app@0.4.37:     |                                                                                                          ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/website_builder.slint:90:125
+warning: app@0.4.37:     |
+warning: app@0.4.37:  90 | ...   if (selected_template == "Classic") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use th...
+warning: app@0.4.37:     |                                                                                                           ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/website_builder.slint:104:122
+warning: app@0.4.37:     |
+warning: app@0.4.37: 104 | ...   if (selected_template == "Bold") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use this ...
+warning: app@0.4.37:     |                                                                                                        ^^^^
+error: could not compile `app` (lib) due to 221 previous errors
+warning: build failed, waiting for other jobs to finish...
+warning: unused variable: `d`
+   --> src/app/ui_tests/business_manager_ux.rs:124:38
+    |
+124 |     manager_ui.on_submit(move |t, n, d, p, dur, sched| {
+    |                                      ^ help: if this is intentional, prefix it with an underscore: `_d`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `dur`
+   --> src/app/ui_tests/business_manager_ux.rs:124:44
+    |
+124 |     manager_ui.on_submit(move |t, n, d, p, dur, sched| {
+    |                                            ^^^ help: if this is intentional, prefix it with an underscore: `_dur`
+
+warning: unused variable: `sched`
+   --> src/app/ui_tests/business_manager_ux.rs:124:49
+    |
+124 |     manager_ui.on_submit(move |t, n, d, p, dur, sched| {
+    |                                                 ^^^^^ help: if this is intentional, prefix it with an underscore: `_sched`
+
+warning: unused variable: `app`
+   --> src/app/ui_tests/business_manager_ux.rs:117:9
+    |
+117 |     let app = create();
+    |         ^^^ help: if this is intentional, prefix it with an underscore: `_app`
+
+warning: unused variable: `dashboard_ui`
+   --> src/app/ui_tests/business_manager_ux.rs:118:9
+    |
+118 |     let dashboard_ui = app::Dashboard::new().unwrap();
+    |         ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_dashboard_ui`
+
+warning: `app` (lib test) generated 5 warnings
+warning: app@0.4.37: warning: Window elements as children do not create separate windows (this may change in the future)
+warning: app@0.4.37:          Consider using a PopupWindow instead
+warning: app@0.4.37:          (Note: VectorMemoryVisualizer inherits Window)
+warning: app@0.4.37:    --> /app/src/app/swarm_memory.slint:104:21
+warning: app@0.4.37:     |
+warning: app@0.4.37: 104 |                     VectorMemoryVisualizer {
+warning: app@0.4.37:     |                     ^^^^^^^^^^^^^^^^^^^^^^^
+warning: app@0.4.37:     |
+warning: app@0.4.37: warning: Exported component 'AdvancedToggle' doesn't inherit Window. No code will be generated for it
+warning: app@0.4.37:    --> /app/src/app/app.slint:1:10
+warning: app@0.4.37:     |
+warning: app@0.4.37:   1 | export { AdvancedToggle } from "./advanced_toggle.slint";
+warning: app@0.4.37:     |          ^^^^^^^^^^^^^^
+warning: app@0.4.37: warning: Exported component 'SwarmObservabilityPanel' doesn't inherit Window. No code will be generated for it
+warning: app@0.4.37:    --> /app/src/app/app.slint:27:10
+warning: app@0.4.37:     |
+warning: app@0.4.37:  27 | export { SwarmObservabilityPanel, SwarmActivity, SwarmAgentStatus } from "./swarm_observability_panel.slint";
+warning: app@0.4.37:     |          ^^^^^^^^^^^^^^^^^^^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/ai_config.slint:68:38
+warning: app@0.4.37:     |
+warning: app@0.4.37:  68 | ...                   padding: 4px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/api_docs.slint:84:46
+warning: app@0.4.37:     |
+warning: app@0.4.37:  84 | ...                   padding: 8px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/business_manager.slint:87:46
+warning: app@0.4.37:     |
+warning: app@0.4.37:  87 | ...                   padding: 4px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/business_manager.slint:93:46
+warning: app@0.4.37:     |
+warning: app@0.4.37:  93 | ...                   padding: 4px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/business_manager.slint:99:46
+warning: app@0.4.37:     |
+warning: app@0.4.37:  99 | ...                   padding: 4px;
+warning: app@0.4.37:     |                                ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/business_share.slint:39:22
+warning: app@0.4.37:     |
+warning: app@0.4.37:  39 |             padding: 0px;
+warning: app@0.4.37:     |                      ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:5:14
+warning: app@0.4.37:     |
+warning: app@0.4.37:   5 |     padding: 16px;
+warning: app@0.4.37:     |              ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:28:26
+warning: app@0.4.37:     |
+warning: app@0.4.37:  28 |                 padding: 12px;
+warning: app@0.4.37:     |                          ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:58:26
+warning: app@0.4.37:     |
+warning: app@0.4.37:  58 |                 padding: 12px;
+warning: app@0.4.37:     |                          ^^^^^
+warning: app@0.4.37: warning: padding-bottom only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/task_list.slint:82:53
+warning: app@0.4.37:     |
+warning: app@0.4.37:  82 | ...                   padding-bottom: 4px;
+warning: app@0.4.37:     |                                       ^^^^
+warning: app@0.4.37: warning: padding-left only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/task_list.slint:79:51
+warning: app@0.4.37:     |
+warning: app@0.4.37:  79 | ...                   padding-left: 8px;
+warning: app@0.4.37:     |                                     ^^^^
+warning: app@0.4.37: warning: padding-right only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/task_list.slint:80:52
+warning: app@0.4.37:     |
+warning: app@0.4.37:  80 | ...                   padding-right: 8px;
+warning: app@0.4.37:     |                                      ^^^^
+warning: app@0.4.37: warning: padding-top only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/task_list.slint:81:50
+warning: app@0.4.37:     |
+warning: app@0.4.37:  81 | ...                   padding-top: 4px;
+warning: app@0.4.37:     |                                    ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/unified_inbox.slint:164:58
+warning: app@0.4.37:     |
+warning: app@0.4.37: 164 | ...                   padding: 12px;
+warning: app@0.4.37:     |                                ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:5:14
+warning: app@0.4.37:     |
+warning: app@0.4.37:   5 |     padding: 16px;
+warning: app@0.4.37:     |              ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:28:26
+warning: app@0.4.37:     |
+warning: app@0.4.37:  28 |                 padding: 12px;
+warning: app@0.4.37:     |                          ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/vector_memory_visualizer.slint:58:26
+warning: app@0.4.37:     |
+warning: app@0.4.37:  58 |                 padding: 12px;
+warning: app@0.4.37:     |                          ^^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/website_builder.slint:76:124
+warning: app@0.4.37:     |
+warning: app@0.4.37:  76 | ...   if (selected_template == "Modern") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use thi...
+warning: app@0.4.37:     |                                                                                                          ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/website_builder.slint:90:125
+warning: app@0.4.37:     |
+warning: app@0.4.37:  90 | ...   if (selected_template == "Classic") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use th...
+warning: app@0.4.37:     |                                                                                                           ^^^^
+warning: app@0.4.37: warning: padding only has effect on layout elements
+warning: app@0.4.37:    --> /app/src/app/website_builder.slint:104:122
+warning: app@0.4.37:     |
+warning: app@0.4.37: 104 | ...   if (selected_template == "Bold") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use this ...
+warning: app@0.4.37:     |                                                                                                        ^^^^
+error: could not compile `app` (lib test) due to 233 previous errors; 5 warnings emitted

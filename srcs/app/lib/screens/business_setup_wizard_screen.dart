@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wizard_provider.dart';
-import '../main.dart'; // For GlassContainer
+import '../main.dart';
+import 'dart:ui' as ui;
+import 'package:flutter/services.dart'; // For GlassContainer
 import '../widgets/contextual_tooltip.dart';
 import '../widgets/walkthrough_overlay.dart';
 import 'help/help_center_screen.dart';
@@ -182,7 +184,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
             child: TextField(
               key: const Key('signupEmailField'),
               style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Email',
                 labelStyle: TextStyle(color: Colors.white70),
                 border: InputBorder.none,
@@ -195,7 +197,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
               key: const Key('signupPasswordField'),
               obscureText: true,
               style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Password',
                 labelStyle: TextStyle(color: Colors.white70),
                 border: InputBorder.none,
@@ -290,7 +292,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
             key: const Key('companyNameField'),
             controller: _companyNameController,
             style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Company Name',
               labelStyle: TextStyle(color: Colors.white70),
               border: InputBorder.none,
@@ -572,7 +574,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
             key: const Key('adminNameField'),
             controller: _adminNameController,
             style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Name',
               labelStyle: TextStyle(color: Colors.white70),
               border: InputBorder.none,
@@ -588,7 +590,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
             key: const Key('adminEmailField'),
             controller: _adminEmailController,
             style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Email',
               labelStyle: TextStyle(color: Colors.white70),
               border: InputBorder.none,
@@ -605,7 +607,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
             controller: _adminPasswordController,
             obscureText: true,
             style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Password',
               labelStyle: TextStyle(color: Colors.white70),
               border: InputBorder.none,
@@ -755,7 +757,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     key: const Key('productNameField'),
                     initialValue: state.productName,
                     style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'e.g. Custom Birthday Cake',
                       hintStyle: TextStyle(color: Colors.white24),
                       border: InputBorder.none,
@@ -775,7 +777,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     initialValue: state.productDescription,
                     style: const TextStyle(color: Colors.white),
                     maxLines: 3,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Describe what you are selling...',
                       hintStyle: TextStyle(color: Colors.white24),
                       border: InputBorder.none,
@@ -788,7 +790,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 ),
                 const SizedBox(height: 10),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () { ref.read(wizardProvider.notifier).updateProductDetails(description: "Generated description for ${state.productName}"); },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white.withOpacity(0.1),
                     padding: const EdgeInsets.symmetric(vertical: 15),
@@ -805,9 +807,9 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     initialValue: state.productPrice,
                     style: const TextStyle(color: Colors.white),
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: '0.00',
-                      prefixText: '\$ ',
+                      prefixText: ui.PlatformDispatcher.instance.locale.countryCode == 'GB' ? '£ ' : (ui.PlatformDispatcher.instance.locale.countryCode == 'EU' ? '€ ' : '\$ '),
                       prefixStyle: TextStyle(color: Colors.white),
                       hintStyle: TextStyle(color: Colors.white24),
                       border: InputBorder.none,
@@ -877,7 +879,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   key: const Key('domainField'),
                   initialValue: state.domainChoice ?? '\${(state.companyName ?? "mybusiness").replaceAll(" ", "").toLowerCase()}.ohc.app',
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.all(15),
                   ),
@@ -968,7 +970,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 },
                 child: ElevatedButton(
                   onPressed: () async {
-                    await ref.read(wizardProvider.notifier).submitWizard();
+                    Clipboard.setData(ClipboardData(text: "https://${state.domainChoice}")).then((_) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Link copied to clipboard! CONFETTI SUCCESS!"))); }); await ref.read(wizardProvider.notifier).submitWizard();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF22C55E),
@@ -1012,11 +1014,11 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
               children: [
                 _buildChecklistItem('✅ Business live', true),
                 const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Add 3 more products', false),
+                _buildChecklistItem('⬜ Add 3 more products', false, onTap: () {}),
                 const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Connect Instagram', false),
+                _buildChecklistItem('⬜ Connect Instagram', false, onTap: () {}),
                 const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Share your link with a friend', false),
+                _buildChecklistItem('⬜ Share your link with a friend', false, onTap: () {}),
               ],
             ),
           ),
@@ -1039,8 +1041,10 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
-  Widget _buildChecklistItem(String text, bool isCompleted) {
-    return Container(
+  Widget _buildChecklistItem(String text, bool isCompleted, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: isCompleted ? Colors.green.withOpacity(0.1) : Colors.white.withOpacity(0.05),
@@ -1060,6 +1064,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
           ),
           const Icon(Icons.chevron_right, color: Colors.white54),
         ],
+      ),
       ),
     );
   }
