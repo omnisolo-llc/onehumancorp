@@ -1,1 +1,1 @@
-Zero WIP Exit - adversarial persona prompt
+Zero WIP Exit
