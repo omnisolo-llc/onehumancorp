@@ -2,183 +2,60 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/main.dart';
-import 'package:app/providers/wizard_provider.dart';
-import 'package:app/screens/business_setup_wizard_screen.dart';
 
 void main() {
-  testWidgets('Onboarding E2E: Standard Path (Modern Template)', (WidgetTester tester) async {
+  testWidgets('Onboarding E2E: Conversational Intake Flow', (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: OHCApp()));
 
+    // 1. Welcome Screen
     final emailField = find.byKey(const Key('signupEmailField'));
     await tester.ensureVisible(emailField);
     await tester.enterText(emailField, 'test1@example.com');
     await tester.enterText(find.byKey(const Key('signupPasswordField')), 'pass1');
-    await tester.ensureVisible(find.byKey(const Key('signupBtn')));
-    await tester.tap(find.byKey(const Key('signupBtn')));
+    final signupBtn = find.byKey(const Key('signupBtn'));
+    await tester.ensureVisible(signupBtn);
+    await tester.tap(signupBtn);
     await tester.pump(const Duration(milliseconds: 500));
 
-    await tester.enterText(find.byKey(const Key('companyNameField')), 'Company 1');
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
+    // 2. Intake Screen
+    final intentField = find.byKey(const Key('intentField'));
+    await tester.ensureVisible(intentField);
+    await tester.enterText(intentField, 'I want to sell vegan cakes in Portland.');
 
-    await tester.tap(find.text('Build software'));
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
+    final generateBtn = find.byKey(const Key('generateBtn'));
+    await tester.ensureVisible(generateBtn);
+    await tester.tap(generateBtn);
 
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
+    // Pump to show generating screen
+    await tester.pump();
+    expect(find.text('Designing storefront...'), findsOneWidget);
 
-    await tester.tap(find.text('Cloud'));
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
+    // Wait for AI Generation simulation (3 seconds)
+    await tester.pump(const Duration(seconds: 4));
 
-    await tester.enterText(find.byKey(const Key('adminNameField')), 'Admin 1');
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
+    // 3. Review Screen
+    expect(find.text('Review & Launch'), findsOneWidget);
+    expect(find.text('Generated Business'), findsOneWidget);
+    expect(find.text('Flagship Product'), findsOneWidget);
 
-    await tester.tap(find.text('Modern'));
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
+    final launchBtn = find.byKey(const Key('launchAIBtn'));
+    await tester.ensureVisible(launchBtn);
 
-    await tester.enterText(find.byKey(const Key('productNameField')), 'Prod 1');
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
+    // Pulse animation runs, so we pump instead of pumpAndSettle
+    await tester.tap(launchBtn);
+    await tester.pump(const Duration(seconds: 2));
 
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    await tester.tap(find.text('Launch My AI Team'));
-    await tester.pump(const Duration(seconds: 3));
-
+    // 4. Checklist Screen
     expect(find.text("You're set up!"), findsOneWidget);
+
+    final goDashBtn = find.text('Go to Dashboard');
+    await tester.ensureVisible(goDashBtn);
+    await tester.tap(goDashBtn);
+
+    // Pump and wait for Dashboard replacement
+    await tester.pumpAndSettle();
+
+    // Check for dashboard
+    expect(find.text("Dashboard"), findsOneWidget);
   });
-
-  testWidgets('Onboarding E2E: Minimum Inputs', (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: OHCApp()));
-
-    await tester.enterText(find.byKey(const Key('signupEmailField')), 'min@example.com');
-    await tester.enterText(find.byKey(const Key('signupPasswordField')), 'p');
-    await tester.ensureVisible(find.byKey(const Key('signupBtn')));
-    await tester.tap(find.byKey(const Key('signupBtn')));
-    await tester.pump(const Duration(milliseconds: 500));
-
-    for (int i = 0; i < 8; i++) {
-      await tester.tap(find.text('Next').last);
-      await tester.pump(const Duration(milliseconds: 500));
-    }
-
-    await tester.tap(find.text('Launch My AI Team'));
-    await tester.pump(const Duration(seconds: 3));
-
-    expect(find.text("You're set up!"), findsOneWidget);
-  });
-
-  testWidgets('Onboarding E2E: Back and Forth Navigation', (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: OHCApp()));
-
-    await tester.enterText(find.byKey(const Key('signupEmailField')), 'back@example.com');
-    await tester.enterText(find.byKey(const Key('signupPasswordField')), 'p');
-    await tester.ensureVisible(find.byKey(const Key('signupBtn')));
-    await tester.tap(find.byKey(const Key('signupBtn')));
-    await tester.pump(const Duration(milliseconds: 500));
-
-    await tester.enterText(find.byKey(const Key('companyNameField')), 'A');
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    await tester.tap(find.text('Back').last);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    await tester.enterText(find.byKey(const Key('companyNameField')), 'B');
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    await tester.tap(find.text('Back').last);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.text('What are your goals?'), findsOneWidget);
-  });
-
-  testWidgets('Onboarding E2E: Cozy Template', (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: OHCApp()));
-
-    await tester.enterText(find.byKey(const Key('signupEmailField')), 'cozy@example.com');
-    await tester.enterText(find.byKey(const Key('signupPasswordField')), 'p');
-    await tester.ensureVisible(find.byKey(const Key('signupBtn')));
-    await tester.tap(find.byKey(const Key('signupBtn')));
-    await tester.pump(const Duration(milliseconds: 500));
-
-    for (int i = 0; i < 5; i++) {
-      await tester.tap(find.text('Next').last);
-      await tester.pump(const Duration(milliseconds: 500));
-    }
-
-    await tester.tap(find.text('Cozy'));
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    await tester.enterText(find.byKey(const Key('productNameField')), 'Cake');
-    await tester.enterText(find.byKey(const Key('productPriceField')), '15');
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.text('Cake'), findsOneWidget);
-    await tester.tap(find.text('Launch My AI Team'));
-    await tester.pump(const Duration(seconds: 3));
-    expect(find.text("You're set up!"), findsOneWidget);
-  });
-
-  testWidgets('Onboarding E2E: Cross Device Resume Simulation', (WidgetTester tester) async {
-    final container = ProviderContainer(
-      overrides: [
-        wizardProvider.overrideWith(() => PreloadedWizardNotifier()),
-      ],
-    );
-
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(
-          home: BusinessSetupWizardScreen(environmentMode: EnvironmentMode.cloud),
-        ),
-      ),
-    );
-
-    expect(find.text('Add your first product or service'), findsOneWidget);
-    await tester.enterText(find.byKey(const Key('productNameField')), 'Resumed Product');
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.text('Resumed Product'), findsOneWidget);
-    expect(find.text('Acme Resumed'), findsOneWidget);
-
-    await tester.tap(find.text('Launch My AI Team'));
-    await tester.pump(const Duration(seconds: 3));
-    expect(find.text("You're set up!"), findsOneWidget);
-  });
-}
-
-class PreloadedWizardNotifier extends WizardNotifier {
-  @override
-  WizardState build() {
-    return WizardState(
-      currentStep: 7,
-      companyName: 'Acme Resumed',
-      industry: 'Technology',
-      templateSelection: 'modern',
-    );
-  }
 }

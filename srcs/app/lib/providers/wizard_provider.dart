@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 
 class WizardState {
   final int currentStep;
+  final String? intent;
   final String? companyName;
   final String? industry;
   final String? size;
@@ -20,6 +21,7 @@ class WizardState {
 
   WizardState({
     this.currentStep = 0,
+    this.intent,
     this.companyName,
     this.industry,
     this.size,
@@ -37,6 +39,7 @@ class WizardState {
 
   WizardState copyWith({
     int? currentStep,
+    String? intent,
     String? companyName,
     String? industry,
     String? size,
@@ -53,6 +56,7 @@ class WizardState {
   }) {
     return WizardState(
       currentStep: currentStep ?? this.currentStep,
+      intent: intent ?? this.intent,
       companyName: companyName ?? this.companyName,
       industry: industry ?? this.industry,
       size: size ?? this.size,
@@ -72,6 +76,7 @@ class WizardState {
   Map<String, dynamic> toJson() {
     return {
       'currentStep': currentStep,
+      'intent': intent,
       'companyName': companyName,
       'industry': industry,
       'size': size,
@@ -91,6 +96,7 @@ class WizardState {
   factory WizardState.fromJson(Map<String, dynamic> json) {
     return WizardState(
       currentStep: json['currentStep'] ?? 0,
+      intent: json['intent'],
       companyName: json['companyName'],
       industry: json['industry'],
       size: json['size'],
@@ -136,7 +142,7 @@ class WizardNotifier extends Notifier<WizardState> {
   }
 
   void nextStep() {
-    if (state.currentStep < 11) {
+    if (state.currentStep < 5) {
       state = state.copyWith(currentStep: state.currentStep + 1);
       _saveCurrentState();
     }
@@ -147,6 +153,11 @@ class WizardNotifier extends Notifier<WizardState> {
       state = state.copyWith(currentStep: state.currentStep - 1);
       _saveCurrentState();
     }
+  }
+
+  void setIntent(String intent) {
+    state = state.copyWith(intent: intent);
+    _saveCurrentState();
   }
 
   void updateBusinessProfile({String? companyName, String? industry, String? size}) {
