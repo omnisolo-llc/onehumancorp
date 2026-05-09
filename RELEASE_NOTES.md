@@ -2,9 +2,13 @@
 
 ### Cloud Scaling Improvements
 - Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
+- 🗺️ Guide: [new onboarding feature] (#12919) - Added 5 distinct E2E tests for the onboarding functionality to ensure reliable scaling.
 
 ### Privacy/Offline Improvements
 - Implement offline-first local vector embeddings cache for the OHC Swarm.
+- 🗺️ Guide: [new onboarding feature] (#12919) - Bolster Standalone Wizard state test coverage for improved offline reliability.
+
+
 
 ## v0.4.39 (Cloud) / v0.4.39+1 (Standalone)
 
