@@ -26,9 +26,9 @@ type MetricPoint struct {
 // TelemetrySyncEngine handles buffering telemetry data locally
 // and syncing it to the cloud when online.
 type TelemetrySyncEngine struct {
-	db          *sql.DB
-	remoteURL   string
-	httpClient  *http.Client
+	db         *sql.DB
+	remoteURL  string
+	httpClient *http.Client
 }
 
 func NewTelemetrySyncEngine(db *sql.DB, remoteURL string) *TelemetrySyncEngine {
@@ -69,11 +69,11 @@ func (e *TelemetrySyncEngine) SyncPendingMetrics(ctx context.Context) error {
 		var pt MetricPoint
 		var attrStr string
 		if err := rows.Scan(&pt.ID, &pt.MetricName, &pt.Value, &attrStr, &pt.Timestamp); err != nil {
-			log.Printf("failed to scan metric row: %v", err)
+			log.Printf("failed to scan metric row: %v\n", err)
 			continue
 		}
 		if err := json.Unmarshal([]byte(attrStr), &pt.Attributes); err != nil {
-			log.Printf("failed to unmarshal attributes for metric %s: %v", pt.ID, err)
+			log.Printf("failed to unmarshal attributes for metric %s: %v\n", pt.ID, err)
 			continue
 		}
 		pending = append(pending, pt)
@@ -84,13 +84,13 @@ func (e *TelemetrySyncEngine) SyncPendingMetrics(ctx context.Context) error {
 
 	for _, pt := range pending {
 		if err := e.syncToCloud(ctx, pt); err != nil {
-			log.Printf("failed to sync metric %s: %v", pt.ID, err)
+			log.Printf("failed to sync metric %s: %v\n", pt.ID, err)
 			continue
 		}
 		// Mark synced
 		_, err := e.db.ExecContext(ctx, "UPDATE local_telemetry_metrics SET synced_to_cloud = TRUE WHERE id = $1", pt.ID)
 		if err != nil {
-			log.Printf("failed to mark metric %s as synced: %v", pt.ID, err)
+			log.Printf("failed to mark metric %s as synced: %v\n", pt.ID, err)
 		}
 	}
 

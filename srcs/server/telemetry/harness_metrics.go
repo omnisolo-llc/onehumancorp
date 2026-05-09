@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-
 func getDeploymentModeAttribute() attribute.KeyValue {
 	isStandalone := os.Getenv("OHC_STANDALONE") == "true" || os.Getenv("STANDALONE_MODE") == "true"
 	mode := "cloud"
@@ -29,16 +28,16 @@ func isTelemetryEnabled() bool {
 }
 
 var (
-	meter                   = otel.Meter("harness")
-	executionDurationHistogram metric.Float64Histogram
-	toolInvocationsCounter     metric.Int64Counter
-	violationsCounter          metric.Int64Counter
-	mcpToolCallsCounter        metric.Int64Counter
-	harnessInitLatencyHistogram metric.Float64Histogram
-	harnessDbIoLatencyHistogram metric.Float64Histogram
-	bubblewrapSpawnTotalCounter metric.Int64Counter
+	meter                               = otel.Meter("harness")
+	executionDurationHistogram          metric.Float64Histogram
+	toolInvocationsCounter              metric.Int64Counter
+	violationsCounter                   metric.Int64Counter
+	mcpToolCallsCounter                 metric.Int64Counter
+	harnessInitLatencyHistogram         metric.Float64Histogram
+	harnessDbIoLatencyHistogram         metric.Float64Histogram
+	bubblewrapSpawnTotalCounter         metric.Int64Counter
 	bubblewrapExecutionLatencyHistogram metric.Float64Histogram
-	bubblewrapViolationTotalCounter metric.Int64Counter
+	bubblewrapViolationTotalCounter     metric.Int64Counter
 )
 
 func init() {
@@ -48,7 +47,7 @@ func init() {
 		metric.WithDescription("Duration of harness execution in seconds"),
 	)
 	if err != nil {
-		log.Printf("Failed to create executionDurationHistogram: %v", err)
+		log.Printf("Failed to create executionDurationHistogram: %v\n", err)
 	}
 
 	toolInvocationsCounter, err = meter.Int64Counter(
@@ -56,7 +55,7 @@ func init() {
 		metric.WithDescription("Total number of tool invocations"),
 	)
 	if err != nil {
-		log.Printf("Failed to create toolInvocationsCounter: %v", err)
+		log.Printf("Failed to create toolInvocationsCounter: %v\n", err)
 	}
 
 	violationsCounter, err = meter.Int64Counter(
@@ -64,7 +63,7 @@ func init() {
 		metric.WithDescription("Total number of harness policy violations"),
 	)
 	if err != nil {
-		log.Printf("Failed to create violationsCounter: %v", err)
+		log.Printf("Failed to create violationsCounter: %v\n", err)
 	}
 
 	mcpToolCallsCounter, err = meter.Int64Counter(
@@ -72,7 +71,7 @@ func init() {
 		metric.WithDescription("Total number of MCP tool calls"),
 	)
 	if err != nil {
-		log.Printf("Failed to create mcpToolCallsCounter: %v", err)
+		log.Printf("Failed to create mcpToolCallsCounter: %v\n", err)
 	}
 
 	harnessInitLatencyHistogram, err = meter.Float64Histogram(
@@ -80,7 +79,7 @@ func init() {
 		metric.WithDescription("Duration of harness initialization in seconds"),
 	)
 	if err != nil {
-		log.Printf("Failed to create harnessInitLatencyHistogram: %v", err)
+		log.Printf("Failed to create harnessInitLatencyHistogram: %v\n", err)
 	}
 
 	harnessDbIoLatencyHistogram, err = meter.Float64Histogram(
@@ -88,7 +87,7 @@ func init() {
 		metric.WithDescription("Duration of harness database I/O in seconds"),
 	)
 	if err != nil {
-		log.Printf("Failed to create harnessDbIoLatencyHistogram: %v", err)
+		log.Printf("Failed to create harnessDbIoLatencyHistogram: %v\n", err)
 	}
 
 	bubblewrapSpawnTotalCounter, err = meter.Int64Counter(
@@ -96,7 +95,7 @@ func init() {
 		metric.WithDescription("Total number of bubblewrap spawns"),
 	)
 	if err != nil {
-		log.Printf("Failed to create bubblewrapSpawnTotalCounter: %v", err)
+		log.Printf("Failed to create bubblewrapSpawnTotalCounter: %v\n", err)
 	}
 
 	bubblewrapExecutionLatencyHistogram, err = meter.Float64Histogram(
@@ -104,7 +103,7 @@ func init() {
 		metric.WithDescription("Latency of bubblewrap execution in seconds"),
 	)
 	if err != nil {
-		log.Printf("Failed to create bubblewrapExecutionLatencyHistogram: %v", err)
+		log.Printf("Failed to create bubblewrapExecutionLatencyHistogram: %v\n", err)
 	}
 
 	bubblewrapViolationTotalCounter, err = meter.Int64Counter(
@@ -112,7 +111,7 @@ func init() {
 		metric.WithDescription("Total number of bubblewrap sandbox violations"),
 	)
 	if err != nil {
-		log.Printf("Failed to create bubblewrapViolationTotalCounter: %v", err)
+		log.Printf("Failed to create bubblewrapViolationTotalCounter: %v\n", err)
 	}
 }
 
@@ -144,7 +143,7 @@ func RecordMCPToolCall(ctx context.Context, toolName string) error {
 	}
 
 	bufferMetricHelper(ctx, "ohc_mcp_tool_calls_total", 1, map[string]interface{}{
-		"tool": toolName,
+		"tool":            toolName,
 		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
 	})
 
@@ -165,7 +164,7 @@ func RecordHarnessToolInvocation(ctx context.Context, toolName string) error {
 	}
 
 	bufferMetricHelper(ctx, "harness_tool_invocations_total", 1, map[string]interface{}{
-		"tool": toolName,
+		"tool":            toolName,
 		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
 	})
 
