@@ -65,14 +65,10 @@ impl DashboardService for MyDashboardService {
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             async {
-                tokio::task::spawn_blocking(move || {
-                    Ok::<_, String>(hub1.get_agents())
-                }).await.unwrap_or_else(|e| Err(e.to_string()))
+                Ok::<_, String>(hub1.get_agents().await)
             },
             async {
-                tokio::task::spawn_blocking(move || {
-                    Ok::<_, String>(hub2.get_meetings())
-                }).await.unwrap_or_else(|e| Err(e.to_string()))
+                Ok::<_, String>(hub2.get_meetings().await)
             },
             async {
                 tokio::task::spawn_blocking(move || {

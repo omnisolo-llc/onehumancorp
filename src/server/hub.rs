@@ -113,23 +113,25 @@ impl Hub {
         }
     }
 
-    fn invalidate_agent_cache(&self) {
+    pub fn invalidate_agent_cache(&self) {
         *self.agent_cache.write().unwrap() = None;
         if let Some(client) = self.redis_client.clone() {
-            tokio::task::spawn_blocking(move || {
-                if let Ok(mut conn) = client.get_connection() {
-                    let _: Result<(), _> = redis::Commands::del(&mut conn, "hub:agents");
+            tokio::spawn(async move {
+                if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                    use redis::AsyncCommands;
+                    let _: Result<(), _> = conn.del("hub:agents").await;
                 }
             });
         }
     }
 
-    fn invalidate_meetings_cache(&self) {
+    pub fn invalidate_meetings_cache(&self) {
         *self.meetings_cache.write().unwrap() = None;
         if let Some(client) = self.redis_client.clone() {
-            tokio::task::spawn_blocking(move || {
-                if let Ok(mut conn) = client.get_connection() {
-                    let _: Result<(), _> = redis::Commands::del(&mut conn, "hub:meetings");
+            tokio::spawn(async move {
+                if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                    use redis::AsyncCommands;
+                    let _: Result<(), _> = conn.del("hub:meetings").await;
                 }
             });
         }
@@ -168,7 +170,7 @@ impl Hub {
         self.invalidate_agent_cache();
     }
 
-    pub fn get_agents(&self) -> Arc<Vec<Agent>> {
+    pub async fn get_agents(&self) -> Arc<Vec<Agent>> {
         {
             let cache = self.agent_cache.read().unwrap();
             if let Some(agents) = &*cache {
@@ -177,12 +179,13 @@ impl Hub {
         }
 
         if let Some(client) = self.redis_client.clone() {
-            let res = tokio::task::block_in_place(move || {
-                let mut conn = client.get_connection().ok()?;
-                let data: Option<String> = redis::Commands::get(&mut conn, "hub:agents").ok()?;
+            let res = async {
+                let mut conn = client.get_multiplexed_tokio_connection().await.ok()?;
+                use redis::AsyncCommands;
+                let data: Option<String> = conn.get("hub:agents").await.ok()?;
                 let agents: Vec<Agent> = serde_json::from_str(&data?).ok()?;
                 Some(Arc::new(agents))
-            });
+            }.await;
             if let Some(arc) = res {
                 *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
                 return arc;
@@ -198,10 +201,11 @@ impl Hub {
 
         if let Some(client) = self.redis_client.clone() {
             let json = serde_json::to_string(&*arc).unwrap_or_default();
-            tokio::task::spawn_blocking(move || {
-                if let Ok(mut conn) = client.get_connection() {
+            tokio::spawn(async move {
+                if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
                     if !json.is_empty() {
-                        let _: Result<(), _> = redis::Commands::set_ex(&mut conn, "hub:agents", json, 3600);
+                        use redis::AsyncCommands;
+                        let _: Result<(), _> = conn.set_ex("hub:agents", json, 3600_u64).await;
                     }
                 }
             });
@@ -327,7 +331,7 @@ impl Hub {
         Ok(())
     }
 
-    pub fn get_meetings(&self) -> Arc<Vec<MeetingRoom>> {
+    pub async fn get_meetings(&self) -> Arc<Vec<MeetingRoom>> {
         {
             let cache = self.meetings_cache.read().unwrap();
             if let Some(meetings) = &*cache {
@@ -336,12 +340,13 @@ impl Hub {
         }
 
         if let Some(client) = self.redis_client.clone() {
-            let res = tokio::task::block_in_place(move || {
-                let mut conn = client.get_connection().ok()?;
-                let data: Option<String> = redis::Commands::get(&mut conn, "hub:meetings").ok()?;
+            let res = async {
+                let mut conn = client.get_multiplexed_tokio_connection().await.ok()?;
+                use redis::AsyncCommands;
+                let data: Option<String> = conn.get("hub:meetings").await.ok()?;
                 let meetings: Vec<MeetingRoom> = serde_json::from_str(&data?).ok()?;
                 Some(Arc::new(meetings))
-            });
+            }.await;
             if let Some(arc) = res {
                 *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
                 return arc;
@@ -356,10 +361,11 @@ impl Hub {
 
         if let Some(client) = self.redis_client.clone() {
             let json = serde_json::to_string(&*arc).unwrap_or_default();
-            tokio::task::spawn_blocking(move || {
-                if let Ok(mut conn) = client.get_connection() {
+            tokio::spawn(async move {
+                if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
                     if !json.is_empty() {
-                        let _: Result<(), _> = redis::Commands::set_ex(&mut conn, "hub:meetings", json, 3600);
+                        use redis::AsyncCommands;
+                        let _: Result<(), _> = conn.set_ex("hub:meetings", json, 3600_u64).await;
                     }
                 }
             });
@@ -840,7 +846,7 @@ mod tests {
         let hub = std::sync::Arc::new(Hub::new(tx, pool));
 
         // 1. Initial get caches empty state
-        let agents = hub.get_agents();
+        let agents = hub.get_agents().await;
         assert_eq!(agents.len(), 0);
 
         // Cache should be populated
@@ -858,7 +864,7 @@ mod tests {
         assert!(hub.agent_cache.read().unwrap().is_none());
 
         // 3. Get agents caches again
-        let agents = hub.get_agents();
+        let agents = hub.get_agents().await;
         assert_eq!(agents.len(), 1);
         assert!(hub.agent_cache.read().unwrap().is_some());
 
@@ -867,7 +873,7 @@ mod tests {
         assert!(hub.agent_cache.read().unwrap().is_none());
 
         // 5. Open meeting invalidates both caches
-        let meetings = hub.get_meetings();
+        let meetings = hub.get_meetings().await;
         assert_eq!(meetings.len(), 0);
         assert!(hub.meetings_cache.read().unwrap().is_some());
 
@@ -876,7 +882,7 @@ mod tests {
         assert!(hub.agent_cache.read().unwrap().is_none());
 
         // 6. Publish invalidates meeting cache
-        let meetings = hub.get_meetings();
+        let meetings = hub.get_meetings().await;
         assert_eq!(meetings.len(), 1);
         assert!(hub.meetings_cache.read().unwrap().is_some());
 

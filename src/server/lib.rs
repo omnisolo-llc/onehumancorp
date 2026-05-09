@@ -1168,7 +1168,7 @@ impl HubService for MyHubService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<GetMeetingsResponse>, Status> {
-        let meetings = self.hub.get_meetings();
+        let meetings = self.hub.get_meetings().await;
         Ok(Response::new(GetMeetingsResponse { meetings: meetings.to_vec() }))
     }
 

@@ -95,9 +95,9 @@ impl TaskWorker {
         }
         
         let mut agent_found = false;
-        let agents = tokio::task::spawn_blocking({ let hub_clone = hub.clone(); move || hub_clone.get_agents() }).await.unwrap_or_else(|e| { tracing::error!("Failed to get agents: {}", e); Vec::new() });
+        let agents = hub.get_agents().await;
         
-        for a in agents {
+        for a in agents.iter() {
             if a.status == "ACTIVE" || a.status == "WAITING_FOR_TOOLS" {
                 let payload = serde_json::json!({
                     "issue_id":   issue.id,
