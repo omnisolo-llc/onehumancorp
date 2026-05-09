@@ -1,3 +1,8 @@
+## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
+
+- Scaling (Cloud): Upgraded backend architecture to support massive scaling for multi-tenant cloud deployments.
+- Privacy/Offline (Standalone): Guaranteed privacy and local capability in standalone mode.
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.

@@ -1,5 +1,13 @@
 # Release Notes
 
+## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Upgraded backend architecture to support massive scaling for multi-tenant cloud deployments.
+
+### Privacy/Offline Improvements
+- Guaranteed privacy and local capability in standalone mode.
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 ### Cloud Scaling Improvements
