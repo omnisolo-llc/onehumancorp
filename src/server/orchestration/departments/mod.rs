@@ -7,3 +7,6 @@ pub use orchestrator::*;
 pub mod memory;
 pub mod operations_agent;
 pub mod customer_success_agent;
+
+#[cfg(test)]
+mod memory_integration_test;
