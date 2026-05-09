@@ -71,6 +71,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_langgraph_mechanic: bool,
     pub enable_time_travel_rewind: bool,
     pub max_rewind_attempts: usize,
+    pub is_subagent: bool,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
 }
 
@@ -120,6 +121,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_langgraph_mechanic: false,
             enable_time_travel_rewind: false,
             max_rewind_attempts: 3,
+            is_subagent: false,
             long_term_memory: None,
         }
     }
@@ -1433,10 +1435,33 @@ impl Agent {
                     }
                 }
 
+                // Rule: Subagents return 1k-2k token condensed summaries.
+                let mut final_content = last_assistant_content.clone();
+                if cfg.is_subagent {
+                    let summary_req = ChatRequest {
+                        model: final_cfg.model.clone(),
+                        system: "You are an expert summarizer. Summarize the task completion of a subagent. Ensure the summary is condensed to between 1000 and 2000 tokens (or shorter if the content is naturally smaller). DO NOT exceed 2000 tokens. Preserve all key findings, results, and critical details.".to_string(),
+                        messages: vec![Message::user(format!("Condense this final output:\n{}", final_content))],
+                        tools: vec![],
+                        max_tokens: 2048,
+                        temperature: 0.0,
+                    };
+
+                    match self.llm.chat(summary_req).await {
+                        Ok(summary_resp) => {
+                            final_content = summary_resp.message.content;
+                        }
+                        Err(e) => {
+                            tracing::warn!("Failed to condense subagent summary: {}", e);
+                            // Fallback to original content
+                        }
+                    }
+                }
+
                 on_event(AgentEvent::TaskComplete {
-                    content: last_assistant_content.clone(),
+                    content: final_content.clone(),
                 });
-                return Ok(last_assistant_content);
+                return Ok(final_content);
             }
 
             // Execute tool calls and collect results.

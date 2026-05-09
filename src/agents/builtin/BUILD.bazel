@@ -87,6 +87,7 @@ rust_library(
         "@crates//:glob",
         "@crates//:dashmap",
         "@crates//:async-nats",
+        "@crates//:clap",
         "@crates//:futures-util",
         "@crates//:hex",
         "@crates//:hmac",
@@ -116,7 +117,7 @@ rust_library(
 )
 
 rust_binary(
-    name = "ohc-builtin-agent",
+    name = "ohc_builtin_agent",
     srcs = ["main.rs"],
     edition = "2024",
     proc_macro_deps = [
@@ -128,6 +129,7 @@ rust_binary(
         ":core",
         ":ohc_builtin_agent_lib",
     ] + [
+        "@crates//:clap",
         "@crates//:base64",
         "@crates//:chrono",
         "@crates//:flate2",

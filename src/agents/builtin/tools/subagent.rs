@@ -29,13 +29,19 @@ impl ToolExecutor for SubagentExecutor {
             let branch_name = format!("subagent-{}", task_id);
             let worktree_path = format!(".agent-worktrees/{}", task_id);
 
-            // Create worktree
-            let _ = self.runner.run("git", &["branch", &branch_name], None, vec![]).await;
+            // Subagent Orchestration: Worktree mechanic
+            // 1. Create a new branch
+            let branch_res = self.runner.run("git", &["branch", &branch_name], None, vec![]).await;
+            if let Err(e) = branch_res {
+                 return Err(ToolError::LlmRecoverable(format!("Failed to create branch '{}': {}", branch_name, e)));
+            }
 
+            // 2. Add a new worktree linked to that branch
             let wt_output = self.runner.run("git", &["worktree", "add", &worktree_path, &branch_name], None, vec![]).await;
 
             if let Err(e) = wt_output {
-                return Err(ToolError::LlmRecoverable(format!("Failed to spawn worktree: {}", e)));
+                let _ = self.runner.run("git", &["branch", "-D", &branch_name], None, vec![]).await;
+                return Err(ToolError::LlmRecoverable(format!("Failed to spawn worktree at '{}': {}", worktree_path, e)));
             }
 
             let mut envs = vec![];
@@ -43,22 +49,20 @@ impl ToolExecutor for SubagentExecutor {
                 envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
             }
 
-            let output = self.runner.run("ohc_builtin_agent", &["--task", &task, "--worktree", &worktree_path], None, envs).await;
+            let binary_name = "ohc_builtin_agent";
+            let output = self.runner.run(binary_name, &["--task", &task, "--worktree", &worktree_path], None, envs).await;
 
             let res = match output {
                 Ok(out) => {
                     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
                     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
                     if out.status.success() {
-                        Ok(agent_service_proto::ohc::agent::service::SubAgentResponse {
-                            result: stdout,
-                            error: String::new(),
-                        })
+                        Ok(stdout)
                     } else {
-                        Err(format!("Process failed: {}", stderr))
+                        Err(format!("Subagent process failed (exit code {}): {}", out.status, stderr))
                     }
                 }
-                Err(e) => Err(format!("Runner failed: {}", e)),
+                Err(e) => Err(format!("Failed to execute subagent binary '{}': {}", binary_name, e)),
             };
 
             // Cleanup
@@ -66,14 +70,8 @@ impl ToolExecutor for SubagentExecutor {
             let _ = self.runner.run("git", &["branch", "-D", &branch_name], None, vec![]).await;
 
             match res {
-                Ok(inner) => {
-                    if !inner.error.is_empty() {
-                        Err(ToolError::LlmRecoverable(inner.error))
-                    } else {
-                        Ok(inner.result)
-                    }
-                }
-                Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
+                Ok(stdout) => Ok(stdout),
+                Err(e) => Err(ToolError::LlmRecoverable(e)),
             }
         } else if mode == "fork" {
             let parent_context_json = args.get("parent_context_json").and_then(|v| v.as_str()).unwrap_or("");
@@ -83,33 +81,25 @@ impl ToolExecutor for SubagentExecutor {
                 envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
             }
 
-            let output = self.runner.run("ohc_builtin_agent", &["--task", &task, "--parent-context", &parent_context_json], None, envs).await;
+            let binary_name = "ohc_builtin_agent";
+            let output = self.runner.run(binary_name, &["--task", &task, "--parent-context", &parent_context_json], None, envs).await;
 
             let res = match output {
                 Ok(out) => {
                     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
                     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
                     if out.status.success() {
-                        Ok(agent_service_proto::ohc::agent::service::SubAgentResponse {
-                            result: stdout,
-                            error: String::new(),
-                        })
+                        Ok(stdout)
                     } else {
-                        Err(format!("Process failed: {}", stderr))
+                        Err(format!("Subagent process failed (exit code {}): {}", out.status, stderr))
                     }
                 }
-                Err(e) => Err(format!("Runner failed: {}", e)),
+                Err(e) => Err(format!("Failed to execute subagent binary '{}': {}", binary_name, e)),
             };
 
             match res {
-                Ok(inner) => {
-                    if !inner.error.is_empty() {
-                        Err(ToolError::LlmRecoverable(inner.error))
-                    } else {
-                        Ok(format!("[Subagent (Fork)] Completed task: {}. Summary: {}", task, inner.result))
-                    }
-                }
-                Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
+                Ok(stdout) => Ok(format!("[Subagent (Fork)] Completed task. Summary: {}", stdout)),
+                Err(e) => Err(ToolError::LlmRecoverable(e)),
             }
         } else if mode == "teammate" {
             let task_id = uuid::Uuid::new_v4().to_string();

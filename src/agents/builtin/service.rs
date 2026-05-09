@@ -387,6 +387,7 @@ impl AgentServiceImpl {
             enable_langgraph_mechanic: false,
             enable_time_travel_rewind: false,
             max_rewind_attempts: 3,
+            is_subagent: false,
             // Long-term memory store for cross-department context sharing
             long_term_memory,
         }
@@ -670,6 +671,7 @@ impl AgentService for AgentServiceImpl {
                 enable_langgraph_mechanic: false,
                 enable_time_travel_rewind: false,
                 max_rewind_attempts: 3,
+                is_subagent: true,
                 long_term_memory: None,
             };
 
