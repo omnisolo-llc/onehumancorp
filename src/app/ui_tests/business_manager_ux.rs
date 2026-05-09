@@ -13,7 +13,7 @@ fn create() -> app::BusinessManager {
 
 #[test]
 fn test_business_manager_ux_list_view() {
-    let app = create();
+    let _app = create();
 
     // Add test products to test touch targets
     let products = Rc::new(VecModel::from(vec![
@@ -26,81 +26,81 @@ fn test_business_manager_ux_list_view() {
             is_out_of_stock: false,
         }
     ]));
-    app.set_products(ModelRc::from(products));
+    _app.set_products(ModelRc::from(products));
 
     let edit_clicked = Rc::new(RefCell::new(false));
     let edit_clicked_clone = edit_clicked.clone();
-    app.on_action_edit(move |_id| {
+    _app.on_action_edit(move |_id| {
         *edit_clicked_clone.borrow_mut() = true;
     });
 
     let archive_clicked = Rc::new(RefCell::new(false));
     let archive_clicked_clone = archive_clicked.clone();
-    app.on_action_archive(move |_id| {
+    _app.on_action_archive(move |_id| {
         *archive_clicked_clone.borrow_mut() = true;
     });
 
-    app.invoke_action_edit("1".into());
+    _app.invoke_action_edit("1".into());
     assert!(*edit_clicked.borrow(), "Edit action should be triggered");
 
-    app.invoke_action_archive("1".into());
+    _app.invoke_action_archive("1".into());
     assert!(*archive_clicked.borrow(), "Archive action should be triggered");
 }
 
 #[test]
 fn test_business_manager_ux_add_new() {
-    let app = create();
+    let _app = create();
 
-    app.invoke_action_add_new();
+    _app.invoke_action_add_new();
     // Verify properties change internally instead of catching via on_...
-    assert_eq!(app.get_current_view(), "add");
-    assert_eq!(app.get_step(), 0);
+    assert_eq!(_app.get_current_view(), "add");
+    assert_eq!(_app.get_step(), 0);
 }
 
 #[test]
 fn test_business_manager_ux_select_type() {
-    let app = create();
-    app.set_current_view("add".into());
-    app.set_step(0);
+    let _app = create();
+    _app.set_current_view("add".into());
+    _app.set_step(0);
 
-    app.invoke_select_type("PHYSICAL".into());
-    assert_eq!(app.get_selected_type(), "PHYSICAL");
+    _app.invoke_select_type("PHYSICAL".into());
+    assert_eq!(_app.get_selected_type(), "PHYSICAL");
 }
 
 #[test]
 fn test_business_manager_ux_next_step() {
-    let app = create();
-    app.set_current_view("add".into());
-    app.set_step(0);
-    app.set_selected_type("PHYSICAL".into());
+    let _app = create();
+    _app.set_current_view("add".into());
+    _app.set_step(0);
+    _app.set_selected_type("PHYSICAL".into());
 
-    app.invoke_next_step();
-    assert_eq!(app.get_step(), 1, "Should advance to step 1");
+    _app.invoke_next_step();
+    assert_eq!(_app.get_step(), 1, "Should advance to step 1");
 }
 
 #[test]
 fn test_business_manager_ux_submit() {
-    let app = create();
-    app.set_current_view("add".into());
-    app.set_step(1);
-    app.set_selected_type("PHYSICAL".into());
-    app.set_product_name("Test Product".into());
-    app.set_product_description("Test Description".into());
-    app.set_product_price("99.99".into());
+    let _app = create();
+    _app.set_current_view("add".into());
+    _app.set_step(1);
+    _app.set_selected_type("PHYSICAL".into());
+    _app.set_product_name("Test Product".into());
+    _app.set_product_description("Test Description".into());
+    _app.set_product_price("99.99".into());
 
     let submitted = Rc::new(RefCell::new(false));
     let submitted_clone = submitted.clone();
-    app.on_submit(move |_type, _name, _desc, _price, _duration, _schedule| {
+    _app.on_submit(move |_type, _name, _desc, _price, _duration, _schedule| {
         *submitted_clone.borrow_mut() = true;
     });
 
-    app.invoke_submit(
-        app.get_selected_type(),
-        app.get_product_name(),
-        app.get_product_description(),
-        app.get_product_price(),
-        app.get_service_duration(),
-        app.get_service_schedule(),
+    _app.invoke_submit(
+        _app.get_selected_type(),
+        _app.get_product_name(),
+        _app.get_product_description(),
+        _app.get_product_price(),
+        _app.get_service_duration(),
+        _app.get_service_schedule(),
     );
 
     assert!(*submitted.borrow(), "Submit action should be triggered");
@@ -114,14 +114,14 @@ fn test_business_manager_fetch_round_trip() {
     // For this UI test, we interact with the components directly to simulate
     // the UI-to-DB round-tripping.
 
-    let app = create();
-    let dashboard_ui = app::Dashboard::new().unwrap();
+    let _app = create();
+    let _dashboard_ui = app::Dashboard::new().unwrap();
     let manager_ui = app::BusinessManager::new().unwrap();
 
     // 1. Action: Trigger a mutation via the existing UI (Submit new product)
     let submitted = Rc::new(RefCell::new(false));
     let sub_clone = submitted.clone();
-    manager_ui.on_submit(move |t, n, d, p, dur, sched| {
+    manager_ui.on_submit(move |t, n, _d, p, _dur, _sched| {
         assert_eq!(t, "PHYSICAL");
         assert_eq!(n, "New Desk");
         assert_eq!(p, "299.00");
@@ -158,16 +158,16 @@ fn test_business_manager_fetch_round_trip() {
 #[test]
 fn test_business_manager_edit_round_trip() {
     crate::ui_tests::init();
-    let app = create();
+    let _app = create();
 
     let edit_clicked = Rc::new(RefCell::new(false));
     let edit_clicked_clone = edit_clicked.clone();
-    app.on_action_edit(move |id| {
+    _app.on_action_edit(move |id| {
         assert_eq!(id, "1");
         *edit_clicked_clone.borrow_mut() = true;
     });
 
-    app.invoke_action_edit("1".into());
+    _app.invoke_action_edit("1".into());
     assert!(*edit_clicked.borrow(), "Mutation: Edit product triggered");
 
     // Simulate updating the product and refreshing the UI state
@@ -181,10 +181,10 @@ fn test_business_manager_edit_round_trip() {
             is_out_of_stock: false,
         }
     ]));
-    app.set_products(ModelRc::from(updated_products));
+    _app.set_products(ModelRc::from(updated_products));
 
     use slint::Model;
-    let p = app.get_products().row_data(0).unwrap();
+    let p = _app.get_products().row_data(0).unwrap();
     assert_eq!(p.name, "Updated Desk", "Verification: UI reflects the updated product name from DB");
     assert_eq!(p.price, "$399.00", "Verification: UI reflects the updated product price from DB");
 }
@@ -192,30 +192,30 @@ fn test_business_manager_edit_round_trip() {
 #[test]
 fn test_business_manager_archive_round_trip() {
     crate::ui_tests::init();
-    let app = create();
+    let _app = create();
 
     let archive_clicked = Rc::new(RefCell::new(false));
     let archive_clicked_clone = archive_clicked.clone();
-    app.on_action_archive(move |id| {
+    _app.on_action_archive(move |id| {
         assert_eq!(id, "1");
         *archive_clicked_clone.borrow_mut() = true;
     });
 
-    app.invoke_action_archive("1".into());
+    _app.invoke_action_archive("1".into());
     assert!(*archive_clicked.borrow(), "Mutation: Archive product triggered");
 
     // Simulate removing the product and refreshing the UI state
     let updated_products = Rc::new(VecModel::from(Vec::<app::UiProduct>::new()));
-    app.set_products(ModelRc::from(updated_products));
+    _app.set_products(ModelRc::from(updated_products));
 
     use slint::Model;
-    assert_eq!(app.get_products().row_count(), 0, "Verification: UI reflects the archived product from DB (empty list)");
+    assert_eq!(_app.get_products().row_count(), 0, "Verification: UI reflects the archived product from DB (empty list)");
 }
 
 #[test]
 fn test_business_manager_out_of_stock_round_trip() {
     crate::ui_tests::init();
-    let app = create();
+    let _app = create();
 
     // Simulate backend reporting a product is out of stock (inventory drops to 0)
     let updated_products = Rc::new(VecModel::from(vec![
@@ -228,10 +228,10 @@ fn test_business_manager_out_of_stock_round_trip() {
             is_out_of_stock: true,
         }
     ]));
-    app.set_products(ModelRc::from(updated_products));
+    _app.set_products(ModelRc::from(updated_products));
 
     use slint::Model;
-    let p = app.get_products().row_data(0).unwrap();
+    let p = _app.get_products().row_data(0).unwrap();
     assert_eq!(p.inventory_count, 0, "Verification: UI reflects inventory count 0 from DB");
     assert_eq!(p.is_out_of_stock, true, "Verification: UI perfectly reflects out of stock visual state");
 }
@@ -239,7 +239,7 @@ fn test_business_manager_out_of_stock_round_trip() {
 #[test]
 fn test_business_manager_digital_product_round_trip() {
     crate::ui_tests::init();
-    let app = create();
+    let _app = create();
 
     // Simulate fetching a digital product where inventory is not applicable but out of stock is false
     let updated_products = Rc::new(VecModel::from(vec![
@@ -252,10 +252,10 @@ fn test_business_manager_digital_product_round_trip() {
             is_out_of_stock: false,
         }
     ]));
-    app.set_products(ModelRc::from(updated_products));
+    _app.set_products(ModelRc::from(updated_products));
 
     use slint::Model;
-    let p = app.get_products().row_data(0).unwrap();
+    let p = _app.get_products().row_data(0).unwrap();
     assert_eq!(p.name, "Ebook");
     assert_eq!(p.type_label, "Digital");
     assert_eq!(p.is_out_of_stock, false, "Verification: Digital products should not show out of stock even with 0 inventory");

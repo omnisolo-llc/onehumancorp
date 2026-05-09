@@ -1778,30 +1778,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(target_arch = "wasm32")]
     wasm_bindgen_futures::spawn_local(async move {
-        // HTTP call in WASM stubbed conceptually for Web via tonic-web or REST equivalent
-        // In this implementation context we populate with placeholder real fetch until tonic-web setup
         slint::invoke_from_event_loop(move || {
-            if let Some(ui) = analytics_charts_handle_clone.upgrade() {
-                let charts = vec![
-                    app::UiChartData {
-                        title: "Analytics Overview".into(),
-                        points: slint::ModelRc::new(slint::VecModel::from(vec![
-                            app::UiDataPoint { label: "Total Agents".into(), value: 5.0, display_value: "5".into() },
-                            app::UiDataPoint { label: "Total Humans".into(), value: 10.0, display_value: "10".into() },
-                            app::UiDataPoint { label: "Fidelity %".into(), value: 95.5, display_value: "95.5%".into() },
-                        ])),
-                    },
-                    app::UiChartData {
-                        title: "Operational Stats".into(),
-                        points: slint::ModelRc::new(slint::VecModel::from(vec![
-                            app::UiDataPoint { label: "Latency (ms)".into(), value: 120.0, display_value: "120".into() },
-                            app::UiDataPoint { label: "Pending Approvals".into(), value: 3.0, display_value: "3".into() },
-                            app::UiDataPoint { label: "Active Handoffs".into(), value: 2.0, display_value: "2".into() },
-                            app::UiDataPoint { label: "Token Velocity".into(), value: 1500.0, display_value: "1500".into() },
-                        ])),
-                    },
-                ];
-                ui.set_charts(slint::ModelRc::new(slint::VecModel::from(charts)));
+            if let Some(_ui) = analytics_charts_handle_clone.upgrade() {
+                // Mock data removed
             }
         }).unwrap();
     });
@@ -2499,33 +2478,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let unified_inbox_ui = app::UnifiedInbox::new().unwrap();
                 GLOBAL_UNIFIED_INBOX.with(|g| *g.borrow_mut() = Some(unified_inbox_ui.as_weak()));
 
-                let conversations = vec![
-                    app::UiConversation {
-                        id: "conv-1".into(),
-                        customer_name: "Maya".into(),
-                        channel_icon: "📷".into(), // Instagram
-                        last_message: "Do you do vegan cakes?".into(),
-                        unread: true,
-                        time: "2m ago".into(),
-                    },
-                    app::UiConversation {
-                        id: "conv-2".into(),
-                        customer_name: "Carlos".into(),
-                        channel_icon: "✉️".into(), // Email
-                        last_message: "Thanks for the repair quote.".into(),
-                        unread: false,
-                        time: "1h ago".into(),
-                    },
-                    app::UiConversation {
-                        id: "conv-3".into(),
-                        customer_name: "Fatima".into(),
-                        channel_icon: "💬".into(), // SMS
-                        last_message: "I need to pick up my order.".into(),
-                        unread: false,
-                        time: "Yesterday".into(),
-                    },
-                ];
-                unified_inbox_ui.set_conversations(slint::ModelRc::new(slint::VecModel::from(conversations)));
+                // Mock conversations removed
 
                 let unified_inbox_handle = unified_inbox_ui.as_weak();
 
@@ -7899,17 +7852,7 @@ mod e2e_hybrid_blob_tests {
         let check_messages_called_clone = check_messages_called.clone();
 
         let unified_inbox_ui = app::UnifiedInbox::new().unwrap();
-        let conversations = vec![
-            app::UiConversation {
-                id: "conv-1".into(),
-                customer_name: "Maya".into(),
-                channel_icon: "📷".into(), // Instagram
-                last_message: "Do you do vegan cakes?".into(),
-                unread: true,
-                time: "2m ago".into(),
-            }
-        ];
-        unified_inbox_ui.set_conversations(slint::ModelRc::new(slint::VecModel::from(conversations)));
+        // Mock conversations removed
 
         let unified_inbox_handle = unified_inbox_ui.as_weak();
         dashboard_ui.on_action_check_messages(move || {

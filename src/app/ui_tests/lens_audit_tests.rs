@@ -1,3 +1,4 @@
+use slint::Model;
 use crate::app;
 
 
@@ -51,4 +52,28 @@ fn test_business_share_cuj_lens_audit() {
     });
     share_ui.invoke_close();
     assert!(*close_called.borrow(), "Close callback must be triggered");
+}
+
+#[test]
+fn test_unified_inbox_no_mock_data() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::UnifiedInbox::new().unwrap();
+    assert_eq!(ui.get_conversations().row_count(), 0, "Conversations should be empty initially.");
+}
+
+#[test]
+fn test_business_manager_no_mock_data() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::BusinessManager::new().unwrap();
+    assert_eq!(ui.get_products().row_count(), 0, "Products should be empty initially.");
+}
+
+#[test]
+fn test_analytics_charts_no_mock_data() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::AnalyticsCharts::new().unwrap();
+    assert_eq!(ui.get_charts().row_count(), 0, "Charts should be empty initially.");
 }
