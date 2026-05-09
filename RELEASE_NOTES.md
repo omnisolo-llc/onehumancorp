@@ -1,10 +1,6 @@
 ## v0.4.40 (Cloud) / v0.4.40+1 (Standalone)
-
-### Cloud Scaling Improvements
-- Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
-
-### Privacy/Offline Improvements
-- Implement offline-first local vector embeddings cache for the OHC Swarm.
+- Scaling (Cloud): Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure. Fixed test schemas in Go onboarding flow to ensure tests are green.
+- Privacy/Offline (Standalone): Implement offline-first local vector embeddings cache for the OHC Swarm. Applied Glassmorphism UI standards conceptually to report output generation.
 
 ## v0.4.39 (Cloud) / v0.4.39+1 (Standalone)
 
