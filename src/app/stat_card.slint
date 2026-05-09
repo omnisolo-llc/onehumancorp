@@ -5,6 +5,7 @@ export component StatCard inherits GlassCard {
     in property <string> label;
     in property <string> value;
     in property <color> value_color: #a855f7;
+    in property <bool> is_loading: false;
 
     border-color: #e2e8f0;
     border-width: 1px;
@@ -23,12 +24,19 @@ export component StatCard inherits GlassCard {
                 font-family: "Inter";
                 font-size: 14px;
             }
-            Text {
+            if (!is_loading) : Text {
                 text: value;
                 font-size: 32px;
                 font-family: "Outfit";
                 font-weight: 700;
                 color: value_color;
+            }
+            if (is_loading) : GlassCard {
+                height: 32px;
+                width: 60%;
+                border-radius: 6px;
+                background: rgba(255, 255, 255, 0.1);
+                opacity: abs(mod(animation-tick(), 1.5s) / 1.5s - 0.5) * 0.5 + 0.3;
             }
         }
     }

@@ -326,9 +326,9 @@ fn test_grandmother_login_error_message_ux() {
     crate::ui_tests::init();
     let ui = crate::app::Login::new().unwrap();
     // Simulate setting an internal error message with jargon
-    ui.set_error_message("We couldn't sign you in.".into());
+    ui.set_error_message("We couldn't sign you in. Please check your email and password and try again.".into());
     // Assert that the raw property gets set
-    assert_eq!(ui.get_error_message(), "We couldn't sign you in.");
+    assert_eq!(ui.get_error_message(), "We couldn't sign you in. Please check your email and password and try again.");
     // Verify that callbacks don't panic even when error is active
     let action_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let action_invoked_clone = action_invoked.clone();

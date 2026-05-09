@@ -152,18 +152,18 @@ export component Dashboard inherits Window { // milestones
                 spacing: 16px;
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
-                    StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
+                    StatCard { is_loading: is_loading; label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
+                    StatCard { is_loading: is_loading; label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Team Members"; value: active_helpers_count; value_color: #10b981; }
-                    StatCard { label: "Ongoing Tasks"; value: tasks_in_progress_count; value_color: #f59e0b; }
+                    StatCard { is_loading: is_loading; label: "Team Members"; value: active_helpers_count; value_color: #10b981; }
+                    StatCard { is_loading: is_loading; label: "Ongoing Tasks"; value: tasks_in_progress_count; value_color: #f59e0b; }
                 }
                 HorizontalBox {
                     spacing: 16px;
                     alignment: start;
-                    StatCard { label: "Store Rating"; value: generative_score; value_color: #34d399; }
+                    StatCard { is_loading: is_loading; label: "Store Rating"; value: generative_score; value_color: #34d399; }
                     Button { text: "?"; width: 44px; height: 44px; clicked => { show_health_hint = !show_health_hint; } }
                 }
                 if (show_health_hint) : Text { text: "Your Store Rating is an AI-calculated score of your business's overall health and performance."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
@@ -172,16 +172,16 @@ export component Dashboard inherits Window { // milestones
             // Small Screen (List)
             if (root.width <= 768px) : VerticalBox {
                 spacing: 16px;
-                StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
+                StatCard { is_loading: is_loading; label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
-                    StatCard { label: "Team Members"; value: active_helpers_count; value_color: #10b981; }
+                    StatCard { is_loading: is_loading; label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
+                    StatCard { is_loading: is_loading; label: "Team Members"; value: active_helpers_count; value_color: #10b981; }
                 }
                 HorizontalBox {
                     spacing: 16px;
-                    StatCard { label: "Ongoing Tasks"; value: tasks_in_progress_count; value_color: #f59e0b; }
-                    StatCard { label: "Store Rating"; value: generative_score; value_color: #34d399; }
+                    StatCard { is_loading: is_loading; label: "Ongoing Tasks"; value: tasks_in_progress_count; value_color: #f59e0b; }
+                    StatCard { is_loading: is_loading; label: "Store Rating"; value: generative_score; value_color: #34d399; }
                 }
                 HorizontalBox {
                     alignment: start;
