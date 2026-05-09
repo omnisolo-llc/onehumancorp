@@ -358,6 +358,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
                                     if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
                                     if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
+                        if let Some(val) = state.get("product_description") { ui.set_product_description(val.into()); }
                                     if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
                                     if let Some(val) = state.get("product_currency") { ui.set_product_currency(val.into()); }
                                     if let Some(val) = state.get("price_type") { ui.set_price_type(val.into()); }
@@ -840,6 +841,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(val) = state.get("is_advanced") { set_global_is_advanced(val == "true"); }
                         if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
                         if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
+                        if let Some(val) = state.get("product_description") { ui.set_product_description(val.into()); }
                         if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
                         if let Some(val) = state.get("product_currency") { ui.set_product_currency(val.into()); }
                         if let Some(val) = state.get("price_type") { ui.set_price_type(val.into()); }
@@ -3169,6 +3171,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("admin_email".to_string(), admin_email.to_string()),
                 ("admin_password".to_string(), admin_password.to_string()),
                 ("website_template".to_string(), website_template.to_string()),
+                ("product_description".to_string(), ui.get_product_description().to_string()),
                 ("product_name".to_string(), product_name.to_string()),
                 ("product_price".to_string(), product_price.to_string()),
                 ("domain_choice".to_string(), domain_choice.to_string()),
@@ -3201,6 +3204,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_first_product_name = product_name.to_string();
             let req_first_product_price = product_price.to_string();
             let req_domain_choice = domain_choice.to_string();
+            let req_product_description = ui.get_product_description().to_string();
             let req_price_type = price_type.to_string();
 
             tokio::spawn(async move {
@@ -3640,6 +3644,7 @@ mod growth_e2e_tests {
         ui.set_sell_physical(true);
         ui.set_website_template("Modern".into());
         ui.set_product_name("Vegan Cake".into());
+        ui.set_product_description("A delicious vegan cake".into());
         ui.set_product_price("45".into());
         ui.set_domain_choice("custom".into());
         ui.set_instant_bio("A cool bakery".into());
@@ -3650,6 +3655,7 @@ mod growth_e2e_tests {
         assert_eq!(ui.get_sell_physical(), true);
         assert_eq!(ui.get_website_template(), "Modern");
         assert_eq!(ui.get_product_name(), "Vegan Cake");
+        assert_eq!(ui.get_product_description(), "A delicious vegan cake");
         assert_eq!(ui.get_product_price(), "45");
         assert_eq!(ui.get_domain_choice(), "custom");
         assert_eq!(ui.get_instant_bio(), "A cool bakery");
@@ -4274,7 +4280,7 @@ mod tests {
         crate::setup_welcome_checklist_routing(&ui);
 
         // Verify initial state
-        assert_eq!(ui.get_progress(), 0);
+        assert_eq!(ui.get_progress(), 25);
         assert_eq!(ui.get_is_completed(), false);
         ui.set_progress(100);
         ui.set_is_completed(true);
