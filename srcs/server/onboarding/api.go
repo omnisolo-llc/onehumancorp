@@ -112,15 +112,16 @@ func (h *APIHandler) HandleGetState(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
-// TenantAuthMiddleware extracts the X-Tenant-Id header and injects it into the request context.
-// In a real application, this would validate a session token, but this provides a secure extraction path.
+// TenantAuthMiddleware extracts the tenant ID from the session cookie
+// and injects it into the request context to ensure Multi-Tenant Safety.
 func TenantAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := r.Header.Get("X-Tenant-Id")
-		if tenantID == "" {
-			http.Error(w, "Missing X-Tenant-Id header", http.StatusUnauthorized)
+		cookie, err := r.Cookie("session_id")
+		if err != nil || cookie.Value == "" {
+			http.Error(w, "Unauthorized: missing session cookie", http.StatusUnauthorized)
 			return
 		}
+		tenantID := cookie.Value
 		// Inject into context
 		ctx := context.WithValue(r.Context(), tenantContextKey, tenantID)
 		next.ServeHTTP(w, r.WithContext(ctx))

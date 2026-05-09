@@ -62,7 +62,7 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	// 3. Poll Status
 	req1, err := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
 	assert.NoError(t, err)
-	req1.Header.Set("X-Tenant-Id", startRes.TenantID)
+	req1.AddCookie(&http.Cookie{Name: "session_id", Value: startRes.TenantID})
 	statusResp, err := http.DefaultClient.Do(req1)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp.StatusCode)
@@ -82,7 +82,7 @@ func TestAPIEndToEndFlow(t *testing.T) {
 
 	// 5. Poll Status Again
 	req2, _ := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
-	req2.Header.Set("X-Tenant-Id", startRes.TenantID)
+	req2.AddCookie(&http.Cookie{Name: "session_id", Value: startRes.TenantID})
 	statusResp2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp2.StatusCode)
