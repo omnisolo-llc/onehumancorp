@@ -251,6 +251,7 @@ mod tests {
         });
     }
 
+    // Enforce Policy-as-Code for PII
     #[test]
     fn test_no_pii_logging_statements() {
         use walkdir::WalkDir;
@@ -345,6 +346,63 @@ mod tests {
         assert!(
             violations.is_empty(),
             "Found PII logging violations in the following lines:\n{:#?}",
+            violations
+        );
+    }
+
+    #[test]
+    fn test_no_pii_leakage_in_error_formatting() {
+        use walkdir::WalkDir;
+        use std::fs;
+        use std::env;
+        use std::path::PathBuf;
+
+        let mut violations = Vec::new();
+
+        let mut search_dirs = vec![PathBuf::from(".")];
+        if let Ok(workspace_dir) = env::var("BUILD_WORKSPACE_DIRECTORY") {
+            let mut p = PathBuf::from(&workspace_dir);
+            p.push("srcs");
+            search_dirs.push(p);
+        } else if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
+            let mut p2 = PathBuf::from(runfiles_dir.clone());
+            p2.push("ohc");
+            p2.push("srcs");
+            search_dirs.push(p2);
+        }
+
+        let mut checked_files = 0;
+
+        for dir in search_dirs {
+            if dir.exists() {
+                let walker = WalkDir::new(&dir).into_iter().filter_entry(|e| {
+                    e.path().components().all(|c| c.as_os_str() != "external")
+                });
+
+                for entry in walker
+                    .filter_map(Result::ok)
+                    .filter(|e| e.path().extension().map_or(false, |ext| ext == "go"))
+                {
+                    checked_files += 1;
+                    let content = fs::read_to_string(entry.path()).unwrap_or_default();
+                    for (i, line) in content.lines().enumerate() {
+                        let lower_line = line.to_lowercase();
+                        if lower_line.contains("fmt.errorf") || lower_line.contains("log.printf") {
+                            if lower_line.contains("tenant_id") ||
+                               lower_line.contains("organization_id") ||
+                               lower_line.contains("session_id") ||
+                               lower_line.contains("payload") {
+                                violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        assert!(
+            violations.is_empty(),
+            "Found PII logging violations in Go error formatting in the following lines:\n{:#?}",
             violations
         );
     }
