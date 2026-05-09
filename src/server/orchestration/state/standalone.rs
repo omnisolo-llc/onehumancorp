@@ -150,20 +150,27 @@ impl StateManager for StandaloneStateManager {
 
             let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
+            let now_rfc = Utc::now().to_rfc3339();
             let rows = sqlx::query(
                 r#"
-                SELECT t.*
-                FROM swarm_tasks t
-                WHERE t.status = 'PENDING'
-                  AND NOT EXISTS (
-                      SELECT 1
-                      FROM json_each(t.dependencies) as dep_id
-                      JOIN swarm_tasks dep ON dep.id = dep_id.value
-                      WHERE dep.status != 'COMPLETED'
-                  )
-                LIMIT ?
+                UPDATE swarm_tasks
+                SET status = 'IN_PROGRESS', updated_at = ?
+                WHERE id IN (
+                    SELECT t.id
+                    FROM swarm_tasks t
+                    WHERE t.status = 'PENDING'
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM json_each(t.dependencies) as dep_id
+                        JOIN swarm_tasks dep ON dep.id = dep_id.value
+                        WHERE dep.status != 'COMPLETED'
+                    )
+                    LIMIT ?
+                )
+                RETURNING *
                 "#
             )
+            .bind(now_rfc)
             .bind(limit)
             .fetch_all(&mut *tx)
             .await
@@ -258,20 +265,11 @@ impl StateManager for StandaloneStateManager {
             }
         }
 
-        // Update status to IN_PROGRESS so it's not picked up by others
+        // Transitions are recorded after the UPDATE ... RETURNING
         if !task_ids.is_empty() {
             let now = Utc::now();
             let now_rfc = now.to_rfc3339();
             for (id_str, tenant_id) in task_ids {
-                sqlx::query(
-                    "UPDATE swarm_tasks SET status = 'IN_PROGRESS', updated_at = ? WHERE id = ?"
-                )
-                .bind(&now_rfc)
-                .bind(&id_str)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
                 let trans_id = uuid::Uuid::new_v4().to_string();
                 sqlx::query(
                     r#"
@@ -291,7 +289,7 @@ impl StateManager for StandaloneStateManager {
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
-        // Update the returned tasks statuses to match what we committed
+        // Update the returned tasks statuses to match what we committed (IN_PROGRESS)
         for t in &mut tasks {
             t.status = "IN_PROGRESS".to_string();
         }
