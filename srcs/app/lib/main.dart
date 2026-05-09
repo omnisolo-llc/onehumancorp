@@ -169,7 +169,7 @@ class DashboardScreen extends StatelessWidget {
                           children: [
                             Icon(Icons.radio_button_unchecked, color: Colors.white70, size: 18),
                             SizedBox(width: 8),
-                            Text("Share your link with a friend", style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+                            Expanded(child: Text("Share your link with a friend", style: TextStyle(color: Colors.white, decoration: TextDecoration.underline))),
                           ],
                         ),
                       ),

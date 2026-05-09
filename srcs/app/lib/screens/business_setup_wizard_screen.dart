@@ -79,7 +79,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(wizardProvider);
 
-    if (state.currentStep == 11) {
+    if (state.currentStep == 6) {
       return const DashboardScreen();
     }
 
@@ -120,21 +120,11 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       case 2:
         return _buildGoalSelectionScreen(state);
       case 3:
-        return _buildExternalIntegrationsScreen();
+        return _buildAIGenerationReviewScreen(state);
       case 4:
-        return _buildDeploymentPreferenceScreen(state);
+        return _buildPaymentSetupScreen(state);
       case 5:
-        return _buildAdministratorAccountScreen();
-      case 6:
-        return _buildTemplateSelectionScreen(state);
-      case 7:
-        return _buildProductScreen(state);
-      case 8:
-        return _buildDomainScreen(state);
-      case 9:
         return _buildReviewAndLaunchScreen(state);
-      case 10:
-        return _buildWelcomeChecklistScreen(state);
       default:
         return const SizedBox.shrink();
     }
@@ -326,32 +316,6 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
             ),
           ),
         ),
-        const SizedBox(height: 15),
-        GlassContainer(
-          child: DropdownButtonHideUnderline(
-            child: ContextualTooltip(
-              tooltipKey: 'sizeDropdown',
-              child: DropdownButton<String>(
-                key: const Key('sizeDropdown'),
-              value: state.size,
-              isExpanded: true,
-              dropdownColor: const Color(0xFF1E293B),
-              style: const TextStyle(color: Colors.white),
-              hint: const Text('Size', style: TextStyle(color: Colors.white70)),
-              items: ['1-10', '11-50', '51-200', '201+']
-                  .map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-                onChanged: (newValue) {
-                  ref.read(wizardProvider.notifier).updateBusinessProfile(size: newValue);
-                },
-              ),
-            ),
-          ),
-        ),
         const Spacer(),
         _buildNavigationButtons(),
       ],
@@ -359,12 +323,12 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   }
 
   Widget _buildGoalSelectionScreen(WizardState state) {
-    final goals = ['Support', 'Build software', 'Marketing', 'Data', 'Custom'];
+    final goals = ['Sell products online', 'Take bookings', 'Build a portfolio'];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'What are your goals?',
+          'What\'s your primary goal right now?',
           style: TextStyle(
             fontFamily: 'Outfit',
             fontSize: 28,
@@ -378,20 +342,22 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
             itemCount: goals.length,
             itemBuilder: (context, index) {
               final goal = goals[index];
-              final isSelected = state.goals.contains(goal);
+              final isSelected = state.primaryGoal == goal;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: GestureDetector(
                   onTap: () {
-                    ref.read(wizardProvider.notifier).toggleGoal(goal);
+                    ref.read(wizardProvider.notifier).setPrimaryGoal(goal);
                   },
                   child: GlassContainer(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          goal,
-                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                        Expanded(
+                          child: Text(
+                            goal,
+                            style: const TextStyle(color: Colors.white, fontSize: 16),
+                          ),
                         ),
                         Icon(
                           isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
@@ -410,218 +376,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
-  Widget _buildExternalIntegrationsScreen() {
-    if (widget.environmentMode == EnvironmentMode.standaloneDesktop) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Local Environment Optimization',
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: SingleChildScrollView(
-              child: GlassContainer(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.speed, size: 60, color: Color(0xFF22C55E)),
-                    SizedBox(height: 20),
-                    Text(
-                      'Bypassing Cloud Dependencies',
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Running in Standalone Desktop mode. Heavy cloud-specific dependencies like Redis and multi-tenant external databases are safely bypassed for local host-machine efficiency.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70, fontSize: 16),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _buildNavigationButtons(),
-        ],
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'External Integrations',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 20),
-        GlassContainer(
-          child: const TextField(
-            key: Key('redisUrlField'),
-            style: TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              labelText: 'Redis URL',
-              labelStyle: TextStyle(color: Colors.white70),
-              border: InputBorder.none,
-            ),
-          ),
-        ),
-        const SizedBox(height: 15),
-        GlassContainer(
-          child: const TextField(
-            key: Key('dbUrlField'),
-            style: TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              labelText: 'Multi-tenant DB URL',
-              labelStyle: TextStyle(color: Colors.white70),
-              border: InputBorder.none,
-            ),
-          ),
-        ),
-        const Spacer(),
-        _buildNavigationButtons(),
-      ],
-    );
-  }
-
-  Widget _buildDeploymentPreferenceScreen(WizardState state) {
-    final options = ['Cloud', 'Desktop', 'Mobile-only'];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Deployment Preference',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: ListView.builder(
-            itemCount: options.length,
-            itemBuilder: (context, index) {
-              final option = options[index];
-              final isSelected = state.deploymentPreference == option;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: GestureDetector(
-                  onTap: () {
-                    ref.read(wizardProvider.notifier).setDeploymentPreference(option);
-                  },
-                  child: GlassContainer(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          option,
-                          style: const TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                        Icon(
-                          isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                          color: isSelected ? const Color(0xFF6B4EFF) : Colors.white54,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        _buildNavigationButtons(),
-      ],
-    );
-  }
-
-  Widget _buildAdministratorAccountScreen() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Administrator Account',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 20),
-        GlassContainer(
-          child: TextField(
-            key: const Key('adminNameField'),
-            controller: _adminNameController,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              labelStyle: TextStyle(color: Colors.white70),
-              border: InputBorder.none,
-            ),
-            onChanged: (value) {
-              ref.read(wizardProvider.notifier).updateAdminAccount(name: value);
-            },
-          ),
-        ),
-        const SizedBox(height: 15),
-        GlassContainer(
-          child: TextField(
-            key: const Key('adminEmailField'),
-            controller: _adminEmailController,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              labelStyle: TextStyle(color: Colors.white70),
-              border: InputBorder.none,
-            ),
-            onChanged: (value) {
-              ref.read(wizardProvider.notifier).updateAdminAccount(email: value);
-            },
-          ),
-        ),
-        const SizedBox(height: 15),
-        GlassContainer(
-          child: TextField(
-            key: const Key('adminPasswordField'),
-            controller: _adminPasswordController,
-            obscureText: true,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              labelText: 'Password',
-              labelStyle: TextStyle(color: Colors.white70),
-              border: InputBorder.none,
-            ),
-            onChanged: (value) {
-              ref.read(wizardProvider.notifier).updateAdminAccount(password: value);
-            },
-          ),
-        ),
-        const Spacer(),
-        _buildNavigationButtons(),
-      ],
-    );
-  }
-
-  Widget _buildTemplateSelectionScreen(WizardState state) {
+  Widget _buildAIGenerationReviewScreen(WizardState state) {
     final templates = [
       {'id': 'modern', 'name': 'Modern', 'icon': Icons.web, 'color': Colors.blue},
       {'id': 'cozy', 'name': 'Cozy', 'icon': Icons.coffee, 'color': Colors.orange},
@@ -632,7 +387,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'Select a Template',
+          'Review AI-Generated Draft',
           style: TextStyle(
             fontFamily: 'Outfit',
             fontSize: 28,
@@ -642,7 +397,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         ),
         const SizedBox(height: 10),
         const Text(
-          'Choose a starting vibe for your storefront.',
+          'The Marketing & Advertising AI department has generated these storefronts for you based on your inputs. Choose one to start with or regenerate.',
           style: TextStyle(color: Colors.white70, fontSize: 16),
         ),
         const SizedBox(height: 20),
@@ -724,12 +479,18 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
-  Widget _buildProductScreen(WizardState state) {
+  Widget _buildPaymentSetupScreen(WizardState state) {
+    final paymentModes = [
+      {'id': 'stripe', 'name': 'Connect Stripe', 'icon': Icons.credit_card},
+      {'id': 'ohc_link', 'name': 'Set up OHC Payment Link', 'icon': Icons.link},
+      {'id': 'defer', 'name': 'Defer for later', 'icon': Icons.schedule},
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'Add your first product or service',
+          'Payment Setup',
           style: TextStyle(
             fontFamily: 'Outfit',
             fontSize: 28,
@@ -739,157 +500,46 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         ),
         const SizedBox(height: 10),
         const Text(
-          'You can add more later.',
+          'How would you like to get paid?',
           style: TextStyle(color: Colors.white70, fontSize: 16),
         ),
         const SizedBox(height: 20),
         Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Name', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                const SizedBox(height: 5),
-                GlassContainer(
-                  child: TextFormField(
-                    key: const Key('productNameField'),
-                    initialValue: state.productName,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: 'e.g. Custom Birthday Cake',
-                      hintStyle: TextStyle(color: Colors.white24),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(15),
-                    ),
-                    onChanged: (value) {
-                      ref.read(wizardProvider.notifier).updateProductDetails(name: value);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 15),
-                const Text('Description (AI will help!)', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                const SizedBox(height: 5),
-                GlassContainer(
-                  child: TextFormField(
-                    key: const Key('productDescField'),
-                    initialValue: state.productDescription,
-                    style: const TextStyle(color: Colors.white),
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      hintText: 'Describe what you are selling...',
-                      hintStyle: TextStyle(color: Colors.white24),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(15),
-                    ),
-                    onChanged: (value) {
-                      ref.read(wizardProvider.notifier).updateProductDetails(description: value);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.1),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Center(child: Text('✨ Auto-generate description', style: TextStyle(color: Colors.white))),
-                ),
-                const SizedBox(height: 15),
-                const Text('Price', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                const SizedBox(height: 5),
-                GlassContainer(
-                  child: TextFormField(
-                    key: const Key('productPriceField'),
-                    initialValue: state.productPrice,
-                    style: const TextStyle(color: Colors.white),
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      hintText: '0.00',
-                      prefixText: '\$ ',
-                      prefixStyle: TextStyle(color: Colors.white),
-                      hintStyle: TextStyle(color: Colors.white24),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(15),
-                    ),
-                    onChanged: (value) {
-                      ref.read(wizardProvider.notifier).updateProductDetails(price: value);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+          child: ListView.builder(
+            itemCount: paymentModes.length,
+            itemBuilder: (context, index) {
+              final mode = paymentModes[index];
+              final isSelected = state.paymentSetupMode == mode['id'];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 15),
+                child: InkWell(
+                  onTap: () {
+                    ref.read(wizardProvider.notifier).setPaymentSetupMode(mode['id'] as String);
+                  },
+                  child: GlassContainer(
+                    child: Row(
                       children: [
-                        Icon(Icons.camera_alt, color: Colors.white54, size: 40),
-                        SizedBox(height: 10),
-                        Text('Tap to select an image', style: TextStyle(color: Colors.white54)),
+                        Icon(mode['icon'] as IconData, color: isSelected ? const Color(0xFF6B4EFF) : Colors.white54, size: 30),
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: Text(
+                            mode['name'] as String,
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        if (isSelected) const Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 24),
                       ],
                     ),
                   ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
-        const SizedBox(height: 20),
-        _buildNavigationButtons(),
-      ],
-    );
-  }
-
-  Widget _buildDomainScreen(WizardState state) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Choose a Domain',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          'This is how customers will find you online.',
-          style: TextStyle(color: Colors.white70, fontSize: 16),
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Your free OHC domain', style: TextStyle(color: Colors.white70, fontSize: 14)),
-              const SizedBox(height: 5),
-              GlassContainer(
-                child: TextFormField(
-                  key: const Key('domainField'),
-                  initialValue: state.domainChoice ?? '\${(state.companyName ?? "mybusiness").replaceAll(" ", "").toLowerCase()}.ohc.app',
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(15),
-                  ),
-                  onChanged: (value) {
-                    ref.read(wizardProvider.notifier).setDomainChoice(value);
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
         _buildNavigationButtons(),
       ],
     );
@@ -919,19 +569,11 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   const SizedBox(height: 10),
                   _buildSummaryItem('Industry', state.industry ?? 'Not set'),
                   const SizedBox(height: 10),
-                  _buildSummaryItem('Size', state.size ?? 'Not set'),
-                  const SizedBox(height: 10),
-                  _buildSummaryItem('Goals', state.goals.isEmpty ? 'None' : state.goals.join(', ')),
-                  const SizedBox(height: 10),
-                  _buildSummaryItem('Deployment', state.deploymentPreference ?? 'Not set'),
-                  const SizedBox(height: 10),
-                  _buildSummaryItem('Admin', state.adminName ?? 'Not set'),
+                  _buildSummaryItem('Primary Goal', state.primaryGoal ?? 'Not set'),
                   const SizedBox(height: 10),
                   _buildSummaryItem('Template', state.templateSelection ?? 'Not set'),
                   const SizedBox(height: 10),
-                  _buildSummaryItem('Product', state.productName ?? 'Not set'),
-                  const SizedBox(height: 10),
-                  _buildSummaryItem('Domain', state.domainChoice ?? 'Not set'),
+                  _buildSummaryItem('Payment Setup', state.paymentSetupMode ?? 'Not set'),
                 ],
               ),
             ),
@@ -984,83 +626,6 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildWelcomeChecklistScreen(WizardState state) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'You\'re set up!',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          'Here\'s what to do next:',
-          style: TextStyle(color: Colors.white70, fontSize: 16),
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildChecklistItem('✅ Business live', true),
-                const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Add 3 more products', false),
-                const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Connect Instagram', false),
-                const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Share your link with a friend', false),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () {
-            ref.read(wizardProvider.notifier).nextStep();
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6B4EFF),
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
-          ),
-          child: const Text('Go to Dashboard', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildChecklistItem(String text, bool isCompleted) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: isCompleted ? Colors.green.withOpacity(0.1) : Colors.white.withOpacity(0.05),
-        border: Border.all(color: isCompleted ? Colors.green : Colors.white24),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: isCompleted ? Colors.greenAccent : Colors.white,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          const Icon(Icons.chevron_right, color: Colors.white54),
-        ],
-      ),
     );
   }
 
