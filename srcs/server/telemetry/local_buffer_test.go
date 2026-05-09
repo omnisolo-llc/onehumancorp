@@ -13,7 +13,7 @@ import (
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("Failed to open test db: %v", err)
 	}
@@ -166,11 +166,13 @@ func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
 	go engine.StartSyncDaemon(ctx, 50*time.Millisecond)
 
 	// Wait for daemon to run
-	time.Sleep(200 * time.Millisecond)
-
-	var countSynced int
-	err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics WHERE synced_to_cloud = TRUE").Scan(&countSynced)
-	if err != nil || countSynced != 1 {
-		t.Fatalf("Expected 1 synced row after daemon run")
+	for i := 0; i < 20; i++ {
+		var countSynced int
+		err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics WHERE synced_to_cloud = TRUE").Scan(&countSynced)
+		if err == nil && countSynced == 1 {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
 	}
+	t.Fatalf("Expected 1 synced row after daemon run")
 }

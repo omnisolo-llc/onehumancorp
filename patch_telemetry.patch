@@ -1,0 +1,12 @@
+--- srcs/server/telemetry/local_buffer.go
++++ srcs/server/telemetry/local_buffer.go
+@@ -131,8 +131,10 @@
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
++				// Need to ensure table exists in tests context because engine.db might drop connection or be mocked poorly. No wait, just do the query
+				if err := e.SyncPendingMetrics(ctx); err != nil {
+					log.Printf("error syncing metrics: %v", err)
+				}
