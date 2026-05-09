@@ -1,6 +1,8 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component Walkthrough inherits Window {
+    out property <string> test_title: root.title;
+
     width: 600px;
     height: 500px;
     title: "App Data Sync Guide";

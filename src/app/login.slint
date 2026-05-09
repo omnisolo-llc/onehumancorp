@@ -3,11 +3,12 @@ import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint"
 import { GlassCard } from "glass_card.slint";
 
 export component Login inherits Window {
+    out property <string> test_title: root.title;
     min-width: 375px;
     preferred-width: 400px;
     height: 600px;
     title: "One Human Corp - Login";
-    out property <string> test_title: root.title;
+
 
     // Add a property to expose the card width constraint to unit tests
     // Fixed cyclic dependency on width

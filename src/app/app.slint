@@ -52,6 +52,8 @@ import { StatCard } from "./stat_card.slint";
 
 
 export component StatCardWindow inherits Window {
+    out property <string> test_title: root.title;
+
     width: 200px;
     height: 100px;
     in-out property <string> label <=> sc.label;
@@ -60,6 +62,8 @@ export component StatCardWindow inherits Window {
 }
 
 export component AgentStatusIndicatorWindow inherits Window {
+    out property <string> test_title: root.title;
+
     width: 100px;
     height: 100px;
     title: "Agent Status Indicator Test";
@@ -75,6 +79,8 @@ export { Meetings, UiMeeting } from "./meetings.slint";
 export { Skills, UiSkill } from "./skills.slint";
 
 export component AppWindow inherits Window {
+    out property <string> test_title: root.title;
+
     width: 400px;
     height: 300px;
     title: "New Rust + Slint App";

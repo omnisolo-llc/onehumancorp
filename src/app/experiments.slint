@@ -1,6 +1,8 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component Experiments inherits Window {
+    out property <string> test_title: root.title;
+
     width: 500px;
     height: 600px;
     title: "Growth Experiments";

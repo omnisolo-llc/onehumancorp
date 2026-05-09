@@ -11,6 +11,8 @@ export struct UiAiConfigProvider {
 }
 
 export component AiConfig inherits Window {
+    out property <string> test_title: root.title;
+
     width: 600px;
     height: 700px;
     title: "AI Providers";

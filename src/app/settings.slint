@@ -1,6 +1,8 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
 
 export component Settings inherits Window {
+    out property <string> test_title: root.title;
+
     width: 500px;
     height: 700px;
     title: "Settings";

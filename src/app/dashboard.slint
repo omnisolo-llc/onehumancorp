@@ -20,7 +20,9 @@ export struct UiRoleCount {
     count: int,
 }
 
-export component Dashboard inherits Window { // milestones
+export component Dashboard inherits Window {
+    out property <string> test_title: root.title;
+     // milestones
     width: 375px;
     height: 800px;
     title: "Dashboard";

@@ -9,7 +9,9 @@ export struct UiReferral {
     created_at: string,
 }
 
-export component Referrals inherits Window { // growth
+export component Referrals inherits Window {
+    out property <string> test_title: root.title;
+     // growth
     width: 600px;
     height: 800px;
     title: "Referral Dashboard";

@@ -3,6 +3,8 @@ import { GlassCard } from "glass_card.slint";
 import { AdvancedToggle } from "advanced_toggle.slint";
 
 export component Wizard inherits Window {
+    out property <string> test_title: root.title;
+
     min-width: 375px;
     preferred-width: 500px;
     height: 600px;

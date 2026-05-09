@@ -1,7 +1,9 @@
 import { Button, VerticalBox, HorizontalBox, StandardTableView, LineEdit, TextEdit } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
-export component SocialPosting inherits Window { // auto-posting
+export component SocialPosting inherits Window {
+    out property <string> test_title: root.title;
+     // auto-posting
     width: 520px;
     height: 700px;
     title: "Social Media Auto-Posting";

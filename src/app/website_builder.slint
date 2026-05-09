@@ -3,7 +3,9 @@ import { HeroBlock, ProductGridBlock, CalendarBlock, TestimonialsBlock, ContactF
 import { AdvancedToggle } from "advanced_toggle.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit, CheckBox } from "std-widgets.slint";
 
-export component WebsiteBuilder inherits Window { // storefront
+export component WebsiteBuilder inherits Window {
+    out property <string> test_title: root.title;
+     // storefront
     width: 600px;
     height: 600px;
     title: "Build My Website";

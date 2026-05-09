@@ -3,11 +3,12 @@ import { AdvancedToggle } from "advanced_toggle.slint";
 import { GlassCard } from "glass_card.slint";
 
 export component FixAgent inherits Window {
+    out property <string> test_title: root.title;
     preferred-width: 400px;
     min-width: 375px;
     height: 600px;
     title: "Help Me Fix This";
-    out property <string> test_title: root.title;
+
 
     in-out property <int> step: 0;
     in-out property <bool> is_applying: false;
@@ -109,11 +110,12 @@ export component FixAgent inherits Window {
 }
 
 export component Upgrade inherits Window {
+    out property <string> test_title: root.title;
     preferred-width: 400px;
     min-width: 375px;
     height: 600px;
     title: "Platform Upgrade";
-    out property <string> test_title: root.title;
+
 
     in-out property <int> progress: 0;
     in-out property <bool> is_upgrading: false;
@@ -190,6 +192,7 @@ export component Upgrade inherits Window {
 }
 
 export component Billing inherits Window {
+    out property <string> test_title: root.title;
     preferred-width: 400px;
     min-width: 375px;
     height: 600px;

@@ -3,6 +3,8 @@ import { GlassCard } from "glass_card.slint";
 import { AdvancedToggle } from "advanced_toggle.slint";
 
 export component GrowBusiness inherits Window {
+    out property <string> test_title: root.title;
+
     preferred-width: 500px;
     min-width: 375px;
     height: 600px;

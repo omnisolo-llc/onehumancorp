@@ -10,6 +10,8 @@ export struct UiHandoff {
 }
 
 export component Handoffs inherits Window {
+    out property <string> test_title: root.title;
+
     width: 500px;
     height: 600px;
     title: "Handoffs & Escalations";

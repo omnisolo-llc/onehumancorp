@@ -11,6 +11,8 @@ export struct UiAgentCost {
 }
 
 export component CostDashboard inherits Window {
+    out property <string> test_title: root.title;
+
     preferred-width: 500px;
     min-width: 375px;
     height: 800px;

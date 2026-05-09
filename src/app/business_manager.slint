@@ -11,10 +11,11 @@ export struct UiProduct {
 }
 
 export component BusinessManager inherits Window {
+    out property <string> test_title: root.title;
     preferred-width: 500px;
     min-width: 375px;
     height: 600px;
-    out property <string> test_title: root.title;
+
     // "list" | "add"
     in-out property <string> current_view: "list";
 

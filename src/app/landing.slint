@@ -1,10 +1,11 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component Landing inherits Window {
+    out property <string> test_title: root.title;
     width: 800px;
     height: 600px;
     title: "OneHumanCorp";
-    out property <string> test_title: root.title;
+
 
     in-out property <bool> is_variant_b: false;
 
