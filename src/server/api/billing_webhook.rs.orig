@@ -30,7 +30,7 @@ pub struct StripeEventData {
 }
 
 pub async fn stripe_webhook_handler(
-    State(state): State<WebhookState>,
+    State(_state): State<WebhookState>,
     Json(payload): Json<StripeEvent>,
 ) -> impl IntoResponse {
 
@@ -81,7 +81,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind(tier_string)
                             .bind(tenant_id)
-                            .execute(&*pool)
+                            .execute(pool.as_ref())
                             .await
                             .map(|_| ())
                     }
@@ -124,7 +124,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind("Free")
                             .bind(tenant_id)
-                            .execute(&*pool)
+                            .execute(pool.as_ref())
                             .await
                             .map(|_| ())
                     }
@@ -174,7 +174,7 @@ pub struct MercadoPagoEventData {
 }
 
 pub async fn mercadopago_webhook_handler(
-    State(state): State<WebhookState>,
+    State(_state): State<WebhookState>,
     Json(payload): Json<MercadoPagoEvent>,
 ) -> impl IntoResponse {
     match payload.action.as_str() {
