@@ -179,13 +179,16 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::MyPlanResponse>, tonic::Status> {
-        let tenant_id = request.metadata().get("x-tenant-id")
-            .map(|v| v.to_str().unwrap_or("default"))
-            .unwrap_or("default");
+        let auth_info = request.extensions().get::<crate::auth::orchestration::AuthInfo>()
+            .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
+        let tenant_id = auth_info.org_id.clone();
+        if tenant_id.is_empty() {
+            return Err(tonic::Status::permission_denied("Only tenants can access plans"));
+        }
 
-        let tier = self.hub.tracker().get_tenant_tier(tenant_id).await.unwrap_or(crate::pricing::rate_limit::PlanTier::Free);
-        let ai_used = self.hub.tracker().get_tenant_actions_used(tenant_id).await.unwrap_or(0);
-        let storage_used_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
+        let tier = self.hub.tracker().get_tenant_tier(&tenant_id).await.unwrap_or(crate::pricing::rate_limit::PlanTier::Free);
+        let ai_used = self.hub.tracker().get_tenant_actions_used(&tenant_id).await.unwrap_or(0);
+        let storage_used_bytes = self.hub.tracker().get_tenant_storage_used(&tenant_id).await.unwrap_or(0);
 
         let plan_name = match tier {
             crate::pricing::rate_limit::PlanTier::Free => "Free",
@@ -218,15 +221,18 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::CostDashboardResponse>, tonic::Status> {
-        let tenant_id = request.metadata().get("x-tenant-id")
-            .map(|v| v.to_str().unwrap_or("default"))
-            .unwrap_or("default");
+        let auth_info = request.extensions().get::<crate::auth::orchestration::AuthInfo>()
+            .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
+        let tenant_id = auth_info.org_id.clone();
+        if tenant_id.is_empty() {
+            return Err(tonic::Status::permission_denied("Only tenants can access cost dashboard"));
+        }
 
         let auditor = self.hub.get_cost_auditor();
         let llm_cost_f64 = auditor.get_total_cost();
         let total_revenue_f64 = auditor.get_total_revenue();
 
-        let storage_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
+        let storage_bytes = self.hub.tracker().get_tenant_storage_used(&tenant_id).await.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
@@ -249,9 +255,12 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<crate::ohc::orchestration::SelectPlanRequest>,
     ) -> Result<tonic::Response<crate::ohc::orchestration::SelectPlanResponse>, tonic::Status> {
-        let tenant_id = request.metadata().get("x-tenant-id")
-            .map(|v| v.to_str().unwrap_or("default"))
-            .unwrap_or("default").to_string();
+        let auth_info = request.extensions().get::<crate::auth::orchestration::AuthInfo>()
+            .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
+        let tenant_id = auth_info.org_id.clone();
+        if tenant_id.is_empty() {
+            return Err(tonic::Status::permission_denied("Only tenants can select plans"));
+        }
         let req = request.into_inner();
 
         let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
