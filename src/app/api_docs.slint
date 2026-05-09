@@ -22,6 +22,7 @@ export component ApiDocs inherits Window {
     in property <[ApiEndpoint]> endpoints: [];
     in-out property <string> api_response: "";
     in-out property <string> active_endpoint: "";
+    in-out property <bool> show_docs_hint: false;
     callback test_endpoint(string);
 
     HorizontalBox {
@@ -32,12 +33,18 @@ export component ApiDocs inherits Window {
             padding: 16px;
             spacing: 20px;
 
-            Text {
-                text: "Custom Integration";
-                font-size: 24px;
-                font-weight: 700;
-                color: white;
+            HorizontalBox {
+                Text {
+                    text: "Custom Integration";
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: white;
+                }
+                Rectangle {}
+                TooltipElement { tooltip_id: "docs_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_docs_hint = !show_docs_hint; } } }
             }
+
+            if (show_docs_hint) : Text { text: "This screen lets you connect external tools using our API."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
 
             Text {
                 text: "Connect other tools to your store to automate your work.";

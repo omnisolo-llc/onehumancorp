@@ -87,12 +87,7 @@ export component Login inherits Window {
                         width: 50%;
                         height: 100%;
                         background: @linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-                        property <length> target_x: parent.width;
-                        x: -self.width;
                         animate x { duration: 1500ms; iteration-count: -1; easing: linear; }
-                        init => {
-                            self.x = self.target_x;
-                        }
                     }
                 }
 

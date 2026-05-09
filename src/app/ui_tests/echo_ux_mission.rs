@@ -102,3 +102,55 @@ fn test_mission_dashboard_today_sales_check() {
     ui.set_todays_sales("$500".into());
     assert_eq!(ui.get_todays_sales(), "$500");
 }
+
+#[test]
+fn test_mission_dashboard_view_orders_quick_action() {
+    crate::ui_tests::init();
+    let ui = app::Dashboard::new().unwrap();
+    let invoked = Rc::new(RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_action_view_orders(move || {
+        *invoked_clone.borrow_mut() = true;
+    });
+    ui.invoke_action_view_orders();
+    assert!(*invoked.borrow(), "View Orders action not triggered");
+}
+
+#[test]
+fn test_mission_dashboard_check_messages_quick_action() {
+    crate::ui_tests::init();
+    let ui = app::Dashboard::new().unwrap();
+    let invoked = Rc::new(RefCell::new(false));
+    let invoked_clone = invoked.clone();
+    ui.on_action_check_messages(move || {
+        *invoked_clone.borrow_mut() = true;
+    });
+    ui.invoke_action_check_messages();
+    assert!(*invoked.borrow(), "Check Messages action not triggered");
+}
+
+#[test]
+fn test_mission_dashboard_shimmer_state() {
+    crate::ui_tests::init();
+    let ui = app::Dashboard::new().unwrap();
+    assert!(!ui.get_is_loading());
+    ui.set_is_loading(true);
+    assert!(ui.get_is_loading());
+}
+
+#[test]
+fn test_mission_login_error_rewrite() {
+    crate::ui_tests::init();
+    let ui = app::Login::new().unwrap();
+    ui.set_error_message("Invalid credentials".into());
+    assert_eq!(ui.get_error_message(), slint::SharedString::from("Invalid credentials"));
+}
+
+#[test]
+fn test_mission_api_docs_hint() {
+    crate::ui_tests::init();
+    let ui = app::ApiDocs::new().unwrap();
+    assert!(!ui.get_show_docs_hint());
+    ui.set_show_docs_hint(true);
+    assert!(ui.get_show_docs_hint());
+}

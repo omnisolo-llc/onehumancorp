@@ -119,12 +119,7 @@ export component Dashboard inherits Window { // milestones
                         width: 50%;
                         height: 100%;
                         background: @linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-                        property <length> target_x: parent.width;
-                        x: -self.width;
                         animate x { duration: 1500ms; iteration-count: -1; easing: linear; }
-                        init => {
-                            self.x = self.target_x;
-                        }
                     }
                 }
             }
@@ -434,12 +429,12 @@ export component Dashboard inherits Window { // milestones
 
         VerticalBox {
             spacing: 10px;
-            
+
             for role_count in role_counts : GlassCard {
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
-                
+
                 HorizontalBox {
                     padding: 16px;
                     Text { text: role_count.role; font-weight: 700; color: white; horizontal-alignment: center; }
