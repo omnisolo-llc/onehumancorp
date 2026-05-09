@@ -1,21 +1,25 @@
-## [Email Marketing] Issue Brief: AI-Generated Customer Broadcasts
+# [Email Marketing] Resend Integration
 
-**Title**: Scout 🔍: Integrate Resend for AI-Powered Email Marketing
-**Problem Statement**:
-Business owners like Priya want to notify their existing customers about new stock or holiday sales. Traditional tools like Mailchimp are too complex and require manual template design, list management, and campaign scheduling.
+**Title**: Integrate Resend for Modern Transactional & Marketing Email
+
+**Problem Statement**: Storefront owners need to send order confirmations and occasional promotional emails to their customer list. Setting up Mailchimp or SendGrid is too complex for non-technical users.
+
 **Research Report**:
-- **Tool**: Resend.
-- **Evaluation**: Resend provides a developer-friendly, reliable email API. Instead of giving users a complex drag-and-drop builder, OHC can use the "Marketing" AI agent to generate beautiful HTML emails based on a simple text prompt from the user.
-- **Ease of Use**: Zero-friction. The user types "Tell my customers about the new summer dress collection," and the AI generates the subject line, body, and inserts product photos automatically.
-- **Pricing**: Resend charges around $20/mo for up to 50k emails, very economical to bundle into an OHC premium tier.
-- **Cloud vs. Standalone**: Cloud mode uses OHC's centralized Resend account. Standalone mode requires the user to input their own SMTP credentials.
+- **Tool**: Resend
+- **Target Persona**: Any business owner needing email communication.
+- **Advantages**: Excellent developer experience, very modern API, fast delivery. Focuses heavily on deliverability. Easy to integrate.
+- **Risks**: Newer company compared to SendGrid, though rapidly growing.
+- **Pricing**: Generous free tier (up to 3,000 emails/month). Affordable paid tiers.
+- **Compatibility**: Cloud. Standalone (would require user to bring their own API key, but feasible).
+
 **Design Doc**:
-- "Marketing" tab -> "Send a Broadcast".
-- User provides a 1-sentence prompt.
-- The AI Agent generates a responsive HTML email preview.
-- User clicks "Send to all customers".
-- The system chunks the customer list and sends via the Resend API.
-**Implementation Prompt**:
-Create a feature where the user can prompt the AI to draft an email blast. Use the business's product catalog to enrich the email. Provide a preview UI. Once approved, queue the emails to be sent out via the Resend API to all opted-in customers, handling rate limits and basic bounce tracking.
-**Priority**: P2
+- OHC handles email sending transparently in the background.
+- Users can view a simplified "Email Campaigns" dashboard to draft and schedule emails.
+- "The Ambassador" AI can help draft engaging promotional emails.
+- Under the hood, OHC uses Resend's API to dispatch emails and track opens/clicks.
+
+**Implementation Prompt**: Integrate Resend API for sending transactional and marketing emails. Build a simple UI for users to view email campaign performance.
+
+**Priority**: P1
+
 **Estimated Scope**: Medium

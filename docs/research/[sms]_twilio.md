@@ -1,17 +1,24 @@
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Order Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
+# [SMS] Twilio Integration
+
+**Title**: Integrate Twilio for Reliable Global SMS Notifications
+
+**Problem Statement**: Business owners like Fatima need to send critical appointment reminders or order updates via SMS, as their customers may not check email frequently.
+
 **Research Report**:
 - **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
+- **Target Persona**: Service providers (appointments) and local delivery businesses.
+- **Advantages**: The industry standard for SMS. Global coverage, highly reliable.
+- **Risks**: SMS pricing can add up quickly. Requires handling opt-outs (STOP messages) carefully for compliance.
+- **Pricing**: Pay-as-you-go per message (varies by country).
+- **Compatibility**: Cloud. Standalone (user brings API key).
+
 **Design Doc**:
-- User goes to Settings and toggles "Send me SMS for new orders".
-- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
-- (Future: Customers can also receive SMS receipts).
-**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
-**Priority**: P2
+- OHC manages a central Twilio account for Cloud users.
+- Users can enable SMS notifications for specific events (e.g., "Appointment Tomorrow").
+- OHC handles sending the SMS via Twilio API and automatically processes STOP replies to ensure compliance.
+
+**Implementation Prompt**: Integrate Twilio API to send SMS notifications for critical business events. Implement automated handling of opt-out requests to ensure regulatory compliance.
+
+**Priority**: P1
+
 **Estimated Scope**: Medium
