@@ -208,7 +208,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
 
             tasks.push(SharedTask {
                 id: id_str,
-                organization_id: tenant_id,
+                tenant_id: tenant_id,
                 mission_id: row.get("mission_id"),
                 parent_plan_id: row.try_get("parent_plan_id").unwrap_or_default(),
                 dependencies,

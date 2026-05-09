@@ -23,7 +23,7 @@ async fn test_task_decomposition_service() {
                 r#"
                 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                     id TEXT PRIMARY KEY,
-                    organization_id TEXT NOT NULL,
+                    tenant_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
                     parent_plan_id TEXT NOT NULL,
                     dependencies JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -63,7 +63,7 @@ async fn test_task_decomposition_service() {
                 r#"
                 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                     id TEXT PRIMARY KEY,
-                    organization_id TEXT NOT NULL,
+                    tenant_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
                     parent_plan_id TEXT NOT NULL,
                     dependencies TEXT NOT NULL DEFAULT '[]',
@@ -119,7 +119,7 @@ async fn test_task_decomposition_service() {
     let now = Utc::now();
     let dep_task = SharedTask {
         id: uuid::Uuid::new_v4().to_string(),
-        organization_id: "org1".to_string(),
+        tenant_id: "org1".to_string(),
         mission_id: "m1".to_string(),
         parent_plan_id: "p1".to_string(),
         dependencies: vec![],
@@ -142,7 +142,7 @@ async fn test_task_decomposition_service() {
 
     let main_task = SharedTask {
         id: uuid::Uuid::new_v4().to_string(),
-        organization_id: "org1".to_string(),
+        tenant_id: "org1".to_string(),
         mission_id: "m1".to_string(),
         parent_plan_id: "p1".to_string(),
         dependencies: vec![dep_task.id.clone()],
@@ -188,7 +188,7 @@ async fn test_task_decomposition_dag_blocked() {
                 r#"
                 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                     id TEXT PRIMARY KEY,
-                    organization_id TEXT NOT NULL,
+                    tenant_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
                     parent_plan_id TEXT NOT NULL,
                     dependencies JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -216,7 +216,7 @@ async fn test_task_decomposition_dag_blocked() {
                 r#"
                 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                     id TEXT PRIMARY KEY,
-                    organization_id TEXT NOT NULL,
+                    tenant_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
                     parent_plan_id TEXT NOT NULL,
                     dependencies TEXT NOT NULL DEFAULT '[]',
@@ -272,7 +272,7 @@ async fn test_task_decomposition_dag_blocked() {
     let now = Utc::now();
     let dep_task = SharedTask {
         id: uuid::Uuid::new_v4().to_string(),
-        organization_id: "org1".to_string(),
+        tenant_id: "org1".to_string(),
         mission_id: "m1".to_string(),
         parent_plan_id: "p1".to_string(),
         dependencies: vec![],
@@ -295,7 +295,7 @@ async fn test_task_decomposition_dag_blocked() {
 
     let main_task = SharedTask {
         id: uuid::Uuid::new_v4().to_string(),
-        organization_id: "org1".to_string(),
+        tenant_id: "org1".to_string(),
         mission_id: "m1".to_string(),
         parent_plan_id: "p1".to_string(),
         dependencies: vec![dep_task.id.clone()],
@@ -343,7 +343,7 @@ async fn test_task_decomposition_service_fail_task() {
                 r#"
                 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                     id TEXT PRIMARY KEY,
-                    organization_id TEXT NOT NULL,
+                    tenant_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
                     parent_plan_id TEXT NOT NULL,
                     dependencies JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -380,7 +380,7 @@ async fn test_task_decomposition_service_fail_task() {
                 r#"
                 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                     id TEXT PRIMARY KEY,
-                    organization_id TEXT NOT NULL,
+                    tenant_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
                     parent_plan_id TEXT NOT NULL,
                     dependencies TEXT NOT NULL DEFAULT '[]',
@@ -433,7 +433,7 @@ async fn test_task_decomposition_service_fail_task() {
     let now = Utc::now();
     let main_task = SharedTask {
         id: uuid::Uuid::new_v4().to_string(),
-        organization_id: "org1".to_string(),
+        tenant_id: "org1".to_string(),
         mission_id: "m1".to_string(),
         parent_plan_id: "p1".to_string(),
         dependencies: vec![],

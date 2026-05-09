@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SharedTask {
     pub id: String,
-    pub organization_id: String,
+    pub tenant_id: String,
     pub mission_id: String,
     pub parent_plan_id: String,
     pub dependencies: Vec<String>,
@@ -31,7 +31,7 @@ impl SharedTask {
     pub fn into_proto(self) -> crate::ohc::orchestration::SharedTask {
         crate::ohc::orchestration::SharedTask {
             id: self.id,
-            organization_id: self.organization_id,
+            organization_id: self.tenant_id,
             parent_plan_id: self.parent_plan_id,
             dependencies: self.dependencies,
             title: self.title,
@@ -98,17 +98,17 @@ impl TaskManager {
         }
     }
 
-    pub fn create_task(&self, org_id: String, mission_id: String, title: String, description: String, priority: String) -> Result<SharedTask, String> {
-        self.create_task_with_plan(org_id, mission_id, String::new(), vec![], title, description, priority)
+    pub fn create_task(&self, tenant_id: String, mission_id: String, title: String, description: String, priority: String) -> Result<SharedTask, String> {
+        self.create_task_with_plan(tenant_id, mission_id, String::new(), vec![], title, description, priority)
     }
 
-    pub fn create_task_with_plan(&self, org_id: String, mission_id: String, parent_plan_id: String, dependencies: Vec<String>, title: String, description: String, priority: String) -> Result<SharedTask, String> {
+    pub fn create_task_with_plan(&self, tenant_id: String, mission_id: String, parent_plan_id: String, dependencies: Vec<String>, title: String, description: String, priority: String) -> Result<SharedTask, String> {
         let id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now();
         
         let task = SharedTask {
             id: id.clone(),
-            organization_id: org_id,
+            tenant_id,
             mission_id,
             parent_plan_id,
             dependencies,
@@ -269,10 +269,10 @@ impl TaskManager {
         }
     }
 
-    pub fn get_pending_approvals(&self, org_id: &str) -> Vec<SharedTask> {
+    pub fn get_pending_approvals(&self, tenant_id: &str) -> Vec<SharedTask> {
         let tasks = self.tasks.read().unwrap();
         tasks.values()
-            .filter(|t| t.organization_id == org_id && t.approval_status.as_deref() == Some("PENDING"))
+            .filter(|t| t.tenant_id == tenant_id && t.approval_status.as_deref() == Some("PENDING"))
             .cloned()
             .collect()
     }

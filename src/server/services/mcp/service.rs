@@ -6,6 +6,7 @@ use crate::integrations::registry::IntegrationsRegistry;
 use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
 use crate::tools::hybridfsmcp::factory;
 use crate::tools::local_proxy::server::LocalProxyServer;
+use crate::db::DbStore;
 
 pub struct MyMcpService {
     dynamic_tools: RwLock<Vec<McpToolProto>>,
@@ -196,7 +197,7 @@ impl McpService for MyMcpService {
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
             "fs_hybrid_read" | "fs_hybrid_write" | "fs_hybrid_sync" | "fs_list_dir" => {
-                match self.hybrid_fs_server.invoke_tool(&req, Some(self.hub.pool.clone())).await {
+                match self.hybrid_fs_server.invoke_tool(&req, Some(self.hub.pg_pool.clone())).await {
                     Ok(resp) => Ok(Response::new(resp)),
                     Err(e) => Err(e),
                 }
@@ -227,26 +228,37 @@ impl McpService for MyMcpService {
 
         let req = request.into_inner();
 
-        let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), tenant_id.clone());
-        let ctx_root = std::env::var("CONTEXT_ROOT").ok();
-        let sip_db = if let Some(root) = ctx_root {
-            sip_db.with_context_root(root)
-        } else {
-            sip_db
+        let sip_db = crate::sip::SipDB {
+            store: self.hub.store.clone(),
+            pg_pool: self.hub.pg_pool.clone(),
+            tenant_id: tenant_id.clone(),
+            context_root: std::env::var("CONTEXT_ROOT").ok(),
         };
 
         let grounding_content = sip_db.load_grounding_content().await;
 
-        let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        match &self.hub.store {
+            DbStore::Postgres => {
+                let mut tx = self.hub.pg_pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
-        for m in req.missions {
-            sip_db.delegate_mission_with_tx(&mut tx, &m.id, &m.status, &m.payload, m.force_local, &grounding_content)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?;
+                for m in req.missions {
+                    sip_db.delegate_mission_with_tx(&mut tx, &m.id, &m.status, &m.payload, m.force_local, &grounding_content)
+                        .await
+                        .map_err(|e| Status::internal(e.to_string()))?;
+                }
+
+                tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+            }
+            DbStore::Sqlite(pool) => {
+                // SQLite Parity Implementation: use upsert_mission logic.
+                for m in req.missions {
+                    sip_db.upsert_mission(&m.id, &m.status, &m.payload, m.force_local)
+                        .await
+                        .map_err(|e| Status::internal(e.to_string()))?;
+                }
+            }
         }
-
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(EmptyResponse {}))
     }
@@ -264,27 +276,43 @@ impl McpService for MyMcpService {
         }
 
         let req = request.into_inner();
-        let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
-
-        let query = "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, organization_id) \
-                     VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5) \
-                     ON CONFLICT (memory_id) DO UPDATE SET \
-                         context = CASE WHEN swarm_memory_embeddings.context != EXCLUDED.context THEN EXCLUDED.context ELSE swarm_memory_embeddings.context END, \
-                         vector_embedding = CASE WHEN swarm_memory_embeddings.vector_embedding != EXCLUDED.vector_embedding THEN EXCLUDED.vector_embedding ELSE swarm_memory_embeddings.vector_embedding END, \
-                         source_plugin = CASE WHEN swarm_memory_embeddings.source_plugin != EXCLUDED.source_plugin THEN EXCLUDED.source_plugin ELSE swarm_memory_embeddings.source_plugin END";
         
-        sqlx::query(query)
-            .bind(&req.memory_id)
-            .bind(&req.context)
-            .bind(req.vector_embedding.as_bytes())
-            .bind(&req.source_plugin)
-            .bind(&tenant_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-            
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        match &self.hub.store {
+            DbStore::Postgres => {
+                let mut tx = self.hub.pg_pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+                let query = "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, tenant_id) \
+                            VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5) \
+                            ON CONFLICT (memory_id) DO UPDATE SET \
+                                context = CASE WHEN swarm_memory_embeddings.context != EXCLUDED.context THEN EXCLUDED.context ELSE swarm_memory_embeddings.context END, \
+                                vector_embedding = CASE WHEN swarm_memory_embeddings.vector_embedding != EXCLUDED.vector_embedding THEN EXCLUDED.vector_embedding ELSE swarm_memory_embeddings.vector_embedding END, \
+                                source_plugin = CASE WHEN swarm_memory_embeddings.source_plugin != EXCLUDED.source_plugin THEN EXCLUDED.source_plugin ELSE swarm_memory_embeddings.source_plugin END";
+
+                sqlx::query(query)
+                    .bind(&req.memory_id)
+                    .bind(&req.context)
+                    .bind(req.vector_embedding.as_bytes())
+                    .bind(&req.source_plugin)
+                    .bind(&tenant_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+            }
+            DbStore::Sqlite(pool) => {
+                // SQLite Parity Implementation
+                let query = "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES (?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding";
+                sqlx::query(query)
+                    .bind(&req.memory_id)
+                    .bind(&req.context)
+                    .bind(&req.vector_embedding)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+            }
+        }
         Ok(Response::new(EmptyResponse {}))
     }
 }
@@ -294,16 +322,24 @@ mod tests {
     use super::*;
     use tonic::Request;
     use crate::ohc::orchestration::{SyncMissionsRequest, SyncContextRequest};
+    use crate::db::DB;
+
+    async fn setup_hub() -> (Arc<crate::hub::Hub>, DB) {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = DB { pool: pool.clone(), store: DbStore::Postgres };
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        (Arc::new(crate::hub::Hub::new(tx, &db)), db)
+    }
 
     #[tokio::test]
     async fn test_sync_missions_unauthenticated() {
+        if std::env::var("DATABASE_URL").is_err() { return; }
+        let (hub, _) = setup_hub().await;
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
-        let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
-        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
-        let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
 
         let req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
@@ -315,13 +351,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_context_unauthenticated() {
+        if std::env::var("DATABASE_URL").is_err() { return; }
+        let (hub, _) = setup_hub().await;
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
-        let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
-        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
-        let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
 
         let req = Request::new(SyncContextRequest {
@@ -338,13 +370,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_missions_authenticated() {
+        if std::env::var("DATABASE_URL").is_err() { return; }
+        let (hub, _) = setup_hub().await;
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
-        let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
-        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
-        let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
 
         let mut req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
@@ -358,13 +386,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_context_authenticated() {
+        if std::env::var("DATABASE_URL").is_err() { return; }
+        let (hub, _) = setup_hub().await;
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
-        let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
-        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
-        let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
 
         let mut req = Request::new(SyncContextRequest {
@@ -375,11 +399,8 @@ mod tests {
         });
         req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap());
 
-        // This will attempt an insert into DB, but since test env may not be running PG properly, it might fail internal, but at least not unauthenticated
         let resp = service.sync_context(req).await;
         if let Err(e) = resp {
-             // We just expect it to bypass the unauthenticated block,
-             // but it might fail on `pool.begin()` if the db is completely missing.
              assert_ne!(e.code(), tonic::Code::Unauthenticated);
         }
     }

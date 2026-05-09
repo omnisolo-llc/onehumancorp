@@ -104,7 +104,7 @@ mod tests {
             .unwrap();
 
         let (tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(Hub::new(tx, pg_pool));
+        let hub = Arc::new(Hub::new(tx, &crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres }));
 
         // Register an idle agent
         hub.register_agent(crate::ohc::orchestration::Agent {
@@ -165,7 +165,7 @@ mod tests {
             .unwrap();
 
         let (tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(Hub::new(tx, pg_pool));
+        let hub = Arc::new(Hub::new(tx, &crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres }));
 
         hub.register_agent(crate::ohc::orchestration::Agent {
             id: "agent_cloud".to_string(),

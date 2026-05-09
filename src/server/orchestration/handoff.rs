@@ -49,7 +49,7 @@ impl HandoffManager {
                             "agent_memories" => {
                                 match &db_clone.store {
                                     DbStore::Postgres => {
-                                        if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES ($1, $2, $3, to_timestamp($4::double precision)) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
+                                        if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, tenant_id, raw_content, updated_at) VALUES ($1, $2, $3, to_timestamp($4::double precision)) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
                                             .bind(&handoff.state_id)
                                             .bind(&handoff.tenant_id)
                                             .bind(&handoff.serialized_state)
@@ -61,7 +61,7 @@ impl HandoffManager {
                                         }
                                     }
                                     DbStore::Sqlite(sqlite_pool) => {
-                                        if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES (?, ?, ?, datetime(?, 'unixepoch')) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
+                                        if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, tenant_id, raw_content, updated_at) VALUES (?, ?, ?, datetime(?, 'unixepoch')) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
                                             .bind(&handoff.state_id)
                                             .bind(&handoff.tenant_id)
                                             .bind(&handoff.serialized_state)
@@ -161,7 +161,7 @@ mod tests {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BLOB, updated_at TIMESTAMP)")
+        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, tenant_id TEXT, raw_content BLOB, updated_at TIMESTAMP)")
             .execute(&pool)
             .await
             .unwrap();
@@ -220,7 +220,7 @@ mod tests {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BLOB, updated_at TIMESTAMP)")
+        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, tenant_id TEXT, raw_content BLOB, updated_at TIMESTAMP)")
             .execute(&pool)
             .await
             .unwrap();

@@ -34,14 +34,14 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     INSERT INTO shared_tasks_decomposition (
-                        id, organization_id, mission_id, parent_plan_id, dependencies,
+                        id, tenant_id, mission_id, parent_plan_id, dependencies,
                         title, description, status, priority, payload, deliberation_log,
                         depth, created_at, updated_at
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                     "#
                 )
                 .bind(&task.id)
-                .bind(&task.organization_id)
+                .bind(&task.tenant_id)
                 .bind(&task.mission_id)
                 .bind(&task.parent_plan_id)
                 .bind(&deps)
@@ -66,14 +66,14 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     INSERT INTO shared_tasks_decomposition (
-                        id, organization_id, mission_id, parent_plan_id, dependencies,
+                        id, tenant_id, mission_id, parent_plan_id, dependencies,
                         title, description, status, priority, payload, deliberation_log,
                         depth, created_at, updated_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     "#
                 )
                 .bind(&task.id)
-                .bind(&task.organization_id)
+                .bind(&task.tenant_id)
                 .bind(&task.mission_id)
                 .bind(&task.parent_plan_id)
                 .bind(&deps_str)
@@ -339,7 +339,7 @@ impl TaskDecompositionService {
 
         Ok(SharedTask {
             id: row.get("id"),
-            organization_id: row.get("organization_id"),
+            tenant_id: row.get("tenant_id"),
             mission_id: row.get("mission_id"),
             parent_plan_id: row.get("parent_plan_id"),
             dependencies: deps,
@@ -382,7 +382,7 @@ impl TaskDecompositionService {
 
         Ok(SharedTask {
             id: row.get("id"),
-            organization_id: row.get("organization_id"),
+            tenant_id: row.get("tenant_id"),
             mission_id: row.get("mission_id"),
             parent_plan_id: row.get("parent_plan_id"),
             dependencies: deps,
@@ -427,7 +427,7 @@ impl TaskDecompositionService {
 
                 Ok(SharedTask {
                     id: row.get("id"),
-                    organization_id: row.get("organization_id"),
+                    tenant_id: row.get("tenant_id"),
                     mission_id: row.get("mission_id"),
                     parent_plan_id: row.get("parent_plan_id"),
                     dependencies: {
@@ -483,7 +483,7 @@ impl TaskDecompositionService {
 
                 Ok(SharedTask {
                     id: row.get("id"),
-                    organization_id: row.get("organization_id"),
+                    tenant_id: row.get("tenant_id"),
                     mission_id: row.get("mission_id"),
                     parent_plan_id: row.get("parent_plan_id"),
                     dependencies: {
@@ -851,7 +851,7 @@ mod chaos_tests {
 
         // Setup tables
         sqlx::query(
-            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, tenant_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
@@ -913,7 +913,7 @@ mod chaos_tests {
 
         // Setup tables
         sqlx::query(
-            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, tenant_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"

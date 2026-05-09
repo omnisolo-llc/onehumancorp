@@ -22,8 +22,8 @@ impl UserRepository for PgUserRepository {
     async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        let organization_id = org_id;
+        set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
             r#"
@@ -58,8 +58,8 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        let organization_id = org_id;
+        set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
 
         let row = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
             sqlx::query(query).bind(id).fetch_one(&mut *tx).await
@@ -94,8 +94,8 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        let organization_id = org_id;
+        set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
 
         let row = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
             sqlx::query(query).bind(username).fetch_one(&mut *tx).await
@@ -129,8 +129,8 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        let organization_id = org_id;
+        set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
 
         let row = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
             sqlx::query(query).bind(email).fetch_one(&mut *tx).await
@@ -164,8 +164,8 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        let organization_id = org_id;
+        set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
 
         let row = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
             sqlx::query(query).bind(sub).fetch_one(&mut *tx).await
@@ -198,8 +198,8 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        let organization_id = org_id;
+        set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
 
         let rows = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
             sqlx::query(query).fetch_all(&mut *tx).await
@@ -246,8 +246,8 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        let organization_id = org_id;
+        set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
 
         let res = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
             sqlx::query(query)
@@ -295,8 +295,8 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        let organization_id = org_id;
+        set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
 
         let res = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
             sqlx::query(query).bind(id).fetch_optional(&mut *tx).await

@@ -36,6 +36,7 @@ pub struct AgentConfig {
     pub temperature: f32,
     pub max_iterations: i32,
     pub max_context_messages: i32,
+    pub max_task_tokens: i32,
 }
 
 /// Implements the AgentService gRPC service.
@@ -320,9 +321,18 @@ impl AgentServiceImpl {
         };
 
         let max_iterations = if req.max_context_messages == 0 {
-            self.cfg.max_iterations
+            if self.cfg.max_iterations == 0 { 100 } else { self.cfg.max_iterations }
         } else {
             req.max_context_messages
+        };
+
+        let max_task_tokens = if req.max_tokens == 0 {
+            if self.cfg.max_task_tokens == 0 { 100_000 } else { self.cfg.max_task_tokens }
+        } else {
+            // Use req.max_tokens as the turn limit, but we need a task-level budget.
+            // For now, if not explicitly provided in the proto (which it isn't yet),
+            // we use the config or 100k.
+            if self.cfg.max_task_tokens == 0 { 100_000 } else { self.cfg.max_task_tokens }
         };
 
         let confidence_threshold = if !department.is_empty() {
@@ -345,8 +355,8 @@ impl AgentServiceImpl {
             user_instructions,
             max_tokens,
             temperature: if req.temperature == 0.0 { self.cfg.temperature } else { req.temperature },
-            max_iterations: if max_iterations == 0 { 100 } else { max_iterations },
-            max_task_tokens: 0,
+            max_iterations,
+            max_task_tokens,
             confidence_threshold,
             enable_acon_context_strategy: false,
             enable_llmcompiler_plan_and_execute: false,

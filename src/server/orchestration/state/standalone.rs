@@ -231,7 +231,7 @@ impl StateManager for StandaloneStateManager {
 
                 let t = SharedTask {
                     id: id.clone(),
-                    organization_id: tenant_id,
+                    tenant_id: tenant_id,
                     mission_id: row.get("mission_id"),
                     parent_plan_id: row.try_get("parent_plan_id").unwrap_or_default(),
                     dependencies,

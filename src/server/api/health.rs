@@ -1,6 +1,7 @@
 use axum::{extract::State, Json};
 use std::sync::Arc;
 use crate::hub::Hub;
+use crate::db::DbStore;
 
 pub async fn health_handler(
     State(hub): State<Arc<Hub>>,
@@ -15,10 +16,20 @@ pub async fn health_handler(
         "local_to_cloud_sync_queue": 0,
     }));
 
-    let stuck_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'")
-        .fetch_one(&hub.pool)
-        .await
-        .unwrap_or(0);
+    let stuck_missions: i64 = match &hub.store {
+        DbStore::Postgres => {
+            sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'")
+                .fetch_one(&hub.pg_pool)
+                .await
+                .unwrap_or(0)
+        }
+        DbStore::Sqlite(pool) => {
+            sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'")
+                .fetch_one(pool)
+                .await
+                .unwrap_or(0)
+        }
+    };
 
     Json(serde_json::json!({
         "mode": health.get("mode").unwrap_or(&serde_json::json!("standalone")),

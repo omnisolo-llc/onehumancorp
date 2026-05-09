@@ -14,6 +14,7 @@ use std::sync::Arc;
 use redis::Commands;
 use crate::services::billing::auditor::CostAuditor;
 use crate::pricing::calculator::CostConfig;
+use crate::db::DbStore;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HubEvent {
@@ -41,14 +42,15 @@ pub struct Hub {
     get_token_usage: Option<Box<dyn Fn() -> HashMap<String, i64> + Send + Sync>>,
     auto_cor_track: RwLock<std::collections::HashSet<String>>,
     event_log_tx: mpsc::Sender<serde_json::Value>,
-    pub(crate) pool: sqlx::PgPool,
+    pub(crate) store: DbStore,
+    pub(crate) pg_pool: sqlx::PgPool,
     redis_client: Option<redis::Client>,
     agent_cache: RwLock<Option<Arc<Vec<Agent>>>>,
     meetings_cache: RwLock<Option<Arc<Vec<MeetingRoom>>>>,
 }
 
 impl Hub {
-    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
+    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, db: &crate::db::DB) -> Self {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
         let redis_client = if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true" {
@@ -58,7 +60,8 @@ impl Hub {
         };
 
         let (telemetry_tx, mut telemetry_rx) = tokio::sync::mpsc::unbounded_channel::<crate::services::billing::auditor::AuditEvent>();
-        let pool_clone = pool.clone();
+        let pool_clone = db.pool.clone();
+        let store_clone = db.store.clone();
         let cost_auditor = Arc::new({
             let mut a = CostAuditor::new(CostConfig::default());
             a.set_telemetry_tx(telemetry_tx.clone());
@@ -79,11 +82,16 @@ impl Hub {
                     "cost_usd": cost,
                 });
 
-                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
-
-                // Blueprint: track cost in cents
-                let cost_cents = (cost * 100.0) as f32;
-                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels).await;
+                match &store_clone {
+                    DbStore::Postgres => {
+                        let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
+                        let cost_cents = (cost * 100.0) as f32;
+                        let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels).await;
+                    }
+                    DbStore::Sqlite(_) => {
+                        tracing::info!("Standalone Token Usage: {} for agent {}", event.output_tokens, event.agent_id);
+                    }
+                }
             }
         });
 
@@ -97,7 +105,8 @@ impl Hub {
             subs: RwLock::new(HashMap::new()),
             minimax_api_key,
             caps_tx,
-            pool,
+            store: db.store.clone(),
+            pg_pool: db.pool.clone(),
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
             tracker: Tracker::new(),
@@ -202,10 +211,10 @@ impl Hub {
         arc
     }
 
-    pub fn get_agents_by_org(&self, org_id: &str) -> Vec<Agent> {
+    pub fn get_agents_by_org(&self, tenant_id: &str) -> Vec<Agent> {
         let agents = self.agents.read().unwrap();
         let mut agents_vec: Vec<Agent> = agents.values()
-            .filter(|a| a.organization_id == org_id || a.id.starts_with(&format!("{}-", org_id)))
+            .filter(|a| a.organization_id == tenant_id || a.id.starts_with(&format!("{}-", tenant_id)))
             .cloned()
             .collect();
         agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
@@ -419,8 +428,6 @@ impl Hub {
         self.invalidate_agent_cache();
         drop(agents);
 
-        // Spawn K8s Pod via Operator
-        // We simulate context isolation and result aggregation here.
         let pod_id = format!("pod-sub-agent-{}-{}", target_role, uuid::Uuid::new_v4());
 
         let k8s_result = format!(
@@ -590,8 +597,13 @@ impl Hub {
                 history.retain(|org_id, _| active_orgs.contains_key(org_id));
             }
             
-            for (org_id, forecast) in forecasts_to_record {
-                let _ = crate::telemetry::record_token_usage_forecast(&self.pool, &org_id, forecast).await;
+            match &self.store {
+                DbStore::Postgres => {
+                    for (org_id, forecast) in forecasts_to_record {
+                        let _ = crate::telemetry::record_token_usage_forecast(&self.pg_pool, &org_id, forecast).await;
+                    }
+                }
+                DbStore::Sqlite(_) => {}
             }
         }
     }
@@ -655,9 +667,8 @@ impl Hub {
         
         agents.insert(child_id.clone(), child);
         self.invalidate_agent_cache();
-        drop(agents); // Release lock before calling publish!
+        drop(agents);
         
-        // Copy history
         let history = {
             let inbox = self.inbox.read().unwrap();
             inbox.get(parent_id).cloned().unwrap_or_default()
@@ -670,7 +681,6 @@ impl Hub {
             self.clone().publish(child_msg)?;
         }
         
-        // Send directive
         let directive_msg = Message {
             id: format!("msg-{}", uuid::Uuid::new_v4()),
             from_agent: "SYSTEM".to_string(),
@@ -689,25 +699,31 @@ impl Hub {
     pub async fn check_health(&self) -> Result<serde_json::Value, String> {
         let start = std::time::Instant::now();
 
-        let pool1 = self.pool.clone();
-        let ping_future = tokio::task::spawn(async move {
-            match sqlx::query("SELECT 1").execute(&pool1).await {
-                Ok(_) => start.elapsed().as_millis() as u64,
-                Err(_) => 0,
+        let pg_ping = match &self.store {
+            DbStore::Postgres => {
+                match sqlx::query("SELECT 1").execute(&self.pg_pool).await {
+                    Ok(_) => start.elapsed().as_millis() as u64,
+                    Err(_) => 0,
+                }
             }
-        });
+            DbStore::Sqlite(pool) => {
+                match sqlx::query("SELECT 1").execute(pool).await {
+                    Ok(_) => start.elapsed().as_millis() as u64,
+                    Err(_) => 0,
+                }
+            }
+        };
 
-        let pool3 = self.pool.clone();
-        let sync_queue_future = tokio::task::spawn(async move {
-            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE _sync_status = 'pending'").fetch_one(&pool3).await
-        });
-
-        let (db_ping_res, sync_queue_res_res) = tokio::join!(ping_future, sync_queue_future);
-
-        let db_ping = db_ping_res.unwrap_or(0);
-        let sync_queue_res = sync_queue_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-
-        let local_to_cloud_sync_queue = sync_queue_res.unwrap_or(0);
+        let sync_queue = match &self.store {
+            DbStore::Postgres => {
+                sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE _sync_status = 'pending'")
+                    .fetch_one(&self.pg_pool).await.unwrap_or(0)
+            }
+            DbStore::Sqlite(pool) => {
+                sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE _sync_status = 'pending'")
+                    .fetch_one(pool).await.unwrap_or(0)
+            }
+        };
 
         let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
             "standalone"
@@ -715,24 +731,17 @@ impl Hub {
             "cloud"
         };
 
-        let status = if db_ping > 0 { "healthy" } else { "degraded" };
-        let mesh_active = db_ping > 0;
+        let status = if pg_ping > 0 { "healthy" } else { "degraded" };
+        let mesh_active = pg_ping > 0;
         let cloud_connected = mode != "standalone";
-
-        let hybrid_mode_ready = if mode == "standalone" {
-            std::env::var("DATABASE_URL").is_ok() && db_ping > 0
-        } else {
-            db_ping > 0
-        };
 
         Ok(serde_json::json!({
             "mode": mode,
             "status": status,
-            "db_ping_ms": db_ping,
+            "db_ping_ms": pg_ping,
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
-            "hybrid_mode_ready": hybrid_mode_ready,
-            "local_to_cloud_sync_queue": local_to_cloud_sync_queue,
+            "local_to_cloud_sync_queue": sync_queue,
         }))
     }
 }
@@ -767,21 +776,26 @@ pub fn check_documentation_gate(content: &str) -> Result<(), String> {
 mod tests {
     use super::*;
     use tokio::sync::mpsc;
+    use crate::db::DB;
 
+    async fn setup_hub() -> (Arc<Hub>, DB) {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&db_url)
+            .unwrap();
+        let db = DB { pool: pool.clone(), store: DbStore::Postgres };
+        let (tx, _) = mpsc::channel(100);
+        (std::sync::Arc::new(Hub::new(tx, &db)), db)
+    }
 
     #[tokio::test]
     async fn test_sanitize_hub_event_redaction() {
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
-        let db_url = std::env::var("DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&db_url)
-            .unwrap();
-        let (tx, _) = mpsc::channel(100);
-        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+        let (hub, _) = setup_hub().await;
 
         let raw = serde_json::json!({
             "type": "TestEvent",
@@ -805,14 +819,7 @@ mod tests {
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
-        let db_url = std::env::var("DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&db_url)
-            .unwrap();
-        let (tx, _) = mpsc::channel(100);
-        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+        let (hub, _) = setup_hub().await;
 
         // 1. Initial get caches empty state
         let agents = hub.get_agents();
@@ -871,15 +878,7 @@ mod tests {
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
-
-        let db_url = std::env::var("DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&db_url)
-            .unwrap();
-        let (tx, _) = mpsc::channel(100);
-        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+        let (hub, _) = setup_hub().await;
 
         let res = hub.delegate_sub_task(
             "non_existent_agent",
@@ -896,15 +895,7 @@ mod tests {
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
-
-        let db_url = std::env::var("DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&db_url)
-            .unwrap();
-        let (tx, _) = mpsc::channel(100);
-        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+        let (hub, _) = setup_hub().await;
 
         hub.register_agent(Agent {
             id: "manager_agent".to_string(),
@@ -929,30 +920,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_health() {
-        // Skip test if no database is available
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
-
-        let db_url = std::env::var("DATABASE_URL").unwrap();
-        // Since test db is likely unmigrated/empty, we connect lazily
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&db_url)
-            .unwrap();
-        let (tx, _) = mpsc::channel(100);
-        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+        let (hub, _) = setup_hub().await;
 
         let health = hub.check_health().await.unwrap();
 
-        // When lazily connected, if DB doesn't exist, status might be degraded,
-        // or we might get an error depending on how check_health handles failure.
-        // In our check_health, failure to query SELECT 1 results in db_ping = 0.
-        // We just ensure the response contains the fields we expect.
         assert!(health.get("status").is_some());
         assert!(health.get("db_ping_ms").is_some());
-        assert!(health.get("hybrid_mode_ready").is_some());
         assert!(health.get("local_to_cloud_sync_queue").is_some());
     }
 }

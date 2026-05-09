@@ -464,7 +464,7 @@ impl HubService for MyHubService {
 
         let tenant_id = org_id.clone();
 
-        let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let mut tx = self.hub.pg_pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
@@ -504,7 +504,7 @@ impl HubService for MyHubService {
         }
         let tenant_id = org_id.clone();
 
-        let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let mut tx = self.hub.pg_pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let row = sqlx::query(
@@ -551,7 +551,7 @@ impl HubService for MyHubService {
         }
         let tenant_id = org_id.clone();
 
-        let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let mut tx = self.hub.pg_pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
@@ -706,7 +706,7 @@ impl HubService for MyHubService {
         
         Ok(Response::new(SharedTask {
             id: task.id,
-            organization_id: task.organization_id,
+            organization_id: task.tenant_id,
             parent_plan_id: task.parent_plan_id,
             dependencies: task.dependencies,
             title: task.title,
@@ -740,7 +740,7 @@ impl HubService for MyHubService {
         let mapped_tasks: Vec<Result<SharedTask, Status>> = tasks.into_iter().map(|task| {
             Ok(SharedTask {
                 id: task.id,
-                organization_id: task.organization_id,
+                organization_id: task.tenant_id,
                 parent_plan_id: task.parent_plan_id,
                 dependencies: task.dependencies,
                 title: task.title,
@@ -814,7 +814,7 @@ impl HubService for MyHubService {
         let mapped_tasks: Vec<SharedTask> = tasks.into_iter().map(|task| {
             SharedTask {
                 id: task.id,
-                organization_id: task.organization_id,
+                organization_id: task.tenant_id,
                 parent_plan_id: task.parent_plan_id,
                 dependencies: task.dependencies,
                 title: task.title,
@@ -1164,7 +1164,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = "[::1]:18789".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
-    let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+    let hub = Arc::new(Hub::new(event_tx, &db));
     
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
@@ -1217,7 +1217,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             let _ = sqlx::query(
                 "CREATE TABLE IF NOT EXISTS onboarding_state (
                     tenant_id TEXT NOT NULL,
-                    organization_id TEXT NOT NULL,
+                    tenant_id TEXT NOT NULL,
                     user_id TEXT NOT NULL,
                     current_step INTEGER NOT NULL DEFAULT 0,
                     state_json JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -1314,6 +1314,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             temperature: std::env::var("OHC_TEMPERATURE").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0),
             max_iterations: std::env::var("OHC_MAX_ITERATIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(100),
             max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES").ok().and_then(|v| v.parse().ok()).unwrap_or(80),
+            max_task_tokens: std::env::var("OHC_MAX_TASK_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(100_000),
         };
         let auth = ohc_builtin_agent::auth::auth_mode_from_env();
         let agent_id_clone = agent_id.clone();
