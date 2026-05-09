@@ -1,6 +1,7 @@
+import (
+	"github.com/google/uuid"
 package onboarding
 
-import (
 	"context"
 	"database/sql"
 	"errors"
@@ -123,7 +124,7 @@ func (s *SqliteTenantStore) CreateTenant(ctx context.Context, tenant *Tenant) er
 	`
 
 	if tenant.ID == "" {
-		tenant.ID = "id-" + time.Now().Format("20060102150405.000000") // Mock UUID
+		tenant.ID = uuid.New().String()
 	}
 	if tenant.Status == "" {
 		tenant.Status = "PENDING"
