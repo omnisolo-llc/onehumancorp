@@ -1,5 +1,13 @@
 # release_notes.md
 
+## v0.4.39 (Cloud) / v0.4.39+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Coordinated promotions across Cloud staging for enhanced hybrid deployment scaling.
+
+### Privacy/Offline Improvements
+- Promoted Local desktop beta builds ensuring zero-trust isolated environments and offline capabilities.
+
 ## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
 
 ### Cloud Scaling Improvements

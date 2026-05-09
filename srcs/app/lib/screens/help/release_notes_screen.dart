@@ -22,6 +22,11 @@ class ReleaseNotesScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                _buildReleaseCard('v0.4.39', 'May 2026', [
+                  'Coordinated promotions across Cloud staging for enhanced hybrid deployment scaling.',
+                  'Promoted Local desktop beta builds ensuring zero-trust isolated environments and offline capabilities.',
+                ]),
+                const SizedBox(height: 20),
                 _buildReleaseCard('v0.4.38', 'May 2026', [
                   'Enhance multi-tenant onboarding flow tests for the Welcome Checklist to ensure reliable scaling.',
                   'Bolster Standalone Wizard state test coverage for improved offline reliability and progressive disclosure validation.',

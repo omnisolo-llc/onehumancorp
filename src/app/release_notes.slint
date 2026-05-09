@@ -7,7 +7,7 @@ export component ReleaseNotes inherits Window {
     min-width: 375px;
     title: "What's New";
     background: #0f172a;
-    in-out property <string> current_version: "v0.4.38";
+    in-out property <string> current_version: "v0.4.39";
     in-out property <bool> show_latest_only: false;
 
     HorizontalBox {
@@ -28,6 +28,20 @@ export component ReleaseNotes inherits Window {
             ScrollView {
                 VerticalBox {
                     spacing: 24px;
+                    VerticalBox {
+                        spacing: 8px;
+                        Text { text: "Version 0.4.39 (Cloud) / v0.4.39+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
+                        GlassCard {
+                            VerticalBox {
+                                padding: 16px; spacing: 12px;
+                                Text { text: "Cloud Scaling Improvements"; color: #38bdf8; font-weight: 600; }
+                                Text { text: "- Coordinated promotions across Cloud staging for enhanced hybrid deployment scaling."; color: #94a3b8; wrap: word-wrap; }
+                                Text { text: "Privacy/Offline Improvements"; color: #34d399; font-weight: 600; }
+                                Text { text: "- Promoted Local desktop beta builds ensuring zero-trust isolated environments and offline capabilities."; color: #94a3b8; wrap: word-wrap; }
+                            }
+                        }
+                    }
+
                     VerticalBox {
                         spacing: 8px;
                         Text { text: "Version 0.4.38 (Cloud) / v0.4.38+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
