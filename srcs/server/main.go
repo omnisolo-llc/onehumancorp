@@ -16,7 +16,7 @@ import (
 	"onehumancorp/srcs/server/dashboard"
 	"onehumancorp/srcs/server/tiers"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mutecomm/go-sqlcipher/v4"
 )
 
 // MockLLMClient implements memory.LLMClient for demonstration purposes
@@ -36,7 +36,17 @@ func main() {
 		dbPath = "ohc_standalone.db"
 	}
 
-	db, err := sql.Open("sqlite3", dbPath)
+    // Pass key via DSN query parameter for sqlcipher
+    dsn := dbPath
+    if dbPath != ":memory:" {
+        dbKey := os.Getenv("OHC_LOCAL_DB_KEY")
+        if dbKey == "" {
+            log.Fatalf("OHC_LOCAL_DB_KEY environment variable is required for local standalone mode encryption")
+        }
+        dsn = dbPath + "?_pragma_key=" + dbKey
+    }
+
+	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
