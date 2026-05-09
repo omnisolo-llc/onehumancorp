@@ -75,6 +75,7 @@ export component Dashboard inherits Window { // milestones
     callback action_mark_order_ready();
     callback action_open_kairos_orchestration();
     callback action_simulate_order();
+    callback action_edit_website();
     callback action_manage_my_ai_team();
 
     in-out property <bool> show_upgrade_prompt: false;
@@ -191,6 +192,42 @@ export component Dashboard inherits Window { // milestones
             }
         }
 
+
+        // Website Preview Widget
+        VerticalBox {
+            spacing: 12px;
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "Live Website"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+                Rectangle {}
+                Button { text: "Edit"; height: 44px; clicked => { action_edit_website(); } }
+            }
+            GlassCard {
+                border-color: rgba(255, 255, 255, 0.1);
+                border-width: 1px;
+                border-radius: 12px;
+                height: 200px;
+                background: rgba(255, 255, 255, 0.05);
+
+                TouchArea {
+                    clicked => {
+                        // Open in full-screen (Placeholder logic for tap to full-screen)
+                        action_share_store();
+                    }
+                    VerticalBox {
+                        alignment: center;
+                        HorizontalBox {
+                            alignment: center;
+                            spacing: 8px;
+                            Text { text: "🌐"; font-size: 24px; vertical-alignment: center; }
+                            Text { text: "Previewing: mybusiness.ohc.app"; color: #cbd5e1; font-size: 16px; vertical-alignment: center; }
+                        }
+                        Text { text: "(Tap to open full-screen)"; color: #94a3b8; font-size: 12px; horizontal-alignment: center; padding-top: 8px; }
+                    }
+                }
+            }
+        }
         if (show_milestone) : GlassCard {
             border-color: #f59e0b;
             border-width: 1px;
@@ -449,83 +486,89 @@ export component Dashboard inherits Window { // milestones
     }
 }
 
-    // Floating Action Button (Bottom)
+    // Bottom Navigation Bar
     Rectangle {
         y: parent.height - 80px;
-        x: parent.width - 80px;
-        width: 60px;
-        height: 60px;
-        background: #8b5cf6;
-        border-radius: 30px;
-        drop-shadow-blur: 10px;
+        width: parent.width;
+        height: 80px;
+        background: rgba(15, 23, 42, 0.95);
+        border-color: rgba(255, 255, 255, 0.1);
+        border-width: 1px;
+        drop-shadow-blur: 20px;
         drop-shadow-color: rgba(0, 0, 0, 0.5);
 
-        Text {
-            text: "+";
-            color: white;
-            font-size: 32px;
-            font-weight: 700;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-        }
+        HorizontalBox {
+            padding: 8px;
+            alignment: space-around;
 
-        TouchArea {
-            clicked => {
-                // We'll map this floating action button to add product for now
-                action_add_product();
-            }
-        }
-    }
-
-    // Floating Create Post & Share Store (Bottom Left quick actions)
-    HorizontalBox {
-        y: parent.height - 80px;
-        x: 20px;
-        spacing: 16px;
-
-        Rectangle {
-            width: 60px;
-            height: 60px;
-            background: #3b82f6;
-            border-radius: 30px;
-            drop-shadow-blur: 10px;
-            drop-shadow-color: rgba(0, 0, 0, 0.5);
-
-            Text {
-                text: "✍️";
-                color: white;
-                font-size: 24px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
-
-            TouchArea {
-                clicked => {
-                    action_open_social_posting();
+            VerticalBox {
+                alignment: center;
+                spacing: 4px;
+                Rectangle {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 22px;
+                    background: #8b5cf6;
+                    Text { text: "+"; color: white; font-size: 24px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                    TouchArea { clicked => { action_add_product(); } }
                 }
-            }
-        }
-
-        Rectangle {
-            width: 60px;
-            height: 60px;
-            background: #10b981; // Emerald
-            border-radius: 30px;
-            drop-shadow-blur: 10px;
-            drop-shadow-color: rgba(0, 0, 0, 0.5);
-
-            Text {
-                text: "🔗";
-                color: white;
-                font-size: 24px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+                Text { text: "Add"; color: white; font-size: 10px; font-family: "Inter"; horizontal-alignment: center; }
             }
 
-            TouchArea {
-                clicked => {
-                    action_share_store();
+            VerticalBox {
+                alignment: center;
+                spacing: 4px;
+                Rectangle {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 22px;
+                    background: transparent;
+                    Text { text: "📦"; font-size: 20px; horizontal-alignment: center; vertical-alignment: center; }
+                    TouchArea { clicked => { action_view_orders(); } }
                 }
+                Text { text: "Orders"; color: #94a3b8; font-size: 10px; font-family: "Inter"; horizontal-alignment: center; }
+            }
+
+            VerticalBox {
+                alignment: center;
+                spacing: 4px;
+                Rectangle {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 22px;
+                    background: transparent;
+                    Text { text: "💬"; font-size: 20px; horizontal-alignment: center; vertical-alignment: center; }
+                    TouchArea { clicked => { action_check_messages(); } }
+                }
+                Text { text: "Chat"; color: #94a3b8; font-size: 10px; font-family: "Inter"; horizontal-alignment: center; }
+            }
+
+            VerticalBox {
+                alignment: center;
+                spacing: 4px;
+                Rectangle {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 22px;
+                    background: transparent;
+                    Text { text: "📊"; font-size: 20px; horizontal-alignment: center; vertical-alignment: center; }
+                    TouchArea { clicked => { action_see_analytics(); } }
+                }
+                Text { text: "Stats"; color: #94a3b8; font-size: 10px; font-family: "Inter"; horizontal-alignment: center; }
+            }
+
+            VerticalBox {
+                alignment: center;
+                spacing: 4px;
+                Rectangle {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 22px;
+                    background: transparent;
+                    Text { text: "🔗"; font-size: 20px; horizontal-alignment: center; vertical-alignment: center; }
+                    TouchArea { clicked => { action_share_store(); } }
+                }
+                Text { text: "Share"; color: #94a3b8; font-size: 10px; font-family: "Inter"; horizontal-alignment: center; }
             }
         }
     }

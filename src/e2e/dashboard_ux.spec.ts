@@ -17,7 +17,7 @@ test.describe('Dashboard UX', () => {
 
     // Some apps navigate to '/' or '/dashboard', we will just wait for navigation
     // and verify the labels.
-    await expect(page.locator('text=My Business').first()).toBeVisible();
+    await expect(page.locator('text=My Store').first()).toBeVisible();
     await expect(page.locator('text=Today\'s Sales')).toBeVisible();
     await expect(page.locator('text=Orders to Ship')).toBeVisible();
     await expect(page.locator('text=Team Members')).toBeVisible();
@@ -115,7 +115,7 @@ test.describe('Dashboard Flow Completeness UX', () => {
     // Wait for Dashboard to load
     await page.waitForURL('**/*');
 
-    await expect(page.locator('text=My Business').first()).toBeVisible();
+    await expect(page.locator('text=My Store').first()).toBeVisible();
 
     const addProductBtn = page.locator('button:has-text("Add")').first();
     await expect(addProductBtn).toBeVisible();
