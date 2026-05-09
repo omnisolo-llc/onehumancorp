@@ -1576,28 +1576,49 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     email_marketing_ui.on_send_campaign({
         let ui_handle = email_marketing_handle.clone();
         move || {
+            let ui = ui_handle.upgrade().unwrap();
+            let content = ui.get_preview_text().to_string();
             let ui_handle = ui_handle.clone();
             tokio::spawn(async move {
-                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
-                    let prompt = "Write a high-converting marketing email for a small business. Focus on engagement and clarity.".to_string();
-                    let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
-                        prompt,
-                        from_agent_id: "EmailMarketingAgent".into(),
+                if let Ok(mut g_client) = GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let send_req = tonic::Request::new(ohc::orchestration::SendEmailCampaignRequest {
+                        subject: "Marketing Campaign".into(),
+                        content,
+                        audience: "All Customers".into(),
                     });
-                    let _ = client.reason(request).await;
-                }
-
-                let _ = slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = ui_handle.upgrade() {
-                        ui.set_emails_sent(150);
-                        ui.set_open_rate("32%".into());
-                        ui.set_status_message("Campaign sent successfully!".into());
+                    if let Ok(send_resp) = g_client.send_email_campaign(send_req).await {
+                        let resp = send_resp.into_inner();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle.upgrade() {
+                                ui.set_emails_sent(resp.emails_sent);
+                                let rate_str = format!("{:.1}%", resp.average_open_rate);
+                                ui.set_open_rate(rate_str.into());
+                                ui.set_status_message(resp.message.into());
+                            }
+                        });
+                        return;
                     }
-                });
+                }
             });
         }
     });
 
+    slint::spawn_local({
+        let ui_handle = email_marketing_handle.clone();
+        async move {
+            if let Ok(mut g_client) = GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                let req = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+                if let Ok(resp) = g_client.get_email_campaign_stats(req).await {
+                    let stats = resp.into_inner();
+                    if let Some(ui) = ui_handle.upgrade() {
+                        ui.set_emails_sent(stats.total_emails_sent);
+                        let rate_str = format!("{:.1}%", stats.average_open_rate);
+                        ui.set_open_rate(rate_str.into());
+                    }
+                }
+            }
+        }
+    }).unwrap();
     email_marketing_ui.on_close({
         let ui_handle = email_marketing_handle.clone();
         move || {

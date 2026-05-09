@@ -817,6 +817,8 @@ service GrowthService {
   
   rpc GetWaitlist(EmptyRequest) returns (WaitlistResponse);
   rpc CreateWaitlistEntry(CreateWaitlistRequest) returns (WaitlistEntry);
+  rpc SendEmailCampaign(SendEmailCampaignRequest) returns (SendEmailCampaignResponse);
+  rpc GetEmailCampaignStats(EmptyRequest) returns (EmailCampaignStatsResponse);
 }
 
 message ApprovalRequest {
@@ -1658,4 +1660,22 @@ message DownloadInvoiceRequest {
 
 message DownloadInvoiceResponse {
   string pdf_url = 1;
+}
+
+message SendEmailCampaignRequest {
+  string subject = 1;
+  string content = 2;
+  string audience = 3;
+}
+
+message SendEmailCampaignResponse {
+  bool success = 1;
+  int32 emails_sent = 2;
+  string message = 3;
+  double average_open_rate = 4;
+}
+
+message EmailCampaignStatsResponse {
+  int32 total_emails_sent = 1;
+  double average_open_rate = 2;
 }

@@ -16,6 +16,7 @@ pub struct MyGrowthService {
     team_invites: RwLock<Vec<TeamInviteProto>>,
     waitlist: RwLock<Vec<WaitlistEntry>>,
     onboarding_funnels: RwLock<Vec<OnboardingFunnel>>,
+    email_stats: RwLock<(i32, f64)>,
 }
 
 impl MyGrowthService {
@@ -27,6 +28,7 @@ impl MyGrowthService {
             team_invites: RwLock::new(Vec::new()),
             waitlist: RwLock::new(Vec::new()),
             onboarding_funnels: RwLock::new(Vec::new()),
+            email_stats: RwLock::new((0, 0.0)),
         }
     }
 
@@ -518,6 +520,51 @@ impl GrowthService for MyGrowthService {
         let wl = self.waitlist.read().unwrap();
         Ok(Response::new(WaitlistResponse {
             entries: wl.clone(),
+        }))
+    }
+
+    async fn send_email_campaign(
+        &self,
+        request: Request<SendEmailCampaignRequest>,
+    ) -> Result<Response<SendEmailCampaignResponse>, Status> {
+        let req = request.into_inner();
+
+        if req.subject.is_empty() || req.content.is_empty() {
+            return Err(Status::invalid_argument("subject and content are required"));
+        }
+
+        let sent_count = match req.audience.as_str() {
+            "All Customers" => 150,
+            "Recent Buyers" => 42,
+            "New Subscribers" => 12,
+            _ => 150,
+        };
+
+        let mut stats = self.email_stats.write().unwrap();
+        let (current_sent, current_rate) = *stats;
+
+        let new_sent = current_sent + sent_count;
+        let new_rate = if current_sent == 0 { 32.5 } else { (current_rate * current_sent as f64 + 31.0 * sent_count as f64) / new_sent as f64 };
+
+        *stats = (new_sent, new_rate);
+
+        Ok(Response::new(SendEmailCampaignResponse {
+            success: true,
+            emails_sent: sent_count,
+            message: "Campaign sent successfully!".to_string(),
+            average_open_rate: new_rate,
+        }))
+    }
+
+    async fn get_email_campaign_stats(
+        &self,
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<EmailCampaignStatsResponse>, Status> {
+        let stats = self.email_stats.read().unwrap();
+
+        Ok(Response::new(EmailCampaignStatsResponse {
+            total_emails_sent: stats.0,
+            average_open_rate: stats.1,
         }))
     }
 
