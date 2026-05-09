@@ -301,6 +301,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let _ = setup_wizard_ui.hide();
+    let _ = dashboard_ui.show();
 
     let init_setup_wizard_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {
@@ -3467,7 +3468,164 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+
+    let dashboard_ui = app::Dashboard::new()?;
+    GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard_ui.as_weak()));
+    let dashboard_handle = dashboard_ui.as_weak();
+
+    let referrals_ui = app::Referrals::new()?;
+    GLOBAL_REFERRALS.with(|g| *g.borrow_mut() = Some(referrals_ui.as_weak()));
+    let referrals_handle = referrals_ui.as_weak();
+
+    let business_share_ui = app::BusinessShare::new()?;
+    let business_share_handle = business_share_ui.as_weak();
+
+    let social_posting_ui = app::SocialPosting::new()?;
+    let social_posting_handle = social_posting_ui.as_weak();
+
+    let email_marketing_ui = app::EmailMarketing::new()?;
+    let email_marketing_handle = email_marketing_ui.as_weak();
+
+    // Wiring Dashboard to Quick Actions
+    dashboard_ui.on_action_open_referrals({
+        let referrals_ui = referrals_ui.clone_strong();
+        move || {
+            let _ = referrals_ui.show();
+        }
+    });
+
+    dashboard_ui.on_action_share_store({
+        let business_share_ui = business_share_ui.clone_strong();
+        move || {
+            let _ = business_share_ui.show();
+        }
+    });
+
+    dashboard_ui.on_action_open_social_posting({
+        let social_posting_ui = social_posting_ui.clone_strong();
+        move || {
+            let _ = social_posting_ui.show();
+        }
+    });
+
+    dashboard_ui.on_action_open_email_marketing({
+        let email_marketing_ui = email_marketing_ui.clone_strong();
+        move || {
+            let _ = email_marketing_ui.show();
+        }
+    });
+
+    // Email Marketing callbacks
+    email_marketing_ui.on_generate_template({
+        let ui_handle = email_marketing_handle.clone();
+        move |template| {
+            if let Some(ui) = ui_handle.upgrade() {
+                let preview = match template.as_str() {
+                    "Flash sale" => "24-Hour Flash Sale!",
+                    _ => "Generated content...",
+                };
+                ui.set_preview_text(preview.into());
+            }
+        }
+    });
+
+    email_marketing_ui.on_send_campaign({
+        let ui_handle = email_marketing_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_emails_sent(150);
+                ui.set_open_rate("24%".into());
+                ui.set_status_message("Campaign sent!".into());
+            }
+        }
+    });
+
+    email_marketing_ui.on_close({
+        let ui_handle = email_marketing_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
+            }
+        }
+    });
+
+    // Social Posting callbacks
+    social_posting_ui.on_connect_instagram({
+        let ui_handle = social_posting_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_is_connected_instagram(true);
+            }
+        }
+    });
+
+    social_posting_ui.on_connect_facebook({
+        let ui_handle = social_posting_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_is_connected_facebook(true);
+            }
+        }
+    });
+
+    // Business Share callbacks
+    business_share_ui.on_close({
+        let ui_handle = business_share_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
+            }
+        }
+    });
+
+    business_share_ui.on_copy_link({
+        let ui_handle = business_share_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let link = ui.get_share_link();
+            }
+        }
+    });
+
+    // Referrals callbacks
+    referrals_ui.on_send_invite_message({
+        let ui_handle = referrals_handle.clone();
+        move |_link| {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_invite_copy_status("Invite message copied!".into());
+            }
+        }
+    });
+
+    referrals_ui.on_copy_link({
+        let ui_handle = referrals_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                ui.set_link_copy_status("Link copied!".into());
+            }
+        }
+    });
+
+    // Success Milestones
+    let dash_weak_milestone = dashboard_ui.as_weak();
+    slint::Timer::single_shot(std::time::Duration::from_secs(5), move || {
+        if let Some(ui) = dash_weak_milestone.upgrade() {
+            ui.set_show_milestone(true);
+            ui.set_milestone_title("🎉 You just got your 10th order!".into());
+        }
+    });
+
+    dashboard_ui.on_dismiss_milestone({
+        let dashboard_handle = dashboard_ui.as_weak();
+        move || {
+            if let Some(ui) = dashboard_handle.upgrade() {
+                ui.set_show_milestone(false);
+            }
+        }
+    });
+
     let _ = setup_wizard_ui.hide();
+    let _ = dashboard_ui.show();
 
 
     let setup_wizard_ui_from_login = setup_wizard_handle.clone();
@@ -3523,6 +3681,7 @@ mod growth_e2e_tests {
         let setup_wizard_handle = setup_wizard_ui.as_weak();
 
         let _ = setup_wizard_ui.hide();
+    let _ = dashboard_ui.show();
 
         let setup_wizard_ui_from_login = setup_wizard_handle.clone();
 
