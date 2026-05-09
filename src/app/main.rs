@@ -2253,7 +2253,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = dashboard_handle_inner.upgrade() {
                                         if used >= 10 { // Free tier limit
-                                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.".into());
+                                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront and grow your business today!".into());
                                             ui.set_show_upgrade_prompt(true);
                                             ui.invoke_action_failed("Tier limit reached: 10 products".into());
                                         } else {
@@ -5955,7 +5955,7 @@ dashboard_ui.on_action_grow_business(move || {
 
         dashboard_ui.on_action_add_product(move || {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.".into());
+                ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront and grow your business today!".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
@@ -5963,7 +5963,7 @@ dashboard_ui.on_action_grow_business(move || {
         dashboard_ui.invoke_action_add_product();
         assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
 
-        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.");
+        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront and grow your business today!");
         // Test agents limit soft paywall
         let agents_ui = app::Agents::new().unwrap();
         let agents_ui_handle = agents_ui.as_weak();
@@ -6270,14 +6270,14 @@ mod remaining_e2e_tests {
 
         dashboard_ui.on_action_add_product(move || {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.".into());
+                ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront and grow your business today!".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
         dashboard_ui.invoke_action_add_product();
         assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
-        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.");
+        assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront and grow your business today!");
 
         let agents_ui = app::Agents::new().unwrap();
         let agents_ui_handle = agents_ui.as_weak();
