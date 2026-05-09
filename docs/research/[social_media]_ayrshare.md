@@ -6,7 +6,10 @@
 **Research Report**:
 - Ayrshare provides a unified API for posting and retrieving messages across all major social networks (Instagram, Facebook, X, TikTok, LinkedIn).
 - Competitor Wix has basic integrations, but Ayrshare makes it easy to support a wider array natively.
-- Pricing: Free tier available, then scales per user.
+- **OAuth Complexity**: Moderate. Unified API abstracts multi-platform auth, but obtaining initial keys requires setup.
+- **Message Parsing Quality**: High. Normalizes payloads across platforms.
+- **Webhook Reliability**: Very strong, designed for high-throughput auto-posting tools.
+- **Pricing**: Free tier available, then scales per user.
 - Fits OHC’s "The Promoter" agent to automate posts and "The Ambassador" to draft replies.
 - Non-technical users benefit by never leaving the OHC interface.
 - Works in Cloud mode well; Standalone mode might require personal Ayrshare API keys or direct OAuth.

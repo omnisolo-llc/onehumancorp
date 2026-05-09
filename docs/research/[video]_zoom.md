@@ -6,6 +6,9 @@
 - **Target Persona**: Leo (Music Tutor)
 - **Advantages**: Ubiquitous for online lessons. Strong API for meeting creation.
 - **Risks**: Zoom OAuth requires annual app review and compliance checks.
+- **Link Generation Speed**: Instantaneous via API.
+- **Calendar Invite Quality**: Integrates natively with calendar providers to include join instructions clearly.
+- **Join Experience**: Familiar to most users, though requires app installation on mobile.
 - **Pricing**: Free tier (40-min limit). Pro starts at $15/mo.
 - **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
 **Design Doc**:

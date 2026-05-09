@@ -4,7 +4,10 @@
 **Title**: Integrate Cal.com for Zero-Config Booking & Calendar Sync
 **Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
 **Research Report**:
-- Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box.
+- Cal.com is an open-source scheduling infrastructure.
+- **Calendar Conflict Resolution**: Excellent. Natively prevents double-booking across all connected calendars.
+- **Timezone Handling**: Flawless. Automatically detects the viewer's timezone and translates slots correctly.
+- **Booking Page Customization**: Highly customizable via API and embedded widgets.
 - It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
 - Free tier available for individuals; great for our free tier users.
 - Alternative is building from scratch, which is error-prone.

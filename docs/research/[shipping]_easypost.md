@@ -5,6 +5,9 @@
 **Problem Statement**: Priya the Boutique Owner hates manually copying addresses to USPS/FedEx to buy shipping labels. She wants one button to print a label and auto-email the tracking number.
 **Research Report**:
 - EasyPost provides a single, unified API for 100+ carriers (USPS, FedEx, UPS, DHL).
+- **Carrier Coverage**: Excellent. Supports major global and regional carriers.
+- **International Support**: Strong, handles customs forms and international labels.
+- **API Reliability**: Very high uptime and clear error messaging.
 - Competitive pricing (free tier for low volume, pennies per label after).
 - Abstracts away complex carrier-specific APIs and handles tracking webhooks.
 - Great fit for OHC physical product merchants.

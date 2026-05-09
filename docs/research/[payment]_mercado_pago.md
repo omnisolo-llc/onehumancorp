@@ -6,6 +6,9 @@
 - **Target Persona**: Global users outside the US/EU.
 - **Advantages**: Dominant in LATAM. Supports local payment methods (Pix in Brazil, OXXO in Mexico). Good developer docs.
 - **Risks**: Settlement times can be longer. API is slightly less standardized than Stripe.
+- **Settlement Speed**: Varies by country and plan, often 14-21 days for lower fees, or instant for higher fees.
+- **Currency Support**: Strong local currency support (BRL, MXN, ARS, COP, CLP).
+- **Failure Rate**: Generally low for local cards compared to international processors.
 - **Pricing**: Variable by country (e.g., ~4-5% per transaction).
 - **Compatibility**: Cloud (OAuth). Standalone (API Key).
 **Design Doc**:

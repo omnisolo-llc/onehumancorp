@@ -6,7 +6,10 @@
 - **Target Persona**: Fatima (Food Cart Operator)
 - **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
 - **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
+- **Global Carrier Coverage**: Industry-leading. Reaches almost any active mobile number globally.
+- **Delivery Reliability**: High. Detailed delivery status webhooks available.
+- **Opt-out Compliance**: Built-in handling for STOP/UNSUBSCRIBE keywords.
+- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US, varies globally).
 - **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
 **Design Doc**:
 - User goes to Settings and toggles "Send me SMS for new orders".

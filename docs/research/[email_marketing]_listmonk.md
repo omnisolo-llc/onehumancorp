@@ -6,6 +6,10 @@
 **Research Report**:
 - Listmonk is an open-source, self-hosted newsletter and mailing list manager.
 - It is lightweight (Go + PostgreSQL), aligning perfectly with the OHC backend stack.
+- **Ease of List Management**: High. Tags and attributes make segmenting simple.
+- **Template Quality**: Good. Supports standard HTML templates and plain text.
+- **Open Rate Analytics**: Built-in and privacy-respecting pixel tracking.
+- **Spam Compliance**: Handles unsubscription headers and bounce processing effectively.
 - Zero extra SaaS costs for OHC Standalone users; minimal scaling costs for Cloud.
 - Simplifies list management and supports template-based sending without complex drag-and-drop builders.
 **Design Doc**:
