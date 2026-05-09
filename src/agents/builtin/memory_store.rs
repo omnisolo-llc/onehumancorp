@@ -391,28 +391,38 @@ impl VectorRepository {
     }
 
     /// Determines the winner of a memory conflict between two embedding records.
+    /// This forms the core logic of the Conflict Resolution system.
+    /// It systematically resolves conflicting context facts based on the following priorities:
+    /// 1. Owner Override: Explicitly pinned or overridden memories by the business owner always win.
+    /// 2. Reliability Score: Memories from highly reliable sources (like advisory) win over less reliable ones.
+    /// 3. Recency: If scores are tied, the most recently created memory wins.
     pub fn determine_conflict_winner<'a>(a: &'a EmbeddingRecord, b: &'a EmbeddingRecord) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
-        if a.owner_override != b.owner_override {
-            if a.owner_override {
-                (a, b)
-            } else {
-                (b, a)
-            }
-        } else if a.reliability_score != b.reliability_score {
-            if a.reliability_score > b.reliability_score {
-                (a, b)
-            } else {
-                (b, a)
-            }
-        } else if a.created_at != b.created_at {
-            if a.created_at > b.created_at {
-                (a, b)
-            } else {
-                (b, a)
-            }
-        } else {
-            (a, b) // Fallback, just pick 'a'
+        // Priority 1: Explicit Owner Override
+        if a.owner_override && !b.owner_override {
+            return (a, b);
         }
+        if !a.owner_override && b.owner_override {
+            return (b, a);
+        }
+
+        // Priority 2: Source Reliability Score
+        if a.reliability_score > b.reliability_score {
+            return (a, b);
+        }
+        if b.reliability_score > a.reliability_score {
+            return (b, a);
+        }
+
+        // Priority 3: Recency (Newer memory wins)
+        if a.created_at > b.created_at {
+            return (a, b);
+        }
+        if b.created_at > a.created_at {
+            return (b, a);
+        }
+
+        // Fallback: Default to a if completely identical
+        (a, b)
     }
 
 
@@ -2278,6 +2288,73 @@ mod determine_conflict_winner_tests {
         let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
         assert_eq!(winner.id, "a"); // fallback to a
         assert_eq!(loser.id, "b");
+    }
+
+    #[test]
+    fn test_conflict_resolution_comprehensive() {
+        // This test ensures the new conflict resolution logic correctly applies
+        // the hierarchy of Owner Override > Reliability Score > Recency.
+
+        let now = chrono::Utc::now();
+        let mut base_record = EmbeddingRecord {
+            id: "base".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "".to_string(),
+            content: "test".to_string(),
+            embedding: vec![0.0],
+            source_type: "NOTE".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Test 1: Override beats everything
+        let mut a1 = base_record.clone();
+        a1.id = "a1".to_string();
+        a1.owner_override = true;
+        a1.reliability_score = 10;
+        a1.created_at = now - chrono::Duration::days(10);
+
+        let mut b1 = base_record.clone();
+        b1.id = "b1".to_string();
+        b1.owner_override = false;
+        b1.reliability_score = 99; // higher score
+        b1.created_at = now;       // newer
+
+        let (w1, l1) = VectorRepository::determine_conflict_winner(&a1, &b1);
+        assert_eq!(w1.id, "a1", "Owner override must win over higher score and recency");
+        assert_eq!(l1.id, "b1");
+
+        // Test 2: Reliability beats recency
+        let mut a2 = base_record.clone();
+        a2.id = "a2".to_string();
+        a2.reliability_score = 80;
+        a2.created_at = now - chrono::Duration::days(10);
+
+        let mut b2 = base_record.clone();
+        b2.id = "b2".to_string();
+        b2.reliability_score = 70;
+        b2.created_at = now;       // newer
+
+        let (w2, l2) = VectorRepository::determine_conflict_winner(&a2, &b2);
+        assert_eq!(w2.id, "a2", "Reliability must win over recency");
+        assert_eq!(l2.id, "b2");
+
+        // Test 3: Recency decides ties
+        let mut a3 = base_record.clone();
+        a3.id = "a3".to_string();
+        a3.created_at = now;
+
+        let mut b3 = base_record.clone();
+        b3.id = "b3".to_string();
+        b3.created_at = now - chrono::Duration::days(10); // older
+
+        let (w3, l3) = VectorRepository::determine_conflict_winner(&a3, &b3);
+        assert_eq!(w3.id, "a3", "Recency must win on tied override and score");
+        assert_eq!(l3.id, "b3");
     }
 }
 // Trigger PR for Memory Consolidation Feature
