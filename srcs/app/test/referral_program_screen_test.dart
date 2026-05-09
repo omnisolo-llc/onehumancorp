@@ -15,6 +15,10 @@ void main() {
       ),
     );
 
+    // Verify milestone notification exists
+    expect(find.text('🎉 You just got your 10th order!'), findsOneWidget);
+    expect(find.text('Keep up the great work!'), findsOneWidget);
+
     // Verify "Share your link with a friend" checklist item exists
     final shareItem = find.text('Share your link with a friend');
     expect(shareItem, findsOneWidget);
