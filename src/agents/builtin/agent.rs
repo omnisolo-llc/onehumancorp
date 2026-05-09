@@ -477,8 +477,9 @@ impl Agent {
                             let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
-                            if count >= 3 {
-                                return Err(format!("Fatal tool error: Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
+                            let max_retries = cfg_max_retries as u64;
+                            if count > max_retries {
+                                return Err(format!("Fatal tool error: Tool '{}' failed {} times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, max_retries + 1, msg));
                             }
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
@@ -552,8 +553,9 @@ impl Agent {
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                                 let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                                 error_counts.insert(name.to_string(), serde_json::json!(count));
-                                if count >= 3 {
-                                    return Err(format!("Fatal tool error: Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
+                                let max_retries = cfg_max_retries as u64;
+                                if count > max_retries {
+                                    return Err(format!("Fatal tool error: Tool '{}' failed {} times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, max_retries + 1, msg));
                                 }
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
@@ -1459,8 +1461,9 @@ impl Agent {
                     Err(ToolError::LlmRecoverable(msg)) => {
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
-                        if *count > 2 {
-                            let fatal_msg = format!("Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
+                        let max_retries = final_cfg.max_retries;
+                        if *count > max_retries {
+                            let fatal_msg = format!("Tool '{}' failed {} times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, max_retries + 1, msg);
                             on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
                             return Err(fatal_msg.into());
                         }
@@ -1581,8 +1584,9 @@ impl Agent {
                         Err(ToolError::LlmRecoverable(msg)) => {
                             let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                             *count += 1;
-                            if *count > 2 {
-                                let fatal_msg = format!("Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
+                            let max_retries = final_cfg.max_retries;
+                            if *count > max_retries {
+                                let fatal_msg = format!("Tool '{}' failed {} times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, max_retries + 1, msg);
                                 on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
                                 return Err(fatal_msg.into());
                             }
