@@ -1692,6 +1692,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let em_handle_for_gb = email_marketing_handle.clone();
     let business_manager_handle_for_gb = business_manager_handle.clone();
     let sp_handle_for_gb = social_posting_handle.clone();
+    grow_business_ui.on_return_to_dashboard({
+        let handle = grow_business_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                let _ = ui.hide();
+            }
+            GLOBAL_DASHBOARD.with(|dash_ref| {
+                if let Some(dash) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
+                    let _ = dash.show();
+                }
+            });
+        }
+    });
+
     grow_business_ui.on_execute({
         move |strategy, _kpi| {
             if strategy == "Run your first email campaign" {
@@ -3847,6 +3861,27 @@ mod growth_e2e_tests {
         login_ui.invoke_start_setup_wizard();
 
         assert!(*transition_executed.borrow(), "The setup wizard transition closure should be executed");
+    }
+
+    #[test]
+    fn test_grow_business_return_to_dashboard_action() {
+        crate::ui_tests::init();
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard_ui.as_weak()));
+
+        let ui = app::GrowBusiness::new().unwrap();
+
+        let returned = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let returned_clone = returned.clone();
+
+        ui.on_return_to_dashboard(move || {
+            *returned_clone.borrow_mut() = true;
+        });
+
+        ui.invoke_return_to_dashboard();
+        assert!(*returned.borrow(), "Return to dashboard closure should be called");
     }
 
     #[test]

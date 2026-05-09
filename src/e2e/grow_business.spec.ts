@@ -11,11 +11,9 @@ test.describe('Grow Business Flow', () => {
     // 2. Navigate to Grow Business UI
 
     // Navigate via dashboard UI like a real user
-    const growBusinessBtn = page.locator('button:has-text("Grow Business")').first();
+    const growBusinessBtn = page.locator('button:has-text("Run Promo")').first();
     await expect(growBusinessBtn).toBeVisible();
     await growBusinessBtn.click();
-
-    await page.waitForURL('**/grow');
 
     // Verify main header
     await expect(page.locator('text=Grow My Business')).toBeVisible();
@@ -48,6 +46,13 @@ test.describe('Grow Business Flow', () => {
     // Execute strategy
 
     await page.locator('button:has-text("Launch Strategy")').click();
+
+    await expect(page.locator('text=Agents Engaged!')).toBeVisible();
+
+    await page.locator('button:has-text("Return to Dashboard")').click();
+
+    // Verify main header
+    await expect(page.locator('text=Dashboard').first()).toBeVisible();
 
   });
 });
