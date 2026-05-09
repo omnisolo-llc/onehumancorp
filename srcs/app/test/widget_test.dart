@@ -104,6 +104,9 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await tester.pump(const Duration(seconds: 1));
 
+    // Wait extra time for the real HTTP request to fail or timeout nicely. We can just pump and settle.
+    await tester.pump(const Duration(milliseconds: 500));
+
     // 11. Checklist
     expect(find.text("You\'re set up!"), findsOneWidget);
     await tester.tap(find.text('Go to Dashboard'));
