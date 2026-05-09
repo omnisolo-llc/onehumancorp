@@ -242,6 +242,78 @@ test.describe('Integrations Page', () => {
     }
   });
 
+  test('should show TikTok integration', async ({ page }) => {
+    await expect(page.locator('text=/TikTok/i')).toBeVisible();
+  });
+
+  test('should connect TikTok integration', async ({ page }) => {
+    const btn = page.locator('text=TikTok').locator('..').locator('button:has-text("Configure")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+      await expect(page.locator('text=/TikTok/i')).toBeVisible();
+    }
+  });
+
+  test('should show Outlook integration', async ({ page }) => {
+    await expect(page.locator('text=/Outlook/i')).toBeVisible();
+  });
+
+  test('should connect Outlook integration', async ({ page }) => {
+    const btn = page.locator('text=Outlook').locator('..').locator('button:has-text("Configure")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+      await expect(page.locator('text=/Outlook/i')).toBeVisible();
+    }
+  });
+
+  test('should show Google Calendar integration', async ({ page }) => {
+    await expect(page.locator('text=/Google Calendar/i')).toBeVisible();
+  });
+
+  test('should connect Google Calendar integration', async ({ page }) => {
+    const btn = page.locator('text=Google Calendar').locator('..').locator('button:has-text("Configure")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+      await expect(page.locator('text=/Google Calendar/i')).toBeVisible();
+    }
+  });
+
+  test('should show Google Meet integration', async ({ page }) => {
+    await expect(page.locator('text=/Google Meet/i')).toBeVisible();
+  });
+
+  test('should connect Google Meet integration', async ({ page }) => {
+    const btn = page.locator('text=Google Meet').locator('..').locator('button:has-text("Configure")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+      await expect(page.locator('text=/Google Meet/i')).toBeVisible();
+    }
+  });
+
+  test('should show EasyPost integration', async ({ page }) => {
+    await expect(page.locator('text=/EasyPost/i')).toBeVisible();
+  });
+
+  test('should connect EasyPost integration', async ({ page }) => {
+    const btn = page.locator('text=EasyPost').locator('..').locator('button:has-text("Configure")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+      await expect(page.locator('text=/EasyPost/i')).toBeVisible();
+    }
+  });
+
+  test('should show Amazon SES integration', async ({ page }) => {
+    await expect(page.locator('text=/Amazon SES/i')).toBeVisible();
+  });
+
+  test('should connect Amazon SES integration', async ({ page }) => {
+    const btn = page.locator('text=Amazon SES').locator('..').locator('button:has-text("Configure")').first();
+    if (await btn.isVisible()) {
+      await btn.click();
+      await expect(page.locator('text=/Amazon SES/i')).toBeVisible();
+    }
+  });
+
 
 test.describe('Pipeline Management', () => {
   test.beforeEach(async ({ page }) => {

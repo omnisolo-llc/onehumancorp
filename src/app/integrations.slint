@@ -107,6 +107,25 @@ export component Integrations inherits Window {
                     }
                 }
             }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "🎵 TikTok"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Unified Social Media DMs"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("TikTok"); }
+                    }
+                }
+            }
         }
 
         HorizontalBox {
@@ -380,6 +399,109 @@ export component Integrations inherits Window {
                     Button {
                         text: "Configure";
                         clicked => { configure_integration("Zoom"); }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📹 Google Meet"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Native Link Generation"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Google Meet"); }
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 16px;
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📅 Google Calendar"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Automated Booking"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Google Calendar"); }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📅 Outlook"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Automated Booking"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Outlook"); }
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 16px;
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📦 EasyPost"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Shipping Rate & Label Generation"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("EasyPost"); }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📧 Amazon SES"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Native Email Campaign Manager"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Amazon SES"); }
                     }
                 }
             }

@@ -1117,7 +1117,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     GLOBAL_INTEGRATIONS.with(|g| *g.borrow_mut() = Some(integrations_ui.as_weak()));
     integrations_ui.on_configure_integration(|id| {
         let id_str = id.to_string();
-        if id_str == "Facebook" || id_str == "Instagram" || id_str == "WhatsApp" {
+        if id_str == "Facebook" || id_str == "Instagram" || id_str == "WhatsApp" || id_str == "TikTok" {
             GLOBAL_UNIFIED_INBOX.with(|inbox_ref| {
                 if let Some(inbox) = inbox_ref.borrow().as_ref().and_then(|i| i.upgrade()) {
                     let mut current_convs = Vec::new();
@@ -1132,6 +1132,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         "Facebook" => "📘",
                         "Instagram" => "📷",
                         "WhatsApp" => "💬",
+                        "TikTok" => "🎵",
                         _ => "✉️",
                     };
 

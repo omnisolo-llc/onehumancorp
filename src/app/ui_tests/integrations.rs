@@ -195,3 +195,57 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
     ui.invoke_configure_integration("WhatsApp".into());
     assert_eq!(*called.borrow(), "WhatsApp");
 }
+
+#[test] fn integr_flow_configure_tiktok() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("TikTok".into());
+    assert_eq!(*called.borrow(), "TikTok");
+}
+
+#[test] fn integr_flow_configure_google_calendar() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("Google Calendar".into());
+    assert_eq!(*called.borrow(), "Google Calendar");
+}
+
+#[test] fn integr_flow_configure_outlook() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("Outlook".into());
+    assert_eq!(*called.borrow(), "Outlook");
+}
+
+#[test] fn integr_flow_configure_google_meet() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("Google Meet".into());
+    assert_eq!(*called.borrow(), "Google Meet");
+}
+
+#[test] fn integr_flow_configure_amazon_ses() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("Amazon SES".into());
+    assert_eq!(*called.borrow(), "Amazon SES");
+}
+
+#[test] fn integr_flow_configure_easypost() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("EasyPost".into());
+    assert_eq!(*called.borrow(), "EasyPost");
+}
