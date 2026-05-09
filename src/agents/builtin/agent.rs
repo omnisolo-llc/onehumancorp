@@ -23,6 +23,16 @@ pub enum AgentEvent {
     Handoff { target_agent: String },
 }
 
+
+/// Structured progress scratchpad for Claude Code Mechanic checkpointing
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AgentStateCheckpoint {
+    pub iteration: u32,
+    pub token_usage: i64,
+    pub timestamp: String,
+    pub messages: Vec<Message>,
+}
+
 /// Configuration for a single agent run.
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
@@ -965,7 +975,10 @@ impl Agent {
 
         if messages.is_empty() && final_cfg.enable_state_checkpointing {
             if let Ok(contents) = tokio::fs::read_to_string(&scratchpad_path).await {
-                if let Ok(saved_msgs) = serde_json::from_str::<Vec<Message>>(&contents) {
+                // Support both legacy raw array and new structured scratchpad
+                if let Ok(checkpoint) = serde_json::from_str::<AgentStateCheckpoint>(&contents) {
+                    messages = checkpoint.messages;
+                } else if let Ok(saved_msgs) = serde_json::from_str::<Vec<Message>>(&contents) {
                     messages = saved_msgs;
                 }
             }
@@ -1437,6 +1450,7 @@ impl Agent {
                         };
                     }
                     Err(ToolError::LlmRecoverable(msg)) => {
+                        tracing::warn!("LLM-Recoverable ToolMessage emitted for tool \'{}\': {}", tc.name, msg);
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
                         if *count > 2 {
@@ -1559,6 +1573,7 @@ impl Agent {
                             }
                         }
                         Err(ToolError::LlmRecoverable(msg)) => {
+                            tracing::warn!("LLM-Recoverable ToolMessage emitted for tool \'{}\': {}", tc.name, msg);
                             let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                             *count += 1;
                             if *count > 2 {
@@ -1670,9 +1685,15 @@ impl Agent {
                 }
             }
 
-            // 2. Local File Scratchpad (Claude Code)
+            // 2. Local File Scratchpad (Claude Code Mechanic structured scratchpad)
             if final_cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
-                if let Ok(json_state) = serde_json::to_string_pretty(&messages) {
+                let checkpoint = AgentStateCheckpoint {
+                    iteration: iteration as u32,
+                    token_usage: 0,
+                    timestamp: chrono::Utc::now().to_rfc3339(),
+                    messages: messages.clone(),
+                };
+                if let Ok(json_state) = serde_json::to_string_pretty(&checkpoint) {
                     if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
                         on_event(AgentEvent::CheckpointSaved {
                             iteration,
@@ -1687,7 +1708,14 @@ impl Agent {
                 let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
                 let commit_msg = format!("checkpoint: agent iteration {}", iteration);
                 let _ = std::process::Command::new("git").arg("add").arg(".").current_dir(&wd).output();
-                let _ = std::process::Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&wd).output();
+                if let Err(e) = std::process::Command::new("git")
+                    .env("GIT_AUTHOR_NAME", "OHC Builtin Agent")
+                    .env("GIT_AUTHOR_EMAIL", "agent@onehumancorp.com")
+                    .env("GIT_COMMITTER_NAME", "OHC Builtin Agent")
+                    .env("GIT_COMMITTER_EMAIL", "agent@onehumancorp.com")
+                    .arg("commit").arg("-m").arg(&commit_msg).current_dir(&wd).output() {
+                    tracing::warn!("Git Commit Checkpointing failed: {}", e);
+                }
             }
 
             // Cross-Department Memory Consolidation: Auto-store task result if successful
