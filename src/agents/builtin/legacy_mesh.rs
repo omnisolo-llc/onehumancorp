@@ -8,6 +8,7 @@ pub struct DistributedLock {
     client: redis::Client,
     key: String,
     value: String,
+    connection: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
 }
 
 impl DistributedLock {
@@ -16,14 +17,16 @@ impl DistributedLock {
             client,
             key: format!("lock:{}", key),
             value: Uuid::new_v4().to_string(),
+            connection: tokio::sync::OnceCell::new(),
         }
     }
 
     pub async fn acquire(&self, timeout: Duration, expiration: Duration) -> Result<(), String> {
-        let con_future = self.client.get_multiplexed_async_connection();
+        let client_clone = self.client.clone();
+        let con_future = self.connection.get_or_try_init(|| async move { client_clone.get_multiplexed_async_connection().await });
         let con_result = tokio::time::timeout(std::time::Duration::from_secs(2), con_future).await;
         let mut con = match con_result {
-            Ok(Ok(c)) => c,
+            Ok(Ok(c)) => c.clone(),
             Ok(Err(e)) => return Err(e.to_string()),
             Err(_) => return Err("timeout connecting to redis".to_string()),
         };
@@ -53,10 +56,11 @@ impl DistributedLock {
     }
 
     pub async fn release(&self) -> Result<(), String> {
-        let con_future = self.client.get_multiplexed_async_connection();
+        let client_clone = self.client.clone();
+        let con_future = self.connection.get_or_try_init(|| async move { client_clone.get_multiplexed_async_connection().await });
         let con_result = tokio::time::timeout(std::time::Duration::from_secs(2), con_future).await;
         let mut con = match con_result {
-            Ok(Ok(c)) => c,
+            Ok(Ok(c)) => c.clone(),
             Ok(Err(e)) => return Err(e.to_string()),
             Err(_) => return Err("timeout connecting to redis".to_string()),
         };

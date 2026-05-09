@@ -75,14 +75,14 @@ mod tests {
         let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
         if let Ok(client) = redis::Client::open(redis_url) {
             // Check if redis server is actually responding before attempting to test
-            if client.get_multiplexed_async_connection().await.is_ok() {
+            if client.get_multiplexed_tokio_connection().await.is_ok() {
                 let limiter = Arc::new(RedisRateLimiter::new(client.clone()));
 
                 // Setup tier
                 let _ = limiter.set_tenant_tier("test_tenant", PlanTier::Free).await;
 
                 // Push limits
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let mut conn = client.get_multiplexed_tokio_connection().await.unwrap();
                 let _: () = conn.set("tenant:test_tenant:actions_used", 101).await.unwrap();
 
                 let app = setup_test_router(limiter).await;
@@ -108,7 +108,9 @@ mod tests {
                 // Because we didn't send a valid Claims extension (no auth middleware here to set it),
                 // it defaults to "system" tenant. If "system" has no limits hit, it might return 200,
                 // or 402 if we hit the limit. We can't strictly assert 402 without setting the "system" usage too.
-                let _: () = conn.set("tenant:system:actions_used", 101).await.unwrap();
+                let now = chrono::Utc::now();
+                let month_key = now.format("%Y-%m").to_string();
+                let _: () = conn.set(format!("tenant:system:actions_used:{}", month_key), 101).await.unwrap();
                 let res2 = client.get(&format!("http://{}/api/v1/protected/action", addr))
                     .send()
                     .await
