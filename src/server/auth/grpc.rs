@@ -54,9 +54,10 @@ impl AuthConfig {
             return Err(Status::unauthenticated("authorization must be Bearer token"));
         }
 
-        let token = &auth_str["Bearer ".len()..];
+        let token = &auth_str["Bearer ".len()..]; if token.trim().is_empty() { return Err(Status::unauthenticated("empty Bearer token")); }
         
-        let app_key = b"ohc-builtin-agent-2025";
+        let app_key_str = std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
+        let app_key = app_key_str.as_bytes();
         let mut mac = Hmac::<Sha256>::new_from_slice(app_key).expect("HMAC can take key of any size");
         mac.update(token.as_bytes());
         
@@ -91,7 +92,8 @@ impl AuthConfig {
 
 #[allow(dead_code)]
 fn hmac_token(tok: &str) -> Vec<u8> {
-    let app_key = b"ohc-builtin-agent-2025";
+    let app_key_str = std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
+        let app_key = app_key_str.as_bytes();
     let mut mac = Hmac::<Sha256>::new_from_slice(app_key).expect("HMAC can take key of any size");
     mac.update(tok.as_bytes());
     mac.finalize().into_bytes().to_vec()

@@ -536,7 +536,7 @@ impl AuthService for AuthServiceServerImpl {
         if let Some(auth_header) = request.metadata().get("authorization") {
             if let Ok(auth_str) = auth_header.to_str() {
                 if auth_str.starts_with("Bearer ") {
-                    let token = &auth_str["Bearer ".len()..];
+                    let token = &auth_str["Bearer ".len()..]; if token.trim().is_empty() { return Err(Status::unauthenticated("empty Bearer token")); }
                     if let Ok(claims) = self.store.validate_token(token).await {
                         let exp = chrono::DateTime::from_timestamp(claims.exp as i64, 0)
                             .unwrap_or_else(|| chrono::Utc::now());
@@ -559,7 +559,7 @@ impl AuthService for AuthServiceServerImpl {
             return Err(Status::unauthenticated("Authorization must be a Bearer token"));
         }
 
-        let token = &auth_str["Bearer ".len()..];
+        let token = &auth_str["Bearer ".len()..]; if token.trim().is_empty() { return Err(Status::unauthenticated("empty Bearer token")); }
         let claims = self.store.validate_token(token).await
             .map_err(|e| Status::unauthenticated(e))?;
 

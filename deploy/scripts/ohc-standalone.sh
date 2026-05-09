@@ -24,6 +24,7 @@ export MALLOC_ARENA_MAX=1
 export RAYON_NUM_THREADS=2
 export OHC_STANDALONE=true
 export LOG_FORMAT="json"
+export RUST_LOG="info"
 export LOG_LEVEL="info"
 export OHC_RUNTIME_DIR=".ohc/runtime"
 export OHC_MEMORY_DIR="${OHC_RUNTIME_DIR}/memory"
