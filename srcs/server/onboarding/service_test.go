@@ -23,7 +23,13 @@ func setupTestDB(t *testing.T) *sql.DB {
 				name TEXT,
 				domain TEXT,
 				tier TEXT,
-				created_at DATETIME
+				category TEXT,
+				description TEXT,
+				status TEXT,
+				owner_email TEXT,
+				state TEXT,
+				created_at DATETIME,
+				updated_at DATETIME
 			);
 			CREATE TABLE onboarding_state (
 				tenant_id TEXT PRIMARY KEY,
