@@ -305,14 +305,28 @@ void main() {
 
       await tester.pump(const Duration(milliseconds: 500));
 
-      // 8. Review & Launch -> Launch My AI Team
+      // 8. Product Screen
+      await tester.tap(find.text('Next').last);
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // 9. Domain Screen
+      await tester.tap(find.text('Next').last);
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // 10. Review & Launch -> Launch My AI Team
       final launchBtn = find.text('Launch My AI Team');
       await tester.ensureVisible(launchBtn);
       await tester.tap(launchBtn);
       await tester.pump(const Duration(milliseconds: 500));
 
-      // After launch, step goes to 8, rendering DashboardScreen
+      // After launch, step goes to 10, rendering Welcome Checklist
       await tester.pump(const Duration(seconds: 2));
+      expect(find.text('You\'re set up!'), findsOneWidget);
+
+      // Go to Dashboard
+      await tester.tap(find.text('Go to Dashboard'));
+      await tester.pump(const Duration(milliseconds: 500));
+
       expect(find.text('Dashboard'), findsOneWidget);
       expect(find.text('Welcome Checklist'), findsOneWidget);
       expect(find.text('Business live'), findsOneWidget);

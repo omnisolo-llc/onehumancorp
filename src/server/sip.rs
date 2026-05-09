@@ -1,5 +1,4 @@
 use sqlx::PgPool;
-use sqlx::Row;
 use chrono::Utc;
 use std::sync::OnceLock;
 use tokio::sync::Semaphore;
@@ -431,6 +430,7 @@ mod tests {
             assert!(res.is_ok());
 
             // Verify
+            use sqlx::Row;
             let row = sqlx::query("SELECT status, mission_log FROM agent_missions WHERE id = 'test_mission_id'")
                 .fetch_one(&pool)
                 .await

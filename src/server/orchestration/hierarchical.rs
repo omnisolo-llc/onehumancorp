@@ -1,12 +1,8 @@
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use std::collections::HashMap;
-
 // Simulates a K8s Operator for Hierarchical Task Delegation
 pub struct K8sOperatorDelegator;
 
 impl K8sOperatorDelegator {
-    pub async fn spawn_sub_agent_pod(role: &str, instruction: &str, thread_id: &str) -> Result<String, String> {
+    pub async fn spawn_sub_agent_pod(role: &str, instruction: &str, _thread_id: &str) -> Result<String, String> {
         // In a real K8s environment, this would use kube-rs to create a Pod/Job
         // and return the ID. For the sake of this issue, we simulate Context Isolation
         // and Result Aggregation by doing a local mock task execution.

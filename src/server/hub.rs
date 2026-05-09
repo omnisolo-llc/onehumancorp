@@ -11,7 +11,6 @@ use crate::scheduler::Scheduler;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
-use redis::Commands;
 use crate::services::billing::auditor::CostAuditor;
 use crate::pricing::calculator::CostConfig;
 
