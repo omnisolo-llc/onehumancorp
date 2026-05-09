@@ -371,3 +371,98 @@ fn test_carlos_handyman_onboarding_flow() {
     assert_eq!(wizard_ui.get_company_name(), "Carlos Handyman Services");
     assert_eq!(wizard_ui.get_product_price(), "80.00");
 }
+
+#[test]
+fn test_e2e_onboarding_full_machine_state_validation() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+
+    // Verify initial values
+    assert_eq!(ui.get_step(), 0);
+    assert_eq!(ui.get_business_type(), "");
+    assert_eq!(ui.get_company_name(), "");
+    assert_eq!(ui.get_company_description(), "");
+    assert_eq!(ui.get_sell_physical(), false);
+    assert_eq!(ui.get_sell_digital(), false);
+    assert_eq!(ui.get_payment_pref(), "");
+    assert_eq!(ui.get_admin_name(), "");
+    assert_eq!(ui.get_admin_email(), "");
+    assert_eq!(ui.get_website_template(), "");
+    assert_eq!(ui.get_product_name(), "");
+    assert_eq!(ui.get_product_description(), "");
+    assert_eq!(ui.get_custom_dns_target(), "");
+
+    // Walk through steps matching onboarding guide requirements:
+
+    // Step 0 -> Step 1
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 1);
+
+    // Step 1: Business Type
+    ui.invoke_select_business_type("Freelancer".into());
+    assert_eq!(ui.get_step(), 2);
+    assert_eq!(ui.get_business_type(), "Freelancer");
+
+    // Step 2: Company Name / Description
+    ui.set_company_name("My Freelance Business".into());
+    ui.set_company_description("I provide excellent services".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 3);
+    assert_eq!(ui.get_company_name(), "My Freelance Business");
+    assert_eq!(ui.get_company_description(), "I provide excellent services");
+
+    // Step 3: Product Category
+    ui.invoke_toggle_sell_services();
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 4);
+    assert_eq!(ui.get_sell_services(), true);
+
+    // Step 4: Payment Preference
+    ui.invoke_select_payment_pref("in_person".into());
+    assert_eq!(ui.get_step(), 5);
+    assert_eq!(ui.get_payment_pref(), "in_person");
+
+    // Step 5: Admin Details
+    ui.set_admin_name("John Doe".into());
+    ui.set_admin_email("john@example.com".into());
+    ui.set_admin_password("pass123".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 6);
+    assert_eq!(ui.get_admin_name(), "John Doe");
+    assert_eq!(ui.get_admin_email(), "john@example.com");
+    assert_eq!(ui.get_admin_password(), "pass123");
+
+    // Step 6: Website Template Preview Selection
+    ui.invoke_select_template("Creative".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 7);
+    assert_eq!(ui.get_website_template(), "Creative");
+
+    // Step 7: First Product / Service Add
+    ui.set_product_name("1 Hour Consultation".into());
+    ui.set_product_description("Professional advice".into());
+    ui.set_product_price("150.00".into());
+    ui.set_product_currency("USD".into());
+    ui.set_price_type("fixed".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 8);
+    assert_eq!(ui.get_product_name(), "1 Hour Consultation");
+    assert_eq!(ui.get_product_description(), "Professional advice");
+    assert_eq!(ui.get_product_price(), "150.00");
+    assert_eq!(ui.get_product_currency(), "USD");
+    assert_eq!(ui.get_price_type(), "fixed");
+
+    // Step 8: Domain & Go-Live
+    ui.set_is_advanced(true);
+    ui.set_custom_dns_target("myawsomedomain.com".into());
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 9);
+    assert_eq!(ui.get_custom_dns_target(), "myawsomedomain.com");
+
+    // Simulation of network deployment
+    ui.set_launch_success(true);
+    ui.invoke_show_welcome_checklist();
+    assert_eq!(ui.get_step(), 10);
+}

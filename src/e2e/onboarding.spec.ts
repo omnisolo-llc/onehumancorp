@@ -153,3 +153,62 @@ test.describe('Onboarding Wizard', () => {
     await expect(page.locator('text="⬜ Share your link with a friend"')).toBeVisible();
   });
 });
+
+  test('Test 4: Onboarding Zero WIP Verification full E2E state machine logic', async ({ page }) => {
+    // 1. Setup Wizard hero / dashboard transition (depends on user context)
+    // Assume we're already signed in and ready.
+    await page.click('button:has-text("Start Setup")');
+    await expect(page.locator('text="Setup Wizard"')).toBeVisible();
+
+    // 2. Initial state verification
+    // Step 0 -> Step 1
+    await page.click('button:has-text("Next")');
+
+    // 3. Step 1: Business Type
+    await page.click('text="Freelancer"');
+    await page.click('button:has-text("Next")');
+
+    // 4. Step 2: Company Name / Description
+    await page.fill('input[placeholder="What is your business called?"]', 'My Freelance Business');
+    await page.fill('textarea[placeholder="What do you do?"]', 'I provide excellent services');
+    await page.click('button:has-text("Next")');
+
+    // 5. Step 3: Product Category
+    await page.check('text="Services"');
+    await page.click('button:has-text("Next")');
+
+    // 6. Step 4: Payment Preference
+    await page.click('text="In-person"');
+    await page.click('button:has-text("Next")');
+
+    // 7. Step 5: Admin Details
+    await page.fill('input[placeholder="Admin Name"]', 'John Doe');
+    await page.fill('input[placeholder="Admin Email"]', 'john@example.com');
+    await page.fill('input[placeholder="Password"]', 'pass123');
+    await page.click('button:has-text("Next")');
+
+    // 8. Step 6: Website Template Preview Selection
+    await page.click('text="Creative"');
+    await page.click('button:has-text("Next")');
+
+    // 9. Step 7: First Product / Service Add
+    await page.fill('input[placeholder="Service Name"]', '1 Hour Consultation');
+    await page.fill('textarea[placeholder="Service Description"]', 'Professional advice');
+    await page.fill('input[placeholder="Price"]', '150.00');
+    // Using default currency
+    await page.click('button:has-text("Next")');
+
+    // 10. Step 8: Domain & Go-Live
+    await page.click('text="Free OHC Domain"');
+    await page.click('button:has-text("Launch")');
+
+    // 11. Welcome Checklist
+    await expect(page.locator('text="You\'re set up! Here\'s what to do next:"')).toBeVisible();
+    await expect(page.locator('text="Business live"')).toBeVisible();
+    await expect(page.locator('text="Add 3 more products"')).toBeVisible();
+    await expect(page.locator('text="Connect Instagram"')).toBeVisible();
+    await expect(page.locator('text="Share your link with a friend"')).toBeVisible();
+
+    await page.click('button:has-text("Go to Dashboard")');
+    await expect(page.locator('text="Business Manager"')).toBeVisible();
+  });

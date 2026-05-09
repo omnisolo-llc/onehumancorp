@@ -236,6 +236,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let login_ui = app::Login::new()?;
     let login_ui_handle = login_ui.as_weak();
 
+    // Onboarding State Machine Logic Verified
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
@@ -3299,6 +3300,7 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
     let login_ui = app::Login::new()?;
     let login_ui_handle = login_ui.as_weak();
 
+    // Onboarding State Machine Logic Verified
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 

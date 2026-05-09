@@ -10,18 +10,18 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show welcome step', async ({ page }) => {
-    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
+    await expect(page.locator('text="Your awesome business, live in minutes!"')).toBeVisible();
   });
 
   test('should display the Setup Wizard hero animation elements', async ({ page }) => {
-    await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
+    await expect(page.locator('text=Your awesome business, live in minutes!')).toBeVisible();
     await expect(page.locator('text=Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
     await expect(page.locator('text=Guided Setup')).toBeVisible();
     await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
   });
 
   test('should display welcome message', async ({ page }) => {
-    await expect(page.locator('text=/welcome|get started|Your business, live in minutes/i')).toBeVisible();
+    await expect(page.locator('text=/welcome|get started|Your awesome business, live in minutes!/i')).toBeVisible();
   });
 
   test('should show next button on welcome step', async ({ page }) => {
@@ -79,7 +79,7 @@ test.describe('Business Setup Wizard', () => {
     const backButton = page.locator('button:has-text("Back")');
     await expect(backButton).toBeVisible();
     await backButton.click();
-    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
+    await expect(page.locator('text="Your awesome business, live in minutes!"')).toBeVisible();
   });
 
   test('should show company name input', async ({ page }) => {
@@ -277,7 +277,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should display the Setup Wizard hero animation elements and complete full setup flow', async ({ page }) => {
-    await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
+    await expect(page.locator('text=Your awesome business, live in minutes!')).toBeVisible();
     await expect(page.locator('text=Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
     await expect(page.locator('text=Guided Setup')).toBeVisible();
     await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
