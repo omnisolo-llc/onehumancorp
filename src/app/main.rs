@@ -860,6 +860,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let ui = ui_handle.unwrap();
             set_global_is_advanced(ui.get_is_advanced());
+            let pwd_strength = if ui.get_admin_password().len() > 8 { 3 } else if ui.get_admin_password().len() > 5 { 2 } else if ui.get_admin_password().len() > 0 { 1 } else { 0 };
+            ui.set_admin_password_strength(pwd_strength);
             let state = std::collections::HashMap::from([
                 ("step".to_string(), ui.get_step().to_string()),
                 ("business_type".to_string(), ui.get_business_type().to_string()),
@@ -3154,6 +3156,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = setup_wizard_handle.clone();
         move |business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password, price_type| {
             let ui = ui_handle.unwrap();
+            let pwd_strength = if admin_password.len() > 8 { 3 } else if admin_password.len() > 5 { 2 } else if admin_password.len() > 0 { 1 } else { 0 };
+            ui.set_admin_password_strength(pwd_strength);
             let state = std::collections::HashMap::from([
                 ("business_type".to_string(), business_type.to_string()),
                 ("company_name".to_string(), company_name.to_string()),

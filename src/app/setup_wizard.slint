@@ -31,6 +31,7 @@ export component SetupWizard inherits Window {
     in-out property <string> admin_name: "";
     in-out property <string> admin_email: "";
     in-out property <string> admin_password: "";
+    in-out property <int> admin_password_strength: 0;
 
     in-out property <bool> is_advanced: false;
 
@@ -386,13 +387,44 @@ export component SetupWizard inherits Window {
 
                 Text { text: "Password"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 PasswordInput { text <=> admin_password; edited => { save_state(); } }
-                Text { text: admin_password != "" ? "Strength: Strong" : "Strength: Weak"; font-size: 12px; color: admin_password != "" ? #10b981 : #ef4444; }
+                HorizontalBox {
+                    spacing: 4px;
+                    Rectangle {
+                        height: 4px;
+                        background: admin_password == "" ? rgba(255, 255, 255, 0.1) : #ef4444;
+                        horizontal-stretch: 1;
+                        border-radius: 2px;
+                    }
+                    Rectangle {
+                        height: 4px;
+                        background: admin_password_strength >= 2 ? #f59e0b : rgba(255, 255, 255, 0.1);
+                        horizontal-stretch: 1;
+                        border-radius: 2px;
+                    }
+                    Rectangle {
+                        height: 4px;
+                        background: admin_password_strength >= 3 ? #10b981 : rgba(255, 255, 255, 0.1);
+                        horizontal-stretch: 1;
+                        border-radius: 2px;
+                    }
+                }
+                Text { text: admin_password == "" ? "" : (admin_password_strength >= 3 ? "Strength: Strong" : (admin_password_strength >= 2 ? "Strength: Medium" : "Strength: Weak")); font-size: 12px; color: admin_password == "" ? transparent : (admin_password_strength >= 3 ? #10b981 : (admin_password_strength >= 2 ? #f59e0b : #ef4444)); }
 
 
                 Text { text: "OR"; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center; }
 
-                Button { text: "Continue with Google"; height: 44px; }
-                Button { text: "Continue with Apple"; height: 44px; }
+                GlassCard {
+                    height: 44px;
+                    background: rgba(255, 255, 255, 0.1);
+                    HorizontalBox { alignment: center; spacing: 8px; Text { text: "G"; font-size: 18px; color: white; } Text { text: "Continue with Google"; font-family: "Inter"; font-weight: 600; color: white; } }
+                    TouchArea { clicked => { save_state(); } }
+                }
+                GlassCard {
+                    height: 44px;
+                    background: rgba(255, 255, 255, 0.1);
+                    HorizontalBox { alignment: center; spacing: 8px; Text { text: ""; font-size: 18px; color: white; } Text { text: "Continue with Apple"; font-family: "Inter"; font-weight: 600; color: white; } }
+                    TouchArea { clicked => { save_state(); } }
+                }
             }
 
             // Step 6: Choose a Template
@@ -800,7 +832,7 @@ export component SetupWizard inherits Window {
                 opacity: pulse_scale;
                 animate opacity { duration: 500ms; easing: ease-in-out; }
 
-                VerticalBox { alignment: center; Text { text: "Publish my business"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: "Launch My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
                     launching = true; copy_link(shareable_link);
                     launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password, price_type);
