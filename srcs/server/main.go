@@ -127,6 +127,7 @@ func main() {
 	mux.HandleFunc("/api/v1/autodream/sync", dashboard.HandleAutoDreamSync)
 	mux.HandleFunc("/api/v1/autodream/query", dashboard.HandleAutoDreamQuery)
 	mux.HandleFunc("/api/mesh/broadcast", dashboard.HandleMeshBroadcast)
+	mux.HandleFunc("/api/help/videos", dashboard.HandleGetVideoTutorials)
 
 	go func() {
 		log.Println("Listening on :8080...")
