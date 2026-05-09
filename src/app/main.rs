@@ -5787,8 +5787,8 @@ dashboard_ui.on_action_grow_business(move || {
         let fix_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let fix_agent_opened_clone = fix_agent_opened.clone();
 
-        agents_ui.on_fix_agent(move |id| {
-            assert_eq!(id, "agent_1");
+        agents_ui.on_fix_agent(move |_id| {
+            assert_eq!(_id, "agent_1");
             *fix_agent_opened_clone.borrow_mut() = true;
         });
 
@@ -5797,8 +5797,8 @@ dashboard_ui.on_action_grow_business(move || {
         let tune_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let tune_agent_opened_clone = tune_agent_opened.clone();
 
-        agents_ui.on_tune_agent(move |id| {
-            assert_eq!(id, "agent_1");
+        agents_ui.on_tune_agent(move |_id| {
+            assert_eq!(_id, "agent_1");
             *tune_agent_opened_clone.borrow_mut() = true;
         });
 

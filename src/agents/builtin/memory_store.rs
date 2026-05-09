@@ -37,7 +37,28 @@ impl VectorRepository {
     }
 
 
-    pub fn get_store(&self) -> &VectorMemoryStore {
+
+    pub async fn get_all_tenant_ids(&self) -> Result<Vec<String>, String> {
+        use sqlx::Row;
+        match &self.store {
+            VectorMemoryStore::Postgres(pool) => {
+                let rows = sqlx::query("SELECT DISTINCT tenant_id FROM consolidated_memory")
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                Ok(rows.into_iter().map(|r| r.get("tenant_id")).collect())
+            }
+            VectorMemoryStore::Sqlite(pool) => {
+                let rows = sqlx::query("SELECT DISTINCT tenant_id FROM consolidated_memory")
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                Ok(rows.into_iter().map(|r| r.get("tenant_id")).collect())
+            }
+        }
+    }
+
+pub fn get_store(&self) -> &VectorMemoryStore {
         &self.store
     }
 
