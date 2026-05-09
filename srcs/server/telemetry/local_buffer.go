@@ -98,12 +98,12 @@ func (e *TelemetrySyncEngine) SyncPendingMetrics(ctx context.Context) error {
 }
 
 func (e *TelemetrySyncEngine) syncToCloud(ctx context.Context, pt MetricPoint) error {
-	payload, err := json.Marshal(pt)
+	data, err := json.Marshal(pt)
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.remoteURL, bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.remoteURL, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
