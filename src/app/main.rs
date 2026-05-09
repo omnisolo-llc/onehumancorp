@@ -2188,7 +2188,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 cost: format!("${:.2}", ac.cost_usd).into(),
                                 roi: format!("{:.1}%", ac.roi).into(),
                                 efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
-                                storage_usage: "0MB".into(),
+                                storage_usage: if ac.storage_used_bytes < 1048576 { format!("{:.1}KB", ac.storage_used_bytes as f64 / 1024.0) } else if ac.storage_used_bytes < 1073741824 { format!("{:.1}MB", ac.storage_used_bytes as f64 / 1048576.0) } else { format!("{:.1}GB", ac.storage_used_bytes as f64 / 1073741824.0) }.into(),
                                 pct: ac.pct,
                             }
                         }).collect();
@@ -2231,7 +2231,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     cost: format!("${:.2}", ac.cost_usd).into(),
                                     roi: format!("{:.1}%", ac.roi).into(),
                                     efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
-                                    storage_usage: "0MB".into(),
+                                    storage_usage: if ac.storage_used_bytes < 1048576 { format!("{:.1}KB", ac.storage_used_bytes as f64 / 1024.0) } else if ac.storage_used_bytes < 1073741824 { format!("{:.1}MB", ac.storage_used_bytes as f64 / 1048576.0) } else { format!("{:.1}GB", ac.storage_used_bytes as f64 / 1073741824.0) }.into(),
                                     pct: ac.pct,
                                 }
                             }).collect();
@@ -2355,7 +2355,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             cost: format!("${:.2}", ac.cost_usd).into(),
                             roi: format!("{:.1}%", ac.roi).into(),
                             efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
-                            storage_usage: "0MB".into(),
+                            storage_usage: if ac.storage_used_bytes < 1048576 { format!("{:.1}KB", ac.storage_used_bytes as f64 / 1024.0) } else if ac.storage_used_bytes < 1073741824 { format!("{:.1}MB", ac.storage_used_bytes as f64 / 1048576.0) } else { format!("{:.1}GB", ac.storage_used_bytes as f64 / 1073741824.0) }.into(),
                             pct: ac.pct,
                         }
                     }).collect();

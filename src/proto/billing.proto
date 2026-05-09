@@ -30,6 +30,7 @@ message AgentCostSummary {
   double roi = 4;
   double efficiency = 5;
   float pct = 6;
+  int64 storage_used_bytes = 7;
 }
 
 message BudgetAlert {

@@ -31,6 +31,7 @@ pub struct CostAuditor {
     total_network_cost: Mutex<f64>,
     agent_revenues: Mutex<HashMap<String, f64>>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
+    agent_storage_usage: Mutex<HashMap<String, i64>>,
     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
     llm_cost_counter: Counter<f64>,
     storage_savings_counter: Counter<f64>,
@@ -55,6 +56,7 @@ impl CostAuditor {
             total_network_cost: Mutex::new(0.0),
             agent_revenues: Mutex::new(HashMap::new()),
             agent_output_tokens: Mutex::new(HashMap::new()),
+            agent_storage_usage: Mutex::new(HashMap::new()),
             telemetry_tx: None,
             llm_cost_counter,
             storage_savings_counter,
@@ -149,17 +151,19 @@ impl CostAuditor {
         *total_cost
     }
 
-    pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64)> {
+    pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64, i64)> {
         let agent_costs = self.agent_costs.lock().unwrap();
         let agent_revenues = self.agent_revenues.lock().unwrap();
         let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
+        let agent_storage_usage = self.agent_storage_usage.lock().unwrap();
         let mut result = Vec::new();
         for (agent_id, cost) in agent_costs.iter() {
             let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
             let output_tokens = agent_output_tokens.get(agent_id).unwrap_or(&0);
+            let storage = agent_storage_usage.get(agent_id).unwrap_or(&0);
             let roi = self.calculate_roi(*cost, *revenue);
             let efficiency = self.calculate_efficiency(*cost, *output_tokens);
-            result.push((agent_id.clone(), *cost, *output_tokens, roi, efficiency));
+            result.push((agent_id.clone(), *cost, *output_tokens, roi, efficiency, *storage));
         }
         result
     }
@@ -186,6 +190,12 @@ impl CostAuditor {
         let mut agent_revenues = self.agent_revenues.lock().unwrap();
         let current_revenue = agent_revenues.entry(agent_id.to_string()).or_insert(0.0);
         *current_revenue += amount;
+    }
+
+    pub fn record_agent_storage(&self, agent_id: &str, bytes: i64) {
+        let mut agent_storage = self.agent_storage_usage.lock().unwrap();
+        let current_storage = agent_storage.entry(agent_id.to_string()).or_insert(0);
+        *current_storage += bytes;
     }
 
     pub fn record_compute_event(&self, event: ComputeEvent) -> f64 {
