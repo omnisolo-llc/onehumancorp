@@ -61,7 +61,7 @@ func TestSyncAuditLogsToCloud_Success(t *testing.T) {
 	tool := NewAuditSyncTool(mockDB, mockTele)
 
 	payload := `{"tenant_id": "t1", "agent_id": "a1", "action": "test", "resource": "res", "status": "ok", "metadata": "{}", "timestamp": 1234567890}`
-	err := tool.SyncAuditLogsToCloud(context.Background(), payload)
+	err := tool.SyncAuditLogsToCloud(context.Background(), "t1", payload)
 
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
@@ -76,7 +76,7 @@ func TestSyncAuditLogsToCloud_InvalidJSON(t *testing.T) {
 	tool := NewAuditSyncTool(&MockDB{}, nil)
 
 	payload := `{invalid_json}`
-	err := tool.SyncAuditLogsToCloud(context.Background(), payload)
+	err := tool.SyncAuditLogsToCloud(context.Background(), "t1", payload)
 
 	if err == nil {
 		t.Fatalf("Expected error for invalid JSON")
@@ -87,7 +87,7 @@ func TestSyncAuditLogsToCloud_MissingFields(t *testing.T) {
 	tool := NewAuditSyncTool(&MockDB{}, nil)
 
 	payload := `{"tenant_id": "t1"}` // Missing other required fields
-	err := tool.SyncAuditLogsToCloud(context.Background(), payload)
+	err := tool.SyncAuditLogsToCloud(context.Background(), "", payload)
 
 	if err == nil {
 		t.Fatalf("Expected error for missing required fields")
