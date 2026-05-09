@@ -725,4 +725,26 @@ mod tests {
         // without panicking.
         assert!(elapsed2.as_millis() >= 0);
     }
+
+    #[tokio::test]
+    async fn test_dashboard_parallel_fetching() {
+        let service = setup_test_dashboard_service().await;
+        let req = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let mut request = tonic::Request::new(req);
+        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "system".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        let start = std::time::Instant::now();
+        let res = service.get_dashboard(request).await.unwrap().into_inner();
+        let elapsed = start.elapsed();
+
+        assert!(elapsed.as_millis() < 5000);
+        assert!(!res.products.is_empty(), "Parallel fetch should return products");
+        assert!(!res.orders.is_empty(), "Parallel fetch should return orders");
+        assert!(res.organization.is_some(), "Parallel fetch should return organization");
+    }
+
 }
