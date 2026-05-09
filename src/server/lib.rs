@@ -1184,7 +1184,30 @@ impl HubService for MyHubService {
     }
 }
 
+
+pub fn init_tracing() {
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+    use std::env;
+
+    let format = env::var("LOG_FORMAT").unwrap_or_else(|_| "text".to_string());
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+    if format.to_lowercase() == "json" {
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer().json())
+            .init();
+    } else {
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer())
+            .init();
+    }
+}
+
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
+    init_tracing();
+
     // Initialize database
     let db = Arc::new(db::DB::new().await?);
     db.run_migrations().await?;

@@ -29,6 +29,7 @@ services:
       dockerfile: deploy/docker/ohc-core/Dockerfile
     environment:
       LOG_LEVEL: "info"
+      LOG_FORMAT: "json"
       LISTEN_ADDR: "0.0.0.0:18789"
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       REDIS_URL: redis://redis:6379
@@ -57,6 +58,7 @@ services:
     image: onehumancorp/server:latest
     environment:
       LOG_LEVEL: "info"
+      LOG_FORMAT: "json"
       REDIS_ADDR: redis:6379
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       CHATWOOT_URL: http://chatwoot:3000
@@ -146,6 +148,7 @@ services:
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
       LOG_LEVEL: "info"
+      LOG_FORMAT: "json"
       POSTGRES_USER: ohc
       POSTGRES_PASSWORD: ohc
       POSTGRES_DB: ohc
@@ -176,6 +179,7 @@ services:
       - "8081:8080"
     environment:
       LOG_LEVEL: "info"
+      LOG_FORMAT: "json"
       PS_DATA_SOURCE_URI: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       PS_PORT: "8080"
     volumes:
@@ -199,6 +203,7 @@ services:
     command: bundle exec rails db:chatwoot_prepare
     environment:
       LOG_LEVEL: "info"
+      LOG_FORMAT: "json"
       SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
       REDIS_URL: redis://redis:6379
@@ -222,6 +227,7 @@ services:
     command: bundle exec rails s -p 3000 -b 0.0.0.0
     environment:
       LOG_LEVEL: "info"
+      LOG_FORMAT: "json"
       SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
       REDIS_URL: redis://redis:6379
@@ -249,6 +255,7 @@ services:
     command: bundle exec sidekiq -C config/sidekiq.yml
     environment:
       LOG_LEVEL: "info"
+      LOG_FORMAT: "json"
       SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
       REDIS_URL: redis://redis:6379
@@ -292,6 +299,8 @@ services:
       - "3000:3000"
     environment:
       LOG_LEVEL: "info"
+      GF_LOG_FORMAT: "json"
+      LOG_FORMAT: "json"
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
     volumes:
@@ -331,6 +340,7 @@ services:
     image: mcp/telemetry-bridge:latest
     environment:
       LOG_LEVEL: "info"
+      LOG_FORMAT: "json"
       PROMETHEUS_URL: http://prometheus:9090
       OHC_STANDALONE: $${OHC_STANDALONE:-false}
     depends_on:
