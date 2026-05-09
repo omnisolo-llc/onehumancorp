@@ -22,7 +22,25 @@ func (h *APIHandler) HandleCheckLimit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID := r.URL.Query().Get("tenant_id")
+	// We extract tenantID directly using a string key because in a real application
+	// this would be securely populated by a shared JWT/Session middleware.
+	tenantID := ""
+	if val := r.Context().Value("tenant_id"); val != nil {
+		if tID, ok := val.(string); ok {
+			tenantID = tID
+		}
+	} else if val := r.Context().Value("organization_id"); val != nil {
+		if tID, ok := val.(string); ok {
+			tenantID = tID
+		}
+	}
+
+	// If the above fails, and we have the X-Tenant-Id header directly injected
+	// in tests or via standard internal routing.
+	if tenantID == "" {
+		tenantID = r.Header.Get("X-Tenant-Id")
+	}
+
 	metric := r.URL.Query().Get("metric")
 
 	if tenantID == "" || metric == "" {
