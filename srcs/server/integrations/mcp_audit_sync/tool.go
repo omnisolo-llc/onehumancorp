@@ -2,13 +2,18 @@ package mcp_audit_sync
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	"ohc/server/db"
-	"ohc/server/telemetry"
 	"time"
 )
+
+type Telemetry interface {
+	IncrementCounter(name string, value int64, tags map[string]string)
+	SetGauge(name string, value float64, tags map[string]string)
+	RecordHistogram(name string, value float64, tags map[string]string)
+}
 
 type AuditSyncPayload struct {
 	TenantID  string `json:"tenant_id"`
@@ -21,11 +26,11 @@ type AuditSyncPayload struct {
 }
 
 type AuditSyncTool struct {
-	DB        db.Database
-	Telemetry telemetry.Telemetry
+	DB        *sql.DB
+	Telemetry Telemetry
 }
 
-func NewAuditSyncTool(db db.Database, tele telemetry.Telemetry) *AuditSyncTool {
+func NewAuditSyncTool(db *sql.DB, tele Telemetry) *AuditSyncTool {
 	return &AuditSyncTool{
 		DB:        db,
 		Telemetry: tele,
@@ -48,7 +53,7 @@ func (t *AuditSyncTool) SyncAuditLogsToCloud(ctx context.Context, payloadStr str
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
-	_, err := t.DB.Exec(ctx, query, id, payload.TenantID, payload.AgentID, payload.Action, payload.Resource, payload.Status, payload.Metadata, time.Unix(payload.Timestamp, 0))
+	_, err := t.DB.ExecContext(ctx, query, id, payload.TenantID, payload.AgentID, payload.Action, payload.Resource, payload.Status, payload.Metadata, time.Unix(payload.Timestamp, 0))
 	if err != nil {
 		return fmt.Errorf("failed to insert audit log: %w", err)
 	}
