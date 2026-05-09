@@ -307,14 +307,19 @@ impl AgentServiceImpl {
             inject_memories_into_prompt(&memories, &req.system_prompt)
         };
 
-        let long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>> = self.memory.as_ref().map(|repo| {
-            Arc::new(crate::memory_store::PersistentMemoryStore {
-                repo: repo.clone(),
-                tenant_id: org_id.clone(),
-                agent_id: self.agent_id.clone(),
-                llm: llm.clone(),
-            }) as Arc<dyn crate::memory_store::LongTermMemory>
-        });
+        let long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>> = if std::env::var("USE_JSON_MEMORY").is_ok() {
+            let base_dir = std::env::var("JSON_MEMORY_DIR").unwrap_or_else(|_| "/tmp/agent_memory".to_string());
+            Some(Arc::new(crate::memory_store::NamespaceOrganizedJsonStore::new(base_dir)))
+        } else {
+            self.memory.as_ref().map(|repo| {
+                Arc::new(crate::memory_store::PersistentMemoryStore {
+                    repo: repo.clone(),
+                    tenant_id: org_id.clone(),
+                    agent_id: self.agent_id.clone(),
+                    llm: llm.clone(),
+                }) as Arc<dyn crate::memory_store::LongTermMemory>
+            })
+        };
 
         // Attempt to load AGENTS.md for user instructions
         let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));

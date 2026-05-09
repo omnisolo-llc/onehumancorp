@@ -652,6 +652,94 @@ impl FileBasedMemory {
     }
 }
 
+pub struct NamespaceOrganizedJsonStore {
+    base_dir: std::path::PathBuf,
+}
+
+impl std::fmt::Debug for NamespaceOrganizedJsonStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NamespaceOrganizedJsonStore")
+            .field("base_dir", &self.base_dir)
+            .finish()
+    }
+}
+
+impl NamespaceOrganizedJsonStore {
+    pub fn new<P: AsRef<std::path::Path>>(base_dir: P) -> Self {
+        Self {
+            base_dir: base_dir.as_ref().to_path_buf(),
+        }
+    }
+
+    fn get_namespace_dir(&self, namespace: &str) -> Result<std::path::PathBuf, String> {
+        if namespace.contains("..") {
+            return Err("path traversal detected (..)".to_string());
+        }
+        let ns_dir = self.base_dir.join(namespace);
+        if !ns_dir.starts_with(&self.base_dir) {
+            return Err("invalid path: attempts to traverse outside base directory".to_string());
+        }
+        Ok(ns_dir)
+    }
+}
+
+#[async_trait]
+impl LongTermMemory for NamespaceOrganizedJsonStore {
+    async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        let mut results = Vec::new();
+        let mut namespaces = match tokio::fs::read_dir(&self.base_dir).await {
+            Ok(rd) => rd,
+            Err(_) => return Ok(results),
+        };
+
+        while let Ok(Some(ns_entry)) = namespaces.next_entry().await {
+            if ns_entry.file_type().await.map(|t| t.is_dir()).unwrap_or(false) {
+                let mut files = match tokio::fs::read_dir(ns_entry.path()).await {
+                    Ok(rd) => rd,
+                    Err(_) => continue,
+                };
+                while let Ok(Some(file_entry)) = files.next_entry().await {
+                    if file_entry.path().extension().and_then(|s| s.to_str()) == Some("json") {
+                        let raw_content = tokio::fs::read_to_string(file_entry.path()).await.map_err(|e| e.to_string())?;
+                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw_content) {
+                            if let Some(content) = parsed.get("content").and_then(|v| v.as_str()) {
+                                if content.contains(query) {
+                                    results.push(raw_content);
+                                    if results.len() >= limit {
+                                        return Ok(results);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(results)
+    }
+
+    async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
+        let namespace = tags.first().cloned().unwrap_or_else(|| "default".to_string());
+        let ns_dir = self.get_namespace_dir(&namespace)?;
+        tokio::fs::create_dir_all(&ns_dir).await.map_err(|e| e.to_string())?;
+
+        let file_name = format!("{}.json", uuid::Uuid::new_v4());
+        let file_path = ns_dir.join(file_name);
+
+        let json_data = serde_json::json!({
+            "content": content,
+            "tags": tags,
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        });
+
+        tokio::fs::write(file_path, serde_json::to_string_pretty(&json_data).unwrap())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+}
+
 #[async_trait]
 impl OHCMemory for FileBasedMemory {
     async fn write(&self, namespace: &str, key: &str, data: &[u8]) -> Result<(), String> {
@@ -1964,6 +2052,29 @@ mod get_conflicts_tests {
     }
 }
 
+
+#[cfg(test)]
+mod namespace_json_store_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_namespace_organized_json_store() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let store = NamespaceOrganizedJsonStore::new(temp_dir.path());
+
+        store.store("Long-term memory JSON test", vec!["test_ns".to_string()]).await.unwrap();
+
+        let results = store.retrieve("JSON test", 5).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert!(results[0].contains("Long-term memory JSON test"));
+        assert!(results[0].contains("test_ns"));
+
+        // Verify file structure
+        let ns_dir = temp_dir.path().join("test_ns");
+        assert!(ns_dir.exists());
+        assert!(ns_dir.is_dir());
+    }
+}
 
 #[cfg(test)]
 mod anthropic_memory_tests {
