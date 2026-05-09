@@ -20,6 +20,7 @@ pub mod service;
 pub mod departments;
 pub mod guardrails;
 pub mod memory_store;
+pub mod memory_layer;
 pub mod autogen;
 pub mod ralph_loop;
 

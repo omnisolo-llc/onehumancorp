@@ -52,6 +52,7 @@ rust_library(
         "masking_tests.rs",
         "lib.rs",
         "memory_store.rs",
+        "memory_layer.rs",
         "mesh/mod.rs",
         "mesh/transport.rs",
         "plane.rs",

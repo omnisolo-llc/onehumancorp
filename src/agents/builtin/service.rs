@@ -9,7 +9,7 @@ use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
 };
 use crate::memory::inject_memories_into_prompt;
-use crate::memory_store::{VectorRepository, EmbeddingRecord};
+use crate::memory_store::VectorRepository;
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SubAgentRequest, SubAgentResponse,
@@ -43,7 +43,7 @@ pub struct AgentServiceImpl {
     agent_id: String,
     cfg: AgentConfig,
     auth: AuthMode,
-    memory: Option<Arc<VectorRepository>>,
+    memory: Option<Arc<crate::memory_layer::MemoryConsolidationSystem>>,
     pub anthropic_memory: Option<Arc<crate::memory_store::Anthropic3TierMemoryStore>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
@@ -147,7 +147,7 @@ impl AgentServiceImpl {
             if db_url.starts_with("sqlite") {
                 match sqlx::SqlitePool::connect_lazy(&db_url) {
                     Ok(pool) => {
-                        self.memory = Some(Arc::new(VectorRepository::new_sqlite(pool)));
+                        self.memory = Some(Arc::new(crate::memory_layer::MemoryConsolidationSystem::new(Arc::new(VectorRepository::new_sqlite(pool)))));
                     }
                     Err(e) => {
                         tracing::error!("Failed to connect to sqlite for memory store: {}", e);
@@ -156,7 +156,7 @@ impl AgentServiceImpl {
             } else {
                 match sqlx::PgPool::connect_lazy(&db_url) {
                     Ok(pool) => {
-                        self.memory = Some(Arc::new(VectorRepository::new(pool)));
+                        self.memory = Some(Arc::new(crate::memory_layer::MemoryConsolidationSystem::new(Arc::new(VectorRepository::new(pool)))));
                     }
                     Err(e) => {
                         tracing::error!("Failed to connect to database for memory store: {}", e);
@@ -270,7 +270,7 @@ impl AgentServiceImpl {
             } else {
                 vec![]
             };
-            store.semantic_search(&org_id, &embedding, 5).await.map(|records| {
+            store.layer.retrieve_cross_department_context(&org_id, &embedding, 5).await.map(|records| {
                 records.into_iter().map(|r| crate::memory::MemoryEntry {
                     memory_id: r.id,
                     context: r.content,
@@ -301,7 +301,7 @@ impl AgentServiceImpl {
 
         let long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>> = self.memory.as_ref().map(|repo| {
             Arc::new(crate::memory_store::PersistentMemoryStore {
-                repo: repo.clone(),
+                repo: repo.layer.repository.clone(),
                 tenant_id: org_id.clone(),
                 agent_id: self.agent_id.clone(),
                 llm: llm.clone(),
@@ -568,21 +568,7 @@ impl AgentService for AgentServiceImpl {
             // Record memory entry.
             if let (Ok(content), Some(store)) = (&result, &memory) {
                 let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
-                let record = EmbeddingRecord {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    tenant_id: org_id,
-                    agent_id: "agent".to_string(),
-                    content: content.clone(),
-                    embedding: vec![],
-                    source_type: "TASK_SUMMARY".to_string(),
-                    created_at: chrono::Utc::now(),
-                    last_referenced_at: chrono::Utc::now(),
-                    reference_count: 0,
-                    reliability_score: 50,
-                    owner_override: false,
-                    metadata: None,
-                };
-                let _ = store.upsert(&record).await;
+                let _ = store.layer.store_context(&org_id, "agent", content, vec![], 50).await;
             }
         });
 

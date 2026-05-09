@@ -231,6 +231,7 @@ Provide your response, which will be passed to the next agent in the sequence.",
 mod tests {
     use super::*;
 
+
     #[tokio::test]
     async fn test_autogen_sequential_chat() {
         let agent1_llm = Arc::new(AutoGenMockLlmClient {
@@ -278,7 +279,7 @@ mod tests {
             .contains("Agent2: I am Agent2. I received the output and did Output 2"));
     }
 
-    use super::*;
+
     use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
 
     struct AutoGenMockLlmClient {
