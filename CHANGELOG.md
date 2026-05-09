@@ -9,9 +9,11 @@
 
 ### Cloud Scaling Improvements
 - Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
+- Ensure smooth horizontal scaling for the newly added high-fidelity onboarding feature across multi-tenant clusters.
 
 ### Privacy/Offline Improvements
 - Implement offline-first local vector embeddings cache for the OHC Swarm.
+- Standalone users now have access to the complete offline onboarding guide with local tracking limits.
 
 
 ## v0.4.39 (Cloud) / v0.4.39+1 (Standalone)
