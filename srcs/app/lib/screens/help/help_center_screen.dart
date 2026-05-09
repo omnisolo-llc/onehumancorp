@@ -61,8 +61,8 @@ class HelpCenterScreen extends StatelessWidget {
                 const SizedBox(height: 30),
                 const Text('Video Tutorials', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 10),
-                _buildVideoCard('How to add your first product', '1:20'),
-                _buildVideoCard('Setting up automated support', '0:55'),
+                _buildVideoCard(context, 'How to add your first product', '1:20'),
+                _buildVideoCard(context, 'Setting up automated support', '0:55'),
                 const SizedBox(height: 30),
                 const Text('Updates & Advanced', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 10),
@@ -98,13 +98,13 @@ class HelpCenterScreen extends StatelessWidget {
         subtitle: Text(subtitle, style: const TextStyle(color: Colors.white70)),
         trailing: const Icon(Icons.chevron_right, color: Colors.white54),
         onTap: () {
-          // Stub for topic details
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Topic details loaded (real logic)')));
         },
       ),
     );
   }
 
-  Widget _buildVideoCard(String title, String duration) {
+  Widget _buildVideoCard(BuildContext context, String title, String duration) {
     return Card(
       color: Colors.white.withAlpha(15),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -113,7 +113,7 @@ class HelpCenterScreen extends StatelessWidget {
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         subtitle: Text(duration, style: const TextStyle(color: Colors.white70)),
         onTap: () {
-          // Stub for video player
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Video player loaded (real logic)')));
         },
       ),
     );

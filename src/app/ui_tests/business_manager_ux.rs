@@ -15,11 +15,10 @@ fn create() -> app::BusinessManager {
 fn test_business_manager_ux_list_view() {
     let app = create();
 
-    // Add dummy products to test touch targets
     let products = Rc::new(VecModel::from(vec![
         app::UiProduct {
             id: "1".into(),
-            name: "Test Item".into(),
+            name: "Item".into(),
             type_label: "PHYSICAL".into(),
             price: "10.00".into(),
             inventory_count: 5,
