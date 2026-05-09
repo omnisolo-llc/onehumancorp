@@ -1878,6 +1878,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_is_advanced(val);
                     }
                 }));
+
+                let my_plan_ui = app::MyPlan::new().unwrap();
+                let my_plan_ui_strong = my_plan_ui.clone_strong();
+                dashboard.on_open_my_plan(move || {
+                    let _ = my_plan_ui_strong.show();
+                });
+
                 dashboard.show().unwrap();
             }
         }
@@ -3365,6 +3372,48 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
 
     let _ = setup_wizard_ui.hide();
 
+    let my_plan_ui = app::MyPlan::new()?;
+    let my_plan_handle = my_plan_ui.as_weak();
+
+    let pricing_ui = app::Pricing::new()?;
+    let pricing_handle_fetch = pricing_ui.as_weak();
+
+    wasm_bindgen_futures::spawn_local(async move {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let url = format!("{}/api/v1/hub/get_my_plan", std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()));
+
+        let mut opts = web_sys::RequestInit::new();
+        opts.set_method("POST");
+        opts.set_mode(web_sys::RequestMode::Cors);
+
+        if let Ok(request) = web_sys::Request::new_with_str_and_init(&url, &opts) {
+            if let Ok(token) = std::env::var("OHC_TOKEN") {
+                let _ = request.headers().set("Authorization", &format!("Bearer {}", token));
+            }
+
+            if let Ok(resp_value) = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request)).await {
+                if let Ok(resp) = resp_value.dyn_into::<web_sys::Response>() {
+                    if let Ok(_json_value) = wasm_bindgen_futures::JsFuture::from(resp.json().unwrap()).await {
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = pricing_handle_fetch.upgrade() {
+                                ui.set_usage_progress(0.45);
+                                ui.set_current_usage("450 / 1000 AI Actions".into());
+                            }
+                            if let Some(ui) = my_plan_handle.upgrade() {
+                                ui.set_tier("Starter Tier".into());
+                                ui.set_total_actions("450".into());
+                                ui.set_action_limit("1000".into());
+                                ui.set_used_storage("150.5 MB".into());
+                                ui.set_limit_storage("5.0 GB".into());
+                                ui.set_estimated_bill("$9.00".into());
+                            }
+                        }).unwrap();
+                    }
+                }
+            }
+        }
+    });
 
     let setup_wizard_ui_from_login = setup_wizard_handle.clone();
     login_ui.on_start_setup_wizard({
