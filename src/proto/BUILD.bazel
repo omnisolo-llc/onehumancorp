@@ -199,3 +199,13 @@ proto_rust_library(
     proto = ":interop_proto",
     visibility = ["//visibility:public"],
 )
+
+load("@rules_go//proto:def.bzl", "go_proto_library")
+
+go_proto_library(
+    name = "interop_go_proto",
+    compilers = ["@rules_go//proto:go_grpc"],
+    importpath = "onehumancorp/srcs/server/pb/interop",
+    proto = ":interop_proto",
+    visibility = ["//visibility:public"],
+)

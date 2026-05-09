@@ -1,0 +1,35 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "interop",
+    srcs = [
+        "lock.go",
+        "protocol.go",
+    ],
+    importpath = "onehumancorp/srcs/server/interop",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/orchestration:orchestration",
+        "//srcs/server/pb/interop:interop",
+        "@com_github_redis_go_redis_v9//:go-redis",
+        "@com_github_golang_protobuf//proto:go_default_library",
+    ],
+)
+
+go_test(
+    name = "interop_test",
+    srcs = [
+        "lock_test.go",
+        "protocol_test.go",
+    ],
+    embed = [":interop"],
+    deps = [
+        "//srcs/server/orchestration:orchestration",
+        "//srcs/server/pb/interop:interop",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_redis_go_redis_v9//:go-redis",
+        "@com_github_alicebob_miniredis_v2//:miniredis",
+    ],
+)
