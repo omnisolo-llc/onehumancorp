@@ -273,6 +273,75 @@ impl InteropProtocol {
 
         self.bus.subscribe(format!("system:job_dispatch:{}", tenant_id), handler).await
     }
+
+    pub async fn handoff_sync(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
+        let lock_key = format!("handoff_sync:{}", mission_id);
+
+        if !self.lock.acquire_lock(&lock_key, &self.node_id, 30).await.unwrap_or(false) {
+            return Err("Failed to acquire distributed lock for state handoff".to_string());
+        }
+
+        let res = self.handoff(mission_id, tenant_id, state_payload).await;
+
+        let _ = self.lock.release_lock(&lock_key, &self.node_id).await;
+
+        res
+    }
+
+    pub async fn active_health_monitoring(&self, interval_ms: u64) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let node_id = self.node_id.clone();
+        let bus = self.bus.clone();
+
+        let cancel_listen = self.listen_for_pings().await?;
+
+        let worker = tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(tokio::time::Duration::from_millis(interval_ms)).await;
+
+                use prost::Message as ProstMessage;
+                let ping = proto::HealthPing {
+                    current_mode: 0,
+                    timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                    source_node_id: node_id.clone(),
+                };
+
+                let mut buf = Vec::new();
+                if ping.encode(&mut buf).is_ok() {
+                    let msg = crate::msgbus::Message {
+                        topic: "system:health_ping".to_string(),
+                        payload: buf,
+                    };
+                    let _ = bus.publish(msg).await;
+                }
+            }
+        });
+
+        Ok(Box::new(move || {
+            cancel_listen();
+            worker.abort();
+        }))
+    }
+
+    pub async fn dispatch_with_retry_semantics(&self, job_id: &str, tenant_id: &str, action_name: &str, payload: Vec<u8>, max_retries: u32) -> Result<bool, String> {
+        let mut retries = 0;
+        let mut backoff_ms = 10; // Use small backoff for tests
+
+        loop {
+            if let Ok(acked) = self.dispatch_job(job_id, tenant_id, action_name, payload.clone(), 50).await {
+                if acked {
+                    return Ok(true);
+                }
+            }
+
+            retries += 1;
+            if retries >= max_retries {
+                return Ok(false);
+            }
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(backoff_ms)).await;
+            backoff_ms *= 2;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -491,5 +560,37 @@ mod tests {
 
         // Release
         let _ = lock.release_lock("handoff:mission_locked", "node_other").await;
+    }
+
+    #[tokio::test]
+    async fn test_handoff_sync() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node_sync".to_string());
+        let res = protocol.handoff_sync("sync_mission", "tenant_1", vec![1, 2, 3]).await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_dispatch_with_retry_semantics() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+
+        // This will timeout and exhaust retries since no agent is listening
+        let res = protocol_server.dispatch_with_retry_semantics("retry_job", "tenant_a", "action", vec![], 2).await;
+        assert!(res.is_ok());
+        assert!(!res.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_active_health_monitoring() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let protocol = InteropProtocol::new(bus.clone(), lock.clone(), "node_health".to_string());
+
+        let cancel = protocol.active_health_monitoring(10).await.unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        cancel();
     }
 }

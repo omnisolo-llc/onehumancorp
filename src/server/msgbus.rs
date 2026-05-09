@@ -472,23 +472,27 @@ impl DistributedLock for RedisBus {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let mut conn = self.publish_conn.lock().await;
         let key = format!("lock:{}", resource);
+
         let script = redis::Script::new(r#"
             if redis.call("get", KEYS[1]) == ARGV[1] then
-                redis.call("set", KEYS[1], ARGV[1], "EX", ARGV[2])
+                redis.call("pexpire", KEYS[1], ARGV[2])
                 return 1
-            elseif redis.call("set", KEYS[1], ARGV[1], "NX", "EX", ARGV[2]) then
+            elseif redis.call("set", KEYS[1], ARGV[1], "NX", "PX", ARGV[2]) then
                 return 1
             else
                 return 0
             end
         "#);
-        let res: i32 = script.key(&key).arg(owner).arg(ttl_seconds).invoke_async(&mut *conn).await.map_err(|e| e.to_string())?;
+
+        let ttl_ms = ttl_seconds * 1000;
+        let res: i32 = script.key(&key).arg(owner).arg(ttl_ms).invoke_async(&mut *conn).await.map_err(|e| e.to_string())?;
         Ok(res == 1)
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
         let key = format!("lock:{}", resource);
+
         let script = redis::Script::new(r#"
             if redis.call("get", KEYS[1]) == ARGV[1] then
                 return redis.call("del", KEYS[1])
@@ -506,6 +510,7 @@ impl DistributedLock for RedisBus {
 impl DistributedLock for IpcBus {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
+        // SQLite advisory lock for Standalone mode
         let res = sqlx::query("INSERT INTO bus_locks (resource, owner, expires_at) VALUES (?, ?, ?) ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE bus_locks.owner = excluded.owner OR bus_locks.expires_at < cast(strftime('%s', 'now') as integer)")
             .bind(resource)
             .bind(owner)
@@ -520,13 +525,16 @@ impl DistributedLock for IpcBus {
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM bus_locks WHERE resource = ? AND owner = ?")
+        let res = sqlx::query("DELETE FROM bus_locks WHERE resource = ? AND owner = ?")
             .bind(resource)
             .bind(owner)
             .execute(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
-        Ok(())
+            .await;
+
+        match res {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string()),
+        }
     }
 }
 

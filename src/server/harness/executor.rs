@@ -28,6 +28,31 @@ impl LocalShellTask {
         // to show interception logic.
         Ok(format!("Executing: {}", wrapped_cmd))
     }
+
+    pub async fn execute_with_cloud(&self, cmd: &str, cloud_transport: Option<&crate::harness::cloud_transport::CloudTransport>) -> Result<String, String> {
+        let wrapped_cmd = match self.manager.wrap_command(cmd).await {
+            Ok(c) => c,
+            Err(e) => return Err(self.manager.annotate_error(e, String::new())),
+        };
+
+        if let Some(transport) = cloud_transport {
+            // Forward execution request over CloudTransport to prevent echo chamber
+            use prost::Message as ProstMessage;
+            let dispatch = crate::interop::protocol::proto::JobDispatch {
+                job_id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: "local".to_string(),
+                action_name: "harness_exec".to_string(),
+                payload_json: wrapped_cmd.as_bytes().to_vec(),
+                timestamp_ms: chrono::Utc::now().timestamp_millis(),
+            };
+            let mut buf = Vec::new();
+            if dispatch.encode(&mut buf).is_ok() {
+                let _ = transport.dispatch_request(buf).await;
+            }
+        }
+
+        Ok(format!("Executing: {}", wrapped_cmd))
+    }
 }
 
 #[cfg(test)]
