@@ -24,6 +24,7 @@ export component BusinessManager inherits Window {
 
     in-out property <int> step: 0;
     in-out property <string> selected_type: "";
+    in-out property <bool> show_offering_hint: false;
 
     // Form fields
     in-out property <string> product_name: "";
@@ -124,7 +125,13 @@ export component BusinessManager inherits Window {
         // Step 0: Select Type
         if (current_view == "add" && step == 0) : VerticalBox {
             spacing: 16px;
-            Text { text: "What are you offering?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "What are you offering?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; vertical-alignment: center; }
+                Button { text: "?"; width: 24px; height: 24px; clicked => { show_offering_hint = !show_offering_hint; } }
+            }
+            if (show_offering_hint) : Text { text: "Choose the type of product or service you want to add to your store."; color: #cbd5e1; font-size: 12px; wrap: word-wrap; }
 
             ScrollView {
                 VerticalBox {
