@@ -103,24 +103,36 @@ impl OrgService for MyOrgService {
         };
         
         let total_agents = agents.len() as i32;
-        let total_humans = 10; 
+
+        let total_humans: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
+            .fetch_one(&self.hub.pool)
+            .await
+            .unwrap_or(0);
+
+        let pending_approvals: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM swarm_tasks WHERE status = 'PENDING'")
+            .fetch_one(&self.hub.pool)
+            .await
+            .unwrap_or(0);
+
+        let active_handoffs: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions WHERE status = 'active'")
+            .fetch_one(&self.hub.pool)
+            .await
+            .unwrap_or(0);
         
         let human_agent_ratio = if total_humans > 0 {
             total_agents as f64 / total_humans as f64
         } else {
             0.0
         };
-        
 
-        
         Ok(Response::new(AnalyticsSummaryResponse {
             human_agent_ratio,
             total_agents,
-            total_humans,
+            total_humans: total_humans as i32,
             audit_fidelity_pct,
-            resumption_latency_ms: 4800,
-            pending_approvals: 2,
-            active_handoffs: 1,
+            resumption_latency_ms: 0,
+            pending_approvals: pending_approvals as i32,
+            active_handoffs: active_handoffs as i32,
             token_velocity: summary.total_tokens,
         }))
     }

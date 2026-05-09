@@ -22,16 +22,17 @@ fn test_analytics_charts_e2e_flow() {
         }
     });
 
-    // 2. Mock Data Injection
-    let mock_charts = vec![
+    // 2. Setup isolated UI state
+    let charts = vec![
         app::UiChartData {
-            title: "Revenue Over Time".into(),
+            title: "Team Overview".into(),
             points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Mon".into(), value: 40.0, display_value: "$400".into() },
+                app::UiDataPoint { label: "AI Agents".into(), value: 20.0, display_value: "2".into() },
+                app::UiDataPoint { label: "Humans".into(), value: 100.0, display_value: "10".into() },
             ])),
         },
     ];
-    analytics_ui.set_charts(slint::ModelRc::new(slint::VecModel::from(mock_charts)));
+    analytics_ui.set_charts(slint::ModelRc::new(slint::VecModel::from(charts)));
 
     // 3. User navigates from dashboard
     dashboard_ui.invoke_action_see_analytics();
@@ -43,14 +44,14 @@ fn test_analytics_charts_e2e_flow() {
     let charts = analytics_ui.get_charts();
     assert_eq!(charts.row_count(), 1, "Should have 1 chart");
     let first_chart = charts.row_data(0).unwrap();
-    assert_eq!(first_chart.title, "Revenue Over Time");
+    assert_eq!(first_chart.title, "Team Overview");
 
     let points = first_chart.points;
-    assert_eq!(points.row_count(), 1, "Should have 1 point");
+    assert_eq!(points.row_count(), 2, "Should have 2 points");
     let first_point = points.row_data(0).unwrap();
-    assert_eq!(first_point.display_value, "$400");
-    assert_eq!(first_point.value, 40.0);
-    assert_eq!(first_point.label, "Mon");
+    assert_eq!(first_point.display_value, "2");
+    assert_eq!(first_point.value, 20.0);
+    assert_eq!(first_point.label, "AI Agents");
 
     // 4. Test close functionality
     let close_called = std::rc::Rc::new(std::cell::RefCell::new(false));

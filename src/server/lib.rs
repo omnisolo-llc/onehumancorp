@@ -1404,6 +1404,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
+        .nest("/api/v1/analytics", api::analytics::router(hub.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             crate::utils::tier_middleware::tier_middleware,

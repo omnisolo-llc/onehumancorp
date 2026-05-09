@@ -1583,52 +1583,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     GLOBAL_ANALYTICS_CHARTS.with(|g| *g.borrow_mut() = Some(analytics_charts_ui.as_weak()));
     let analytics_charts_handle = analytics_charts_ui.as_weak();
 
-    // Setup mock data for analytics charts
-    let mock_charts = vec![
-        app::UiChartData {
-            title: "Revenue Over Time".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Mon".into(), value: 40.0, display_value: "$400".into() },
-                app::UiDataPoint { label: "Tue".into(), value: 65.0, display_value: "$650".into() },
-                app::UiDataPoint { label: "Wed".into(), value: 30.0, display_value: "$300".into() },
-                app::UiDataPoint { label: "Thu".into(), value: 80.0, display_value: "$800".into() },
-                app::UiDataPoint { label: "Fri".into(), value: 120.0, display_value: "$1.2k".into() },
-                app::UiDataPoint { label: "Sat".into(), value: 150.0, display_value: "$1.5k".into() },
-                app::UiDataPoint { label: "Sun".into(), value: 100.0, display_value: "$1.0k".into() },
-            ])),
-        },
-        app::UiChartData {
-            title: "Orders by Day".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Mon".into(), value: 20.0, display_value: "10".into() },
-                app::UiDataPoint { label: "Tue".into(), value: 40.0, display_value: "20".into() },
-                app::UiDataPoint { label: "Wed".into(), value: 30.0, display_value: "15".into() },
-                app::UiDataPoint { label: "Thu".into(), value: 50.0, display_value: "25".into() },
-                app::UiDataPoint { label: "Fri".into(), value: 80.0, display_value: "40".into() },
-                app::UiDataPoint { label: "Sat".into(), value: 100.0, display_value: "50".into() },
-                app::UiDataPoint { label: "Sun".into(), value: 70.0, display_value: "35".into() },
-            ])),
-        },
-        app::UiChartData {
-            title: "Top Products".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Vegan Cake".into(), value: 100.0, display_value: "120".into() },
-                app::UiDataPoint { label: "Latte".into(), value: 75.0, display_value: "90".into() },
-                app::UiDataPoint { label: "Cookies".into(), value: 50.0, display_value: "60".into() },
-            ])),
-        },
-        app::UiChartData {
-            title: "Traffic Sources".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Direct".into(), value: 80.0, display_value: "40%".into() },
-                app::UiDataPoint { label: "Social".into(), value: 60.0, display_value: "30%".into() },
-                app::UiDataPoint { label: "Search".into(), value: 40.0, display_value: "20%".into() },
-                app::UiDataPoint { label: "Referral".into(), value: 20.0, display_value: "10%".into() },
-            ])),
-        },
-    ];
-    analytics_charts_ui.set_charts(slint::ModelRc::new(slint::VecModel::from(mock_charts)));
-
     let ac_close_handle = analytics_charts_handle.clone();
     analytics_charts_ui.on_close(move || {
         if let Some(ui) = ac_close_handle.upgrade() {
@@ -1639,9 +1593,109 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dashboard_ref_for_analytics = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
     let ac_handle_for_dash = analytics_charts_handle.clone();
     dashboard_ref_for_analytics.upgrade().unwrap().on_action_see_analytics(move || {
-        if let Some(ui) = ac_handle_for_dash.upgrade() {
-            let _ = ui.show();
-        }
+        let ac_handle_inner = ac_handle_for_dash.clone();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        tokio::spawn(async move {
+            if let Ok(mut client) = OrgServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                let resp: Result<tonic::Response<_>, tonic::Status> = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                if let Ok(resp) = resp {
+                    let analytics: ohc::orchestration::AnalyticsSummaryResponse = resp.into_inner();
+
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ac_handle_inner.upgrade() {
+                            let charts = vec![
+                                app::UiChartData {
+                                    title: "Team Overview".into(),
+                                    points: slint::ModelRc::new(slint::VecModel::from(vec![
+                                        app::UiDataPoint { label: "AI Agents".into(), value: analytics.total_agents as f32, display_value: analytics.total_agents.to_string().into() },
+                                        app::UiDataPoint { label: "Humans".into(), value: analytics.total_humans as f32, display_value: analytics.total_humans.to_string().into() },
+                                    ])),
+                                },
+                                app::UiChartData {
+                                    title: "Operations".into(),
+                                    points: slint::ModelRc::new(slint::VecModel::from(vec![
+                                        app::UiDataPoint { label: "Pending Approvals".into(), value: analytics.pending_approvals as f32, display_value: analytics.pending_approvals.to_string().into() },
+                                        app::UiDataPoint { label: "Active Handoffs".into(), value: analytics.active_handoffs as f32, display_value: analytics.active_handoffs.to_string().into() },
+                                    ])),
+                                },
+                            ];
+                            ui.set_charts(slint::ModelRc::new(slint::VecModel::from(charts)));
+                            let _ = ui.show();
+                        }
+                    }).unwrap();
+                    return;
+                }
+            }
+
+            // Fallback
+            slint::invoke_from_event_loop(move || {
+                if let Some(ui) = ac_handle_inner.upgrade() {
+                    let _ = ui.show();
+                }
+            }).unwrap();
+        });
+
+        #[cfg(target_arch = "wasm32")]
+        wasm_bindgen_futures::spawn_local(async move {
+            let mut init = web_sys::RequestInit::new();
+            init.method("POST");
+
+            let request = match web_sys::Request::new_with_str_and_init("/api/v1/analytics/get", &init) {
+                Ok(r) => r,
+                Err(_) => return,
+            };
+
+            if let Some(window) = web_sys::window() {
+                if let Ok(resp_value) = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request)).await {
+                    let resp: web_sys::Response = resp_value.into();
+                    if resp.ok() {
+                        if let Ok(json_promise) = resp.json() {
+                            if let Ok(json) = wasm_bindgen_futures::JsFuture::from(json_promise).await {
+                                if let Some(obj) = json.dyn_ref::<js_sys::Object>() {
+                                    let total_agents = js_sys::Reflect::get(obj, &"total_agents".into()).unwrap_or(wasm_bindgen::JsValue::from_f64(0.0)).as_f64().unwrap_or(0.0) as i32;
+                                    let total_humans = js_sys::Reflect::get(obj, &"total_humans".into()).unwrap_or(wasm_bindgen::JsValue::from_f64(0.0)).as_f64().unwrap_or(0.0) as i32;
+                                    let pending_approvals = js_sys::Reflect::get(obj, &"pending_approvals".into()).unwrap_or(wasm_bindgen::JsValue::from_f64(0.0)).as_f64().unwrap_or(0.0) as i32;
+                                    let active_handoffs = js_sys::Reflect::get(obj, &"active_handoffs".into()).unwrap_or(wasm_bindgen::JsValue::from_f64(0.0)).as_f64().unwrap_or(0.0) as i32;
+
+                                    let charts = vec![
+                                        app::UiChartData {
+                                            title: "Team Overview".into(),
+                                            points: slint::ModelRc::new(slint::VecModel::from(vec![
+                                                app::UiDataPoint { label: "AI Agents".into(), value: total_agents as f32, display_value: total_agents.to_string().into() },
+                                                app::UiDataPoint { label: "Humans".into(), value: total_humans as f32, display_value: total_humans.to_string().into() },
+                                            ])),
+                                        },
+                                        app::UiChartData {
+                                            title: "Operations".into(),
+                                            points: slint::ModelRc::new(slint::VecModel::from(vec![
+                                                app::UiDataPoint { label: "Pending Approvals".into(), value: pending_approvals as f32, display_value: pending_approvals.to_string().into() },
+                                                app::UiDataPoint { label: "Active Handoffs".into(), value: active_handoffs as f32, display_value: active_handoffs.to_string().into() },
+                                            ])),
+                                        },
+                                    ];
+
+                                    slint::invoke_from_event_loop(move || {
+                                        if let Some(ui) = ac_handle_inner.upgrade() {
+                                            ui.set_charts(slint::ModelRc::new(slint::VecModel::from(charts)));
+                                            let _ = ui.show();
+                                        }
+                                    }).unwrap();
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Fallback: If network fails, still show the UI
+            slint::invoke_from_event_loop(move || {
+                if let Some(ui) = ac_handle_inner.upgrade() {
+                    let _ = ui.show();
+                }
+            }).unwrap();
+        });
     });
 
     let bs_handle_clone_for_dash = business_share_handle.clone();
