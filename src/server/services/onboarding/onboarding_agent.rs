@@ -311,7 +311,7 @@ mod tests {
             None => return,
         };
         let (tx, _) = tokio::sync::mpsc::channel(10);
-        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.clone()));
         let agent = OnboardingAgent::new(db, hub);
 
         let req = StartOnboardingRequest {
@@ -374,7 +374,7 @@ mod tests {
             None => return,
         };
         let (tx, _) = tokio::sync::mpsc::channel(10);
-        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.clone()));
         let agent = OnboardingAgent::new(db.clone(), hub);
 
         // Test Service Business

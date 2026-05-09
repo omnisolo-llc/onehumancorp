@@ -115,7 +115,8 @@ mod tests {
             .unwrap();
 
         let (tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(Hub::new(tx, pg_pool));
+        let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Postgres });
+        let hub = Arc::new(Hub::new(tx, db));
 
         // Register an idle agent
         hub.register_agent(crate::ohc::orchestration::Agent {
@@ -176,7 +177,8 @@ mod tests {
             .unwrap();
 
         let (tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(Hub::new(tx, pg_pool));
+        let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Postgres });
+        let hub = Arc::new(Hub::new(tx, db));
 
         hub.register_agent(crate::ohc::orchestration::Agent {
             id: "agent_cloud".to_string(),
@@ -217,7 +219,8 @@ mod tests {
             .unwrap();
 
         let (tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(Hub::new(tx, pg_pool));
+        let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Postgres });
+        let hub = Arc::new(Hub::new(tx, db));
 
         let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
         let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));

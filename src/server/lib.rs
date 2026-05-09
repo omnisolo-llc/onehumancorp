@@ -1192,7 +1192,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = "[::1]:18789".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
-    let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+    let hub = Arc::new(Hub::new(event_tx, db.clone()));
     
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
@@ -1484,7 +1484,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         loop {
             tokio::select! {
                 _ = prune_interval.tick() => {
-                    let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
+                    let sip_db = crate::sip::SipDB::new(hub_for_sched.db.clone(), "system".to_string());
                     if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
                         tracing::error!("failed to prune stale missions: {}", e);
                     }

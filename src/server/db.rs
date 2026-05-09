@@ -10,6 +10,11 @@ use std::path::Path;
 use std::sync::OnceLock;
 
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
+static SQLITE_CONCURRENCY_LIMITER: OnceLock<tokio::sync::Semaphore> = OnceLock::new();
+
+pub fn get_sqlite_limiter() -> &'static tokio::sync::Semaphore {
+    SQLITE_CONCURRENCY_LIMITER.get_or_init(|| tokio::sync::Semaphore::new(1))
+}
 
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get().cloned().unwrap_or_else(|| {
@@ -168,24 +173,37 @@ impl DB {
     where
         F: FnMut() -> Fut,
         Fut: std::future::Future<Output = Result<T, E>>,
-        E: std::fmt::Debug + std::fmt::Display + From<String>,
+        E: std::fmt::Debug + std::fmt::Display + From<sqlx::Error>,
     {
         let mut attempt = 0;
-        let max_attempts = 10;
-        let mut backoff = std::time::Duration::from_millis(50);
+        // ML-Resilience Rule 1: max 3 attempts
+        let max_attempts = 3;
+        let mut backoff = std::time::Duration::from_millis(100);
 
         loop {
             match f().await {
                 Ok(val) => return Ok(val),
                 Err(err) => {
                     let err_str = err.to_string().to_lowercase();
-                    if self.is_sqlite() && (err_str.contains("database is locked") || err_str.contains("sqlite_busy")) {
+                    // AI agent database operations must be resilient to transient failures in both Cloud and Standalone modes.
+                    let is_transient = err_str.contains("database is locked") ||
+                                     err_str.contains("sqlite_busy") ||
+                                     err_str.contains("connection refused") ||
+                                     err_str.contains("connection reset") ||
+                                     err_str.contains("timeout") ||
+                                     err_str.contains("closed");
+
+                    if is_transient {
                         attempt += 1;
                         if attempt >= max_attempts {
-                            let _ = crate::telemetry::record_sqlite_retry_exhausted(&self.pool, operation).await;
-                            return Err(E::from(format!("SQLite retry exhausted after {} attempts: {}", max_attempts, err)));
+                            if self.is_sqlite() {
+                                let _ = crate::telemetry::record_sqlite_retry_exhausted(&self.pool, operation).await;
+                            }
+                            return Err(err);
                         }
-                        let _ = crate::telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
+                        if self.is_sqlite() {
+                            let _ = crate::telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
+                        }
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
                     } else {
@@ -573,6 +591,7 @@ impl DB {
                         payload TEXT NOT NULL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        organization_id TEXT NOT NULL DEFAULT 'system',
                         tenant_id TEXT NOT NULL DEFAULT 'system',
                         cloud_mission_id TEXT,
                         sync_error TEXT,

@@ -596,7 +596,7 @@ mod tests {
         let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let hub = Arc::new(crate::hub::Hub::new(tx, db.clone()));
 
         // Add agents
         hub.register_agent(crate::ohc::orchestration::Agent {

@@ -1,15 +1,16 @@
+use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use crate::ohc::orchestration::*;
 use crate::ohc::orchestration::sync_service_server::SyncService;
 use crate::sip::SipDB;
 
 pub struct MySyncService {
-    pool: sqlx::PgPool,
+    db: Arc<crate::db::DB>,
 }
 
 impl MySyncService {
-    pub fn new(pool: sqlx::PgPool) -> Self {
-        MySyncService { pool }
+    pub fn new(db: Arc<crate::db::DB>) -> Self {
+        MySyncService { db }
     }
 }
 
@@ -32,7 +33,7 @@ impl SyncService for MySyncService {
         }
 
         let mut synced_count = 0;
-        let sip_db = SipDB::new(self.pool.clone(), "system".to_string());
+        let sip_db = SipDB::new(self.db.clone(), "system".to_string());
 
         for p in payloads {
             if p.id.is_empty() {
@@ -98,7 +99,7 @@ impl SyncService for MySyncService {
             }));
         }
 
-        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self.db.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         for item in items {
@@ -168,7 +169,7 @@ impl SyncService for MySyncService {
             tenant_id = "system".to_string();
         }
 
-        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self.db.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let rows = match sqlx::query(
@@ -249,7 +250,7 @@ impl SyncService for MySyncService {
             }));
         }
 
-        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self.db.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut synced_count = 0;
@@ -334,7 +335,7 @@ impl SyncService for MySyncService {
                 updated_at: chrono::Utc::now(),
             };
 
-            let q = crate::queue::PostgresTaskQueue::new(self.pool.clone());
+            let q = crate::queue::PostgresTaskQueue::new(self.db.pool.clone());
             
             match crate::queue::TaskQueue::enqueue(&q, job).await {
                 Ok(_) => {
@@ -363,7 +364,8 @@ mod tests {
         // We can test empty payloads without DB!
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let service = MySyncService::new(db.clone());
         let req = Request::new(HybridSyncMissionsRequest { payloads: vec![] });
         let resp = service.hybrid_sync_missions(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
@@ -374,7 +376,8 @@ mod tests {
     async fn test_power_sync_push() {
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let service = MySyncService::new(db.clone());
         let req = Request::new(PowerSyncPushRequest { payload: "[]".to_string() });
         let resp = service.power_sync_push(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "ok");
@@ -388,7 +391,8 @@ mod tests {
         #[allow(unused_variables)]
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let service = MySyncService::new(db.clone());
         let req = Request::new(PowerSyncPullRequest {});
         let resp = service.power_sync_pull(req).await;
         // The query fails because migrations are not run on dummy. Thus it returns internal error.
@@ -408,7 +412,8 @@ mod tests {
 
             .connect(&database_url).await.unwrap();
 
-        let service = MySyncService::new(pool.clone());
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let service = MySyncService::new(db.clone());
 
         let mission_id = "test_mission_push_pull";
         let payload_json = serde_json::json!([{
@@ -448,7 +453,8 @@ mod tests {
     async fn test_sync_mcp_deltas_empty() {
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let service = MySyncService::new(db.clone());
         let mut req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
         req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
         let resp = service.sync_mcp_deltas(req).await.unwrap();
@@ -459,7 +465,8 @@ mod tests {
     async fn test_sync_escalation_empty() {
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let service = MySyncService::new(db.clone());
         let req = Request::new(SyncEscalationRequest { payloads: vec![] });
         let resp = service.sync_escalation(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
@@ -469,7 +476,8 @@ mod tests {
     async fn test_vector_sync() {
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let service = MySyncService::new(db.clone());
         let req = Request::new(VectorSyncRequest {});
         let resp = service.vector_sync(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");

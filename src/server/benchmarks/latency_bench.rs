@@ -71,9 +71,9 @@ pub async fn bench_api_response_time() {
 
     // Cloud setup
     let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
-    let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
-    let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
-    let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
+    let db_cloud = Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
+    let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.clone()));
+    let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(db_cloud, hub_cloud.clone());
 
     let mut cloud_times = Vec::new();
     for _ in 0..iterations {
@@ -94,9 +94,9 @@ pub async fn bench_api_response_time() {
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
 
-    let db_standalone = crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlite_pool) };
-    let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
-    let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
+    let db_standalone = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlite_pool) });
+    let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.clone()));
+    let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(db_standalone, hub_standalone.clone());
 
     let mut standalone_times = Vec::new();
     for _ in 0..iterations {
@@ -132,15 +132,15 @@ pub async fn bench_dashboard_snapshot() {
         sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
 
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
+        Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) })
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect(&database_url).await.unwrap();
-        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
+        Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres })
     };
 
-    let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+    let hub = Arc::new(crate::hub::Hub::new(tx, db.clone()));
 
     let iterations = 100;
     let mut fetch_times = Vec::new();
@@ -188,8 +188,7 @@ pub async fn bench_dashboard_snapshot() {
 
         let req_desktop = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
         use crate::ohc::app::dashboard_service_server::DashboardService;
-        let db_arc = std::sync::Arc::new(db.clone());
-        let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
+        let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
         let mut request = tonic::Request::new(req_desktop);
         request.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
             spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
@@ -208,8 +207,7 @@ pub async fn bench_dashboard_snapshot() {
     let req_desktop = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
 
     use crate::ohc::app::dashboard_service_server::DashboardService;
-    let db_arc = std::sync::Arc::new(db.clone());
-    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
+    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
 
     let mut req_mobile_t = tonic::Request::new(req_mobile);
     req_mobile_t.extensions_mut().insert(crate::auth::orchestration::AuthInfo {

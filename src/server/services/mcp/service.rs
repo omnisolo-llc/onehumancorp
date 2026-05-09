@@ -235,7 +235,7 @@ impl McpService for MyMcpService {
 
         let req = request.into_inner();
 
-        let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), tenant_id.clone());
+        let sip_db = crate::sip::SipDB::new(self.hub.db.clone(), tenant_id.clone());
         let ctx_root = std::env::var("CONTEXT_ROOT").ok();
         let sip_db = if let Some(root) = ctx_root {
             sip_db.with_context_root(root)
@@ -247,7 +247,7 @@ impl McpService for MyMcpService {
 
         let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
         let _permit = if is_standalone {
-            Some(crate::sip::get_sqlite_limiter().acquire().await.unwrap())
+            Some(crate::db::get_sqlite_limiter().acquire().await.unwrap())
         } else {
             None
         };
@@ -281,7 +281,7 @@ impl McpService for MyMcpService {
         let req = request.into_inner();
         let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
         let _permit = if is_standalone {
-            Some(crate::sip::get_sqlite_limiter().acquire().await.unwrap())
+            Some(crate::db::get_sqlite_limiter().acquire().await.unwrap())
         } else {
             None
         };
@@ -325,7 +325,8 @@ mod tests {
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let hub = Arc::new(crate::hub::Hub::new(tx, db));
         let service = MyMcpService::new(registry, hub);
 
         let req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
@@ -343,7 +344,8 @@ mod tests {
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let hub = Arc::new(crate::hub::Hub::new(tx, db));
         let service = MyMcpService::new(registry, hub);
 
         let req = Request::new(SyncContextRequest {
@@ -366,7 +368,8 @@ mod tests {
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let hub = Arc::new(crate::hub::Hub::new(tx, db));
         let service = MyMcpService::new(registry, hub);
 
         let mut req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
@@ -386,7 +389,8 @@ mod tests {
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let hub = Arc::new(crate::hub::Hub::new(tx, db));
         let service = MyMcpService::new(registry, hub);
 
         let mut req = Request::new(SyncContextRequest {

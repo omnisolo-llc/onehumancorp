@@ -42,13 +42,15 @@ pub struct Hub {
     auto_cor_track: RwLock<std::collections::HashSet<String>>,
     event_log_tx: mpsc::Sender<serde_json::Value>,
     pub(crate) pool: sqlx::PgPool,
+    pub(crate) db: Arc<crate::db::DB>,
     pub redis_client: Option<redis::Client>,
     agent_cache: RwLock<Option<Arc<Vec<Agent>>>>,
     meetings_cache: RwLock<Option<Arc<Vec<MeetingRoom>>>>,
 }
 
 impl Hub {
-    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
+    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, db: Arc<crate::db::DB>) -> Self {
+        let pool = db.pool.clone();
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
         let redis_client = if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true" {
@@ -100,6 +102,7 @@ impl Hub {
             minimax_api_key,
             caps_tx,
             pool,
+            db,
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
             tracker: Tracker::new(),
@@ -807,8 +810,9 @@ mod tests {
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
         let (tx, _) = mpsc::channel(100);
-        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+        let hub = std::sync::Arc::new(Hub::new(tx, db));
 
         let raw = serde_json::json!({
             "type": "TestEvent",
@@ -838,8 +842,9 @@ mod tests {
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
         let (tx, _) = mpsc::channel(100);
-        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+        let hub = std::sync::Arc::new(Hub::new(tx, db));
 
         // 1. Initial get caches empty state
         let agents = hub.get_agents();
@@ -905,8 +910,9 @@ mod tests {
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
         let (tx, _) = mpsc::channel(100);
-        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+        let hub = std::sync::Arc::new(Hub::new(tx, db));
 
         let res = hub.delegate_sub_task(
             "non_existent_agent",
@@ -930,8 +936,9 @@ mod tests {
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
         let (tx, _) = mpsc::channel(100);
-        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+        let hub = std::sync::Arc::new(Hub::new(tx, db));
 
         hub.register_agent(Agent {
             id: "manager_agent".to_string(),
@@ -968,8 +975,9 @@ mod tests {
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
         let (tx, _) = mpsc::channel(100);
-        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+        let hub = std::sync::Arc::new(Hub::new(tx, db));
 
         let health = hub.check_health().await.unwrap();
 
