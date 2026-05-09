@@ -1,12 +1,54 @@
 package dashboard
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 )
+
+type SafeRecorder struct {
+	*httptest.ResponseRecorder
+	mu   sync.Mutex
+	code int
+	buf  bytes.Buffer
+}
+
+func NewSafeRecorder() *SafeRecorder {
+	return &SafeRecorder{
+		ResponseRecorder: httptest.NewRecorder(),
+		code:             http.StatusOK,
+	}
+}
+
+func (rw *SafeRecorder) WriteHeader(code int) {
+	rw.mu.Lock()
+	defer rw.mu.Unlock()
+	rw.code = code
+	rw.ResponseRecorder.WriteHeader(code)
+}
+
+func (rw *SafeRecorder) Write(b []byte) (int, error) {
+	rw.mu.Lock()
+	defer rw.mu.Unlock()
+	rw.buf.Write(b)
+	return rw.ResponseRecorder.Write(b)
+}
+
+func (rw *SafeRecorder) BodyString() string {
+	rw.mu.Lock()
+	defer rw.mu.Unlock()
+	return rw.buf.String()
+}
+
+func (rw *SafeRecorder) GetCode() int {
+	rw.mu.Lock()
+	defer rw.mu.Unlock()
+	return rw.code
+}
 
 func TestHandleStream(t *testing.T) {
 	req, err := http.NewRequest("GET", "/api/v1/stream", nil)
@@ -17,7 +59,7 @@ func TestHandleStream(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	req = req.WithContext(ctx)
 
-	rr := httptest.NewRecorder()
+	rr := NewSafeRecorder()
 
 	go func() {
 		HandleStream(rr, req)
@@ -31,15 +73,16 @@ func TestHandleStream(t *testing.T) {
 	cancel()
 	time.Sleep(100 * time.Millisecond)
 
-	if rr.Code != http.StatusOK {
+	if rr.GetCode() != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v",
-			rr.Code, http.StatusOK)
+			rr.GetCode(), http.StatusOK)
 	}
 
 	expectedPrefix := "data: test event\n\n"
-	if len(rr.Body.String()) < len(expectedPrefix) || rr.Body.String()[:len(expectedPrefix)] != expectedPrefix {
+	bodyStr := rr.BodyString()
+	if len(bodyStr) < len(expectedPrefix) || bodyStr[:len(expectedPrefix)] != expectedPrefix {
 		t.Errorf("handler returned unexpected body: got %v want prefix %v",
-			rr.Body.String(), expectedPrefix)
+			bodyStr, expectedPrefix)
 	}
 }
 

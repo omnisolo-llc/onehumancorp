@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"fmt"
+	"time"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -14,7 +16,7 @@ import (
 )
 
 func setupSIPDB(t *testing.T) (*sql.DB, func()) {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 
 	_, err = db.Exec(`CREATE TABLE agent_missions (

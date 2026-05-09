@@ -1,6 +1,8 @@
 package growth
 
 import (
+	"fmt"
+	"time"
 	"bytes"
 	"database/sql"
 	"encoding/json"
@@ -12,7 +14,7 @@ import (
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	if err != nil {
 		t.Fatalf("failed to open test db: %v", err)
 	}

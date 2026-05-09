@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"fmt"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -14,7 +15,7 @@ import (
 )
 
 func setupSyncTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 
 	_, err = db.Exec(`
@@ -270,7 +271,7 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 	ClearSemaphore()
 	defer ClearSemaphore()
 
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 	defer db.Close()
 

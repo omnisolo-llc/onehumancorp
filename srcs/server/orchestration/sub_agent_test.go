@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"fmt"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -41,7 +42,7 @@ func (m *mockMeshTransport) Subscribe(ctx context.Context, channel string, handl
 }
 
 func setupTestDBForSubAgent(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 
 	query := `

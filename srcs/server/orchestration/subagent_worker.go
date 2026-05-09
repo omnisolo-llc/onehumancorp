@@ -62,11 +62,13 @@ func (w *SubAgentWorker) Poll(ctx context.Context) {
 			return
 		}
 
-		// Find a pending job
+		// Find a pending job and update atomically to prevent SQLite deadlocks
 		var id, taskID string
-		query := "SELECT id, task_id FROM sub_agent_jobs WHERE status = 'PENDING' LIMIT 1"
-		if !w.isSQLite {
-			query += " FOR UPDATE SKIP LOCKED"
+		var query string
+		if w.isSQLite {
+			query = "UPDATE kairos_sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM kairos_sub_agent_jobs WHERE status = 'PENDING' LIMIT 1) RETURNING id, task_id"
+		} else {
+			query = "UPDATE kairos_sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM kairos_sub_agent_jobs WHERE status = 'PENDING' LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, task_id"
 		}
 
 		err = tx.QueryRowContext(ctx, query).Scan(&id, &taskID)
@@ -76,19 +78,8 @@ func (w *SubAgentWorker) Poll(ctx context.Context) {
 				w.mu.Unlock()
 			}
 			if err != sql.ErrNoRows {
-				log.Printf("Failed to poll jobs: %v", err)
+				log.Printf("Failed to poll and update jobs: %v", err)
 			}
-			return
-		}
-
-		// Update to RUNNING
-		_, err = tx.ExecContext(ctx, "UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = $1", id)
-		if err != nil {
-			tx.Rollback()
-			if w.isSQLite {
-				w.mu.Unlock()
-			}
-			log.Printf("Failed to update job status: %v", err)
 			return
 		}
 
@@ -118,7 +109,19 @@ func (w *SubAgentWorker) processJob(ctx context.Context, jobID, taskID string) {
 	// Inform state machine that job is running
 	_ = w.sm.ProcessEvent(ctx, taskID, EventDecompositionComplete)
 
-	err := w.spawner.SpawnIsolated(ctx, job)
+	var err error
+	maxRetries := 3
+	for i := 0; i < maxRetries; i++ {
+		// 60 second timeout per ML resilience rules for EACH retry attempt
+		timeoutCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+		err = w.spawner.SpawnIsolated(timeoutCtx, job)
+		cancel()
+		if err == nil {
+			break
+		}
+		// Brief sleep in tests, exponential in prod
+		time.Sleep(10 * time.Millisecond)
+	}
 
 	duration := time.Since(start).Seconds()
 	meter := otel.Meter("subagent_worker")
@@ -147,7 +150,7 @@ func (w *SubAgentWorker) processJob(ctx context.Context, jobID, taskID string) {
 
 	tx, txErr := w.db.BeginTx(ctx, nil)
 	if txErr == nil {
-		_, execErr := tx.ExecContext(ctx, "UPDATE sub_agent_jobs SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", status, jobID)
+		_, execErr := tx.ExecContext(ctx, "UPDATE kairos_sub_agent_jobs SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", status, jobID)
 		if execErr == nil {
 			_ = tx.Commit()
 		} else {

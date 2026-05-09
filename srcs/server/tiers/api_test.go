@@ -1,6 +1,8 @@
 package tiers
 
 import (
+	"fmt"
+	"time"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -12,7 +14,7 @@ import (
 )
 
 func TestAPIHandler(t *testing.T) {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	if err != nil {
 		t.Fatalf("failed to open memory db: %v", err)
 	}

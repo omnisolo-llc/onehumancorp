@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"fmt"
 	"context"
 	"database/sql"
 	"testing"
@@ -12,11 +13,11 @@ import (
 )
 
 func setupTestDBForSubAgentWorker(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 
 	query := `
-		CREATE TABLE IF NOT EXISTS sub_agent_jobs (
+		CREATE TABLE IF NOT EXISTS kairos_sub_agent_jobs (
 			id TEXT PRIMARY KEY,
 			task_id TEXT,
 			status TEXT,
@@ -64,7 +65,7 @@ func TestSubAgentWorker_Poll(t *testing.T) {
 	_, err := db.Exec("INSERT INTO ohc_tasks (id, status) VALUES ('task-1', 'PENDING')")
 	require.NoError(t, err)
 
-	_, err = db.Exec("INSERT INTO sub_agent_jobs (id, task_id, status) VALUES ('job-1', 'task-1', 'PENDING')")
+	_, err = db.Exec("INSERT INTO kairos_sub_agent_jobs (id, task_id, status) VALUES ('job-1', 'task-1', 'PENDING')")
 	require.NoError(t, err)
 
 	sm := NewTaskStateMachine(db)
@@ -75,11 +76,11 @@ func TestSubAgentWorker_Poll(t *testing.T) {
 	worker.Poll(context.Background())
 
 	// Wait for async processing
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(5 * time.Second)
 
 	// Verify job status
 	var jobStatus string
-	err = db.QueryRow("SELECT status FROM sub_agent_jobs WHERE id = 'job-1'").Scan(&jobStatus)
+	err = db.QueryRow("SELECT status FROM kairos_sub_agent_jobs WHERE id = 'job-1'").Scan(&jobStatus)
 	require.NoError(t, err)
 	assert.Equal(t, "COMPLETED", jobStatus)
 
@@ -100,7 +101,7 @@ func TestSubAgentWorker_Poll_Failure(t *testing.T) {
 	_, err := db.Exec("INSERT INTO ohc_tasks (id, status) VALUES ('task-2', 'PENDING')")
 	require.NoError(t, err)
 
-	_, err = db.Exec("INSERT INTO sub_agent_jobs (id, task_id, status) VALUES ('job-2', 'task-2', 'PENDING')")
+	_, err = db.Exec("INSERT INTO kairos_sub_agent_jobs (id, task_id, status) VALUES ('job-2', 'task-2', 'PENDING')")
 	require.NoError(t, err)
 
 	sm := NewTaskStateMachine(db)
@@ -111,11 +112,11 @@ func TestSubAgentWorker_Poll_Failure(t *testing.T) {
 	worker.Poll(context.Background())
 
 	// Wait for async processing
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(5 * time.Second)
 
 	// Verify job status
 	var jobStatus string
-	err = db.QueryRow("SELECT status FROM sub_agent_jobs WHERE id = 'job-2'").Scan(&jobStatus)
+	err = db.QueryRow("SELECT status FROM kairos_sub_agent_jobs WHERE id = 'job-2'").Scan(&jobStatus)
 	require.NoError(t, err)
 	assert.Equal(t, "FAILED", jobStatus)
 

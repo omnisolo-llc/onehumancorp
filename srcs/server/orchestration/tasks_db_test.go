@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
 	"time"
 	"context"
@@ -14,7 +15,7 @@ import (
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 
 	_, err = db.Exec(`
@@ -949,7 +950,7 @@ func TestSqliteTaskStore_GetTasksByOrganization_ParseDateError(t *testing.T) {
 
 // Append to tasks_db_test.go so we don't mess up parity tests
 func TestSqliteTaskStore_PollDelegatedTasks(t *testing.T) {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 	defer db.Close()
 	_, err = db.Exec(`
@@ -1046,7 +1047,7 @@ func TestPostgresTaskStore_PollDelegatedTasks_FullCoverage(t *testing.T) {
 
 func TestSqliteTaskStore_PollDelegatedTasks_Errors(t *testing.T) {
 	// We can't practically mock Mattn sqlite, so testing an open/close error
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 	store := NewSqliteTaskStore(db)
 	ctx := context.Background()
@@ -1136,7 +1137,7 @@ func TestPostgresTaskStore_PollDelegatedTasks_CommitError(t *testing.T) {
 
 func TestSqliteTaskStore_PollDelegatedTasks_ScanError(t *testing.T) {
 	// Given we are scanning a set structure, it's easiest to create a table with wrong schema
-	badDB, err := sql.Open("sqlite3", ":memory:")
+	badDB, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
 	require.NoError(t, err)
 	defer badDB.Close()
 
