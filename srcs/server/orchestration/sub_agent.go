@@ -99,15 +99,17 @@ func (s *DefaultSubAgentSpawner) Spawn(ctx context.Context, task *SharedTask) er
 	if s.isSQLite {
 		// Throttled spawning for Standalone mode
 		s.semaphore <- struct{}{}
+		tCopy := *task
 		go func(t *SharedTask) {
 			defer func() { <-s.semaphore }()
 			s.runSubAgent(context.Background(), t)
-		}(task)
+		}(&tCopy)
 		return nil
 	}
 
 	// Unthrottled distributed spawning for Cloud mode
-	go s.runSubAgent(context.Background(), task)
+	tCopy := *task
+	go s.runSubAgent(context.Background(), &tCopy)
 	return nil
 }
 
@@ -166,7 +168,11 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 	}
 
 	// Write heartbeat to .agent-task/status/
-	statusDir := filepath.Join(".agent-task", "status")
+	statusDir := os.Getenv("AGENT_STATUS_DIR")
+	if statusDir == "" {
+		statusDir = filepath.Join(".agent-task", "status", task.ID)
+	}
+
 	if err := os.MkdirAll(statusDir, 0755); err != nil {
 		return err
 	}

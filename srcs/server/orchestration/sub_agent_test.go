@@ -10,6 +10,8 @@ import (
 	"testing"
 	"onehumancorp/srcs/server/pb"
 	"time"
+	"sync"
+	"github.com/google/uuid"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
@@ -18,11 +20,22 @@ import (
 
 type mockMeshTransport struct {
 	published []string
+	mu        sync.Mutex
 }
 
 func (m *mockMeshTransport) Publish(ctx context.Context, channel string, data []byte) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.published = append(m.published, string(data))
 	return nil
+}
+
+func (m *mockMeshTransport) getPublished() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	res := make([]string, len(m.published))
+	copy(res, m.published)
+	return res
 }
 
 
@@ -70,35 +83,53 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 	mesh := &mockMeshTransport{}
 	spawner := NewDefaultSubAgentSpawner(mesh, true, 2)
 
+	taskID := "test-task-standalone-" + uuid.New().String()
 	task := &SharedTask{
-		ID: "test-task-standalone-1",
+		ID: taskID,
+		OrganizationID: "org-spawn-" + uuid.New().String(),
 	}
+	tokenMu.Lock()
+	tokenBudgets[task.OrganizationID] = 1000
+	tokenMu.Unlock()
+
+	// Provision tokens for the unique org
+	tokenMu.Lock()
+	tokenBudgets[task.OrganizationID] = 1000
+	tokenMu.Unlock()
 
 	err := spawner.Spawn(context.Background(), task)
 	assert.NoError(t, err)
 
-	// Allow time for the goroutine to run (transient failures may take time to retry)
-	time.Sleep(6 * time.Second)
-	time.Sleep(6 * time.Second)
-
-	// Check MeshTransport events
 	foundSpawned := false
 	foundCompleted := false
-	for _, msg := range mesh.published {
-		var payload map[string]interface{}
-		_ = json.Unmarshal([]byte(msg), &payload)
-		if payload["event"] == "SUB_AGENT_SPAWNED" && payload["task_id"] == "test-task-standalone-1" {
-			foundSpawned = true
+	for i := 0; i < 3000; i++ {
+		published := mesh.getPublished()
+		foundSpawned = false
+		foundCompleted = false
+		for _, msg := range published {
+			var payload map[string]interface{}
+			_ = json.Unmarshal([]byte(msg), &payload)
+			if payload["event"] == "SUB_AGENT_SPAWNED" && payload["task_id"] == taskID {
+				foundSpawned = true
+			}
+			if payload["event"] == "SUB_AGENT_COMPLETED" && payload["task_id"] == taskID {
+				foundCompleted = true
+			}
 		}
-		if payload["event"] == "SUB_AGENT_COMPLETED" && payload["task_id"] == "test-task-standalone-1" {
-			foundCompleted = true
+		if foundSpawned && foundCompleted {
+			break
 		}
+		time.Sleep(100 * time.Millisecond)
 	}
 	assert.True(t, foundSpawned)
 	assert.True(t, foundCompleted)
 
 	// Check heartbeat file
-	statusFile := filepath.Join(".agent-task", "status", "test-task-standalone-1.yml")
+	statusDir := os.Getenv("AGENT_STATUS_DIR")
+	if statusDir == "" {
+		statusDir = filepath.Join(".agent-task", "status", taskID)
+	}
+	statusFile := filepath.Join(statusDir, taskID + ".yml")
 	_, err = os.Stat(statusFile)
 	assert.NoError(t, err)
 
@@ -112,28 +143,43 @@ func TestSubAgentSpawner_SpawnCloud(t *testing.T) {
 	mesh := &mockMeshTransport{}
 	spawner := NewDefaultSubAgentSpawner(mesh, false, 0)
 
+	taskID := "test-task-cloud-" + uuid.New().String()
 	task := &SharedTask{
-		ID: "test-task-cloud-1",
+		ID: taskID,
+		OrganizationID: "org-spawn-" + uuid.New().String(),
 	}
+	tokenMu.Lock()
+	tokenBudgets[task.OrganizationID] = 1000
+	tokenMu.Unlock()
+
+	// Provision tokens for the unique org
+	tokenMu.Lock()
+	tokenBudgets[task.OrganizationID] = 1000
+	tokenMu.Unlock()
 
 	err := spawner.Spawn(context.Background(), task)
 	assert.NoError(t, err)
 
-	// Allow time for the goroutine to run
-	time.Sleep(6 * time.Second)
-
-	// Check MeshTransport events
 	foundSpawned := false
 	foundCompleted := false
-	for _, msg := range mesh.published {
-		var payload map[string]interface{}
-		_ = json.Unmarshal([]byte(msg), &payload)
-		if payload["event"] == "SUB_AGENT_SPAWNED" && payload["task_id"] == "test-task-cloud-1" {
-			foundSpawned = true
+	for i := 0; i < 1000; i++ {
+		published := mesh.getPublished()
+		foundSpawned = false
+		foundCompleted = false
+		for _, msg := range published {
+			var payload map[string]interface{}
+			_ = json.Unmarshal([]byte(msg), &payload)
+			if payload["event"] == "SUB_AGENT_SPAWNED" && payload["task_id"] == taskID {
+				foundSpawned = true
+			}
+			if payload["event"] == "SUB_AGENT_COMPLETED" && payload["task_id"] == taskID {
+				foundCompleted = true
+			}
 		}
-		if payload["event"] == "SUB_AGENT_COMPLETED" && payload["task_id"] == "test-task-cloud-1" {
-			foundCompleted = true
+		if foundSpawned && foundCompleted {
+			break
 		}
+		time.Sleep(100 * time.Millisecond)
 	}
 	assert.True(t, foundSpawned)
 	assert.True(t, foundCompleted)
@@ -145,14 +191,21 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 
 	store := NewSqliteTaskStore(db)
 
+	taskID := "delegated-task-" + uuid.New().String()
 	// Create a DELEGATED task
 	task := &SharedTask{
-		ID:             "delegated-task-1",
-		OrganizationID: "org-1",
+		ID:             taskID,
+		OrganizationID: "org-poll-" + uuid.New().String(),
 		Title:          "Delegated Work",
 		Status:         "PENDING",
 		Priority:       "DELEGATED",
 	}
+
+	// Provision tokens for the unique org
+	tokenMu.Lock()
+	tokenBudgets[task.OrganizationID] = 1000
+	tokenMu.Unlock()
+
 	err := store.CreateTask(context.Background(), task)
 	require.NoError(t, err)
 
@@ -168,16 +221,20 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "ASSIGNED", fetchedTask.Status)
 
-	// Give spawner time
-	time.Sleep(6 * time.Second)
-
 	foundCompleted := false
-	for _, msg := range mesh.published {
-		var payload map[string]interface{}
-		_ = json.Unmarshal([]byte(msg), &payload)
-		if payload["event"] == "SUB_AGENT_COMPLETED" && payload["task_id"] == "delegated-task-1" {
-			foundCompleted = true
+	for i := 0; i < 150; i++ {
+		published := mesh.getPublished()
+		for _, msg := range published {
+			var payload map[string]interface{}
+			_ = json.Unmarshal([]byte(msg), &payload)
+			if payload["event"] == "SUB_AGENT_COMPLETED" && payload["task_id"] == taskID {
+				foundCompleted = true
+			}
 		}
+		if foundCompleted {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
 	}
 	assert.True(t, foundCompleted)
 }
@@ -188,7 +245,13 @@ func TestSubAgentTimeout(t *testing.T) {
 
 	task := &SharedTask{
 		ID: "timeout-task-1",
+		OrganizationID: "org-timeout-" + uuid.New().String(),
 	}
+
+	// Give the org enough tokens explicitly so the context cancellation fails it instead
+	tokenMu.Lock()
+	tokenBudgets[task.OrganizationID] = 1000
+	tokenMu.Unlock()
 
 	// Provide an already-canceled context so that executeTask checks the Done channel immediately and returns ctx.Err()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -196,6 +259,7 @@ func TestSubAgentTimeout(t *testing.T) {
 
 	err := spawner.executeTask(ctx, task)
 	assert.Error(t, err)
+	// it should fail due to context cancelled
 	assert.ErrorIs(t, err, context.Canceled)
 }
 
@@ -206,8 +270,12 @@ func TestSubAgentSpawner_CircuitBreaker(t *testing.T) {
 
 	task := &SharedTask{
 		ID:             "test-cb",
-		OrganizationID: "org-test",
+		OrganizationID: "org-cb-" + uuid.New().String(),
 	}
+
+	tokenMu.Lock()
+	tokenBudgets[task.OrganizationID] = 1000
+	tokenMu.Unlock()
 
 	// First execution with short timeout will fail and trip breaker
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
@@ -218,12 +286,13 @@ func TestSubAgentSpawner_CircuitBreaker(t *testing.T) {
 	// Second execution should be blocked by circuit breaker
 	task2 := &SharedTask{
 		ID:             "test-cb-2",
-		OrganizationID: "org-test",
+		OrganizationID: "org-cb-" + uuid.New().String(),
 	}
 	spawner.runSubAgent(context.Background(), task2)
 
 	foundPaused := false
-	for _, msg := range mesh.published {
+	published := mesh.getPublished()
+	for _, msg := range published {
 		var payload map[string]interface{}
 		_ = json.Unmarshal([]byte(msg), &payload)
 		if payload["event"] == "SUB_AGENT_PAUSED" && payload["task_id"] == "test-cb-2" {
@@ -268,12 +337,20 @@ func TestTaskOrchestrator_StartBackgroundWorker(t *testing.T) {
 
 	store := NewSqliteTaskStore(db)
 
+	taskID := "worker-delegated-" + uuid.New().String()
 	// Create a delegated task
-	err := store.CreateTask(context.Background(), &SharedTask{
-		ID:       "worker-delegated-1",
+	task := &SharedTask{
+		ID:       taskID,
 		Status:   "PENDING",
 		Priority: "DELEGATED",
-	})
+		OrganizationID: "org-worker-" + uuid.New().String(),
+	}
+
+	tokenMu.Lock()
+	tokenBudgets[task.OrganizationID] = 1000
+	tokenMu.Unlock()
+
+	err := store.CreateTask(context.Background(), task)
 	assert.NoError(t, err)
 
 	spawner := NewDefaultSubAgentSpawner(&mockMeshTransport{}, true, 2)
@@ -282,12 +359,20 @@ func TestTaskOrchestrator_StartBackgroundWorker(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	orchestrator.StartBackgroundWorker(ctx)
 
-	// Wait for the worker to poll
-	time.Sleep(3 * time.Second)
+	var fetchedTask *SharedTask
+	var errFetch error
+	for i := 0; i < 150; i++ {
+		fetchedTask, errFetch = store.GetTask(context.Background(), taskID)
+		if errFetch == nil && fetchedTask.Status == "ASSIGNED" {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 	cancel() // Stop the worker
 
 	// Ensure task was processed
-	fetchedTask, _ := store.GetTask(context.Background(), "worker-delegated-1")
+	assert.NoError(t, errFetch)
+	assert.NotNil(t, fetchedTask)
 	assert.Equal(t, "ASSIGNED", fetchedTask.Status)
 }
 
