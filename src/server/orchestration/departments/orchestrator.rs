@@ -1,3 +1,4 @@
+use crate::orchestration::departments::memory::layer::CrossDepartmentMemoryLayer;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
@@ -83,6 +84,7 @@ impl Department for DummyDepartment {
 
 pub struct DepartmentOrchestrator {
     db: Arc<crate::db::DB>,
+    pub memory_layer: Option<Arc<CrossDepartmentMemoryLayer>>,
     departments: RwLock<HashMap<DepartmentType, Arc<tokio::sync::RwLock<dyn Department>>>>,
     event_subscriptions: RwLock<HashMap<String, Vec<DepartmentType>>>,
 }
@@ -93,6 +95,7 @@ impl DepartmentOrchestrator {
             db,
             departments: RwLock::new(HashMap::new()),
             event_subscriptions: RwLock::new(HashMap::new()),
+            memory_layer: None,
         }
     }
 
