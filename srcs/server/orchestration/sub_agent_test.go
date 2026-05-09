@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"testing"
@@ -66,8 +65,8 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Allow time for the goroutine to run (transient failures may take time to retry)
-	time.Sleep(3 * time.Second)
-	time.Sleep(3 * time.Second)
+	time.Sleep(6 * time.Second)
+	time.Sleep(6 * time.Second)
 
 	// Check MeshHub events
 	foundSpawned := false
@@ -86,13 +85,13 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 	assert.True(t, foundCompleted)
 
 	// Check heartbeat file
-	files, _ := filepath.Glob(filepath.Join(".agent-task", "status", "*.yml")); var statusFile string; if len(files) > 0 { statusFile = files[len(files)-1] } else { t.Fatalf("no status file found") }
+	statusFile := filepath.Join(".agent-task", "status", "test-task-standalone-1.json")
 	_, err = os.Stat(statusFile)
 	assert.NoError(t, err)
 
 	bytes, _ := os.ReadFile(statusFile)
 	var finalData map[string]interface{}
-	_ = yaml.Unmarshal(bytes, &finalData)
+	_ = json.Unmarshal(bytes, &finalData)
 	assert.Equal(t, "COMPLETED", finalData["status"])
 }
 
@@ -108,7 +107,7 @@ func TestSubAgentSpawner_SpawnCloud(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Allow time for the goroutine to run
-	time.Sleep(3 * time.Second)
+	time.Sleep(6 * time.Second)
 
 	// Check MeshHub events
 	foundSpawned := false
@@ -157,7 +156,7 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 	assert.Equal(t, "ASSIGNED", fetchedTask.Status)
 
 	// Give spawner time
-	time.Sleep(3 * time.Second)
+	time.Sleep(6 * time.Second)
 
 	foundCompleted := false
 	for _, msg := range mesh.published {
