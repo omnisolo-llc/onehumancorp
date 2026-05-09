@@ -5,6 +5,9 @@ import '../main.dart'; // For GlassContainer
 import '../widgets/contextual_tooltip.dart';
 import '../widgets/walkthrough_overlay.dart';
 import 'help/help_center_screen.dart';
+import 'package:confetti/confetti.dart';
+import 'package:flutter/services.dart';
+import 'referral_program_screen.dart';
 
 enum EnvironmentMode { cloud, standaloneDesktop }
 
@@ -29,6 +32,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   late AnimationController _heroAnimationController;
   late Animation<double> _heroAnimation;
 
+  late ConfettiController _confettiController;
   late AnimationController _pulseAnimationController;
   late Animation<double> _pulseAnimation;
 
@@ -37,6 +41,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _heroAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -58,6 +63,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
 
   @override
   void dispose() {
+    _confettiController.dispose();
     _heroAnimationController.dispose();
     _pulseAnimationController.dispose();
     _companyNameController.dispose();
@@ -969,6 +975,16 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 child: ElevatedButton(
                   onPressed: () async {
                     await ref.read(wizardProvider.notifier).submitWizard();
+
+                    if (!context.mounted) return;
+
+                    final domain = ref.read(wizardProvider).domainChoice ?? 'mybusiness.ohc.app';
+                    Clipboard.setData(ClipboardData(text: 'https://$domain'));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Domain copied to clipboard!'), duration: Duration(seconds: 2)),
+                    );
+
+                    _confettiController.play();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF22C55E),
@@ -988,78 +1004,100 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   }
 
   Widget _buildWelcomeChecklistScreen(WizardState state) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Stack(
       children: [
-        const Text(
-          'You\'re set up!',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          'Here\'s what to do next:',
-          style: TextStyle(color: Colors.white70, fontSize: 16),
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildChecklistItem('✅ Business live', true),
-                const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Add 3 more products', false),
-                const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Connect Instagram', false),
-                const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Share your link with a friend', false),
-              ],
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'You\'re set up!',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () {
-            ref.read(wizardProvider.notifier).nextStep();
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6B4EFF),
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
+            const SizedBox(height: 10),
+            const Text(
+              'Here\'s what to do next:',
+              style: TextStyle(color: Colors.white70, fontSize: 16),
             ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildChecklistItem('✅ Business live', true, onTap: null),
+                    const SizedBox(height: 10),
+                    _buildChecklistItem('⬜ Add 3 more products', false, onTap: () {
+                      ref.read(wizardProvider.notifier).updateStep(7);
+                    }),
+                    const SizedBox(height: 10),
+                    _buildChecklistItem('⬜ Connect Instagram', false, onTap: () {
+                      ref.read(wizardProvider.notifier).updateStep(3);
+                    }),
+                    const SizedBox(height: 10),
+                    _buildChecklistItem('⬜ Share your link with a friend', false, onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ReferralProgramScreen()));
+                    }),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                ref.read(wizardProvider.notifier).nextStep();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6B4EFF),
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              child: const Text('Go to Dashboard', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            shouldLoop: false,
+            colors: const [Colors.green, Colors.blue, Colors.pink, Colors.orange, Colors.purple],
           ),
-          child: const Text('Go to Dashboard', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       ],
     );
   }
 
-  Widget _buildChecklistItem(String text, bool isCompleted) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: isCompleted ? Colors.green.withOpacity(0.1) : Colors.white.withOpacity(0.05),
-        border: Border.all(color: isCompleted ? Colors.green : Colors.white24),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: isCompleted ? Colors.greenAccent : Colors.white,
-                fontSize: 16,
+  Widget _buildChecklistItem(String text, bool isCompleted, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: isCompleted ? Colors.green.withOpacity(0.1) : Colors.white.withOpacity(0.05),
+          border: Border.all(color: isCompleted ? Colors.green : Colors.white24),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: isCompleted ? Colors.greenAccent : Colors.white,
+                  fontSize: 16,
+                ),
               ),
             ),
-          ),
-          const Icon(Icons.chevron_right, color: Colors.white54),
-        ],
+            const Icon(Icons.chevron_right, color: Colors.white54),
+          ],
+        ),
       ),
     );
   }

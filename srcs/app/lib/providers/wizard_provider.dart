@@ -89,6 +89,10 @@ class WizardNotifier extends Notifier<WizardState> {
     }
   }
 
+  void updateStep(int step) {
+    state = state.copyWith(currentStep: step);
+  }
+
   void updateBusinessProfile({String? companyName, String? industry, String? size}) {
     state = state.copyWith(
       companyName: companyName ?? state.companyName,
