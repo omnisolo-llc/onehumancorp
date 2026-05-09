@@ -115,5 +115,6 @@ site/
 playwright-report/
 debian-binary
 /*.diff
-/srcs/
+
 /scratch/
+srcs/server/orchestration/.agent-task/
