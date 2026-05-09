@@ -7,8 +7,6 @@ type HmacSha256 = Hmac<Sha256>;
 /// Authentication mode.
 #[derive(Debug, Clone)]
 pub enum AuthMode {
-    /// No authentication (dev/test only).
-    Disabled,
     /// Pre-shared HMAC-SHA256 token.
     Token { token_hash: Vec<u8> },
     /// SPIFFE/mTLS peer certificate.
@@ -17,16 +15,9 @@ pub enum AuthMode {
 
 /// Build an AuthMode from environment variables.
 ///
-///   OHC_AGENT_AUTH_DISABLED=true   – skip auth (dev only)
 ///   OHC_AGENT_TOKEN                – enables token mode
 ///   OHC_AGENT_SPIFFE_ID            – restricts SPIFFE ID (enables SPIFFE mode)
 pub fn auth_mode_from_env() -> AuthMode {
-    if env::var("OHC_AGENT_AUTH_DISABLED")
-        .map(|v| v == "true")
-        .unwrap_or(false)
-    {
-        return AuthMode::Disabled;
-    }
     if let Ok(tok) = env::var("OHC_AGENT_TOKEN") {
         if !tok.is_empty() {
             let hash = hmac_token(&tok);

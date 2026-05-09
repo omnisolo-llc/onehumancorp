@@ -134,6 +134,17 @@ impl DB {
                 conn_opts = conn_opts.pragma("key", key);
                 // Force full encryption of the database
                 conn_opts = conn_opts.pragma("cipher", "sqlcipher");
+            } else {
+                // Ensure encryption even if not strictly in STANDALONE_MODE but using SQLite
+                let key = if let Some(k) = database_url.split("key=").nth(1) {
+                    k.split('&').next().unwrap_or("").to_string()
+                } else {
+                    std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| "".to_string())
+                };
+                if !key.is_empty() {
+                    conn_opts = conn_opts.pragma("key", key);
+                    conn_opts = conn_opts.pragma("cipher", "sqlcipher");
+                }
             }
 
             let sqlite_pool = SqlitePoolOptions::new()

@@ -182,7 +182,6 @@ impl AgentServiceImpl {
 
     fn check_auth<T>(&self, req: &Request<T>) -> Result<(), Status> {
         match &self.auth {
-            AuthMode::Disabled => Ok(()),
             AuthMode::Token { token_hash } => {
                 let meta = req.metadata();
                 let auth_val = meta
@@ -834,7 +833,7 @@ mod tests {
         use crate::auth::AuthMode;
 
         let transport = Arc::new(MemoryTransport::new());
-        let svc = Arc::new(AgentServiceImpl::new("test_agent", AgentConfig::default(), AuthMode::Disabled));
+        let svc = Arc::new(AgentServiceImpl::new("test_agent", AgentConfig::default(), AuthMode::Spiffe { allowed_id: "spiffe://onehumancorp.io/agent/test".to_string() }));
 
         crate::service::start_builtin_agent(transport.clone(), svc.clone()).await;
 
@@ -1037,7 +1036,7 @@ mod memory_tests {
             std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
         }
 
-        let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
+        let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Spiffe { allowed_id: "spiffe://onehumancorp.io/agent/test".to_string() });
         service.init_memory().await;
 
         assert!(service.anthropic_memory.is_some(), "Anthropic Memory should be initialized");

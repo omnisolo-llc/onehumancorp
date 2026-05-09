@@ -5,7 +5,6 @@ use sha2::Sha256;
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 enum AuthMode {
-    Disabled,
     Token(Vec<u8>), // HMAC-SHA256 of expected token
     SPIFFE { allowed_id: Option<String> },
 }
@@ -19,9 +18,6 @@ pub struct AuthConfig {
 #[allow(dead_code)]
 impl AuthConfig {
     pub fn from_env() -> Self {
-        if std::env::var("OHC_AGENT_AUTH_DISABLED").unwrap_or_default() == "true" {
-            return AuthConfig { mode: AuthMode::Disabled };
-        }
         if let Ok(tok) = std::env::var("OHC_AGENT_TOKEN") {
             let h = hmac_token(&tok);
             return AuthConfig { mode: AuthMode::Token(h) };
@@ -36,7 +32,6 @@ impl AuthConfig {
 
     pub fn authenticate(&self, req: &Request<()>) -> Result<(), Status> {
         match &self.mode {
-            AuthMode::Disabled => Ok(()),
             AuthMode::Token(expected_hash) => self.check_token(req, expected_hash),
             AuthMode::SPIFFE { allowed_id } => self.check_spiffe(req, allowed_id.as_deref()),
         }
