@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "localproxy",
+    srcs = ["proxy.go"],
+    importpath = "onehumancorp/srcs/server/agents/localproxy",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/agents/sandbox",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "localproxy_test",
+    srcs = ["proxy_test.go"],
+    embed = [":localproxy"],
+    deps = [
+        "//srcs/server/agents/sandbox",
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
+    ],
+)
