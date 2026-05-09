@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 )
 
+var sqliteConcurrencyLimit = make(chan struct{}, 1)
+
 type SIPDB struct {
 	db          *sql.DB
 	ContextRoot string
@@ -25,6 +27,11 @@ type AgentMission struct {
 }
 
 func (s *SIPDB) DelegateMission(ctx context.Context, mission *AgentMission) error {
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		sqliteConcurrencyLimit <- struct{}{}
+		defer func() { <-sqliteConcurrencyLimit }()
+	}
+
 	payloadStr := string(mission.Payload)
 
 	if s.ContextRoot != "" {
