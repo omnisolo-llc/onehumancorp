@@ -922,6 +922,62 @@ impl Agent {
         rx
     }
 
+    /// Master Catalog B.6. Output Parsing via Native Tool Calls
+    /// Uses a schema-constrained response by forcing a specific tool call.
+    pub async fn run_structured<T: serde::de::DeserializeOwned + Send + Sync + 'static, F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        output_schema: serde_json::Value,
+        on_event: &mut F,
+    ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        let mut final_cfg = cfg.clone();
+
+        // Append instruction to force the use of the structured output tool
+        final_cfg.server_system_message = format!(
+            "{}\n\nCRITICAL INSTRUCTION: You MUST call the `return_structured_output` tool to return your final structured answer. Do NOT return raw text as the final answer.",
+            final_cfg.server_system_message
+        );
+
+        let mut structured_tools = self.tools.clone();
+
+        // We define a dummy executor because the tool is intercepted before execution
+        struct DummyExecutor;
+        #[async_trait::async_trait]
+        impl crate::tools::ToolExecutor for DummyExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Ok("Dummy".to_string())
+            }
+        }
+
+        structured_tools.push(crate::tools::Tool {
+            name: "return_structured_output".to_string(),
+            description: "Returns the final output matching the required JSON schema.".to_string(),
+            is_read_only: false,
+            parameters: output_schema,
+            execute: std::sync::Arc::new(DummyExecutor),
+        });
+
+        let temp_agent = Agent {
+            llm: self.llm.clone(),
+            tools: structured_tools,
+            progress: self.progress.clone(),
+            memory_store: self.memory_store.clone(),
+            checkpointer: self.checkpointer.clone(),
+            observation_store: self.observation_store.clone(),
+        };
+
+        // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
+        let raw_json_str = temp_agent.run(&final_cfg, initial_message, on_event).await?;
+
+        let parsed: T = serde_json::from_str(&raw_json_str)
+            .map_err(|e| format!("Failed to parse JSON into struct: {}. Raw: {}", e, raw_json_str))?;
+        Ok(parsed)
+    }
+
     pub async fn run<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -1460,6 +1516,21 @@ impl Agent {
             // Note: Since `on_event` is `&mut F`, we can't easily share it across concurrent tasks.
             // For now, we will collect events and results from the concurrent execution, then emit them sequentially.
             // We will execute the read-only calls concurrently using `futures::future::join_all`.
+
+            // Output Parsing mechanic: Schema-Constrained Responses
+            // Intercept special output formatting tool natively
+            if let Some(tc) = mutating_calls.iter().chain(read_only_calls.iter()).find(|t| t.name == "return_structured_output") {
+                on_event(AgentEvent::ToolCall {
+                    name: tc.name.clone(),
+                    args_json: tc.arguments.to_string(),
+                    result: "Returning structured output".to_string(),
+                    iteration,
+                });
+
+                // When the model calls the structured output tool,
+                // we terminate the orchestrator immediately with the raw JSON arguments as the task completion.
+                return Ok(tc.arguments.to_string());
+            }
 
             let mut read_only_futures = Vec::new();
             for tc in &read_only_calls {
@@ -2091,6 +2162,63 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+    #[derive(serde::Deserialize, PartialEq, Debug)]
+    struct MyStructuredOutput {
+        city: String,
+        population: u32,
+    }
+
+    #[tokio::test]
+    async fn test_run_structured() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![ToolCall {
+                        id: "call_123".to_string(),
+                        name: "return_structured_output".to_string(),
+                        arguments: serde_json::json!({
+                            "city": "Tokyo",
+                            "population": 14000000
+                        }),
+                    }],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: Some("mock-id".to_string()),
+            }]),
+        });
+
+        let agent = Agent::new(client, vec![]);
+        let cfg = AgentRunConfig::default();
+        let schema = serde_json::json!({
+            "type": "object",
+            "properties": {
+                "city": { "type": "string" },
+                "population": { "type": "integer" }
+            },
+            "required": ["city", "population"]
+        });
+
+        let mut events = vec![];
+        let result: MyStructuredOutput = agent
+            .run_structured(&cfg, "What is the population of Tokyo?", schema, &mut |e| events.push(e))
+            .await
+            .unwrap();
+
+        assert_eq!(
+            result,
+            MyStructuredOutput {
+                city: "Tokyo".to_string(),
+                population: 14000000,
+            }
+        );
+    }
+
     #[tokio::test]
     async fn test_cascading_agents_md() {
         use tempfile::tempdir;
