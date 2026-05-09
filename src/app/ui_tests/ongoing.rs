@@ -1,6 +1,6 @@
 use crate::app;
 
-fn create_f() -> app::FixAgent { crate::ui_tests::init(); app::FixAgent::new().unwrap() }
+fn create_f() -> app::Wizard { crate::ui_tests::init(); app::Wizard::new().unwrap() }
 fn create_u() -> app::Upgrade { crate::ui_tests::init(); app::Upgrade::new().unwrap() }
 fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unwrap() }
 
@@ -27,12 +27,12 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
     assert_eq!(ui.get_step(), 0);
     ui.set_step(1);
     assert_eq!(ui.get_step(), 1);
-    ui.set_is_applying(true);
-    assert!(ui.get_is_applying());
     ui.set_step(2);
-    ui.set_is_applying(false);
+
+    ui.set_step(2);
+
     assert_eq!(ui.get_step(), 2);
-    assert!(!ui.get_is_applying());
+
 }
 
 #[test] fn ongoing_upgrade_flow() {
@@ -101,16 +101,11 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
 
     let apply_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let apply_called_clone = apply_called.clone();
-    ui.on_apply_fix(move || { *apply_called_clone.borrow_mut() = true; });
-    ui.invoke_apply_fix();
+    ui.on_resolve_issue(move || { *apply_called_clone.borrow_mut() = true; });
+    ui.invoke_resolve_issue();
     assert!(*apply_called.borrow());
 
-    let return_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-    let return_called_clone = return_called.clone();
-    ui.on_return_to_agents(move || { *return_called_clone.borrow_mut() = true; });
-    ui.invoke_return_to_agents();
-    assert!(*return_called.borrow());
-}
+    }
 
 // --- Consolidated Verified Tests ---
 
@@ -165,7 +160,7 @@ fn test_e2e_fix_agent_full_journey() {
     agents_ui.invoke_fix_agent("agent_1".into());
     assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
 
-    let fix_agent_ui = app::FixAgent::new().unwrap();
+    let fix_agent_ui = app::Wizard::new().unwrap();
     assert_eq!(fix_agent_ui.get_step(), 0);
 
     // Advance to step 1
@@ -173,25 +168,17 @@ fn test_e2e_fix_agent_full_journey() {
 
     let apply_fix_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let apply_fix_called_clone = apply_fix_called.clone();
-    fix_agent_ui.on_apply_fix(move || {
+    fix_agent_ui.on_resolve_issue(move || {
         *apply_fix_called_clone.borrow_mut() = true;
     });
 
-    fix_agent_ui.invoke_apply_fix();
+    fix_agent_ui.invoke_resolve_issue();
     assert!(*apply_fix_called.borrow(), "Apply fix should be called");
 
     // Advance to step 2
     fix_agent_ui.set_step(2);
 
-    let return_to_agents_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-    let return_to_agents_called_clone = return_to_agents_called.clone();
-    fix_agent_ui.on_return_to_agents(move || {
-        *return_to_agents_called_clone.borrow_mut() = true;
-    });
-
-    fix_agent_ui.invoke_return_to_agents();
-    assert!(*return_to_agents_called.borrow(), "Return to agents should be called");
-}
+    }
 
 #[test]
 fn test_e2e_grow_business_full_journey() {

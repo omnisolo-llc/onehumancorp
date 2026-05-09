@@ -3145,15 +3145,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     let agent_hire_ui = app::AgentHire::new()?;
-    let fix_agent_ui = app::FixAgent::new()?;
+    let fix_issue_wizard_ui = app::Wizard::new()?;
     let upgrade_ui = app::Upgrade::new()?;
     let billing_ui = app::Billing::new()?;
 
-    fix_agent_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    fix_issue_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     upgrade_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     billing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
-    let fix_agent_handle = fix_agent_ui.as_weak();
+    let fix_agent_handle = fix_issue_wizard_ui.as_weak();
     let fa_ui_weak = fix_agent_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = fa_ui_weak.upgrade() {
@@ -3177,7 +3177,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }));
 
-    fix_agent_ui.on_save_state({
+    fix_issue_wizard_ui.on_save_state({
         let ui_handle = fix_agent_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
@@ -3192,6 +3192,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = client.save_wizard_state(request).await;
                     }
                 });
+            }
+        }
+    });
+
+    fix_issue_wizard_ui.on_resolve_issue({
+        let ui_handle = fix_agent_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let _ = ui.hide();
             }
         }
     });
@@ -3294,7 +3303,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     });
 
-    let fix_agent_handle = fix_agent_ui.as_weak();
+    let fix_agent_handle = fix_issue_wizard_ui.as_weak();
     agents_ui.on_fix_agent(move |_id| {
         if let Some(ui) = fix_agent_handle.upgrade() {
             let _ = ui.show();
@@ -4964,7 +4973,7 @@ mod tests {
     #[test]
     fn test_fix_agent_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::FixAgent::new().unwrap();
+        app::Wizard::new().unwrap();
     }
     #[test]
     fn test_upgrade_creation() {
@@ -6255,32 +6264,24 @@ dashboard_ui.on_action_grow_business(move || {
         agents_ui.invoke_fix_agent("agent_1".into());
         assert!(*fix_agent_opened.borrow(), "Fix Agent should be opened from Agents screen");
 
-        let fix_agent_ui = app::FixAgent::new().unwrap();
-        assert_eq!(fix_agent_ui.get_step(), 0);
+        let fix_issue_wizard_ui = app::Wizard::new().unwrap();
+        assert_eq!(fix_issue_wizard_ui.get_step(), 0);
 
         // Advance to step 1
-        fix_agent_ui.set_step(1);
+        fix_issue_wizard_ui.set_step(1);
 
         let apply_fix_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let apply_fix_called_clone = apply_fix_called.clone();
-        fix_agent_ui.on_apply_fix(move || {
+        fix_issue_wizard_ui.on_resolve_issue(move || {
             *apply_fix_called_clone.borrow_mut() = true;
         });
 
-        fix_agent_ui.invoke_apply_fix();
+        fix_issue_wizard_ui.invoke_resolve_issue();
         assert!(*apply_fix_called.borrow(), "Apply fix should be called");
 
         // Advance to step 2 manually as in test simulation we drive state
-        fix_agent_ui.set_step(2);
+        fix_issue_wizard_ui.set_step(2);
 
-        let return_to_agents_called = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let return_to_agents_called_clone = return_to_agents_called.clone();
-        fix_agent_ui.on_return_to_agents(move || {
-            *return_to_agents_called_clone.borrow_mut() = true;
-        });
-
-        fix_agent_ui.invoke_return_to_agents();
-        assert!(*return_to_agents_called.borrow(), "Return to agents should be called");
 
         let tune_agent_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let tune_agent_opened_clone = tune_agent_opened.clone();

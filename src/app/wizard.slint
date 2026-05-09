@@ -21,6 +21,7 @@ export component Wizard inherits Window {
 
     callback next_step();
     callback prev_step();
+    callback save_state();
     callback resolve_issue();
 
     next_step => { step = step + 1; }
