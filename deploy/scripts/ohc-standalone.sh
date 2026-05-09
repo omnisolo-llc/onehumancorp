@@ -36,14 +36,17 @@ fi
 
 echo -e "${DIM}[1/2] Provisioning local standalone state boundaries...${RESET}"
 mkdir -p "${OHC_MEMORY_DIR}/auto/" "${OHC_MEMORY_DIR}/team/" "${OHC_STATUS_DIR}"
-chmod 700 "${OHC_RUNTIME_DIR}" "${OHC_MEMORY_DIR}" "${OHC_STATUS_DIR}" "${OHC_MEMORY_DIR}/auto/" "${OHC_MEMORY_DIR}/team/"
+
+# Apply strict recursive permissions to ensure local sovereignty
+chmod -R 700 "${OHC_RUNTIME_DIR}"
 find "${OHC_RUNTIME_DIR}" -type f -exec chmod 600 {} \+
 find "${OHC_RUNTIME_DIR}" -type d -exec chmod 700 {} \+
 
 if [ -z "$OHC_LOCAL_DB_KEY" ]; then
   KEY_FILE="${OHC_RUNTIME_DIR}/.sqlite_key"
   if [ ! -f "$KEY_FILE" ]; then
-    (umask 077 && openssl rand -hex 32 > "$KEY_FILE")
+    # Use /dev/urandom for high-entropy key generation
+    (umask 077 && head -c 32 /dev/urandom | hex > "$KEY_FILE" 2>/dev/null || openssl rand -hex 32 > "$KEY_FILE")
     chmod 600 "$KEY_FILE"
   fi
   export OHC_LOCAL_DB_KEY="$(cat "$KEY_FILE")"

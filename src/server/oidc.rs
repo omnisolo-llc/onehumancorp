@@ -48,7 +48,11 @@ fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
     ip.is_loopback() || ip.is_unspecified() || ip.is_multicast() ||
     match ip {
         std::net::IpAddr::V4(ipv4) => ipv4.is_private() || ipv4.is_link_local(),
-        std::net::IpAddr::V6(ipv6) => ipv6.is_loopback() || ipv6.is_unspecified(),
+        std::net::IpAddr::V6(ipv6) => {
+            ipv6.is_loopback() || ipv6.is_unspecified() ||
+            (ipv6.segments()[0] & 0xfe00) == 0xfc00 || // Unique Local Address (fc00::/7)
+            (ipv6.segments()[0] & 0xffc0) == 0xfe80    // Link Local Address (fe80::/10)
+        }
     }
 }
 
