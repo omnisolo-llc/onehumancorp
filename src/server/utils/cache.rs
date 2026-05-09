@@ -72,4 +72,16 @@ where
             guard.insert(key.to_string(), (value, std::time::Instant::now() + ttl));
         }
     }
+
+    pub async fn invalidate(&self, key: &str) {
+        if let Ok(mut guard) = self.get_local().write() {
+            guard.remove(key);
+        }
+        if let Some(client) = &self.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                use redis::AsyncCommands;
+                let _: Result<(), _> = conn.del(key).await;
+            }
+        }
+    }
 }
