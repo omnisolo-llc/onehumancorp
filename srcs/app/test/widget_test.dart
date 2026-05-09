@@ -116,6 +116,14 @@ void main() {
     expect(find.text("Add 3 more products"), findsOneWidget);
     expect(find.text("Connect Instagram"), findsOneWidget);
     expect(find.text("Share your link with a friend"), findsOneWidget);
+
+    // Check for the milestone notification before the Pending Agent Approvals
+    expect(find.text("🎉 You just got your 10th order!"), findsOneWidget);
+
+    // We scroll down to find the remaining widgets that might be off screen
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pump();
+
     expect(find.text("Pending Agent Approvals"), findsOneWidget);
   });
 }
