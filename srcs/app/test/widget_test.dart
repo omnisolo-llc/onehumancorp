@@ -59,7 +59,25 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    // 6. Review & Launch Screen
+    // 6. Template Selection
+    await tester.tap(find.text('Modern'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.text('Next'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 7. Add Product Screen
+    await tester.enterText(find.byKey(const Key('productNameField')), 'Custom Cake');
+    await tester.enterText(find.byKey(const Key('productPriceField')), '45.00');
+    await tester.tap(find.text('Auto-generate description'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.text('Next'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 8. Domain Selection Screen
+    await tester.tap(find.text('Next'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 9. Review & Launch Screen
     expect(find.text('Review & Launch'), findsOneWidget);
     expect(find.text('Acme Corp'), findsOneWidget);
     expect(find.text('Technology'), findsOneWidget);
@@ -68,11 +86,14 @@ void main() {
     expect(find.text('John Doe'), findsOneWidget);
 
     await tester.tap(find.text('Launch My AI Team'));
-    await tester.pump();
-
-    // Wait for the simulated API call (2 seconds)
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump(const Duration(milliseconds: 500));
+    for (int i = 0; i < 50; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+      if (find.text('Dashboard').evaluate().isNotEmpty) {
+        break;
+      }
+    }
+    await tester.pump(const Duration(seconds: 1));
+  await tester.pump(const Duration(seconds: 1));
 
     // 7. Dashboard Screen
     expect(find.text("Dashboard"), findsOneWidget);

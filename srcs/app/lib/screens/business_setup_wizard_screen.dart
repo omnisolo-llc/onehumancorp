@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wizard_provider.dart';
-import '../main.dart'; // For GlassContainer
+import '../main.dart';
 
 class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
   const BusinessSetupWizardScreen({super.key});
@@ -15,6 +15,8 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   final _adminNameController = TextEditingController();
   final _adminEmailController = TextEditingController();
   final _adminPasswordController = TextEditingController();
+  final _productNameController = TextEditingController();
+  final _productPriceController = TextEditingController();
 
   late AnimationController _heroAnimationController;
   late Animation<double> _heroAnimation;
@@ -52,6 +54,8 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     _adminNameController.dispose();
     _adminEmailController.dispose();
     _adminPasswordController.dispose();
+    _productNameController.dispose();
+    _productPriceController.dispose();
     super.dispose();
   }
 
@@ -67,7 +71,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(wizardProvider);
 
-    if (state.currentStep == 6) {
+    if (state.currentStep == 9) {
       return const DashboardScreen();
     }
 
@@ -98,6 +102,12 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       case 4:
         return _buildAdministratorAccountScreen();
       case 5:
+        return _buildTemplateSelectionScreen(state);
+      case 6:
+        return _buildAddProductScreen(state);
+      case 7:
+        return _buildDomainSelectionScreen(state);
+      case 8:
         return _buildReviewAndLaunchScreen(state);
       default:
         return const SizedBox.shrink();
@@ -341,6 +351,200 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
+
+  Widget _buildTemplateSelectionScreen(WizardState state) {
+    final templates = ['Modern', 'Classic', 'Playful'];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Template Selection',
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ...templates.map((template) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: GlassContainer(
+                    child: InkWell(
+                      onTap: () {
+                        ref.read(wizardProvider.notifier).updateWebsiteTemplate(template);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(15),
+                        child: Row(
+                          children: [
+                            Icon(
+                              state.websiteTemplate == template ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                              color: state.websiteTemplate == template ? const Color(0xFF6B4EFF) : Colors.white54,
+                            ),
+                            const SizedBox(width: 15),
+                            Text(template, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                )).toList(),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
+  Widget _buildAddProductScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Add a Product',
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                GlassContainer(
+                  child: TextField(
+                    key: const Key('productNameField'),
+                    controller: _productNameController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Product Name',
+                      labelStyle: TextStyle(color: Colors.white70),
+                      border: InputBorder.none,
+                    ),
+                    onChanged: (value) {
+                      ref.read(wizardProvider.notifier).updateProduct(name: value);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 15),
+                GlassContainer(
+                  child: TextField(
+                    key: const Key('productPriceField'),
+                    controller: _productPriceController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Price',
+                      labelStyle: TextStyle(color: Colors.white70),
+                      border: InputBorder.none,
+                    ),
+                    onChanged: (value) {
+                      ref.read(wizardProvider.notifier).updateProduct(price: value);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 15),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    ref.read(wizardProvider.notifier).updateProduct(
+                      description: 'An AI-generated description for ${state.productName}.'
+                    );
+                  },
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('Auto-generate description'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6B4EFF),
+                  ),
+                ),
+                if (state.productDescription.isNotEmpty) ...[
+                  const SizedBox(height: 15),
+                  GlassContainer(
+                    child: Padding(
+                      padding: const EdgeInsets.all(15.0),
+                      child: Text(
+                        state.productDescription,
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                  ),
+                ]
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
+  Widget _buildDomainSelectionScreen(WizardState state) {
+    final domains = ['🌐 Free OHC Domain', '🔗 Connect Custom Domain'];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Domain Auto-assignment',
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ...domains.map((domain) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: GlassContainer(
+                    child: InkWell(
+                      onTap: () {
+                        ref.read(wizardProvider.notifier).updateDomainChoice(domain.contains('Free') ? 'subdomain' : 'custom');
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(15),
+                        child: Row(
+                          children: [
+                            Icon(
+                              (state.domainChoice == 'subdomain' && domain.contains('Free')) || (state.domainChoice == 'custom' && domain.contains('Custom'))
+                                  ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                              color: (state.domainChoice == 'subdomain' && domain.contains('Free')) || (state.domainChoice == 'custom' && domain.contains('Custom'))
+                                  ? const Color(0xFF6B4EFF) : Colors.white54,
+                            ),
+                            const SizedBox(width: 15),
+                            Expanded(child: Text(domain, style: const TextStyle(color: Colors.white, fontSize: 16))),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                )).toList(),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
   Widget _buildAdministratorAccountScreen() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -475,8 +679,18 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   );
                 },
                 child: ElevatedButton(
+
                   onPressed: () async {
+                    // Show confetti
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('🎉 Your business is live! Link copied to clipboard.')),
+                    );
                     await ref.read(wizardProvider.notifier).submitWizard();
+                    if (context.mounted) {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF22C55E),

@@ -11,6 +11,11 @@ class WizardState {
   final String? adminName;
   final String? adminEmail;
   final String? adminPassword;
+  final String websiteTemplate;
+  final String productName;
+  final String productDescription;
+  final String productPrice;
+  final String domainChoice;
 
   WizardState({
     this.currentStep = 0,
@@ -22,6 +27,11 @@ class WizardState {
     this.adminName,
     this.adminEmail,
     this.adminPassword,
+    this.websiteTemplate = '',
+    this.productName = '',
+    this.productDescription = '',
+    this.productPrice = '',
+    this.domainChoice = '',
   });
 
   WizardState copyWith({
@@ -34,6 +44,11 @@ class WizardState {
     String? adminName,
     String? adminEmail,
     String? adminPassword,
+    String? websiteTemplate,
+    String? productName,
+    String? productDescription,
+    String? productPrice,
+    String? domainChoice,
   }) {
     return WizardState(
       currentStep: currentStep ?? this.currentStep,
@@ -45,6 +60,11 @@ class WizardState {
       adminName: adminName ?? this.adminName,
       adminEmail: adminEmail ?? this.adminEmail,
       adminPassword: adminPassword ?? this.adminPassword,
+      websiteTemplate: websiteTemplate ?? this.websiteTemplate,
+      productName: productName ?? this.productName,
+      productDescription: productDescription ?? this.productDescription,
+      productPrice: productPrice ?? this.productPrice,
+      domainChoice: domainChoice ?? this.domainChoice,
     );
   }
 }
@@ -57,8 +77,25 @@ class WizardNotifier extends Notifier<WizardState> {
     return WizardState();
   }
 
+
+  void updateWebsiteTemplate(String template) {
+    state = state.copyWith(websiteTemplate: template);
+  }
+
+  void updateProduct({String? name, String? description, String? price}) {
+    state = state.copyWith(
+      productName: name,
+      productDescription: description,
+      productPrice: price,
+    );
+  }
+
+  void updateDomainChoice(String choice) {
+    state = state.copyWith(domainChoice: choice);
+  }
+
   void nextStep() {
-    if (state.currentStep < 6) {
+    if (state.currentStep < 9) {
       state = state.copyWith(currentStep: state.currentStep + 1);
     }
   }
