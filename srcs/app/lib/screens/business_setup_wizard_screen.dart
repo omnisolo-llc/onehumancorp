@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:confetti/confetti.dart';
+
 import '../providers/wizard_provider.dart';
 import '../main.dart'; // For GlassContainer
 import '../widgets/contextual_tooltip.dart';
@@ -26,7 +28,12 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   final _adminEmailController = TextEditingController();
   final _adminPasswordController = TextEditingController();
 
+
+  late ConfettiController _confettiController;
+  bool _showConfetti = false;
+
   late AnimationController _heroAnimationController;
+
   late Animation<double> _heroAnimation;
 
   late AnimationController _pulseAnimationController;
@@ -42,10 +49,14 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       ref.read(wizardProvider.notifier).setTenantId('tenant-mock-local');
       ref.read(wizardProvider.notifier).loadState('tenant-mock-local');
     });
+
     _heroAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+
 
     _heroAnimation = Tween<double>(begin: -10, end: 10).animate(
       CurvedAnimation(parent: _heroAnimationController, curve: Curves.easeInOut),
@@ -61,16 +72,19 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
+
   @override
   void dispose() {
     _heroAnimationController.dispose();
     _pulseAnimationController.dispose();
+    _confettiController.dispose();
     _companyNameController.dispose();
     _adminNameController.dispose();
     _adminEmailController.dispose();
     _adminPasswordController.dispose();
     super.dispose();
   }
+
 
   void _nextStep() {
     ref.read(wizardProvider.notifier).nextStep();
@@ -971,18 +985,25 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     child: child,
                   );
                 },
+
                 child: ElevatedButton(
                   onPressed: () async {
+                    setState(() {
+                      _showConfetti = true;
+                    });
+                    _confettiController.play();
+                    await Future.delayed(const Duration(seconds: 2));
                     await ref.read(wizardProvider.notifier).submitWizard();
                   },
                   style: ElevatedButton.styleFrom(
+
                     backgroundColor: const Color(0xFF22C55E),
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
-                  key: const Key('launchAIBtn'), child: const Text('Launch My AI Team', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                  key: const Key('launchAIBtn'), child: const Text('Publish my business →', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ),
@@ -992,12 +1013,25 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
+
   Widget _buildWelcomeChecklistScreen(WizardState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_showConfetti)
+          const Text(
+            'CONFETTI Success',
+            style: TextStyle(
+              fontSize: 20,
+              color: Colors.green,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        const SizedBox(height: 10),
         const Text(
           'You\'re set up!',
+
           style: TextStyle(
             fontFamily: 'Outfit',
             fontSize: 28,
