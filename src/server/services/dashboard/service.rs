@@ -91,6 +91,7 @@ impl DashboardService for MyDashboardService {
             },
             async {
                 let org_id = org_id1; // Caching layer logic (Phase 4)
+                if crate::config::get().multitenant && auth_info.org_id != org_id { return Err("Cross-tenant caching blocked".to_string()); }
                 let cache_key = format!("hub:products:{}", org_id);
 
                 if let Some(client) = &hub_prod.redis_client {
@@ -177,6 +178,7 @@ impl DashboardService for MyDashboardService {
             },
             async {
                 let org_id = org_id2;
+                if crate::config::get().multitenant && auth_info.org_id != org_id { return Err("Cross-tenant caching blocked".to_string()); }
                 let cache_key = format!("hub:orders:{}", org_id);
 
                 if let Some(client) = &hub_orders.redis_client {
@@ -256,6 +258,7 @@ impl DashboardService for MyDashboardService {
             },
             async {
                 let org_id = org_id3;
+                if crate::config::get().multitenant && auth_info.org_id != org_id { return Err("Cross-tenant caching blocked".to_string()); }
                 let cache_key = format!("hub:org:{}", org_id);
 
                 if let Some(client) = &hub_org.redis_client {
@@ -636,5 +639,54 @@ impl DashboardService for MyDashboardService {
         Ok(Response::new(UpdateOnboardingStateResponse {
             success: true,
         }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::Request;
+    use crate::auth::orchestration::AuthInfo;
+    use crate::ohc::app::GetDashboardRequest;
+    use std::sync::Arc;
+    use tokio::sync::mpsc;
+
+    #[tokio::test]
+    async fn test_multitenant_dashboard_idor_cache_isolation() {
+        let (tx, _) = mpsc::channel(1);
+        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(database_url)
+            .unwrap();
+
+        let db = Arc::new(crate::db::DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        });
+
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let service = MyDashboardService::new(db, hub);
+
+        let mut req = Request::new(GetDashboardRequest {
+            organization_id: "target_tenant".to_string(),
+            mobile_optimized: false,
+        });
+
+// Inject AuthInfo from a DIFFERENT tenant (e.g. system bypass)
+        req.extensions_mut().insert(AuthInfo {
+            org_id: "system".to_string(),
+            agent_id: "admin".to_string(),
+            spiffe_id: "spiffe://onehumancorp.io/system/admin".to_string(),
+        });
+
+        let res = service.get_dashboard(req).await;
+        if crate::config::get().multitenant {
+            assert!(res.is_err(), "System bypass must fail at cache layer due to IDOR block");
+            if let Err(status) = res {
+                assert!(status.message().contains("Cross-tenant caching blocked"), "Should cleanly block cache layer cross-tenant reads");
+            }
+        }
     }
 }

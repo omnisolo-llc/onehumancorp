@@ -427,10 +427,10 @@ impl Store {
             Ok(token)
     }
 
-    pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
+    pub async fn validate_token(&self, token: &str) -> Result<Claims, String> {
             let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
             let token_data = jsonwebtoken::decode::<Claims>(
-                _token,
+                token,
                 &jsonwebtoken::DecodingKey::from_secret(&self.secret),
                 &validation
             );
@@ -449,6 +449,24 @@ impl Store {
                     Ok(data.claims)
                 }
                 Err(_) => {
+                    let oidc_cfg = self.oidc_cfg.read().unwrap().clone();
+                    if oidc_cfg.enabled {
+                        // Map crate::auth::OIDCConfig to crate::oidc::OIDCConfig if needed, or simply extract the string values
+                        let real_oidc_cfg = crate::oidc::OIDCConfig {
+                            issuer_url: oidc_cfg.issuer_url,
+                            client_id: oidc_cfg.client_id,
+                            enabled: oidc_cfg.enabled,
+                        };
+                        if let Ok(claims) = crate::oidc::validate_oidc_token(token, &real_oidc_cfg).await {
+                            if claims.sub.trim().is_empty() {
+                                return Err("Invalid OIDC token: empty subject".to_string());
+                            }
+                            if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()) {
+                                return Err("token revoked".to_string());
+                            }
+                            return Ok(claims);
+                        }
+                    }
                     Err("Invalid token".to_string())
                 }
         }
