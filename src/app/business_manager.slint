@@ -180,19 +180,19 @@ export component BusinessManager inherits Window {
 
             VerticalBox {
                 spacing: 8px;
-                Text { text: "Name"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                Text { text: "What is this called?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                 LineEdit { text <=> product_name; placeholder-text: "E.g. Custom Vegan Cake"; height: 44px; }
             }
 
             VerticalBox {
                 spacing: 8px;
-                Text { text: "Description"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                Text { text: "Tell your customers about it"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                 LineEdit { text <=> product_description; placeholder-text: "Brief description"; height: 44px; }
             }
 
             VerticalBox {
                 spacing: 8px;
-                Text { text: "Price (USD)"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                Text { text: "How much does it cost?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                 LineEdit { text <=> product_price; input-type: decimal; placeholder-text: "0.00"; height: 44px; }
             }
 
@@ -200,12 +200,12 @@ export component BusinessManager inherits Window {
                 spacing: 16px;
                 VerticalBox {
                     spacing: 8px;
-                    Text { text: "Duration (minutes)"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    Text { text: "How long does it take?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                     LineEdit { text <=> service_duration; input-type: number; placeholder-text: "60"; height: 44px; }
                 }
                 VerticalBox {
                     spacing: 8px;
-                    Text { text: "Available Hours"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    Text { text: "When are you available?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                     LineEdit { text <=> service_schedule; placeholder-text: "e.g. Mon-Fri 9am-5pm"; height: 44px; }
                 }
             }

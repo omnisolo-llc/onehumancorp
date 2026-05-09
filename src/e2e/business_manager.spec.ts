@@ -107,7 +107,7 @@ test.describe('Business Manager UI', () => {
     await page.fill('input[placeholder="0.00"]', '19.99');
 
     // For physical items, Service fields should not be visible
-    await expect(page.locator('text=Duration (minutes)')).toBeHidden();
+    await expect(page.locator('text=How long does it take?')).toBeHidden();
 
     // Click Create
     const createBtn = page.locator('text="Create"');
@@ -116,6 +116,52 @@ test.describe('Business Manager UI', () => {
 
     // Should go back to the list view after creation
     await expect(page.locator('text=My Offerings')).toBeVisible();
+  });
+
+  // UX tests for Plain Language Labels
+  test('UX: should display "What is this called?" instead of "Name"', async ({ page }) => {
+    await page.locator('text="+ Add New Offering"').click();
+    await page.locator('text=📦 Physical Item').click();
+    await page.locator('text="Next →"').click();
+
+    await expect(page.locator('text=What is this called?')).toBeVisible();
+    await expect(page.locator('text=Name').first()).toBeHidden();
+  });
+
+  test('UX: should display "Tell your customers about it" instead of "Description"', async ({ page }) => {
+    await page.locator('text="+ Add New Offering"').click();
+    await page.locator('text=📦 Physical Item').click();
+    await page.locator('text="Next →"').click();
+
+    await expect(page.locator('text=Tell your customers about it')).toBeVisible();
+    await expect(page.locator('text=Description').first()).toBeHidden();
+  });
+
+  test('UX: should display "How much does it cost?" instead of "Price (USD)"', async ({ page }) => {
+    await page.locator('text="+ Add New Offering"').click();
+    await page.locator('text=📦 Physical Item').click();
+    await page.locator('text="Next →"').click();
+
+    await expect(page.locator('text=How much does it cost?')).toBeVisible();
+    await expect(page.locator('text=Price (USD)')).toBeHidden();
+  });
+
+  test('UX: should display "How long does it take?" instead of "Duration (minutes)" for Service offerings', async ({ page }) => {
+    await page.locator('text="+ Add New Offering"').click();
+    await page.locator('text=⏱️ My Time / Service').click();
+    await page.locator('text="Next →"').click();
+
+    await expect(page.locator('text=How long does it take?')).toBeVisible();
+    await expect(page.locator('text=Duration (minutes)')).toBeHidden();
+  });
+
+  test('UX: should display "When are you available?" instead of "Available Hours" for Service offerings', async ({ page }) => {
+    await page.locator('text="+ Add New Offering"').click();
+    await page.locator('text=⏱️ My Time / Service').click();
+    await page.locator('text="Next →"').click();
+
+    await expect(page.locator('text=When are you available?')).toBeVisible();
+    await expect(page.locator('text=Available Hours')).toBeHidden();
   });
 
 });
