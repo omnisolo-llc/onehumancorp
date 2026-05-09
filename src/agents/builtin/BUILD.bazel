@@ -6,6 +6,7 @@ load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 rust_library(
     name = "core",
     srcs = [
+        "codex.rs",
         "auth.rs",
         "budget.rs",
         "caveman.rs",
@@ -40,6 +41,7 @@ rust_library(
 rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
+        "codex.rs",
         "agent.rs",
         "checkpointer.rs",
         "departments.rs",
@@ -114,7 +116,8 @@ rust_library(
 
 rust_binary(
     name = "ohc-builtin-agent",
-    srcs = ["main.rs"],
+    srcs = [
+        "codex.rs","main.rs"],
     edition = "2024",
     proc_macro_deps = [
         "@crates//:async-recursion",
