@@ -8,7 +8,7 @@ func RedactInterfacePII(attrs map[string]interface{}) map[string]interface{} {
 	redacted := make(map[string]interface{}, len(attrs))
 	for k, v := range attrs {
 		// Basic PII redaction logic
-		if k == "email" || k == "phone" || k == "name" || k == "password" || k == "token" {
+		if k == "email" || k == "phone" || k == "name" || k == "password" || k == "token" || k == "ssn" {
 			redacted[k] = "[REDACTED]"
 		} else {
 			// For nested maps, we could recurse, but for now just copy

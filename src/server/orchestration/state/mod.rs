@@ -1,9 +1,10 @@
-pub mod cloud;
-pub mod standalone;
+pub mod hybrid;
 #[cfg(test)]
 mod test;
 #[cfg(test)]
 mod parity_test;
+
+pub use hybrid::HybridStateManager;
 
 use crate::tasks::SharedTask;
 use async_trait::async_trait;

@@ -1,4 +1,4 @@
-use super::{StateManager, standalone::StandaloneStateManager};
+use super::{StateManager, HybridStateManager};
 use crate::db::{DB, DbStore};
 
 use std::sync::Arc;
@@ -106,7 +106,7 @@ async fn setup_db() -> Arc<DB> {
 async fn test_single_agent_flow() {
     let db = setup_db().await;
     let mesh: Arc<dyn TeammateMesh> = Arc::new(MockMesh::new());
-    let state_manager = StandaloneStateManager::new(db.clone(), mesh);
+    let state_manager = HybridStateManager::new(db.clone(), mesh);
 
     let task_id = uuid::Uuid::new_v4().to_string();
 
@@ -136,7 +136,7 @@ async fn test_single_agent_flow() {
 async fn test_dag_workflow() {
     let db = setup_db().await;
     let mesh: Arc<dyn TeammateMesh> = Arc::new(MockMesh::new());
-    let state_manager = StandaloneStateManager::new(db.clone(), mesh);
+    let state_manager = HybridStateManager::new(db.clone(), mesh);
 
     let parent_id = uuid::Uuid::new_v4().to_string();
     let child_id = uuid::Uuid::new_v4().to_string();
@@ -172,43 +172,6 @@ async fn test_dag_workflow() {
     assert!(tasks_after.iter().any(|t| t.id == child_id));
 }
 
-use super::cloud::CloudStateManager;
-
-// Mock testing CloudStateManager for test coverage requirements without hitting SQLite syntax panics
-#[tokio::test]
-async fn test_cloud_dag_workflow_mock() {
-    let db = setup_db().await;
-    // For unit coverage we instantiate it
-    let mesh: Arc<dyn TeammateMesh> = Arc::new(MockMesh::new());
-    let _state_manager = CloudStateManager::new(db.clone(), mesh);
-
-    let parent_id = uuid::Uuid::new_v4().to_string();
-    let child_id = uuid::Uuid::new_v4().to_string();
-    let deps = format!(r#"["{}"]"#, parent_id);
-
-    if let DbStore::Sqlite(pool) = &db.store {
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, 'm1', 'parent', 'PENDING')")
-            .bind(&parent_id)
-            .execute(pool)
-            .await
-            .unwrap();
-
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES (?, 'm1', 'child', 'PENDING', ?)")
-            .bind(&child_id)
-            .bind(&deps)
-            .execute(pool)
-            .await
-            .unwrap();
-    }
-
-    // Since we know CloudStateManager executes raw Postgres syntax `WHERE id = $1::uuid FOR UPDATE`,
-    // calling `state_manager.transition_state()` directly will fail the test environment SQLite database.
-    // However, instantiating it and running a mock path verifies the components are valid.
-
-    // In order to achieve the coverage required while passing the SQLite sandbox, we test Standalone fully
-    // and rely on structural type coverage for CloudStateManager.
-    assert!(true);
-}
 
 struct SleepingMockMesh;
 
@@ -236,7 +199,7 @@ impl TeammateMesh for SleepingMockMesh {
 async fn test_degradation_fallback_standalone() {
     let db = setup_db().await;
     let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
-    let state_manager = StandaloneStateManager::new(db.clone(), mesh);
+    let state_manager = HybridStateManager::new(db.clone(), mesh);
 
     // Testing the fail-safe behavior via mocked timeout
     // The acquire_lock on the MockMesh sleeps for 2.5s, which exceeds the 2s timeout.
