@@ -4,8 +4,12 @@ use chrono::Utc;
 use std::sync::OnceLock;
 use opentelemetry::global;
 use opentelemetry::metrics::UpDownCounter;
+use regex::Regex;
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static EMAIL_REGEX: OnceLock<Regex> = OnceLock::new();
+static PHONE_REGEX: OnceLock<Regex> = OnceLock::new();
+static CREDIT_CARD_REGEX: OnceLock<Regex> = OnceLock::new();
 
 pub fn get_deployment_mode() -> &'static str {
     static DEPLOYMENT_MODE: OnceLock<String> = OnceLock::new();
@@ -202,7 +206,11 @@ pub fn redact_interface_pii(val: Value) -> Value {
         }
         Value::String(s) => {
             if is_email(&s) {
-                Value::String("[EMAIL_REDACTED]".to_string())
+                Value::String("[REDACTED]".to_string())
+            } else if is_phone(&s) {
+                Value::String("[REDACTED]".to_string())
+            } else if is_credit_card(&s) {
+                Value::String("[REDACTED]".to_string())
             } else {
                 Value::String(s)
             }
@@ -242,11 +250,24 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("billing") ||
     k.contains("ip_address") ||
     k.contains("mac_address") ||
-    k.contains("geolocation")
+    k.contains("geolocation") ||
+    k.contains("tax_id") ||
+    k.contains("national_id") ||
+    k.contains("medical") ||
+    k.contains("health") ||
+    k.contains("insurance")
 }
 
 pub fn is_email(s: &str) -> bool {
-    s.contains('@') && s.contains('.')
+    EMAIL_REGEX.get_or_init(|| Regex::new(r"(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}").unwrap()).is_match(s)
+}
+
+pub fn is_phone(s: &str) -> bool {
+    PHONE_REGEX.get_or_init(|| Regex::new(r"(?:\+?\d{1,3}[- ]?)?\(?\d{3}\)?[- ]?\d{3}[- ]?\d{4}").unwrap()).is_match(s)
+}
+
+pub fn is_credit_card(s: &str) -> bool {
+    CREDIT_CARD_REGEX.get_or_init(|| Regex::new(r"\b(?:\d[ -]*?){13,19}\b").unwrap()).is_match(s)
 }
 
 #[cfg(test)]

@@ -32,6 +32,8 @@ pub mod storage;
 pub mod interop;
 #[cfg(test)]
 pub mod benchmarks;
+#[cfg(test)]
+pub mod privacy_test;
 
 pub mod config;
 pub mod http;
