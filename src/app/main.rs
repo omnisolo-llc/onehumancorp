@@ -2922,7 +2922,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     let agents_ui_handle = agents_ui.as_weak();
-    let _agent_hire_handle = agent_hire_ui.as_weak();
+    let agent_hire_handle = agent_hire_ui.as_weak();
 
     agents_ui.on_hire_agent(move || {
         let agents_ui_handle_inner = agents_ui_handle.clone();

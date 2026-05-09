@@ -1,4 +1,4 @@
-//use slint::ComponentHandle;
+use slint::ComponentHandle;
 use crate::app;
 
 fn create() -> app::SocialPosting {
