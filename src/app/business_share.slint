@@ -7,11 +7,11 @@ export component BusinessShare inherits Window { // embed
     title: "Share my business";
     out property <string> test_title: root.title;
 
-    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+    background: transparent;
 
-    in property <string> business_name: "My Awesome Store";
-    in property <string> business_tagline: "The best place to buy things";
-    in property <string> share_link: "ohc://share?b=123";
+    in property <string> business_name: "";
+    in property <string> business_tagline: "";
+    in property <string> share_link: "";
 
     callback copy_link();
     callback share_to_instagram();
@@ -19,7 +19,8 @@ export component BusinessShare inherits Window { // embed
     callback share_to_whatsapp();
     callback close();
 
-    VerticalBox {
+    GlassCard {
+      VerticalBox {
         spacing: 20px;
         padding: 24px;
 
@@ -124,5 +125,6 @@ export component BusinessShare inherits Window { // embed
         }
 
         Rectangle {}
+      }
     }
 }

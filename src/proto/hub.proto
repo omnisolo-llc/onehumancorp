@@ -690,6 +690,7 @@ message ReferralStatsResponse {
   int32 waitlist_position = 7;
   string business_share_url = 8;
   string business_name = 9;
+  string business_tagline = 10;
 }
 
 message GrowthIdRequest {

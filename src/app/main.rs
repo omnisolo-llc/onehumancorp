@@ -1868,6 +1868,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             if let Some(bs_ui) = weak.upgrade() {
                                                 bs_ui.set_share_link(stats.business_share_url.into());
                                                 bs_ui.set_business_name(stats.business_name.into());
+                                                bs_ui.set_business_tagline(stats.business_tagline.into());
                                             }
                                         }
                                     });
@@ -6818,7 +6819,7 @@ mod remaining_e2e_tests {
         let close_called_clone = close_called.clone();
         business_share_ui.on_close(move || { *close_called_clone.borrow_mut() = true; });
 
-        assert_eq!(business_share_ui.get_business_name(), "My Awesome Store");
+        assert_eq!(business_share_ui.get_business_name(), "");
         business_share_ui.set_business_name("Maya's Cakes".into());
         assert_eq!(business_share_ui.get_business_name(), "Maya's Cakes");
 

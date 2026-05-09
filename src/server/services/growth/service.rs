@@ -119,12 +119,21 @@ impl GrowthService for MyGrowthService {
         let download_count = self.downloads.read().unwrap().len() as i32 + 105;
 
         // Generate clean business URL for sharing
-        let business_name: String = sqlx::query_scalar("SELECT business_name FROM tenants WHERE tenant_id = $1::uuid")
+        let row = sqlx::query("SELECT business_name, business_tagline FROM tenants WHERE tenant_id = $1::uuid")
             .bind(&org_id)
             .fetch_optional(&mut *tx)
             .await
-            .unwrap_or(None)
-            .unwrap_or_else(|| "My Awesome Store".to_string());
+            .unwrap_or(None);
+
+        let mut business_name = "".to_string();
+        let mut business_tagline = "".to_string();
+
+        if let Some(r) = row {
+            use sqlx::Row;
+            business_name = r.try_get("business_name").unwrap_or_default();
+            let raw_tagline: Option<String> = r.try_get("business_tagline").unwrap_or(None);
+            business_tagline = raw_tagline.unwrap_or_default();
+        }
 
         let slug = crate::utils::slug::slugify(&business_name);
         let business_share_url = format!("ohc.app/b/{}", slug);
@@ -141,6 +150,7 @@ impl GrowthService for MyGrowthService {
             waitlist_position,
             business_share_url,
             business_name,
+            business_tagline,
         }))
     }
 
