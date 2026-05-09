@@ -87,7 +87,9 @@ func main() {
 	telemetry.InitGlobalSyncEngine(telemetryEngine)
 	go telemetryEngine.StartSyncDaemon(ctx, 30*time.Second)
 
-
+	// Initialize Token Forecaster Engine
+	telemetry.InitGlobalTokenForecaster(telemetryEngine)
+	go telemetry.GlobalTokenForecaster.StartForecastingDaemon(ctx, 1*time.Minute)
 
 	log.Println("OHC Server is running. AutoDream daemon started.")
 

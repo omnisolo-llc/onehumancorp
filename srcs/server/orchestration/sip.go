@@ -5,11 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 var (
+	// Throttle to 1 concurrent SQLite write in standalone mode
 	sqliteLimiter = make(chan struct{}, 1)
 )
 
@@ -46,18 +49,47 @@ func (s *SIPDB) DelegateMission(ctx context.Context, mission *AgentMission) erro
 
 	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
 	if isStandalone {
+		// Strict concurrency throttling for Standalone SQLite
 		select {
 		case sqliteLimiter <- struct{}{}:
 			defer func() { <-sqliteLimiter }()
 		case <-ctx.Done():
 			return ctx.Err()
 		}
+
+		// Exponential backoff for database lock contention
+		maxRetries := 5
+		backoff := 10 * time.Millisecond
+		var err error
+
+		for i := 0; i < maxRetries; i++ {
+			_, err = s.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ($1, $2, $3)", mission.ID, mission.Status, string(mission.Payload))
+			if err == nil {
+				return nil
+			}
+
+			// Check if it's a locked error (for sqlite, it usually contains "database is locked")
+			errStr := err.Error()
+			if errStr == "database is locked" {
+				log.Printf("SQLite database locked, retrying %d/%d after %v", i+1, maxRetries, backoff)
+				select {
+				case <-time.After(backoff):
+					backoff *= 2
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+				continue
+			}
+
+			// If it's a different error, return immediately
+			return err
+		}
+		return fmt.Errorf("exhausted retries on SQLite database lock: %w", err)
 	}
 
+	// Cloud Mode: Direct insert
 	_, err := s.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ($1, $2, $3)", mission.ID, mission.Status, string(mission.Payload))
 	if err != nil {
-		// handle sqlite vs postgres differences or just return err
-		// we'll try standard postgres positional parameters or sqlite fallback
 		return err
 	}
 

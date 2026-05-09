@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"onehumancorp/srcs/server/telemetry"
 )
 
 var ErrTokenBudgetExceeded = errors.New("token budget exceeded")
@@ -206,6 +208,11 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 
 	// Deduct tokens after successful execution (simulated)
 	deductTokens(task.OrganizationID, 100)
+
+	// Record token usage for forecasting
+	if telemetry.GlobalTokenForecaster != nil {
+		telemetry.GlobalTokenForecaster.RecordUsage(task.OrganizationID, 100)
+	}
 
 	// Mark final completion status
 	finalData := map[string]interface{}{

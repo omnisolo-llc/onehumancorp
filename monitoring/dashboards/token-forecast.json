@@ -59,7 +59,7 @@
             "uid": "Prometheus"
           },
           "expr": "ohc_token_burn_rate_forecast",
-          "legendFormat": "{{organization_id}}",
+          "legendFormat": "{{tenant_id}}",
           "range": true,
           "refId": "A"
         }
