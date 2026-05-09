@@ -1,5 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { UpgradePrompt } from "./upgrade_prompt.slint";
 
 export struct UiProduct {
     id: string,
@@ -23,6 +24,9 @@ export component BusinessManager inherits Window {
     in-out property <int> step: 0;
     in-out property <string> selected_type: "";
 
+    in-out property <bool> show_upgrade_prompt: false;
+    in-out property <string> upgrade_prompt_message: "";
+
     // Form fields
     in-out property <string> product_name: "";
     in-out property <string> product_description: "";
@@ -45,9 +49,21 @@ export component BusinessManager inherits Window {
     next_step => { step = step + 1; }
     prev_step => { step = step - 1; }
     select_type(t) => { selected_type = t; }
-    action_add_new => { current_view = "add"; step = 0; selected_type = ""; product_name = ""; product_description = ""; product_price = ""; }
+    action_add_new => {
+        if (products.length >= 10) {
+            show_upgrade_prompt = true;
+            upgrade_prompt_message = "Your business is booming! 🚀 You've added all 10 products included in the Free plan. Upgrade to Starter to unlock 100 products and a custom domain.";
+        } else {
+            current_view = "add"; step = 0; selected_type = ""; product_name = ""; product_description = ""; product_price = "";
+        }
+    }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    if (show_upgrade_prompt) : UpgradePrompt {
+        message: root.upgrade_prompt_message;
+        action_dismiss => { root.show_upgrade_prompt = false; }
+    }
 
     VerticalBox {
         spacing: 20px;

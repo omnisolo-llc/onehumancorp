@@ -44,6 +44,7 @@ export component Dashboard inherits Window { // milestones
     in property <[UiPendingApproval]> pending_approvals;
     in property <[UiRoleCount]> role_counts;
 
+    in property <string> ai_warning_message: "Hey Maya! You're getting lots of customer messages. You have 50 AI actions left this month. Want me to handle upgrading to Pro so I don't stop replying to your customers?";
 
     in-out property <bool> show_milestone: false;
     in property <string> milestone_title: "";
@@ -399,6 +400,38 @@ export component Dashboard inherits Window { // milestones
             }
         }
 
+        if (ai_warning_message != "") : GlassCard {
+            border-color: rgba(239, 68, 68, 0.5); // Red warning border
+            border-width: 1px;
+            border-radius: 12px;
+            background: rgba(239, 68, 68, 0.05);
+            backdrop-filter: blur(20px) saturate(200%);
+
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+
+                HorizontalBox {
+                    spacing: 8px;
+                    alignment: start;
+                    Rectangle {
+                        width: 24px;
+                        height: 24px;
+                        background: #ef4444;
+                        border-radius: 12px;
+                        Text { text: "⚠️"; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                    }
+                    Text { text: "Business Advisory"; color: #ef4444; font-weight: 700; font-size: 12px; vertical-alignment: center; }
+                }
+
+                Text { text: ai_warning_message; color: white; wrap: word-wrap; font-size: 14px; }
+
+                HorizontalBox {
+                    alignment: end;
+                    Button { text: "Upgrade to Pro"; height: 44px; }
+                }
+            }
+        }
 
         // My Team
         VerticalBox {

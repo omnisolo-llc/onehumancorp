@@ -49,7 +49,17 @@ export component Agents inherits Window {
                 is_advanced <=> root.is_advanced;
                 toggled => { toggle_advanced(); }
             }
-            Button { text: "Hire Agent"; clicked => { hire_agent(); } }
+            Button {
+                text: "Hire Agent";
+                clicked => {
+                    if (agents.length >= 1) {
+                        show_upgrade_prompt = true;
+                        upgrade_prompt_message = "Your team is growing! 🚀 You've hired all AI departments included in the Free plan. Upgrade to Pro to unlock up to 10 AI departments and infinite products.";
+                    } else {
+                        hire_agent();
+                    }
+                }
+            }
         }
 
         VerticalBox {
