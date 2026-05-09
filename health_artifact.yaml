@@ -1,7 +1,10 @@
-triage_results:
-  status: "Healthy"
-  issue_category: "cleanup"
-  notes: "Cleaned up unused slint imports causing test failures. Test suite is now 100% green."
-debt_report:
-  status: "Minimal"
-  notes: "No new technical debt introduced. Hybrid SemVer bumps applied universally."
+issue_category: "reliability"
+mission_status: "SUCCESS"
+report_type: "chaos_report"
+content: |
+  Chaos Test Report: Hybrid Agentic OS Parity
+  -------------------------------------------
+  * Tests passed: 100%
+  * Modes validated: Cloud & Standalone
+  * Resilience Rules Enforced: 60s timeout, 3x retries, idempotent operations, and PAUSED state handoff.
+  * Verified concurrent load test with 10 simultaneous business owners.

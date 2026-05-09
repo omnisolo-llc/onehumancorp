@@ -148,3 +148,36 @@ func TestChaosStressVerification(t *testing.T) {
         }
     }
 }
+
+func TestChaosStandaloneStressVerification(t *testing.T) {
+	// Chaos Engineering: Standalone mode
+	// Run concurrent load tests: 10 simultaneous business owners in Standalone mode
+	localDB := setupTestDB(t)
+	defer localDB.Close()
+
+	localStore := NewSqliteTaskStore(localDB)
+
+	for i := 0; i < 10; i++ {
+		task := &SharedTask{
+			ID:             fmt.Sprintf("task-standalone-stress-%d", i),
+			OrganizationID: fmt.Sprintf("org-stress-%d", i),
+			Title:          "Standalone Stress Task",
+			Status:         "PENDING",
+		}
+		err := localStore.CreateTask(context.Background(), task)
+		assert.NoError(t, err)
+	}
+
+	for i := 0; i < 10; i++ {
+		go func(orgID string) {
+			_, _ = localStore.ClaimTask(context.Background(), orgID, "agent-1")
+		}(fmt.Sprintf("org-stress-%d", i))
+	}
+	time.Sleep(1 * time.Second)
+
+	for i := 0; i < 10; i++ {
+		task, err := localStore.GetTask(context.Background(), fmt.Sprintf("task-standalone-stress-%d", i))
+		assert.NoError(t, err)
+		assert.Equal(t, "ASSIGNED", task.Status)
+	}
+}
