@@ -12,8 +12,8 @@ backend:
     enabled: true
     minReplicas: 2
     maxReplicas: 20
-    targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 85
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 75
   resources:
     requests:
       cpu: "500m"

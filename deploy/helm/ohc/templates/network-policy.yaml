@@ -2,47 +2,73 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ .Release.Name }}-backend-isolation
+  name: {{ .Release.Name }}-tenant-isolation
+  labels:
+    app: {{ .Release.Name }}
 spec:
   podSelector:
     matchLabels:
       app: {{ .Release.Name }}-backend
   policyTypes:
-    - Ingress
-    - Egress
+  - Ingress
+  - Egress
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels:
-              app: {{ .Release.Name }}-ohc-core
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels:
-              app.kubernetes.io/component: controller
-      ports:
-        - protocol: TCP
-          port: {{ .Values.backend.service.port }}
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Release.Namespace }}
+      podSelector:
+        matchLabels:
+          app: {{ .Release.Name }}-frontend
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Release.Namespace }}
+      podSelector:
+        matchLabels:
+          app: {{ .Release.Name }}-ingress
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Release.Namespace }}
+      podSelector:
+        matchLabels:
+          app: {{ .Release.Name }}-ohc-core
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Release.Namespace }}
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/component: controller
+    ports:
+    - protocol: TCP
+      port: {{ .Values.backend.service.port }}
   egress:
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
+  - to:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: kube-system
+        podSelector:
+          matchLabels:
+            k8s-app: kube-dns
+    ports:
+      - protocol: UDP
+        port: 53
+      - protocol: TCP
+        port: 53
+  - to:
+    - podSelector:
+        matchLabels:
+          app: {{ .Values.cnpg.clusterName }}-rw
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: {{ .Release.Name }}-redis-master
+    ports:
+    - protocol: TCP
+      port: 6379
 {{- end }}
