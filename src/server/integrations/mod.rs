@@ -12,3 +12,8 @@ pub mod stripe;
 pub mod twilio;
 pub mod mcp_gateway;
 pub mod mercadopago;
+pub mod manychat;
+pub mod calendly;
+pub mod mailchimp;
+pub mod shippo;
+pub mod zoom;
