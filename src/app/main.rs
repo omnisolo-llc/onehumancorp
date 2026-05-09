@@ -594,6 +594,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let api_docs_ui = app::ApiDocs::new().unwrap();
+                                        api_docs_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+                                        let api_docs_ui_weak = api_docs_ui.as_weak();
+                                        add_advanced_listener(Box::new(move |val| {
+                                            if let Some(ui) = api_docs_ui_weak.upgrade() {
+                                                ui.set_is_advanced(val);
+                                            }
+                                        }));
+                                        api_docs_ui.on_toggle_advanced({
+                                            let ui_handle = api_docs_ui.as_weak();
+                                            move || {
+                                                if let Some(ui) = ui_handle.upgrade() {
+                                                    set_global_is_advanced(ui.get_is_advanced());
+                                                }
+                                            }
+                                        });
+
                                         let models = vec![
                                             app::ApiEndpoint {
                                                 method: "GET".into(),
@@ -817,6 +833,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         });
 
                                         let api_docs_ui = app::ApiDocs::new().unwrap();
+                                        api_docs_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+                                        let api_docs_ui_weak = api_docs_ui.as_weak();
+                                        add_advanced_listener(Box::new(move |val| {
+                                            if let Some(ui) = api_docs_ui_weak.upgrade() {
+                                                ui.set_is_advanced(val);
+                                            }
+                                        }));
+                                        api_docs_ui.on_toggle_advanced({
+                                            let ui_handle = api_docs_ui.as_weak();
+                                            move || {
+                                                if let Some(ui) = ui_handle.upgrade() {
+                                                    set_global_is_advanced(ui.get_is_advanced());
+                                                }
+                                            }
+                                        });
                                         let api_docs_handle = api_docs_ui.as_weak();
                                         dashboard.on_open_api_docs(move || {
                                             if let Some(ui) = api_docs_handle.upgrade() {
@@ -2957,6 +2988,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
 
                 let api_docs_ui = app::ApiDocs::new().unwrap();
+                api_docs_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+                let api_docs_ui_weak = api_docs_ui.as_weak();
+                add_advanced_listener(Box::new(move |val| {
+                    if let Some(ui) = api_docs_ui_weak.upgrade() {
+                        ui.set_is_advanced(val);
+                    }
+                }));
+                api_docs_ui.on_toggle_advanced({
+                    let ui_handle = api_docs_ui.as_weak();
+                    move || {
+                        if let Some(ui) = ui_handle.upgrade() {
+                            set_global_is_advanced(ui.get_is_advanced());
+                        }
+                    }
+                });
+
                 let models = vec![
                     app::ApiEndpoint {
                         method: "GET".into(),

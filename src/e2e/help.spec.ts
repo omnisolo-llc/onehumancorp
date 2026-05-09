@@ -500,8 +500,12 @@ test.describe('API Documentation', () => {
   test('should toggle advanced developer documentation', async ({ page }) => {
     await page.locator('button:has-text("Menu")').first().click();
     await page.locator('button:has-text("Connect Apps")').first().click();
-    const advancedCheckbox = page.locator('text=/Show Advanced/i').first();
-    await advancedCheckbox.click();
+
+    // Toggle ON
+    const advancedText = page.locator('text=Advanced Mode').first();
+    await expect(advancedText).toBeVisible();
+    await advancedText.click();
+
     await expect(page.locator('text=/Read Product List/i').first()).toBeVisible();
   });
 });

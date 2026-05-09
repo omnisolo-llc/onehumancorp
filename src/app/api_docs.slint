@@ -19,6 +19,9 @@ export component ApiDocs inherits Window {
     in-out property <string> api_key: "sk_live_...";
     in-out property <string> endpoint_url: "https://api.ohc.io";
     in-out property <bool> is_advanced: false;
+    callback toggle_advanced();
+    toggle_advanced => {}
+
     in property <[ApiEndpoint]> endpoints: [];
     in-out property <string> api_response: "";
     in-out property <string> active_endpoint: "";
@@ -48,7 +51,11 @@ export component ApiDocs inherits Window {
             TooltipElement {
                 tooltip_id: "api_docs_advanced";
                 AdvancedToggle {
-                    is_advanced <=> is_advanced;
+                    is_advanced: root.is_advanced;
+                    toggled => {
+                        root.is_advanced = !root.is_advanced;
+                        root.toggle_advanced();
+                    }
                 }
             }
 
