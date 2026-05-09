@@ -140,6 +140,14 @@ impl DB {
                 .connect_with(conn_opts)
                 .await?;
 
+            if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+                let row: (String,) = sqlx::query_as("PRAGMA cipher_version").fetch_one(&sqlite_pool).await?;
+                if row.0.is_empty() {
+                    panic!("CRITICAL SECURITY ERROR: SQLCipher is NOT active. Standalone Mode requires encrypted storage.");
+                }
+                tracing::info!("SQLCipher active: version {}", row.0);
+            }
+
             Ok(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) })
         } else {
             let mut pg_url = database_url.clone();

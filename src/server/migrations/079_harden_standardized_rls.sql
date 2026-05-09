@@ -1,0 +1,79 @@
+-- 079_harden_standardized_rls.sql
+-- Unifies all RLS policies to use 'app.current_tenant' and enables FORCE RLS on all multi-tenant tables.
+
+-- 1. Standardize builder tables to use app.current_tenant instead of app.current_tenant_id
+DROP POLICY IF EXISTS builder_sites_tenant_policy ON builder_sites;
+CREATE POLICY builder_sites_tenant_policy ON builder_sites FOR ALL USING (tenant_id::text = current_setting('app.current_tenant', true));
+
+DROP POLICY IF EXISTS builder_pages_tenant_policy ON builder_pages;
+CREATE POLICY builder_pages_tenant_policy ON builder_pages FOR ALL USING (tenant_id::text = current_setting('app.current_tenant', true));
+
+DROP POLICY IF EXISTS builder_blocks_tenant_policy ON builder_blocks;
+CREATE POLICY builder_blocks_tenant_policy ON builder_blocks FOR ALL USING (tenant_id::text = current_setting('app.current_tenant', true));
+
+-- 2. Ensure agent_violations has standardized RLS
+ALTER TABLE IF EXISTS agent_violations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS agent_violations FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_agent_violations ON agent_violations;
+CREATE POLICY tenant_isolation_agent_violations ON agent_violations
+    USING (tenant_id::text = current_setting('app.current_tenant', true));
+
+-- 3. Force RLS on all other multi-tenant tables to ensure even table owners are restricted
+ALTER TABLE IF EXISTS tenants FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS agents FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS products FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS orders FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS order_items FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS customers FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS pages FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS memories FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS consolidated_memory FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS shared_tasks FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS shared_tasks_v4 FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS swarm_tasks FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS agent_missions FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS onboarding_state FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS agent_session_data FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS swarm_truth_embeddings FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS memory_conflicts FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS embedding_cache FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS llm_completion_cache FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS llm_reason_cache FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS local_cloud_sync_log FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS sub_agent_jobs FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS swarm_dream_epochs FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS swarm_long_term_memory FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS swarm_task_dependencies FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS swarm_ultra_plans FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS sub_agent_queue FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_dependencies FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS state_machine_transitions FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS referrals FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS agent_memories FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS autodream_memories FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS knowledge_embeddings FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS meeting_rooms FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS meeting_transcripts FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS agent_inbox FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS tool_integrations FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS tenant_calendars FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS hybrid_fs_sync_queue FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS department_tasks FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS agent_violations FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS organizations FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS agent_approvals FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS quotes FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS revoked_tokens FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS roles FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS users FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS scheduled_tasks FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS usage_events FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS telemetry_buffer FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS tasks FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS swarm_memory FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS swarm_memory_embeddings FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS capability_plugins FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS agent_status FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS local_mcp_rag_tasks FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS crdt_deltas FORCE ROW LEVEL SECURITY;

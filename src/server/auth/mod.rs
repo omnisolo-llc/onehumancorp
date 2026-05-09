@@ -457,6 +457,9 @@ impl Store {
         }
     }
 }
+
+#[cfg(test)]
+mod isolation_tests_v2;
 fn random_bytes(n: usize) -> Vec<u8> {
     let mut b = vec![0u8; n];
     rand::thread_rng().fill_bytes(&mut b);
