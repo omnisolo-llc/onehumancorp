@@ -272,7 +272,7 @@ fn test_maya_baker_onboarding_flow() {
     assert_eq!(wizard_ui.get_step(), 1);
 
     // Select Business Type
-    wizard_ui.invoke_select_business_type("Food".into());
+    wizard_ui.invoke_select_business_type("Restaurant / Food".into());
     assert_eq!(wizard_ui.get_step(), 2);
 
     // Name and description
@@ -326,7 +326,7 @@ fn test_maya_baker_onboarding_flow() {
     });
 
     wizard_ui.invoke_launch(
-        "Food".into(), "Maya's Cakes".into(), "Delicious vegan cakes".into(), "both".into(), "maya@example.com".into(),
+        "Restaurant / Food".into(), "Maya's Cakes".into(), "Delicious vegan cakes".into(), "both".into(), "maya@example.com".into(),
         "Modern".into(), "Vegan Chocolate Cake".into(), "45.00".into(), "mayascakes.ohc.app".into(), "".into(), "".into(), "".into()
     );
     assert!(*launched.borrow(), "Maya's onboarding launch failed");
@@ -355,7 +355,7 @@ fn test_carlos_handyman_onboarding_flow() {
     wizard_ui.on_generate_instant_preview(move || {
         if let Some(ui) = wizard_weak.upgrade() {
             ui.set_company_name("Carlos Handyman Services".into());
-            ui.set_business_type("Service".into());
+            ui.set_business_type("Service Business".into());
             ui.set_product_name("1-Hour Home Repair".into());
             ui.set_product_price("80.00".into());
             ui.set_is_generating_instant_preview(false);
