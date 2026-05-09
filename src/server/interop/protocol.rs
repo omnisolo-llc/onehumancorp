@@ -371,6 +371,103 @@ impl InteropProtocol {
         self.bus.subscribe(format!("system:job_status:{}", job_id), bus_handler).await
     }
 
+    /// Enqueues a job for asynchronous execution, ensuring message bus reliability
+    /// with an explicit acknowledgment to survive network partitions and reconnections.
+    pub async fn enqueue_job(&self, job: proto::QueueJob, timeout_ms: u64) -> Result<bool, String> {
+        use prost::Message as ProstMessage;
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let ack_topic = format!("system:queue_job_ack:{}", job.id);
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == ack_topic {
+                rx.store(true, Ordering::SeqCst);
+            }
+        });
+
+        let cancel = self.bus.subscribe(format!("system:queue_job_ack:{}", job.id), handler).await?;
+
+        let mut buf = Vec::new();
+        job.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let msg = Message {
+            topic: format!("system:queue_job:{}", job.tenant_id),
+            payload: buf,
+        };
+
+        // Add internal retry for publishing to ensure enqueue survives partitions
+        let mut retries = 0;
+        let mut delay_ms = 100;
+        loop {
+            match self.bus.publish(msg.clone()).await {
+                Ok(_) => break,
+                Err(e) => {
+                    if retries >= 5 {
+                        cancel();
+                        return Err(format!("Failed to enqueue job after retries: {}", e));
+                    }
+                    retries += 1;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    delay_ms *= 2; // Exponential backoff
+                }
+            }
+        }
+
+        // Wait for up to timeout_ms
+        let start = std::time::Instant::now();
+        while start.elapsed().as_millis() < timeout_ms as u128 {
+            if received.load(Ordering::SeqCst) {
+                cancel();
+                return Ok(true);
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        }
+
+        cancel();
+        Ok(false) // Not acked, implies failure/timeout, dispatch might need to be retried
+    }
+
+    /// Listens for enqueued jobs and sends an acknowledgment to guarantee reliability
+    pub async fn listen_for_queue_jobs(&self, tenant_id: &str, handler: Box<dyn Fn(proto::QueueJob) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let bus = self.bus.clone();
+
+        let bus_handler = Box::new(move |msg: Message| {
+            if msg.topic.starts_with("system:queue_job:") {
+                use prost::Message as ProstMessage;
+                if let Ok(decoded) = proto::QueueJob::decode(&msg.payload[..]) {
+                    let job_id = decoded.id.clone();
+
+                    // Call the user's handler
+                    handler(decoded);
+
+                    let ack_msg = Message {
+                        topic: format!("system:queue_job_ack:{}", job_id),
+                        payload: vec![],
+                    };
+
+                    let bus_clone = bus.clone();
+                    tokio::spawn(async move {
+                        // Retry mechanism to ensure ACK reaches the dispatcher
+                        let mut retries = 0;
+                        let mut delay_ms = 50;
+                        while retries < 5 {
+                            if bus_clone.publish(ack_msg.clone()).await.is_ok() {
+                                break;
+                            }
+                            retries += 1;
+                            tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                            delay_ms *= 2; // Exponential backoff
+                        }
+                    });
+                }
+            }
+        });
+
+        self.bus.subscribe(format!("system:queue_job:{}", tenant_id), bus_handler).await
+    }
+
 }
 
 #[cfg(test)]
@@ -446,6 +543,7 @@ mod tests {
         let lock = Arc::new(MemoryBus::new());
         let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
 
+        use std::sync::atomic::AtomicBool;
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
@@ -1071,6 +1169,137 @@ mod tests {
 
         let success = protocol.dispatch_job("job1", "t1", "action", vec![], 500).await.unwrap();
         assert!(success);
+    }
+
+    #[tokio::test]
+    async fn test_interop_enqueue_job_success() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        use std::sync::atomic::AtomicBool;
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let _cancel = protocol.listen_for_queue_jobs("t1", Box::new(move |job| {
+            if job.id == "job1" {
+                rx.store(true, Ordering::SeqCst);
+            }
+        })).await.unwrap();
+
+        let job = proto::QueueJob {
+            id: "job1".to_string(),
+            tenant_id: "t1".to_string(),
+            parent_task_id: "".to_string(),
+            agent_role: "".to_string(),
+            payload: "".to_string(),
+            status: "PENDING".to_string(),
+            attempts: 0,
+            max_attempts: 3,
+            run_after_ms: 0,
+            locked_until_ms: 0,
+            created_at_ms: 0,
+            updated_at_ms: 0,
+        };
+
+        let result = protocol.enqueue_job(job, 500).await.unwrap();
+        assert!(result);
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_enqueue_job_timeout() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let job = proto::QueueJob {
+            id: "job1".to_string(),
+            tenant_id: "t1".to_string(),
+            parent_task_id: "".to_string(),
+            agent_role: "".to_string(),
+            payload: "".to_string(),
+            status: "PENDING".to_string(),
+            attempts: 0,
+            max_attempts: 3,
+            run_after_ms: 0,
+            locked_until_ms: 0,
+            created_at_ms: 0,
+            updated_at_ms: 0,
+        };
+
+        // No listener is configured, so this should time out
+        let result = protocol.enqueue_job(job, 100).await.unwrap();
+        assert!(!result);
+    }
+
+    #[tokio::test]
+    async fn test_interop_listen_for_queue_jobs_malformed() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        use std::sync::atomic::AtomicBool;
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let _cancel = protocol.listen_for_queue_jobs("t1", Box::new(move |_| {
+            rx.store(true, Ordering::SeqCst);
+        })).await.unwrap();
+
+        let msg = Message {
+            topic: "system:queue_job:t1".to_string(),
+            payload: vec![255, 255, 255],
+        };
+        bus.publish(msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(!received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_enqueue_job_retry_failure() {
+        struct MockFailingBus2 {
+            failures_left: std::sync::atomic::AtomicUsize,
+        }
+        #[async_trait::async_trait]
+        impl crate::msgbus::Bus for MockFailingBus2 {
+            async fn publish(&self, _msg: crate::msgbus::Message) -> Result<(), String> {
+                if self.failures_left.fetch_sub(1, Ordering::SeqCst) > 0 {
+                    return Err("Simulated network failure".to_string());
+                }
+                Ok(())
+            }
+            async fn subscribe(&self, _topic: String, _handler: Box<dyn Fn(crate::msgbus::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+                Ok(Box::new(|| {}))
+            }
+        }
+        let bus = Arc::new(MockFailingBus2 {
+            failures_left: std::sync::atomic::AtomicUsize::new(10),
+        });
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus, lock, "node1".to_string());
+
+        let job = proto::QueueJob {
+            id: "job1".to_string(),
+            tenant_id: "t1".to_string(),
+            parent_task_id: "".to_string(),
+            agent_role: "".to_string(),
+            payload: "".to_string(),
+            status: "PENDING".to_string(),
+            attempts: 0,
+            max_attempts: 3,
+            run_after_ms: 0,
+            locked_until_ms: 0,
+            created_at_ms: 0,
+            updated_at_ms: 0,
+        };
+
+        let result = protocol.enqueue_job(job, 100).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to enqueue job after retries"));
     }
 
     #[tokio::test]
