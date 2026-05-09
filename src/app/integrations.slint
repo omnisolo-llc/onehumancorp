@@ -1,3 +1,5 @@
+import { GlassCard } from "glass_card.slint";
+
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 
 export struct UiMcpTool {
@@ -28,11 +30,7 @@ export component Integrations inherits Window {
         HorizontalBox {
             spacing: 16px;
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -47,11 +45,7 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -70,11 +64,7 @@ export component Integrations inherits Window {
         HorizontalBox {
             spacing: 16px;
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -89,11 +79,7 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -112,11 +98,7 @@ export component Integrations inherits Window {
         HorizontalBox {
             spacing: 16px;
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -131,18 +113,14 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
                     Text { text: "💬 Twilio"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Send SMS alerts to customers"; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Global SMS Alerts & Customer Notifications"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
                         clicked => { configure_integration("Twilio"); }
@@ -154,18 +132,14 @@ export component Integrations inherits Window {
         HorizontalBox {
             spacing: 16px;
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
                     Text { text: "💬 Twilio"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Send SMS alerts to customers"; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Global SMS Alerts & Customer Notifications"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
                         clicked => { configure_integration("Twilio"); }
@@ -173,41 +147,14 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
                     Text { text: "📅 Cal.com"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Automated appointment booking"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Cal.com"); }
-                    }
-                }
-            }
-        }
-
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "📅 Calendly"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Automated Booking"; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Zero-Config Booking & Calendar Sync"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
                         clicked => { configure_integration("Calendly"); }
@@ -215,11 +162,7 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -234,11 +177,7 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -258,11 +197,7 @@ export component Integrations inherits Window {
         HorizontalBox {
             spacing: 16px;
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -277,11 +212,7 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -296,11 +227,7 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -319,11 +246,7 @@ export component Integrations inherits Window {
         HorizontalBox {
             spacing: 16px;
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -338,11 +261,7 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -357,11 +276,7 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -380,11 +295,7 @@ export component Integrations inherits Window {
         HorizontalBox {
             spacing: 16px;
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -399,11 +310,7 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -422,11 +329,7 @@ export component Integrations inherits Window {
         HorizontalBox {
             spacing: 16px;
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -441,11 +344,7 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
 
                 VerticalBox {
@@ -464,19 +363,14 @@ export component Integrations inherits Window {
         Text { text: "Connect Custom Software"; font-size: 20px; font-weight: 700; color: #1e293b; }
         Text { text: "Manually trigger advanced connected tools for your business."; color: #64748b; }
 
-        Rectangle {
-            background: white;
-            border-color: #e2e8f0;
-            border-width: 1px;
-            border-radius: 8px;
-            
+        GlassCard {
             VerticalBox {
                 padding: 16px;
                 spacing: 10px;
                 
                 for tool in tools : HorizontalBox {
                     Text { text: "🛠️ " + tool.name; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                    Rectangle {} 
+                    GlassCard {}
                     Button { 
                         text: "Invoke"; 
                         clicked => { invoke_tool(tool.id); }

@@ -40,5 +40,66 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     };
     catalog.push(twilio_provider);
 
+    let ayrshare_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "ayrshare".to_string(),
+            name: "Ayrshare".to_string(),
+            category: "Social Media".to_string(),
+            base_url: "https://app.ayrshare.com/api".to_string(),
+        }
+    };
+    catalog.push(ayrshare_provider);
+
+    let calcom_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "calcom".to_string(),
+            name: "Cal.com".to_string(),
+            category: "Calendar & Scheduling".to_string(),
+            base_url: "https://api.cal.com/v1".to_string(),
+        }
+    };
+    catalog.push(calcom_provider);
+
+    let listmonk_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "listmonk".to_string(),
+            name: "Listmonk".to_string(),
+            category: "Email Marketing".to_string(),
+            base_url: "http://localhost:9000/api".to_string(),
+        }
+    };
+    catalog.push(listmonk_provider);
+
+    let easypost_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "easypost".to_string(),
+            name: "EasyPost".to_string(),
+            category: "Shipping & Logistics".to_string(),
+            base_url: "https://api.easypost.com/v2".to_string(),
+        }
+    };
+    catalog.push(easypost_provider);
+
+    let mercadopago_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "mercadopago".to_string(),
+            name: "Mercado Pago".to_string(),
+            category: "Payment Processing".to_string(),
+            base_url: "https://api.mercadopago.com".to_string(),
+        }
+    };
+    catalog.push(mercadopago_provider);
+
+    let jitsi_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "jitsi".to_string(),
+            name: "Jitsi Meet".to_string(),
+            category: "Video Conferencing".to_string(),
+            base_url: "https://meet.jit.si".to_string(),
+        }
+    };
+    catalog.push(jitsi_provider);
+
+
     catalog
 }
