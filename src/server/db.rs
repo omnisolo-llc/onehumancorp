@@ -816,26 +816,41 @@ pub async fn insert_autodream_memory(
 
     pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
+        let stuck_threshold = Utc::now() - chrono::Duration::seconds(timeout_secs * 2);
+
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
+                let mut tx = sqlite_pool.begin().await?;
+                let mut total_affected = 0;
+                total_affected += sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
                     .bind(threshold.to_rfc3339())
-                    .execute(sqlite_pool)
-                    .await?.rows_affected()
+                    .execute(&mut *tx)
+                    .await?.rows_affected();
+                total_affected += sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' AND updated_at < ?")
+                    .bind(stuck_threshold.to_rfc3339())
+                    .execute(&mut *tx)
+                    .await?.rows_affected();
+                tx.commit().await?;
+                total_affected
             },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 set_org_context(&mut *tx, "system").await?;
-                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
+                let mut total_affected = 0;
+                total_affected += sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
                     .bind(threshold)
                     .execute(&mut *tx)
                     .await?.rows_affected();
+                total_affected += sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' AND updated_at < $1")
+                    .bind(stuck_threshold)
+                    .execute(&mut *tx)
+                    .await?.rows_affected();
                 tx.commit().await?;
-                affected
+                total_affected
             }
         };
         if affected > 0 {
-            tracing::info!("Cleaned up {} stagnant missions older than {} seconds", affected, timeout_secs);
+            tracing::debug!("Cleaned up {} stagnant missions older than {} seconds", affected, timeout_secs);
         }
         Ok(affected)
     }
