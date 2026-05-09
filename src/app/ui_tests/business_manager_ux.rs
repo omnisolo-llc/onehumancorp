@@ -114,14 +114,14 @@ fn test_business_manager_fetch_round_trip() {
     // For this UI test, we interact with the components directly to simulate
     // the UI-to-DB round-tripping.
 
-    let app = create();
-    let dashboard_ui = app::Dashboard::new().unwrap();
+    let _app = create();
+    let _dashboard_ui = app::Dashboard::new().unwrap();
     let manager_ui = app::BusinessManager::new().unwrap();
 
     // 1. Action: Trigger a mutation via the existing UI (Submit new product)
     let submitted = Rc::new(RefCell::new(false));
     let sub_clone = submitted.clone();
-    manager_ui.on_submit(move |t, n, d, p, dur, sched| {
+    manager_ui.on_submit(move |t, n, _d, p, _dur, _sched| {
         assert_eq!(t, "PHYSICAL");
         assert_eq!(n, "New Desk");
         assert_eq!(p, "299.00");
