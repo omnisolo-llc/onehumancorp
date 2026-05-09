@@ -214,8 +214,8 @@ pub fn redact_interface_pii(val: Value) -> Value {
 pub fn is_sensitive_key(key: &str) -> bool {
     let k = key.to_lowercase();
     k.contains("password") ||
-    k.contains("secret") ||
-    k.contains("key") ||
+    k.contains("secret_key") ||
+    k.contains("api_key") ||
     k.contains("token") ||
     k.contains("auth") ||
     k.contains("cookie") ||
@@ -224,20 +224,20 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("phone") ||
     k.contains("ssn") ||
     k.contains("address") ||
-    k.contains("name") ||
+    k.contains("first_name") ||
+    k.contains("last_name") ||
+    k.contains("full_name") ||
     k.contains("pii") ||
     k.contains("tenant_id") ||
     k.contains("organization_id") ||
     k.contains("session_id") ||
     k.contains("payload") ||
-    k.contains("credit") ||
-    k.contains("card") ||
+    k.contains("credit_card") ||
     k.contains("cvv") ||
     k.contains("dob") ||
     k.contains("birth") ||
     k.contains("passport") ||
-    k.contains("bank") ||
-    k.contains("account") ||
+    k.contains("bank_account") ||
     k.contains("stripe") ||
     k.contains("billing") ||
     k.contains("ip_address") ||

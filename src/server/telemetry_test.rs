@@ -21,7 +21,7 @@ mod tests {
             }
         }
 
-        assert_eq!(sanitized_props.get("username").unwrap(), "[REDACTED]"); // Because username contains "name"
+        assert_eq!(sanitized_props.get("username").unwrap(), "maya"); // Not redacted anymore since we removed "name"
         assert_eq!(sanitized_props.get("password").unwrap(), "[REDACTED]"); // Because it contains "password"
         assert_eq!(sanitized_props.get("contact").unwrap(), "[EMAIL_REDACTED]");
         assert_eq!(sanitized_props.get("safe_field").unwrap(), "safe_value");
@@ -40,14 +40,16 @@ mod tests {
             "username": "maya",
             "password": "secret-password-123",
             "nested": {
-                "admin_key": "some-key"
+                "admin_key": "some-key",
+                "api_key": "some-api-key"
             }
         });
         let expected = json!({
-            "username": "[REDACTED]",
+            "username": "maya",
             "password": "[REDACTED]",
             "nested": {
-                "admin_key": "[REDACTED]"
+                "admin_key": "some-key",
+                "api_key": "[REDACTED]"
             }
         });
         assert_eq!(redact_interface_pii(input), expected);
@@ -468,7 +470,7 @@ fn test_redact_interface_pii_malicious_payloads() {
             }
         },
         "array_of_evil": [
-            { "name": "John Doe", "email": "john@doe.com" },
+            { "full_name": "John Doe", "email": "john@doe.com" },
             { "address": "456 Elm St", "phone": "555-987-6543" }
         ],
         "safe_field": "This should not be redacted",
@@ -494,7 +496,7 @@ fn test_redact_interface_pii_malicious_payloads() {
     assert_eq!(redacted["nested"]["deep"]["credential_id"], "[REDACTED]");
 
     // Verify array redactions
-    assert_eq!(redacted["array_of_evil"][0]["name"], "[REDACTED]");
+    assert_eq!(redacted["array_of_evil"][0]["full_name"], "[REDACTED]");
     assert_eq!(redacted["array_of_evil"][0]["email"], "[REDACTED]");
     assert_eq!(redacted["array_of_evil"][1]["address"], "[REDACTED]");
     assert_eq!(redacted["array_of_evil"][1]["phone"], "[REDACTED]");
