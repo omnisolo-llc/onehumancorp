@@ -72,4 +72,88 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
     // We expect the first setup wizard text / step to be visible
     await expect(page.locator('text="Your business, live in minutes."').first()).toBeVisible({ timeout: 5000 });
   });
+  test('Flow 6: User accesses Business Manager via Dashboard and sees plain language headers', async ({ page }) => {
+    await page.goto('/login');
+    // Login
+    await page.fill('input[type="email"]', 'grandma@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL('**/*');
+
+    // Tap "Add" button from the bottom nav
+    const addProductBtn = page.locator('button:has-text("Add")');
+    await expect(addProductBtn).toBeVisible();
+    await addProductBtn.click();
+
+    // Verify Business Manager header
+    await expect(page.locator('text="My Offerings"')).toBeVisible();
+  });
+
+  test('Flow 7: User opens Business Manager helper for guidance', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'grandma@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL('**/*');
+
+    await page.click('button:has-text("Add")');
+    await expect(page.locator('text="My Offerings"')).toBeVisible();
+
+    const questionMarkBtn = page.locator('text="My Offerings"').locator('..').locator('button:has-text("?")');
+    await expect(questionMarkBtn).toBeVisible();
+    await questionMarkBtn.click();
+
+    // Verify the new plain language hint is displayed
+    await expect(page.locator('text=These options let you change, remove, or add new items to your store.')).toBeVisible();
+  });
+
+  test('Flow 8: User accesses Add Offering form and sees straightforward fields', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'grandma@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL('**/*');
+
+    await page.click('button:has-text("Add")');
+
+    const addNewBtn = page.locator('text="+ Add New Offering"');
+    await expect(addNewBtn).toBeVisible();
+    await addNewBtn.click();
+
+    await expect(page.locator('text="What are you offering?"')).toBeVisible();
+  });
+
+  test('Flow 9: User navigates Add Offering form successfully without jargon', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'grandma@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL('**/*');
+
+    await page.click('button:has-text("Add")');
+    await page.click('text="+ Add New Offering"');
+
+    // Verify product type labels are plain language
+    await expect(page.locator('text="📦 Physical Item"')).toBeVisible();
+    await expect(page.locator('text="💻 Digital Download"')).toBeVisible();
+    await expect(page.locator('text="⏱️ My Time / Service"')).toBeVisible();
+  });
+
+  test('Flow 10: User can back out of Add Offering form easily', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'grandma@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL('**/*');
+
+    await page.click('button:has-text("Add")');
+    await page.click('text="+ Add New Offering"');
+
+    // Click back to list
+    const backBtn = page.locator('button:has-text("Back to List")');
+    await expect(backBtn).toBeVisible();
+    await backBtn.click();
+
+    await expect(page.locator('text="My Offerings"')).toBeVisible();
+  });
 });
