@@ -2312,8 +2312,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     if let Some(limit) = plan.ai_actions_limit {
                         ui.set_action_limit(limit.to_string().into());
+                        if plan.ai_actions_used >= limit {
+                            ui.set_upgrade_prompt_message(format!("Monthly action limit reached ({}). Upgrade to Starter.", limit).into());
+                        } else {
+                            ui.set_upgrade_prompt_message("".into());
+                        }
                     } else {
                         ui.set_action_limit("Unlimited".into());
+                        ui.set_upgrade_prompt_message("".into());
                     }
 
                     ui.set_used_storage(format!("{:.1} MB", plan.storage_used_bytes as f64 / 1_048_576.0).into());
