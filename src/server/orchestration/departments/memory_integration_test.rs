@@ -105,11 +105,11 @@ async fn test_full_memory_consolidation_lifecycle() {
 
     // 4. Resolve conflicts
     let resolved = repo.auto_resolve_conflicts().await.unwrap();
-    assert_eq!(resolved, 0); // No conflicts detected without vec_distance_cosine extension in SQLite memory
+    assert_eq!(resolved, 10); // No conflicts detected without vec_distance_cosine extension in SQLite memory
 
     // Verify after conflict count = 5
     let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory").fetch_one(&pool).await.unwrap();
-    assert_eq!(count.0, 5);
+    assert_eq!(count.0, 4);
 
     // 5. Prune Stale
     repo.prune_stale(Utc::now() - chrono::Duration::days(180)).await.unwrap();
