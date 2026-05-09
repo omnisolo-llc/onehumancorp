@@ -190,6 +190,7 @@ impl Tracker {
 #[derive(Default)]
 pub struct TokenSummary {
     pub total_tokens: i64,
+    pub total_cost_cents: i64,
 }
 
 impl Default for Tracker {
