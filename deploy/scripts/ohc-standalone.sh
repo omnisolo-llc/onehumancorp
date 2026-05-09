@@ -19,10 +19,13 @@ echo ""
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
-export TOKIO_WORKER_THREADS=1
-export MALLOC_ARENA_MAX=1
+export TOKIO_WORKER_THREADS=2
+export MALLOC_ARENA_MAX=2
 export RAYON_NUM_THREADS=2
 export OHC_STANDALONE=true
+export JEMALLOC_SYS_WITH_MALLOC_CONF="background_thread:true,metadata_thp:auto,dirty_decay_ms:1000,muzzy_decay_ms:1000"
+export GOGC=50
+export GOMEMLIMIT=256MiB
 export LOG_FORMAT="json"
 export LOG_LEVEL="info"
 export RUST_LOG="info"
