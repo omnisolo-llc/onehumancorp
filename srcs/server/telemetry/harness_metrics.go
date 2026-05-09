@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-
 func getDeploymentModeAttribute() attribute.KeyValue {
 	isStandalone := os.Getenv("OHC_STANDALONE") == "true" || os.Getenv("STANDALONE_MODE") == "true"
 	mode := "cloud"
@@ -18,14 +17,6 @@ func getDeploymentModeAttribute() attribute.KeyValue {
 		mode = "standalone"
 	}
 	return attribute.String("deployment_mode", mode)
-}
-func isTelemetryEnabled() bool {
-	// In standalone mode, do not sync telemetry to cloud unless explicitly enabled
-	isStandalone := os.Getenv("OHC_STANDALONE") == "true" || os.Getenv("STANDALONE_MODE") == "true"
-	if isStandalone {
-		return os.Getenv("OHC_TELEMETRY_ENABLED") == "true"
-	}
-	return true
 }
 
 var (

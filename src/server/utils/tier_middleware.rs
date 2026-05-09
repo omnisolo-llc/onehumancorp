@@ -30,7 +30,7 @@ pub async fn tier_middleware(
                 }
             }
             Err(e) => {
-                tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                tracing::warn!(error = %e, "RateLimiter problem. Failing open to avoid blocking users.");
             }
         }
     }

@@ -41,7 +41,7 @@ impl Tracker {
             match limiter.check_storage_quota(tenant_id, delta_bytes).await {
                 Ok(status) => Ok(status),
                 Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    tracing::warn!(error = %e, "RateLimiter problem. Failing open to avoid blocking users.");
                     Ok(RateLimitStatus {
                         is_allowed: true,
                         soft_limit_reached: false,
@@ -63,7 +63,7 @@ impl Tracker {
             match limiter.check_product_quota(tenant_id).await {
                 Ok(status) => Ok(status),
                 Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    tracing::warn!(error = %e, "RateLimiter problem. Failing open to avoid blocking users.");
                     Ok(RateLimitStatus {
                         is_allowed: true,
                         soft_limit_reached: false,
@@ -85,7 +85,7 @@ impl Tracker {
             match limiter.record_product_added(tenant_id).await {
                 Ok(_) => Ok(()),
                 Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    tracing::warn!(error = %e, "RateLimiter problem. Failing open to avoid blocking users.");
                     Ok(())
                 }
             }
@@ -99,7 +99,7 @@ impl Tracker {
             match limiter.record_action(tenant_id, agent_id).await {
                 Ok(status) => Ok(status),
                 Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    tracing::warn!(error = %e, "RateLimiter problem. Failing open to avoid blocking users.");
                     Ok(RateLimitStatus {
                         is_allowed: true,
                         soft_limit_reached: false,
@@ -121,7 +121,7 @@ impl Tracker {
             match limiter.check_agent_quota(tenant_id).await {
                 Ok(status) => Ok(status),
                 Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    tracing::warn!(error = %e, "RateLimiter problem. Failing open to avoid blocking users.");
                     Ok(RateLimitStatus {
                         is_allowed: true,
                         soft_limit_reached: false,
@@ -143,7 +143,7 @@ impl Tracker {
             match limiter.record_agent_added(tenant_id).await {
                 Ok(_) => Ok(()),
                 Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    tracing::warn!(error = %e, "RateLimiter problem. Failing open to avoid blocking users.");
                     Ok(())
                 }
             }
