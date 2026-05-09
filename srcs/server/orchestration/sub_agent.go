@@ -159,7 +159,7 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 
 	}
 
-	_, _ = harness.RunAttempt("ls")
+	_, _ = harness.RunAttempt(ctx, "ls")
 	// Check token budget BEFORE executing
 	if err := checkTokenBudget(task.OrganizationID); err != nil {
 		return err

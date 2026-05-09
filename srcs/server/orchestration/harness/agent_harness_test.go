@@ -1,13 +1,14 @@
 package harness
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
 
 type MockHarness struct{}
 
-func (m *MockHarness) RunAttempt(cmd string) (*AttemptResult, error) {
+func (m *MockHarness) RunAttempt(ctx context.Context, cmd string) (*AttemptResult, error) {
 	return &AttemptResult{
 		Stdout:   "mock stdout",
 		ExitCode: 0,
@@ -24,7 +25,7 @@ func (m *MockHarness) Reset() error {
 
 func TestMockHarness(t *testing.T) {
 	var harness AgentHarness = &MockHarness{}
-	res, err := harness.RunAttempt("ls")
+	res, err := harness.RunAttempt(context.Background(), "ls")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -70,7 +71,7 @@ func TestAssistantAgentHarness_RunAttempt(t *testing.T) {
 		t.Fatalf("failed to create harness: %v", err)
 	}
 
-	res, err := harness.RunAttempt("echo hello")
+	res, err := harness.RunAttempt(context.Background(), "echo hello")
 	if err != nil {
 		t.Fatalf("RunAttempt failed: %v", err)
 	}
@@ -89,7 +90,7 @@ func TestAssistantAgentHarness_RunAttempt_PolicyDenied(t *testing.T) {
 		t.Fatalf("failed to create harness: %v", err)
 	}
 
-	res, err := harness.RunAttempt("rm -rf /")
+	res, err := harness.RunAttempt(context.Background(), "rm -rf /")
 	if err == nil {
 		t.Fatalf("expected error for denied command, got nil")
 	}

@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"context"
+
     "onehumancorp/srcs/server/orchestration/harness"
 )
 
@@ -20,7 +22,7 @@ func (r *HarnessResolver) Resolve(agentID string) (harness.AgentHarness, error) 
 
 type MockHarness struct{}
 
-func (m *MockHarness) RunAttempt(cmd string) (*harness.AttemptResult, error) {
+func (m *MockHarness) RunAttempt(ctx context.Context, cmd string) (*harness.AttemptResult, error) {
     return &harness.AttemptResult{
         Stdout:   "mock stdout",
         ExitCode: 0,

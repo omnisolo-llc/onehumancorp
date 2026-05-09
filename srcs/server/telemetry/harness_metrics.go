@@ -33,6 +33,8 @@ var (
 	executionDurationHistogram metric.Float64Histogram
 	toolInvocationsCounter     metric.Int64Counter
 	violationsCounter          metric.Int64Counter
+	commandDurationHistogram   metric.Float64Histogram
+	ioBytesTotalCounter        metric.Int64Counter
 	mcpToolCallsCounter        metric.Int64Counter
 	harnessInitLatencyHistogram metric.Float64Histogram
 	harnessDbIoLatencyHistogram metric.Float64Histogram
@@ -114,6 +116,68 @@ func init() {
 	if err != nil {
 		log.Printf("Failed to create bubblewrapViolationTotalCounter: %v", err)
 	}
+
+	commandDurationHistogram, err = meter.Float64Histogram(
+		"ohc_harness_command_duration_seconds",
+		metric.WithDescription("Duration of individual harness shell commands"),
+	)
+	if err != nil {
+		log.Printf("Failed to create commandDurationHistogram: %v", err)
+	}
+
+	ioBytesTotalCounter, err = meter.Int64Counter(
+		"ohc_harness_io_bytes_total",
+		metric.WithDescription("Total number of bytes read/written by harness shell commands"),
+	)
+	if err != nil {
+		log.Printf("Failed to create ioBytesTotalCounter: %v", err)
+	}
+}
+
+func RecordHarnessCommandDuration(ctx context.Context, durationSecs float64, tenantID string, commandPrefix string, exitCode int) error {
+	if !isTelemetryEnabled() {
+		return nil
+	}
+	if commandDurationHistogram != nil {
+		opts := metric.WithAttributes(
+			attribute.String("tenant_id", tenantID),
+			attribute.String("command_prefix", commandPrefix),
+			attribute.Int("exit_code", exitCode),
+			getDeploymentModeAttribute(),
+		)
+		commandDurationHistogram.Record(ctx, durationSecs, opts)
+	}
+
+	bufferMetricHelper(ctx, "ohc_harness_command_duration_seconds", durationSecs, map[string]interface{}{
+		"tenant_id":       tenantID,
+		"command_prefix":  commandPrefix,
+		"exit_code":       exitCode,
+		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
+	})
+
+	return nil
+}
+
+func RecordHarnessIOBytes(ctx context.Context, bytesCount int64, tenantID string, streamType string) error {
+	if !isTelemetryEnabled() {
+		return nil
+	}
+	if ioBytesTotalCounter != nil {
+		opts := metric.WithAttributes(
+			attribute.String("tenant_id", tenantID),
+			attribute.String("stream_type", streamType),
+			getDeploymentModeAttribute(),
+		)
+		ioBytesTotalCounter.Add(ctx, bytesCount, opts)
+	}
+
+	bufferMetricHelper(ctx, "ohc_harness_io_bytes_total", float64(bytesCount), map[string]interface{}{
+		"tenant_id":       tenantID,
+		"stream_type":     streamType,
+		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
+	})
+
+	return nil
 }
 
 // RecordHarnessExecutionDuration records the duration of a harness execution.
