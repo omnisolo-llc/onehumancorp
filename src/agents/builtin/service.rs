@@ -21,6 +21,8 @@ use ohc_builtin_agent_tools::{
 use crate::departments::{Department, get_department_config};
 use std::str::FromStr;
 use tokio::sync::RwLock;
+use crate::consolidation_worker::ConsolidationWorker;
+use std::time::Duration;
 
 pub const DEFAULT_ADDRESS: &str = "127.0.0.1:50051";
 const AGENT_VERSION: &str = "1.0.0";
@@ -47,6 +49,7 @@ pub struct AgentServiceImpl {
     pub anthropic_memory: Option<Arc<crate::memory_store::Anthropic3TierMemoryStore>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
+    pub worker_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
 
@@ -129,6 +132,7 @@ impl AgentServiceImpl {
             memory: None,
             llm_override: None,
             anthropic_memory: None,
+            worker_handle: None,
         }
     }
 
@@ -147,7 +151,9 @@ impl AgentServiceImpl {
             if db_url.starts_with("sqlite") {
                 match sqlx::SqlitePool::connect_lazy(&db_url) {
                     Ok(pool) => {
-                        self.memory = Some(Arc::new(VectorRepository::new_sqlite(pool)));
+                        let repo = Arc::new(VectorRepository::new_sqlite(pool));
+                        self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_secs(3600), 180)).spawn_background_task());
+                        self.memory = Some(repo);
                     }
                     Err(e) => {
                         tracing::error!("Failed to connect to sqlite for memory store: {}", e);
@@ -156,7 +162,9 @@ impl AgentServiceImpl {
             } else {
                 match sqlx::PgPool::connect_lazy(&db_url) {
                     Ok(pool) => {
-                        self.memory = Some(Arc::new(VectorRepository::new(pool)));
+                        let repo = Arc::new(VectorRepository::new(pool));
+                        self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_secs(3600), 180)).spawn_background_task());
+                        self.memory = Some(repo);
                     }
                     Err(e) => {
                         tracing::error!("Failed to connect to database for memory store: {}", e);
@@ -410,6 +418,14 @@ impl AgentServiceImpl {
         let ralph = crate::ralph_loop::RalphLoop::new(agent, run_cfg, &progress_file);
         if let Err(e) = ralph.run(&req.task).await {
             tracing::error!("Ralph Loop error: {}", e);
+        }
+    }
+}
+
+impl Drop for AgentServiceImpl {
+    fn drop(&mut self) {
+        if let Some(handle) = self.worker_handle.take() {
+            handle.abort();
         }
     }
 }
