@@ -551,3 +551,67 @@ impl DashboardService for MyDashboardService {
         }))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::{DB, DbStore};
+    use crate::hub::Hub;
+    use sqlx::sqlite::SqlitePoolOptions;
+    use std::sync::Arc;
+    use crate::ohc::app::GetDashboardRequest;
+    use crate::ohc::app::dashboard_service_server::DashboardService;
+
+    #[tokio::test]
+    async fn test_get_dashboard_mobile_optimization() {
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let pool = SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap(),
+            store: DbStore::Sqlite(pool),
+        });
+
+        let hub = Arc::new(Hub::new(tx, db.pool.clone()));
+
+        hub.open_meeting("meeting_1".to_string(), vec![], "Test Agenda".to_string());
+        hub.clone().publish(crate::ohc::orchestration::Message {
+            id: "msg1".to_string(),
+            from_agent: "agent1".to_string(),
+            to_agent: "agent2".to_string(),
+            r#type: "chat".to_string(),
+            content: "Test transcript".to_string(),
+            occurred_at_unix: 0,
+            meeting_id: "meeting_1".to_string(),
+        }).unwrap();
+
+
+        let service = MyDashboardService::new(db, hub);
+
+        let req = GetDashboardRequest {
+            organization_id: "system".to_string(),
+            mobile_optimized: true,
+        };
+
+        let mut request = tonic::Request::new(req);
+        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "system".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        let response = service.get_dashboard(request).await.unwrap().into_inner();
+
+        // The products are loaded from cache, which is currently empty here.
+        // We ensure transcripts are empty unconditionally.
+        assert!(!response.meetings.is_empty(), "Meetings should not be empty");
+        assert_eq!(response.meetings[0].transcript.len(), 0, "Mobile optimization should clear transcripts");
+    }
+}
