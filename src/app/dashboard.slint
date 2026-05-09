@@ -365,6 +365,7 @@ export component Dashboard inherits Window { // milestones
         if (pending_approvals.length > 0) : VerticalBox {
             spacing: 16px;
             Text { text: "Tasks for You to Approve"; font-size: 20px; font-weight: 700; color: white; }
+            Text { text: "Review drafts created by your AI Agent Departments."; font-size: 14px; color: #cbd5e1; }
 
             for approval in pending_approvals : GlassCard {
                 border-color: rgba(255, 255, 255, 0.1);

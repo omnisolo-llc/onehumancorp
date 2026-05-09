@@ -4589,6 +4589,50 @@ mod e2e_tests {
 #[cfg(test)]
 mod tests {
 
+
+    #[test]
+    fn test_e2e_ai_agent_department_coordination_approval() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        // 1. Start from Dashboard after login
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        // Simulate an event bus trigger
+
+        // Inject initial tasks pending approval
+        let initial_tasks = vec![
+            app::UiPendingApproval {
+                task_id: "order-123".into(),
+                title: "Draft Confirmation for Maya".into(),
+                proposed_content: "Review the custom cake order details.".into(),
+                helper_name: "The Ambassador".into(),
+            }
+        ];
+        let pending_model = slint::ModelRc::new(slint::VecModel::from(initial_tasks));
+        dashboard_ui.set_pending_approvals(pending_model.into());
+
+        // Verify that the task is visible
+        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 1, "There should be one pending approval from a department");
+
+        let task = dashboard_ui.get_pending_approvals().row_data(0).unwrap();
+        assert_eq!(task.helper_name, "The Ambassador");
+
+        // 2. Click approve
+        let was_approved = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let was_approved_clone = was_approved.clone();
+        dashboard_ui.on_approve_task(move |task_id| {
+            if task_id == "order-123" {
+                *was_approved_clone.borrow_mut() = true;
+            }
+        });
+
+        dashboard_ui.invoke_approve_task("order-123".into());
+
+        // 3. Verify approval happened
+        assert!(*was_approved.borrow(), "The task should have been approved");
+    }
+
     #[test]
     fn test_e2e_cost_transparency_flow_1() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }

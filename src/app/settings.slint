@@ -119,6 +119,64 @@ export component Settings inherits Window {
             }
         }
 
+        // AI Agent Department Settings
+        Text { text: "AI DEPARTMENTS"; color: #7c3aed; font-weight: 700; }
+        Rectangle {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+            border-width: 1px;
+            border-radius: 8px;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: rgba(0, 0, 0, 0.2);
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+
+                HorizontalBox {
+                    Text { text: "Operations (The Manager)"; color: #1e293b; vertical-alignment: center; }
+                    Rectangle {}
+                    Text { text: "Review First"; color: #64748b; font-size: 12px; vertical-alignment: center; }
+                    CheckBox { checked: true; toggled => {} }
+                }
+                HorizontalBox {
+                    Text { text: "Marketing & Advertising (The Promoter)"; color: #1e293b; vertical-alignment: center; }
+                    Rectangle {}
+                    Text { text: "Review First"; color: #64748b; font-size: 12px; vertical-alignment: center; }
+                    CheckBox { checked: true; toggled => {} }
+                }
+                HorizontalBox {
+                    Text { text: "Sales & Acquisition (The Salesperson)"; color: #1e293b; vertical-alignment: center; }
+                    Rectangle {}
+                    Text { text: "Review First"; color: #64748b; font-size: 12px; vertical-alignment: center; }
+                    CheckBox { checked: true; toggled => {} }
+                }
+                HorizontalBox {
+                    Text { text: "Customer Success (The Ambassador)"; color: #1e293b; vertical-alignment: center; }
+                    Rectangle {}
+                    Text { text: "Review First"; color: #64748b; font-size: 12px; vertical-alignment: center; }
+                    CheckBox { checked: true; toggled => {} }
+                }
+                HorizontalBox {
+                    Text { text: "Finance & Payments (The Accountant)"; color: #1e293b; vertical-alignment: center; }
+                    Rectangle {}
+                    Text { text: "Review First"; color: #64748b; font-size: 12px; vertical-alignment: center; }
+                    CheckBox { checked: true; toggled => {} }
+                }
+                HorizontalBox {
+                    Text { text: "Legal & Compliance (The Protector)"; color: #1e293b; vertical-alignment: center; }
+                    Rectangle {}
+                    Text { text: "Review First"; color: #64748b; font-size: 12px; vertical-alignment: center; }
+                    CheckBox { checked: true; toggled => {} }
+                }
+                HorizontalBox {
+                    Text { text: "Business Advisory (The Advisor)"; color: #1e293b; vertical-alignment: center; }
+                    Rectangle {}
+                    Text { text: "Review First"; color: #64748b; font-size: 12px; vertical-alignment: center; }
+                    CheckBox { checked: true; toggled => {} }
+                }
+            }
+        }
+
         // Account Section
         Text { text: "ACCOUNT"; color: #7c3aed; font-weight: 700; }
         Rectangle {
