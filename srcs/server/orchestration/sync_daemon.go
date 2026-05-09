@@ -113,7 +113,6 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		if err != nil {
 			// Release semaphore on error
 			<-throttleSemaphore
-			_, _ = d.db.ExecContext(ctx, "UPDATE agent_missions SET sync_error = $1, last_synced_at = datetime('now') WHERE id = $2", err.Error(), m.id)
 			log.Printf("sync_daemon: [DEBUG] failed to sync mission %s: %v", m.id, err)
 			continue
 		}
