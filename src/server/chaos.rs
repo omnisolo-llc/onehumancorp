@@ -16,7 +16,7 @@ mod tests {
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]
     async fn test_sipdb_chaos_parity() {
-        let pool = PgPoolOptions::new()
+        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(Duration::from_millis(50))
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://localhost/dummy")
@@ -71,7 +71,7 @@ mod tests {
         use std::sync::Arc;
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
-        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .max_connections(5) // Constrained to force lock contention
             .connect(&uri)
             .await
@@ -208,7 +208,7 @@ mod tests {
         use sqlx::sqlite::SqlitePoolOptions;
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
-        let pool = SqlitePoolOptions::new().max_connections(1).connect(&uri).await.unwrap();
+        let pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) }).max_connections(1).connect(&uri).await.unwrap();
 
         sqlx::query(
             "CREATE TABLE agent_missions (
@@ -255,7 +255,7 @@ mod tests {
         // Simulate SQL sync lag by delaying the "synced" status update in a multi-step workflow
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
-        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect(&uri).await.unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) }).connect(&uri).await.unwrap();
 
         sqlx::query(
             "CREATE TABLE sync_queue (

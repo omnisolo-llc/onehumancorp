@@ -111,7 +111,7 @@ mod determine_conflict_winner_tests {
     #[tokio::test]
     async fn test_auto_resolve_conflicts_with_override_new() {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+        let pool = match SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) }).connect_with(conn_opts).await {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -160,7 +160,7 @@ mod determine_conflict_winner_tests {
     #[tokio::test]
     async fn test_auto_resolve_conflicts() {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+        let pool = match SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) }).connect_with(conn_opts).await {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -205,7 +205,7 @@ mod determine_conflict_winner_tests {
     #[tokio::test]
     async fn test_auto_resolve_conflicts_fallback() {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+        let pool = match SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) }).connect_with(conn_opts).await {
             Ok(p) => p,
             Err(_) => return,
         };

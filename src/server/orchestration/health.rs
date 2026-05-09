@@ -104,7 +104,7 @@ mod tests {
             return;
         }
 
-        let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+        let _pool = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) }).max_connections(1)
             .connect_lazy("sqlite::memory:")
             .unwrap();
 
@@ -167,7 +167,7 @@ mod tests {
             return;
         }
 
-        let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+        let _pool = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) }).max_connections(1)
             .connect_lazy("sqlite::memory:")
             .unwrap();
 
@@ -208,7 +208,7 @@ mod tests {
             return;
         }
 
-        let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+        let _pool = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) }).max_connections(1)
             .connect_lazy("sqlite::memory:")
             .unwrap();
 

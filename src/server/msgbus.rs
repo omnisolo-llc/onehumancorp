@@ -197,7 +197,7 @@ impl IpcBus {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
         let options = options.create_if_missing(true);
-        let pool = SqlitePoolOptions::new().connect_with(options).await.map_err(|e| e.to_string())?;
+        let pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) }).connect_with(options).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS bus_checkpoints (

@@ -255,7 +255,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_get_mesh_transport_sqlite_memory() {
-        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .connect("sqlite::memory:")
             .await
             .unwrap();
@@ -277,7 +277,7 @@ mod tests {
 
         std::fs::File::create(&db_path).unwrap();
 
-        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .connect(&db_url)
             .await
             .unwrap();

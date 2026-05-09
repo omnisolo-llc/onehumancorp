@@ -150,7 +150,7 @@ mod tests {
     use sqlx::sqlite::SqlitePoolOptions;
 
     async fn setup_test_db() -> Arc<DB> {
-        let pool = SqlitePoolOptions::new()
+        let pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .connect("sqlite::memory:")
             .await
             .unwrap();

@@ -12,7 +12,7 @@ mod tests {
     async fn test_cross_department_context_sharing() {
         // Safe database initialization
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
-        let pool = SqlitePoolOptions::new()
+        let pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .connect_with(conn_opts)
             .await
             .expect("Failed to connect to SQLite in-memory database");

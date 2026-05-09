@@ -233,7 +233,7 @@ mod tests {
     use crate::db::DbStore;
 
     async fn setup_test_db() -> Arc<DB> {
-        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .connect("sqlite::memory:")
             .await
             .expect("Failed to initialize database");
@@ -272,7 +272,7 @@ mod tests {
         "#;
         sqlx::query(schema).execute(&sqlite_pool).await.unwrap();
 
-        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 

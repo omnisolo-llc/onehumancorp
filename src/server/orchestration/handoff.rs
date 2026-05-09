@@ -175,7 +175,7 @@ mod tests {
             .unwrap()
             .create_if_missing(true);
 
-        let pool = SqlitePoolOptions::new()
+        let pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .max_connections(1)
             .connect_with(conn_opts)
             .await
@@ -187,7 +187,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
+            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -274,7 +274,7 @@ mod tests {
             .unwrap()
             .create_if_missing(true);
 
-        let pool = SqlitePoolOptions::new()
+        let pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .max_connections(1)
             .connect_with(conn_opts)
             .await
@@ -286,7 +286,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
+            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -411,7 +411,7 @@ mod tests {
             .unwrap()
             .create_if_missing(true);
 
-        let pool = SqlitePoolOptions::new()
+        let pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .max_connections(1)
             .connect_with(conn_opts)
             .await
@@ -429,7 +429,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
+            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;

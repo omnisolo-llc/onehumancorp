@@ -8,7 +8,7 @@ use chrono::Utc;
 #[tokio::test]
 async fn test_task_decomposition_service() {
     // Mock db to avoid pool timeouts for isolated test
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
         .connect("sqlite::memory:")
         .await
         .expect("Failed to initialize database");
@@ -174,7 +174,7 @@ async fn test_task_decomposition_service() {
 
 #[tokio::test]
 async fn test_task_decomposition_dag_blocked() {
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
         .connect("sqlite::memory:")
         .await
         .expect("Failed to initialize database");
@@ -329,7 +329,7 @@ async fn test_task_decomposition_dag_blocked() {
 
 #[tokio::test]
 async fn test_task_decomposition_service_fail_task() {
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
         .connect("sqlite::memory:")
         .await
         .expect("Failed to initialize database");

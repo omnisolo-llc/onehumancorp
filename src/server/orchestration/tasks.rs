@@ -793,7 +793,7 @@ mod tests {
         assert!(result.is_err()); // Will fail correctly since table is not created but covers path
 
         let sqlite_url = "sqlite::memory:";
-        if let Ok(sqlite_pool) = sqlx::sqlite::SqlitePoolOptions::new()
+        if let Ok(sqlite_pool) = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect(sqlite_url).await
         {
@@ -843,7 +843,7 @@ mod chaos_tests {
         // Also simulate >2s backend latency to verify fail-safe behavior
 
         let database_url = "sqlite::memory:";
-        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .acquire_timeout(std::time::Duration::from_millis(5000))
             .connect(database_url)
             .await
@@ -857,7 +857,7 @@ mod chaos_tests {
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
         let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
@@ -912,7 +912,7 @@ mod chaos_tests {
         // "Run concurrent load tests: 10 simultaneous business owners in Standalone mode"
 
         let database_url = "sqlite::memory:";
-        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .acquire_timeout(std::time::Duration::from_millis(5000))
             .connect(database_url)
             .await
@@ -926,7 +926,7 @@ mod chaos_tests {
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
         let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });

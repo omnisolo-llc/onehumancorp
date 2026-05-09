@@ -49,7 +49,7 @@ async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: 
 async fn setup_db() -> Arc<DB> {
     let db_id = uuid::Uuid::new_v4().to_string();
     let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
-    let sqlite_pool = SqlitePoolOptions::new()
+    let sqlite_pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
         .max_connections(1)
         .connect(&uri)
         .await

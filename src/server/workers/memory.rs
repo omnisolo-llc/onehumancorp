@@ -49,7 +49,7 @@ mod tests {
         use std::str::FromStr;
 
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+        let pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) }).connect_with(conn_opts).await.unwrap();
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
         let worker = MemoryConsolidationWorker::new(repo);
@@ -67,7 +67,7 @@ mod tests {
         use std::str::FromStr;
 
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+        let pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) }).connect_with(conn_opts).await.unwrap();
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
         let worker = MemoryConsolidationWorker::new(repo);
@@ -80,7 +80,7 @@ mod tests {
 
         // Safe database initialization without Err(_) => return
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse SQLite connection string");
-        let pool = SqlitePoolOptions::new()
+        let pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .connect_with(conn_opts)
             .await
             .expect("Failed to connect to SQLite memory pool");

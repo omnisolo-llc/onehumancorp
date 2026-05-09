@@ -13,7 +13,7 @@ mod tests {
             .unwrap()
             .create_if_missing(true);
 
-        let pool = SqlitePoolOptions::new()
+        let pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .connect_with(conn_opts)
             .await
             .unwrap();
@@ -51,7 +51,7 @@ mod tests {
 
         // Create dummy DB structure wrapped with our DbStore::Sqlite
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
+            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .connect_lazy("postgres://localhost/dummy").unwrap(),
             store: DbStore::Sqlite(pool.clone()),
@@ -78,7 +78,7 @@ mod tests {
             .unwrap()
             .create_if_missing(true);
 
-        let pool = SqlitePoolOptions::new()
+        let pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .connect_with(conn_opts)
             .await
             .unwrap();
@@ -105,7 +105,7 @@ mod tests {
 
         // Create dummy DB structure wrapped with our DbStore::Sqlite
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
+            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .connect_lazy("postgres://localhost/dummy").unwrap(),
             store: DbStore::Sqlite(pool.clone()),
@@ -131,7 +131,7 @@ mod tests {
             .unwrap()
             .create_if_missing(true);
 
-        let pool = SqlitePoolOptions::new()
+        let pool = SqlitePoolOptions::new().after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .connect_with(conn_opts)
             .await
             .unwrap();
@@ -158,7 +158,7 @@ mod tests {
 
         // Create dummy DB structure wrapped with our DbStore::Sqlite
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
+            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .connect_lazy("postgres://localhost/dummy").unwrap(),
             store: DbStore::Sqlite(pool.clone()),
