@@ -114,3 +114,35 @@ func TestHandleTeamInviteAccept(t *testing.T) {
 		t.Errorf("expected Status 'ACCEPTED', got '%s'", resp.Status)
 	}
 }
+
+func TestHandleDownload(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	svc := NewGrowthService(db)
+
+	reqBody := `{"os": "Mac", "version": "1.0.0"}`
+	req, err := http.NewRequest("POST", "/api/growth/downloads", bytes.NewBufferString(reqBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(svc.HandleDownload)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var resp Download
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.OS != "Mac" {
+		t.Errorf("expected OS 'Mac', got '%s'", resp.OS)
+	}
+	if resp.Version != "1.0.0" {
+		t.Errorf("expected Version '1.0.0', got '%s'", resp.Version)
+	}
+}

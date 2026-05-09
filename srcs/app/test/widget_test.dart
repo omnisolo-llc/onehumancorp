@@ -8,8 +8,13 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const ProviderScope(child: OHCApp()));
 
+    // Navigate from Landing Screen
+    await tester.tap(find.byKey(const Key('continueSetupBtn')));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
+
     // 1. Welcome Screen
-    expect(find.text('Welcome to One Human Corp'), findsOneWidget);
+    expect(find.text('Setup your Business'), findsOneWidget);
     final emailField = find.byKey(const Key('signupEmailField'));
     await tester.ensureVisible(emailField);
     await tester.enterText(emailField, 'newuser@example.com');

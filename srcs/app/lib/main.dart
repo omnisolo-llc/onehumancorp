@@ -6,6 +6,7 @@ import 'screens/business_setup_wizard_screen.dart';
 import 'screens/help/help_center_screen.dart';
 import 'screens/help/ai_help_chat_screen.dart';
 import 'screens/referral_program_screen.dart';
+import 'screens/landing_screen.dart';
 
 
 void main() {
@@ -27,7 +28,7 @@ class OHCApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
       ),
-      home: const BusinessSetupWizardScreen(),
+      home: const LandingScreen(),
     );
   }
 }

@@ -7,6 +7,11 @@ import 'package:app/main.dart';
 Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.pumpWidget(const ProviderScope(child: OHCApp()));
 
+  // Navigate from Landing Screen
+  await tester.tap(find.byKey(const Key('continueSetupBtn')));
+  await tester.pump(const Duration(milliseconds: 500));
+  await tester.pump(const Duration(milliseconds: 500));
+
   // 1. Welcome Screen
   final emailField = find.byKey(const Key('signupEmailField'));
   await tester.ensureVisible(emailField);

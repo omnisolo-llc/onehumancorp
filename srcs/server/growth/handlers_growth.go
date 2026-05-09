@@ -18,6 +18,12 @@ type TeamInvite struct {
 	Status string `json:"status"`
 }
 
+type Download struct {
+	ID      int    `json:"id"`
+	OS      string `json:"os"`
+	Version string `json:"version"`
+}
+
 type GrowthService struct {
 	db *sql.DB
 }
@@ -32,6 +38,11 @@ func NewGrowthService(db *sql.DB) *GrowthService {
 		CREATE TABLE IF NOT EXISTS team_invites (
 			id TEXT PRIMARY KEY,
 			status TEXT DEFAULT 'PENDING'
+		);
+		CREATE TABLE IF NOT EXISTS downloads (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			os TEXT,
+			version TEXT
 		);
 	`)
 	if err != nil {
@@ -131,4 +142,31 @@ func (s *GrowthService) HandleTeamInviteAccept(w http.ResponseWriter, r *http.Re
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(inv)
+}
+
+func (s *GrowthService) HandleDownload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req Download
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	err := s.db.QueryRow(`
+		INSERT INTO downloads (os, version)
+		VALUES ($1, $2)
+		RETURNING id, os, version
+	`, req.OS, req.Version).Scan(&req.ID, &req.OS, &req.Version)
+
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(req)
 }

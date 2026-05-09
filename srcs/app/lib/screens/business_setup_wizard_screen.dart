@@ -158,7 +158,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
           ),
           const SizedBox(height: 30),
           const Text(
-            'Welcome to One Human Corp',
+            'Setup your Business',
             style: TextStyle(
               fontFamily: 'Outfit',
               fontSize: 32,
