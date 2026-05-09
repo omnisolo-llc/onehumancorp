@@ -13,7 +13,7 @@ fn test_bottom_navigation_share_button() {
     let _ui_handle = ui.as_weak();
     // In our test, clicking share store doesn't easily expose an internal state
     // but we can verify properties if they were exposed.
-    // Instead we can test callback is wired up properly via standard mocking:
+    // Instead we can test callback is wired up properly via standard callback testing:
     let shared = std::rc::Rc::new(std::cell::RefCell::new(false));
     let shared_clone = shared.clone();
 

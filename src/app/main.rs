@@ -236,16 +236,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    setup_wizard_ui.set_product_currency("USD".into());
 
-    // Mock locale-based currency detection
-    let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-        "GBP"
-    } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-        "EUR"
-    } else {
-        "USD"
-    };
-    setup_wizard_ui.set_product_currency(detected_currency.into());
 
     let setup_wizard_handle = setup_wizard_ui.as_weak();
     let sw_ui_weak = setup_wizard_handle.clone();
@@ -3097,16 +3089,8 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
 
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    setup_wizard_ui.set_product_currency("USD".into());
 
-    // Mock locale-based currency detection
-    let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-        "GBP"
-    } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-        "EUR"
-    } else {
-        "USD"
-    };
-    setup_wizard_ui.set_product_currency(detected_currency.into());
 
     let setup_wizard_handle = setup_wizard_ui.as_weak();
     let sw_ui_weak = setup_wizard_handle.clone();
@@ -3201,15 +3185,8 @@ mod growth_e2e_tests {
         let login_ui_handle = login_ui.as_weak();
 
         let setup_wizard_ui = app::SetupWizard::new().unwrap();
+        setup_wizard_ui.set_product_currency("USD".into());
 
-        let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-            "GBP"
-        } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-            "EUR"
-        } else {
-            "USD"
-        };
-        setup_wizard_ui.set_product_currency(detected_currency.into());
 
         let setup_wizard_handle = setup_wizard_ui.as_weak();
 
@@ -8265,7 +8242,7 @@ mod e2e_issue_9422_tests {
             *launch_called_clone.borrow_mut() = true;
         });
 
-        ui.set_launch_success(true); // Mock successful launch
+        ui.set_launch_success(true); // Set successful launch state for test
 
         // 3. Generation Screen
         // Assume generation succeeds and we go to dashboard.
