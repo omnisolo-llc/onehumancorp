@@ -553,12 +553,13 @@ impl StateHandoffManager {
 #[allow(dead_code)]
 pub struct HealthMonitor {
     bus: std::sync::Arc<dyn Bus>,
+    pub last_ack_timestamps: std::sync::Arc<dashmap::DashMap<String, i64>>,
 }
 
 #[allow(dead_code)]
 impl HealthMonitor {
     pub fn new(bus: std::sync::Arc<dyn Bus>) -> Self {
-        Self { bus }
+        Self { bus, last_ack_timestamps: std::sync::Arc::new(dashmap::DashMap::new()) }
     }
 
     pub async fn ping(&self) -> Result<(), String> {
@@ -601,6 +602,68 @@ impl HealthMonitor {
                 Err("Health ping timed out waiting for ack".to_string())
             }
         }
+    }
+
+    pub fn start_background_monitor(&self, node_id: String, mut stop_signal: tokio::sync::watch::Receiver<()>) -> tokio::task::JoinHandle<()> {
+        let ping_bus = self.bus.clone();
+        let ack_bus = self.bus.clone();
+        let last_acks = self.last_ack_timestamps.clone();
+
+        let topic_name = format!("system:health_ack:{}", node_id);
+        let topic_name_clone = topic_name.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == topic_name_clone {
+                if let Ok(ack) = <crate::interop::protocol::proto::HealthAck as prost::Message>::decode(&msg.payload[..]) {
+                    last_acks.insert(ack.source_node_id, chrono::Utc::now().timestamp_millis());
+                }
+            }
+        });
+
+        tokio::spawn(async move {
+            let mut _cancel = Box::new(|| {}) as Box<dyn Fn() + Send + Sync>;
+            if let Ok(c) = ack_bus.subscribe(topic_name, handler).await {
+                _cancel = c;
+            } else {
+                eprintln!("HealthMonitor failed to subscribe to acks");
+                return;
+            }
+
+            loop {
+                let ping = crate::interop::protocol::proto::HealthPing {
+                    current_mode: 0,
+                    timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                    source_node_id: node_id.clone(),
+                };
+                let mut buf = Vec::new();
+                prost::Message::encode(&ping, &mut buf).unwrap_or(());
+                let msg = Message {
+                    topic: "system:health_ping".to_string(),
+                    payload: buf,
+                };
+                let _ = ping_bus.publish(msg).await;
+
+                tokio::select! {
+                    _ = tokio::time::sleep(tokio::time::Duration::from_secs(60)) => {}
+                    _ = stop_signal.changed() => {
+                        _cancel();
+                        break;
+                    }
+                }
+            }
+        })
+    }
+
+    pub fn get_alive_nodes(&self, timeout_ms: i64) -> Vec<String> {
+        let now = chrono::Utc::now().timestamp_millis();
+        let mut alive = Vec::new();
+        self.last_ack_timestamps.retain(|_, v| now - *v <= timeout_ms * 2);
+        for entry in self.last_ack_timestamps.iter() {
+            if now - *entry.value() <= timeout_ms {
+                alive.push(entry.key().clone());
+            }
+        }
+        alive
     }
 }
 
@@ -811,6 +874,54 @@ mod tests {
         let result = monitor.ping().await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Health ping timed out waiting for ack");
+    }
+
+    #[tokio::test]
+    async fn test_health_monitor_background_monitor() {
+        let bus = std::sync::Arc::new(MemoryBus::new());
+        let monitor = HealthMonitor::new(bus.clone());
+
+        let received = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let received_clone = received.clone();
+
+        let ack_bus = bus.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "system:health_ping" {
+                received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+
+                let ack = crate::interop::protocol::proto::HealthAck {
+                    source_node_id: "test_node_id".to_string(),
+                    target_node_id: "test_node_id".to_string(),
+                    timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                };
+                let mut buf = Vec::new();
+                prost::Message::encode(&ack, &mut buf).unwrap_or(());
+                let ack_msg = Message {
+                    topic: "system:health_ack:test_node_id".to_string(),
+                    payload: buf,
+                };
+
+                let inner_bus = ack_bus.clone();
+                tokio::spawn(async move {
+                    let _ = inner_bus.publish(ack_msg).await;
+                });
+            }
+        });
+
+        let cancel = bus.subscribe("system:health_ping".to_string(), handler).await.unwrap();
+
+        let (tx, rx) = tokio::sync::watch::channel(());
+        let handle = monitor.start_background_monitor("test_node_id".to_string(), rx);
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        assert!(monitor.get_alive_nodes(5000).contains(&"test_node_id".to_string()));
+
+        tx.send(()).unwrap();
+        handle.await.unwrap();
+        assert!(received.load(std::sync::atomic::Ordering::SeqCst));
+        cancel();
     }
 
     #[tokio::test]
