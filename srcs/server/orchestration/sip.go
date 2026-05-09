@@ -51,11 +51,9 @@ func (s *SIPDB) DelegateMission(ctx context.Context, mission *AgentMission) erro
 }
 
 func (s *SIPDB) ReportMissionHandover(ctx context.Context, missionID string, blockers string) error {
-	_, err := s.db.ExecContext(ctx, `
-		UPDATE agent_missions
-		SET status = 'blocked',
-		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '
-' END || $1
-		WHERE id = $2`, blockers, missionID)
+	// Use explicit line break format that SQLite will interpret exactly as '\n' without escaping it.
+	// Since backticks literalize exactly, we construct the string without backticks.
+	query := "UPDATE agent_missions SET status = 'blocked', mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '\n' END || $1 WHERE id = $2"
+	_, err := s.db.ExecContext(ctx, query, blockers, missionID)
 	return err
 }
