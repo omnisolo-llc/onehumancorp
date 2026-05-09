@@ -5,6 +5,10 @@ import (
 	"net/http"
 )
 
+type ContextKey string
+
+const TenantContextKey ContextKey = "tenant_id"
+
 // APIHandler handles tier related requests
 type APIHandler struct {
 	svc *TierService
@@ -22,10 +26,20 @@ func (h *APIHandler) HandleCheckLimit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID := r.URL.Query().Get("tenant_id")
-	metric := r.URL.Query().Get("metric")
+	// Read tenant_id from context (session), NOT from query parameters
+	// Also fallback to primitive string "tenant_id" because middleware might be using it
+	tenantID, ok := r.Context().Value(TenantContextKey).(string)
+	if !ok || tenantID == "" {
+		tenantID, ok = r.Context().Value("tenant_id").(string)
+	}
 
-	if tenantID == "" || metric == "" {
+	if !ok || tenantID == "" {
+		http.Error(w, "Unauthorized: missing tenant context", http.StatusUnauthorized)
+		return
+	}
+
+	metric := r.URL.Query().Get("metric")
+	if metric == "" {
 		http.Error(w, "Missing required parameters", http.StatusBadRequest)
 		return
 	}
