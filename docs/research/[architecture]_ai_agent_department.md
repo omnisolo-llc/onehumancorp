@@ -1,24 +1,17 @@
-# OHC AI Agent Department Architecture
+# Title
+OHC AI Agent Department Architecture
 
-## 1. Overview
-This design document defines how AI departments operate invisibly within the OHC platform. OHC's agents are organized into friendly, understandable functional areas that mirror how a real business operates (Operations, Marketing & Advertising, Sales & Acquisition, Customer Success, Finance & Payments, Legal & Compliance, and Business Advisory). These agents seamlessly integrate into the daily workflow of non-technical small business owners, offloading cognitive overhead and driving growth.
+## Problem Statement
+Small business owners lack the time and expertise to manage all aspects of a business (operations, marketing, sales, customer success, finance, legal, advisory). They need AI to handle this complexity invisibly. OHC requires a defined architecture for 7 AI Agent Departments that seamlessly integrate into the daily workflow of non-technical small business owners, offloading cognitive overhead while maintaining safety, trust, and proper multi-tenant isolation.
 
-## 2. Goals & Non-Goals
-### 2.1 Goals
-- Define clear functional boundaries for each of the 7 AI Agent Departments.
-- Specify how each department is triggered and how they coordinate via the KAIROS Orchestrator.
-- Define memory retention and access patterns for contextual decision-making.
-- Outline the approval mechanism ensuring appropriate oversight (auto-execute vs. draft-for-review).
-- Establish usage limits and budgeting based on tenant tiers.
+## Research Report
+- AI departments mirror real business functions: Operations, Marketing, Sales, Customer Success, Finance, Legal, Advisory.
+- Competitors like Shopify and Wix offer isolated AI text generation or chatbot add-ons, but lack a cohesive, autonomous "departmental" structure that runs asynchronously and coordinates across domains (e.g., Sales talking to Ops).
+- OHC's competitive edge is the invisible orchestration of these departments using a shared event mesh, allowing them to collaborate securely.
 
-### 2.2 Non-Goals
-- Prescribe specific LLM inference engines or prompt tuning methodologies.
-- Define explicit SQL DDL schemas for the database.
-- Specify exact queueing mechanisms or worker node provisioning.
+## Design Doc
 
-## 3. Detailed Design
-
-### 3.1 Architecture Diagram
+### Architecture Diagram
 ```mermaid
 sequenceDiagram
     participant O as KAIROS Orchestrator
@@ -39,60 +32,33 @@ sequenceDiagram
     CS->>DB: Fetch Customer Profile
     DB-->>CS: Profile (Preferences)
     CS->>Hub: Draft Email for Review
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class O,Hub,Op,CS,Fin,DB premium;
 ```
 
-### 3.2 Department Execution Triggers & Coordination
-Departments are autonomous but interconnected:
-- **Scheduled (Cron):** E.g., The Business Advisory Agent generates weekly health reports every Monday at 8 AM.
-- **Event-Driven:** Triggered by system events. E.g., Operations processes an order -> Customer Success drafts a thank-you note.
-- **On-Demand:** Direct user prompts via the dashboard UI.
+### UI Wireframes or Screen Flow Description (375px first)
+1. **Agent Dashboard**: A 375px optimized feed showing active tasks from various "Departments" (e.g., "The Manager", "The Ambassador").
+2. **Draft Review Screen**: A card presenting a drafted social media post or customer email with a clear "Approve" (1-tap) or "Reject" button.
 
-Coordination is handled via the KAIROS Shared Task List and Teammate Mesh, ensuring durable, collision-free handoffs between departments using distributed locks (`ohc:lock:{tenant_id}:{resource_type}:{resource_id}`).
+### Mobile UX Flow
+- All agent interactions (approving drafts, viewing reports) happen via a 375px mobile UI.
+- Action items are summarized in plain language.
+- Draft-for-review actions show a persistent bottom-sheet notification until acted upon.
 
-#### Critical 1-Tap Handoff Triggers
-To ensure the "1-Tap Approval" experience, the following coordination patterns are strictly enforced:
-1.  **Ops -> Success (The Fulfillment Flow)**: When "The Manager" marks an order as `SHIPPED` or `READY_FOR_PICKUP`, a `tenant.order.fulfillment_ready` event is emitted. "The Ambassador" immediately drafts a personalized notification for the customer.
-2.  **Sales -> Ops (The Quote flow)**: When a customer accepts a quote, "The Salesperson" emits `tenant.quote.accepted`. "The Manager" automatically creates an `ORDER` and a `BOOKING` in the shared task list, pending the owner's confirmation.
-3.  **Advisor -> Promoter (The Growth Flow)**: When "The Advisor" identifies a high-velocity product (e.g., Maya's vegan cake), it emits `tenant.insight.trending`. "The Promoter" then drafts a social media campaign or a website banner to capitalize on the trend.
+### AI Agent Integration Points
+- **Scheduled (Cron)**: Business Advisory generates weekly reports.
+- **Event-Driven**: Operations processes an order -> Customer Success drafts a thank you.
+- **On-Demand**: Direct user prompts.
+- **Memory**: Short-term context and long-term `autodream_memories` via `pgvector`.
 
-### 3.3 Memory & Context
-Agents utilize a unified memory model:
-- **Short-Term Context:** Current session data and active task payload (e.g., the specific order details).
-- **Long-Term Memory:** Embedded into `autodream_memories` using `pgvector`. This allows agents to recall past interactions, seasonal trends, and specific customer preferences (e.g., "Customer X always asks for vegan options").
+### Key Design Decisions and Why
+- **Approval Workflows**: Low-risk actions are auto-executed; high-risk actions (external communication, refunds) require 1-tap Draft-for-Review approval to maintain trust.
+- **Departmental Boundaries**: Clear functional boundaries ensure predictable agent behavior and isolated failure domains.
+- **Usage Throttling**: Actions are gated by the SaaS tier to control infrastructure costs while offering upgrades.
 
-### 3.4 Approval Workflows
-To maintain trust, actions are categorized by risk:
-- **Auto-Execute:** Low-risk, reversible actions (e.g., updating internal inventory tags, parsing analytics).
-- **Draft-for-Review:** High-risk, external actions (e.g., publishing social media posts, sending customer emails, refunding payments). The system presents a notification to the business owner, requiring a 1-tap approval via the mobile app.
+## Implementation Prompt
+Implement the Draft-for-Review workflow engine within the KAIROS orchestrator. Agents must be able to submit high-risk actions (e.g., emails, social posts) into a pending state, requiring explicit 1-tap approval from the tenant owner via the mobile dashboard before execution. Include the unified API contract for submitting agent drafts and the user journey for reviewing and approving them on mobile. Do not prescribe specific database schemas or internal inference configurations. Ensure complete UI integration testing for the approval flow.
 
-### 3.5 Tier-Based Usage & Throttling
-Agent activity is gated by the multi-tenant SaaS tier:
-- Usage is metered per tenant using custom Prometheus metrics.
-- Hard limits on monthly AI actions (e.g., Free: 100, Starter: 1,000, Pro: Unlimited).
-- Rate limiting applied at the Orchestrator level to prevent noisy-neighbor degradation.
+## Priority
+P1
 
-## 4. Cross-cutting Concerns
-### 4.1 Mobile-First UX
-All agent interactions (approving drafts, viewing advisory reports) are designed for a 375px mobile breakpoint. Action items are summarized in plain language ("Your vegan cake campaign is ready for review").
-
-### 4.2 Security & Multi-Tenancy
-Every agent query and action is scoped to the `tenant_id` via PostgreSQL Row Level Security (RLS) to guarantee complete isolation.
-
-## 5. Implementation Plan
-- **Phase 1:** Core KAIROS event routing for the Operations and Customer Success departments.
-- **Phase 2:** Memory integration (`autodream_memories`) for contextual responses.
-- **Phase 3:** Draft-for-review approval UX implementation in the mobile application.
-
-```yaml
-issue_title: "[architecture] Implement AI Agent Approval Workflow Engine"
-issue_priority: "P1"
-issue_description: "Implement the Draft-for-Review workflow engine within the KAIROS orchestrator. Agents must be able to submit high-risk actions (e.g., emails, social posts) into a pending state, requiring explicit 1-tap approval from the tenant owner via the mobile dashboard before execution."
-issue_todo_list:
-  - [ ] Define ActionRisk level in agent mission payload.
-  - [ ] Create pending approval queue in OHC-SIP DB.
-  - [ ] Implement approval/rejection callback endpoints.
-issue_label: ["architecture", "high-impact", "core-feature"]
-```
+## Estimated Scope
+Medium
