@@ -10,7 +10,7 @@ import (
 )
 
 type EventBroker struct {
-	mu          sync.Mutex
+	mu          sync.RWMutex
 	clients     map[chan string]bool
 	newClients  chan chan string
 	deadClients chan chan string
@@ -40,20 +40,27 @@ func (b *EventBroker) Start() {
 				close(s)
 				b.mu.Unlock()
 			case msg := <-b.messages:
-				b.mu.Lock()
+				b.mu.RLock()
 				for s := range b.clients {
 					select {
 					case s <- msg:
 					default:
 					}
 				}
-				b.mu.Unlock()
+				b.mu.RUnlock()
 			}
 		}
 	}()
 }
 
 var GlobalBroker = NewEventBroker()
+
+// Pre-allocate successful response payloads
+var (
+	autoDreamSyncSuccessJSON  = []byte(`{"status":"ok"}`)
+	autoDreamQuerySuccessJSON = []byte(`{"results":[]}`)
+	meshBroadcastSuccessJSON  = []byte(`{"status":"broadcasted"}`)
+)
 
 func init() {
 	GlobalBroker.Start()
@@ -64,7 +71,7 @@ func HandleStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	msgChan := make(chan string)
+	msgChan := make(chan string, 1) // Buffer channel to prevent blocking
 	GlobalBroker.newClients <- msgChan
 	defer func() {
 		GlobalBroker.deadClients <- msgChan
@@ -101,7 +108,7 @@ func HandleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"ok"}`))
+	w.Write(autoDreamSyncSuccessJSON)
 }
 
 func HandleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
@@ -116,7 +123,7 @@ func HandleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"results":[]}`))
+	w.Write(autoDreamQuerySuccessJSON)
 }
 
 func HandleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
@@ -128,5 +135,5 @@ func HandleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 	telemetry.MeshBroadcastTotal.WithLabelValues(deploymentMode).Inc()
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"broadcasted"}`))
+	w.Write(meshBroadcastSuccessJSON)
 }
