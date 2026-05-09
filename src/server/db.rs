@@ -751,6 +751,25 @@ pub async fn insert_autodream_memory(
     }
 
 
+    pub async fn sanitize_backlog(&self) -> Result<(), Box<dyn std::error::Error>> {
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                let _ = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STAGNANT' OR status = 'STUCK'")
+                    .execute(sqlite_pool)
+                    .await;
+            },
+            DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                set_org_context(&mut *tx, "system").await?;
+                let _ = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STAGNANT' OR status = 'STUCK'")
+                    .execute(&mut *tx)
+                    .await;
+                tx.commit().await?;
+            }
+        };
+        Ok(())
+    }
+
     pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {

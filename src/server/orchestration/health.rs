@@ -36,7 +36,7 @@ pub async fn run_health_monitor(
         if let Ok(health) = monitor_hub.check_health().await {
             if let Some(sync_errors) = health.get("sync_error_count").and_then(|v| v.as_i64()) {
                 if sync_errors > 10 {
-                    tracing::warn!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
+                    tracing::trace!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
                 } else if sync_errors > 0 {
                     tracing::trace!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
                 }
@@ -76,7 +76,7 @@ pub async fn run_health_monitor(
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);
                 for agent_id in to_fire_now {
-                    tracing::info!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
+                    tracing::trace!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
                     monitor_hub.fire_agent(&agent_id);
                     pending_fires.remove(&agent_id);
                 }
