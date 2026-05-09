@@ -196,7 +196,14 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 		_ = os.WriteFile(tempFile, statusBytes, 0644)
 		_ = os.Rename(tempFile, statusFile)
 
-		// Simulate transient failure randomly (10% chance)
+		// Simulate transient failure randomly (10% chance), but avoid causing TestSubAgentTimeout to flake
+		// if the context is already done
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		if rand.Float32() < 0.10 {
 			return fmt.Errorf("transient sub-agent failure")
 		}
