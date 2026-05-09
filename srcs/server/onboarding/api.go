@@ -1,11 +1,15 @@
 package onboarding
 
 import (
-	"encoding/json"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
+	"os"
+	"strings"
 )
-
 
 type contextKey string
 const tenantContextKey contextKey = "tenant_id"
@@ -112,17 +116,69 @@ func (h *APIHandler) HandleGetState(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
-// TenantAuthMiddleware extracts the X-Tenant-Id header and injects it into the request context.
-// In a real application, this would validate a session token, but this provides a secure extraction path.
+// TenantAuthMiddleware extracts the organization_id from the JWT in the Authorization header.
 func TenantAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := r.Header.Get("X-Tenant-Id")
-		if tenantID == "" {
-			http.Error(w, "Missing X-Tenant-Id header", http.StatusUnauthorized)
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			http.Error(w, "Unauthorized: missing or invalid token", http.StatusUnauthorized)
 			return
 		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		parts := strings.Split(tokenString, ".")
+		if len(parts) != 3 {
+			http.Error(w, "Unauthorized: invalid token format", http.StatusUnauthorized)
+			return
+		}
+
+		// Validate JWT Signature securely
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			if os.Getenv("OHC_STANDALONE") == "true" {
+				// Standalone fallback: derive secret from OHC_SQLITE_KEY like Rust backend
+				sqliteKey := os.Getenv("OHC_SQLITE_KEY")
+				if sqliteKey != "" {
+					mac := hmac.New(sha256.New, []byte("ohc_jwt_derivation_salt"))
+					mac.Write([]byte(sqliteKey))
+					secret = string(mac.Sum(nil))
+				}
+			}
+		}
+
+		// If we still have no secret, we must reject in cloud mode to prevent forged tokens
+		if secret == "" && os.Getenv("OHC_STANDALONE") != "true" {
+			http.Error(w, "Internal Server Error: Missing JWT_SECRET", http.StatusInternalServerError)
+			return
+		}
+
+		if secret != "" {
+			mac := hmac.New(sha256.New, []byte(secret))
+			mac.Write([]byte(parts[0] + "." + parts[1]))
+			expectedSignature := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+
+			if !hmac.Equal([]byte(parts[2]), []byte(expectedSignature)) {
+				http.Error(w, "Unauthorized: invalid token signature", http.StatusUnauthorized)
+				return
+			}
+		}
+
+		payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+		if err != nil {
+			http.Error(w, "Unauthorized: malformed token payload", http.StatusUnauthorized)
+			return
+		}
+
+		var claims struct {
+			OrganizationID string `json:"organization_id"`
+		}
+		if err := json.Unmarshal(payload, &claims); err != nil || claims.OrganizationID == "" {
+			http.Error(w, "Unauthorized: missing organization_id in token", http.StatusUnauthorized)
+			return
+		}
+
 		// Inject into context
-		ctx := context.WithValue(r.Context(), tenantContextKey, tenantID)
+		ctx := context.WithValue(r.Context(), tenantContextKey, claims.OrganizationID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }

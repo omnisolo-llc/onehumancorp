@@ -37,9 +37,13 @@ func (p *CloudFSProvider) sanitizePath(tenantID, inputPath string) (string, erro
 	if tenantID == "" {
 		return "", fmt.Errorf("tenant ID is required")
 	}
+	cleanTenantID := filepath.Clean(tenantID)
+	if cleanTenantID != tenantID || strings.Contains(tenantID, "/") || strings.Contains(tenantID, "\\") {
+		return "", fmt.Errorf("invalid tenant ID")
+	}
 
 	cleanPath := filepath.Clean(inputPath)
-	tenantPath := p.getTenantPath(tenantID)
+	tenantPath := p.getTenantPath(cleanTenantID)
 	fullPath := filepath.Join(tenantPath, cleanPath)
 
 	// Fix security vulnerability by comparing with Rel

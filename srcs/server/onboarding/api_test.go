@@ -3,7 +3,7 @@ package onboarding
 import (
 	"bytes"
 	"context"
-
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -62,7 +62,12 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	// 3. Poll Status
 	req1, err := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
 	assert.NoError(t, err)
-	req1.Header.Set("X-Tenant-Id", startRes.TenantID)
+	payload := `{"organization_id":"` + startRes.TenantID + `"}`
+	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
+
+	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_SQLITE_KEY", "") // Force empty secret
+	req1.Header.Set("Authorization", "Bearer header."+encodedPayload+".signature")
 	statusResp, err := http.DefaultClient.Do(req1)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp.StatusCode)
@@ -82,7 +87,7 @@ func TestAPIEndToEndFlow(t *testing.T) {
 
 	// 5. Poll Status Again
 	req2, _ := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
-	req2.Header.Set("X-Tenant-Id", startRes.TenantID)
+	req2.Header.Set("Authorization", "Bearer header."+encodedPayload+".signature")
 	statusResp2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp2.StatusCode)

@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -34,6 +36,11 @@ func main() {
 	dbPath := ":memory:"
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		dbPath = "ohc_standalone.db"
+		sqliteKey := os.Getenv("OHC_SQLITE_KEY")
+		if sqliteKey == "" {
+			log.Fatalf("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+		}
+		dbPath = fmt.Sprintf("%s?_pragma_key=%s", dbPath, url.QueryEscape(sqliteKey))
 	}
 
 	db, err := sql.Open("sqlite3", dbPath)
@@ -44,8 +51,12 @@ func main() {
 
 	if dbPath != ":memory:" {
 		// Enforce secure file permissions for local standalone mode
-		if err := os.Chmod(dbPath, 0600); err != nil {
-			log.Printf("Warning: Failed to set secure permissions on %s: %v", dbPath, err)
+		actualPath := dbPath
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			actualPath = "ohc_standalone.db"
+		}
+		if err := os.Chmod(actualPath, 0600); err != nil {
+			log.Printf("Warning: Failed to set secure permissions on %s: %v", actualPath, err)
 		}
 	}
 
