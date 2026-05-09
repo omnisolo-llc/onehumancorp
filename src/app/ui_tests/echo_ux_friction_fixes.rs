@@ -1,5 +1,5 @@
 use crate::app;
-use slint::ComponentHandle;
+
 use std::rc::Rc;
 use std::cell::RefCell;
 
