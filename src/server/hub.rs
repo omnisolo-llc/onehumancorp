@@ -82,7 +82,7 @@ impl Hub {
                 let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
 
                 // Blueprint: track cost in cents
-                let cost_cents = (cost * 100.0) as f32;
+                let cost_cents = (cost * 100.0).round() as f32;
                 let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels).await;
             }
         });
