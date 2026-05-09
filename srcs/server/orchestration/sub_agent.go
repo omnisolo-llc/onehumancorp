@@ -208,9 +208,9 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 
 // Simulated server-side token budget tracking
 var tokenBudgets = map[string]int{
-	"org-1":      1000,
-	"org-chaos":  1000,
-	"org-parity": 1000,
+	"org-1":           1000,
+	"org-chaos":       1000,
+	"org-parity":      1000,
 	"org-budget-fail": 0,
 }
 var tokenMu sync.Mutex

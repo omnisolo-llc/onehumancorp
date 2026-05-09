@@ -9,6 +9,7 @@ filegroup(
 go_library(
     name = "db",
     srcs = ["entities.go", "provider.go"],
+    embedsrcs = glob(["migrations/*.sql"]),
     importpath = "onehumancorp/srcs/server/db",
     visibility = ["//visibility:public"],
     deps = [
