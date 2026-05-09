@@ -42,8 +42,14 @@ impl AutoDreamWorker {
                 };
 
                 let stale_threshold = chrono::Utc::now() - chrono::Duration::days(180);
-                if let Err(e) = repository.prune_stale(stale_threshold).await {
-                    debug!("AutoDream: pruning consolidated memory failed: {}", e);
+                if let Ok(tenants) = repository.get_all_tenants().await {
+                    for tenant in tenants {
+                        if let Err(e) = repository.prune_stale(&tenant, stale_threshold).await {
+                            debug!("AutoDream: pruning consolidated memory failed for tenant {}: {}", tenant, e);
+                        }
+                    }
+                } else {
+                    debug!("AutoDream: pruning consolidated memory failed");
                 }
 
                 sleep(Duration::from_secs(60)).await;
@@ -152,7 +158,11 @@ impl AutoDreamWorker {
             crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
         };
 
-        let resolved_count = repository.auto_resolve_conflicts().await.map_err(|e| e.to_string())?;
+        let tenants = repository.get_all_tenants().await.map_err(|e| e.to_string())?;
+        let mut resolved_count = 0;
+        for tenant in tenants {
+            resolved_count += repository.auto_resolve_conflicts(&tenant).await.map_err(|e| e.to_string())?;
+        }
         if resolved_count > 0 {
             debug!("AutoDream: Resolved {} memory conflicts automatically.", resolved_count);
         }

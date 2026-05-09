@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
 use chrono::Utc;
-use crate::orchestration::departments::memory::pruning::prune_stale;
 use crate::orchestration::departments::memory::conflict::auto_resolve_conflicts;
 
 pub struct MemoryConsolidationWorker {
@@ -28,11 +27,20 @@ impl MemoryConsolidationWorker {
             loop {
                 interval.tick().await;
                 let older_than = Utc::now() - chrono::Duration::days(prune_threshold_days);
-                if let Err(e) = prune_stale(repository.clone(), older_than).await {
-                    tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
-                }
-                if let Err(e) = auto_resolve_conflicts(repository.clone()).await {
-                    tracing::error!("Consolidation Worker: Failed to resolve memory conflicts: {}", e);
+                match repository.get_all_tenants().await {
+                    Ok(tenants) => {
+                        for tenant in tenants {
+                            if let Err(e) = repository.prune_stale(&tenant, older_than).await {
+                                tracing::error!("Consolidation Worker: Failed to prune stale context for tenant {}: {}", tenant, e);
+                            }
+                            if let Err(e) = auto_resolve_conflicts(repository.clone(), &tenant).await {
+                                tracing::error!("Consolidation Worker: Failed to resolve memory conflicts for tenant {}: {}", tenant, e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Consolidation Worker: Failed to retrieve active tenants: {}", e);
+                    }
                 }
             }
         });

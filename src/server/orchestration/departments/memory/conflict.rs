@@ -1,8 +1,8 @@
 use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
 use std::sync::Arc;
 
-pub async fn auto_resolve_conflicts(repository: Arc<VectorRepository>) -> Result<usize, String> {
-    let conflicts = repository.get_conflicting_pairs().await?;
+pub async fn auto_resolve_conflicts(repository: Arc<VectorRepository>, tenant_id: &str) -> Result<usize, String> {
+    let conflicts = repository.get_conflicting_pairs(tenant_id).await?;
     let mut resolved_count = 0;
 
     for (a, b) in conflicts {
@@ -143,7 +143,7 @@ mod determine_conflict_winner_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
 
-        let resolved = auto_resolve_conflicts(repo.clone()).await.unwrap();
+        let resolved = auto_resolve_conflicts(repo.clone(), "org1").await.unwrap();
         assert_eq!(resolved, 1);
 
         let query = "SELECT id, reference_count FROM consolidated_memory";
@@ -191,7 +191,7 @@ mod determine_conflict_winner_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
 
-        let resolved = auto_resolve_conflicts(repo.clone()).await.unwrap();
+        let resolved = auto_resolve_conflicts(repo.clone(), "org1").await.unwrap();
         assert_eq!(resolved, 1);
 
         let query = "SELECT id, reference_count FROM consolidated_memory";
@@ -237,7 +237,7 @@ mod determine_conflict_winner_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
 
-        let resolved = auto_resolve_conflicts(repo.clone()).await.unwrap();
+        let resolved = auto_resolve_conflicts(repo.clone(), "org1").await.unwrap();
         assert_eq!(resolved, 1);
 
         let query = "SELECT id, reference_count FROM consolidated_memory";

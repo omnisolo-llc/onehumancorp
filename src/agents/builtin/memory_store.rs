@@ -323,17 +323,19 @@ impl VectorRepository {
         Ok(results)
     }
 
-    pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
+    pub async fn prune_stale(&self, tenant_id: &str, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                sqlx::query("DELETE FROM consolidated_memory WHERE tenant_id = $1 AND last_referenced_at < $2 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                    .bind(tenant_id)
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                sqlx::query("DELETE FROM consolidated_memory WHERE tenant_id = ? AND last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                    .bind(tenant_id)
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -372,8 +374,38 @@ impl VectorRepository {
         Ok(())
     }
 
-    pub async fn auto_resolve_conflicts(&self) -> Result<usize, String> {
-        let conflicts = self.get_conflicting_pairs().await?;
+
+    pub async fn get_all_tenants(&self) -> Result<Vec<String>, String> {
+        let mut tenants = Vec::new();
+        match &self.store {
+            VectorMemoryStore::Postgres(pool) => {
+                let rows = sqlx::query("SELECT DISTINCT tenant_id FROM consolidated_memory")
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                for row in rows {
+                    use sqlx::Row;
+                    let tenant_id: String = row.get("tenant_id");
+                    tenants.push(tenant_id);
+                }
+            }
+            VectorMemoryStore::Sqlite(pool) => {
+                let rows = sqlx::query("SELECT DISTINCT tenant_id FROM consolidated_memory")
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                for row in rows {
+                    use sqlx::Row;
+                    let tenant_id: String = row.get("tenant_id");
+                    tenants.push(tenant_id);
+                }
+            }
+        }
+        Ok(tenants)
+    }
+
+    pub async fn auto_resolve_conflicts(&self, tenant_id: &str) -> Result<usize, String> {
+        let conflicts = self.get_conflicting_pairs(tenant_id).await?;
         let mut resolved_count = 0;
 
         for (a, b) in conflicts {
@@ -410,7 +442,7 @@ impl VectorRepository {
     }
 
 
-    pub async fn get_conflicting_pairs(&self) -> Result<Vec<(EmbeddingRecord, EmbeddingRecord)>, String> {
+    pub async fn get_conflicting_pairs(&self, tenant_id: &str) -> Result<Vec<(EmbeddingRecord, EmbeddingRecord)>, String> {
         let mut conflicts = Vec::new();
 
         match &self.store {
@@ -421,10 +453,11 @@ impl VectorRepository {
                         b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
                     FROM consolidated_memory a
                     JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
-                    WHERE a.embedding <=> b.embedding < 0.05
+                    WHERE a.tenant_id = $1 AND a.embedding <=> b.embedding < 0.05
                     LIMIT 10
                 ";
                 let rows = sqlx::query(query)
+                    .bind(tenant_id)
                     .fetch_all(pool)
                     .await
                     .map_err(|e| e.to_string())?;
@@ -483,10 +516,11 @@ impl VectorRepository {
                             b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
                         FROM consolidated_memory a
                         JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
-                        WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.05
+                        WHERE a.tenant_id = ? AND vec_distance_cosine(a.embedding, b.embedding) < 0.05
                         LIMIT 10
                     ";
                     let rows = sqlx::query(query)
+                        .bind(tenant_id)
                         .fetch_all(pool)
                         .await
                         .map_err(|e| e.to_string())?;
@@ -535,9 +569,10 @@ impl VectorRepository {
                     let query = "
                         SELECT
                             id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata
-                        FROM consolidated_memory LIMIT 1000
+                        FROM consolidated_memory WHERE tenant_id = ? LIMIT 1000
                     ";
                     let rows = sqlx::query(query)
+                        .bind(tenant_id)
                         .fetch_all(pool)
                         .await
                         .map_err(|e| e.to_string())?;
@@ -1111,7 +1146,7 @@ mod get_conflicts_tests {
         repo.upsert(&r1).await.unwrap();
         repo.upsert(&r2).await.unwrap();
 
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts("org1").await.unwrap();
         assert_eq!(resolved, 1);
 
         let query = "SELECT id, owner_override FROM consolidated_memory";
@@ -1328,7 +1363,10 @@ mod get_conflicts_tests {
         repo.upsert(&r5).await.unwrap();
         repo.upsert(&r6).await.unwrap();
 
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let mut resolved = 0;
+        resolved += repo.auto_resolve_conflicts("org1").await.unwrap();
+        resolved += repo.auto_resolve_conflicts("org2").await.unwrap();
+        resolved += repo.auto_resolve_conflicts("org3").await.unwrap();
         assert_eq!(resolved, 3); // 3 conflicts resolved
 
         let query = "SELECT id, reference_count FROM consolidated_memory";
@@ -1450,7 +1488,7 @@ mod get_conflicts_tests {
         repo.upsert(&record4).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+        repo.prune_stale("org1", now - chrono::Duration::days(180)).await.unwrap();
 
         // Verify prune
         let query = "SELECT id FROM consolidated_memory";
@@ -1525,7 +1563,7 @@ mod get_conflicts_tests {
         repo.upsert(&r1).await.unwrap();
         repo.upsert(&r2).await.unwrap();
 
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts("org1").await.unwrap();
         assert_eq!(resolved, 1);
 
         let query = "SELECT id, reference_count FROM consolidated_memory WHERE tenant_id = 'org4'";
@@ -1605,7 +1643,7 @@ mod get_conflicts_tests {
         repo.upsert(&record2).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+        repo.prune_stale("org1", now - chrono::Duration::days(180)).await.unwrap();
 
         // Verify prune
         let query = "SELECT id FROM consolidated_memory";
@@ -1617,7 +1655,7 @@ mod get_conflicts_tests {
         assert_eq!(id, "rec1", "The correct record should remain");
 
         // get_conflicting_pairs test
-        let conflicts = repo.get_conflicting_pairs().await.unwrap();
+        let conflicts = repo.get_conflicting_pairs("org1").await.unwrap();
         assert!(conflicts.is_empty(), "Should have no conflicts");
     }
 
@@ -2127,7 +2165,7 @@ mod anthropic_memory_tests {
         repo.upsert(&old_record).await.unwrap();
         repo.upsert(&new_record).await.unwrap();
 
-        repo.prune_stale(threshold).await.unwrap();
+        repo.prune_stale("org1", threshold).await.unwrap();
 
         use sqlx::Row;
         let query = "SELECT id FROM consolidated_memory";
@@ -2186,7 +2224,7 @@ mod anthropic_memory_tests {
         repo.upsert(&record1).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+        repo.prune_stale("org1", now - chrono::Duration::days(180)).await.unwrap();
 
         // Verify it was NOT deleted
         use sqlx::Row;
