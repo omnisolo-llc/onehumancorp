@@ -1,3 +1,11 @@
+## v0.4.39 (Cloud) / v0.4.39+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Add auto-scaling limits for Sub-Agent Queue and Teammate Mesh APIs to handle increased load spikes.
+
+### Privacy/Offline Improvements
+- Enforce full local SIPDB SQLite encryption parity for Standalone builds to protect sensitive user telemetry.
+
 ## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
 
 ### Cloud Scaling Improvements
