@@ -1,18 +1,42 @@
-## [Shipping] Shippo Integration
-**Title**: Integrate Shippo for Automated Label Generation
-**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
-**Research Report**:
-- **Tool**: Shippo
-- **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
-- **Advantages**: Aggregates rates from USPS, UPS, FedEx, DHL. Simple API. No monthly fee for pay-as-you-go.
-- **Risks**: International shipping requires complex customs declarations which might be hard to automate fully for non-technical users.
-- **Pricing**: Free tier (pay per label + postage).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
-- The Operations agent shows the cheapest shipping option.
-- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
-- OHC automatically emails the customer the tracking number.
-**Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
-**Priority**: P1
-**Estimated Scope**: Large
+# [Shipping] Shippo Logistics
+## Problem Statement
+Owners selling physical goods spend hours manually calculating shipping rates on carrier websites and handwriting labels.
+
+## Research Report
+- **Tool Evaluated**: Shippo API
+- **Ease of Use**: Abstracts multiple carriers (USPS, UPS, FedEx) into one single API.
+- **Pricing**: Pay as you go, $0.05 per label or flat monthly rate.
+- **Reputation**: Highly reliable, excellent developer documentation.
+- **Cloud & Standalone**: Works well via REST API in both modes.
+
+### Pain Points Solved
+- Automates rate calculation across multiple carriers.
+- One-click label printing from the dashboard.
+
+```mermaid
+graph TD
+    A[Order Placed] --> B[Shippo API: Fetch Rates]
+    B --> C[Owner Selects Rate]
+    C --> D[Shippo API: Generate Label]
+    D --> E[Print PDF Label]
+```
+
+| Shipping API | Carrier Support | Pricing |
+| :--- | :--- | :--- |
+| Shippo | 85+ Global | $0.05/label |
+| EasyPost | High | Tiered |
+| ShipEngine | High | Tiered |
+
+## Design Doc
+- **Integration**: API Key integration.
+- **Triggers**: Order creation fetches rates. Order fulfillment generates a label.
+- **User Flow**: User enters package dimensions, selects the cheapest rate provided by the API, and clicks "Print Label".
+
+## Implementation Prompt
+Integrate a shipping rate calculator and label generator using Shippo. The business owner should be able to view live shipping rates based on package weight/dimensions and purchase/print a shipping label directly from the order details screen.
+
+## Priority
+P2
+
+## Estimated Scope
+Large
