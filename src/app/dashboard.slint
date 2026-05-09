@@ -137,8 +137,8 @@ export component Dashboard inherits Window { // milestones
                 Button { text: "My Plan"; height: 44px; clicked => { open_my_plan(); show_menu = false; } }
                 TooltipElement { tooltip_id: "api_docs"; Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } } }
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
-                Button { text: "How to use this app"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
-                Button { text: "How to automate work"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
+                Button { text: "App Tour"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
+                Button { text: "Automate Work Tour"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
             }
         }
@@ -449,7 +449,28 @@ export component Dashboard inherits Window { // milestones
     }
 }
 
+    // Bottom Navigation Bar
+    if (root.width <= 768px) : Rectangle {
+        y: parent.height - 60px;
+        width: parent.width;
+        height: 60px;
+        background: rgba(0, 0, 0, 0.8);
+        border-color: rgba(255, 255, 255, 0.1);
+        border-width: 1px;
+
+        HorizontalBox {
+            alignment: space-around;
+
+            Button { text: "Add"; width: 44px; height: 44px; clicked => { action_add_product(); } }
+            Button { text: "Orders"; width: 44px; height: 44px; clicked => { action_view_orders(); } }
+            Button { text: "Chat"; width: 44px; height: 44px; clicked => { action_check_messages(); } }
+            Button { text: "Stats"; width: 44px; height: 44px; clicked => { action_see_analytics(); } }
+            Button { text: "Share"; width: 44px; height: 44px; clicked => { action_share_store(); } }
+        }
+    }
+
     // Floating Action Button (Bottom)
+    if (root.width > 768px) :
     Rectangle {
         y: parent.height - 80px;
         x: parent.width - 80px;

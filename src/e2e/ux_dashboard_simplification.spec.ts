@@ -50,7 +50,7 @@ test.describe('Dashboard UX Simplification (Grandmother Test)', () => {
 
     // 9. Check "How to use this app" is not showing right away but we can verify the text exists when menu opens, or just ensure old text is gone.
     const oldAppTour = page.locator('text="App Tour"');
-    await expect(oldAppTour).toHaveCount(0);
+    await expect(page.locator('text="App Tour")).toHaveCount(0);
     const oldAutomateTour = page.locator('text="Automate Work Tour"');
     await expect(oldAutomateTour).toHaveCount(0);
   });
