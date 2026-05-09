@@ -1824,6 +1824,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = wc_handle.upgrade() {
                 let _ = ui.show();
             }
+        }
+    });
+
+    setup_wizard_ui.on_go_to_dashboard({
+        let handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                let _ = ui.hide();
+            }
+            GLOBAL_DASHBOARD.with(|global| {
+                if let Some(weak) = global.borrow().as_ref() {
+                    if let Some(ui) = weak.upgrade() { let _ = ui.show(); }
+                }
+            });
 
     let my_plan_ui = app::MyPlan::new().unwrap();
     let my_plan_handle = my_plan_ui.as_weak();
@@ -4035,11 +4049,11 @@ mod e2e_tests {
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let dashboard_opened_clone = dashboard_opened.clone();
-        ui.on_show_welcome_checklist(move || {
+        ui.on_go_to_dashboard(move || {
             *dashboard_opened_clone.borrow_mut() = true;
         });
 
-        ui.invoke_show_welcome_checklist();
+        ui.invoke_go_to_dashboard();
         assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
 
         let add_products_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -4620,10 +4634,10 @@ mod docs_tests {
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let dashboard_opened_clone = dashboard_opened.clone();
-        ui.on_show_welcome_checklist(move || {
+        ui.on_go_to_dashboard(move || {
             *dashboard_opened_clone.borrow_mut() = true;
         });
-        ui.invoke_show_welcome_checklist();
+        ui.invoke_go_to_dashboard();
         assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
     }
 
@@ -4746,10 +4760,10 @@ mod docs_tests {
         // Step 7: Go to Dashboard
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let dashboard_opened_clone = dashboard_opened.clone();
-        ui.on_show_welcome_checklist(move || {
+        ui.on_go_to_dashboard(move || {
             *dashboard_opened_clone.borrow_mut() = true;
         });
-        ui.invoke_show_welcome_checklist();
+        ui.invoke_go_to_dashboard();
         assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
 
         // Final state verification

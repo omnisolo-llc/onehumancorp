@@ -250,11 +250,11 @@ fn test_e2e_onboarding_welcome_checklist() {
     let checklist_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let checklist_called_clone = checklist_called.clone();
 
-    wizard_ui.on_show_welcome_checklist(move || {
+    wizard_ui.on_go_to_dashboard(move || {
         *checklist_called_clone.borrow_mut() = true;
     });
 
-    wizard_ui.invoke_show_welcome_checklist();
+    wizard_ui.invoke_go_to_dashboard();
     assert!(*checklist_called.borrow(), "Welcome checklist post-onboarding should work");
 }
 
