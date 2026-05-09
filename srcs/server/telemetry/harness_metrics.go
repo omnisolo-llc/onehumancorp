@@ -184,6 +184,12 @@ func RecordHarnessViolation(ctx context.Context, violationType string) error {
 		)
 		violationsCounter.Add(ctx, 1, opts)
 	}
+
+	bufferMetricHelper(ctx, "harness_violations_total", 1, map[string]interface{}{
+		"violation_type": violationType,
+		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
+	})
+
 	return nil
 }
 
@@ -214,6 +220,12 @@ func RecordHarnessDbIOLatency(ctx context.Context, durationSecs float64, operati
 		)
 		harnessDbIoLatencyHistogram.Record(ctx, durationSecs, opts)
 	}
+
+	bufferMetricHelper(ctx, "harness_db_io_latency_seconds", durationSecs, map[string]interface{}{
+		"operation": operation,
+		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
+	})
+
 	return nil
 }
 
@@ -226,6 +238,11 @@ func RecordBubblewrapSpawn(ctx context.Context) error {
 		opts := metric.WithAttributes(getDeploymentModeAttribute())
 		bubblewrapSpawnTotalCounter.Add(ctx, 1, opts)
 	}
+
+	bufferMetricHelper(ctx, "bubblewrap_spawn_total", 1, map[string]interface{}{
+		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
+	})
+
 	return nil
 }
 
@@ -258,5 +275,11 @@ func RecordBubblewrapViolation(ctx context.Context, violationType string) error 
 		)
 		bubblewrapViolationTotalCounter.Add(ctx, 1, opts)
 	}
+
+	bufferMetricHelper(ctx, "bubblewrap_violation_total", 1, map[string]interface{}{
+		"violation_type": violationType,
+		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
+	})
+
 	return nil
 }
