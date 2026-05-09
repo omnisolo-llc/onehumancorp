@@ -3,6 +3,7 @@ import { TooltipRegistry } from "tooltip_registry.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { StatCard } from "stat_card.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 
 import { UpgradePrompt } from "./upgrade_prompt.slint";
 import { DailyBriefing } from "daily_briefing.slint";
@@ -34,6 +35,7 @@ export component Dashboard inherits Window { // milestones
     in property <string> generative_score: "85";
     in property <bool> is_loading: false;
     in-out property <bool> is_advanced: false;
+    callback save_state();
 
     // AI Assistant Memory Telemetry
     in property <string> telemetry_cache_hits: "84%";
@@ -108,7 +110,14 @@ export component Dashboard inherits Window { // milestones
             spacing: 16px;
             VerticalBox {
                 alignment: center;
-                Text { text: "My Store"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                HorizontalBox {
+                    Text { text: "My Store"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                    Rectangle {}
+                    AdvancedToggle {
+                        is_advanced <=> root.is_advanced;
+                        toggled => { save_state(); }
+                    }
+                }
                 if (is_loading) : GlassCard {
                     height: 12px;
                     width: 100px;
