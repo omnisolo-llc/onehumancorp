@@ -66,7 +66,7 @@ test.describe('Success Milestones Notifications', () => {
     }
 
     // Might appear later
-    await expect(page.locator('text=🎉 10th Order!')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=🎉 You just got your 10th order!')).toBeVisible({ timeout: 10000 });
   });
 
   test('should verify 100 visitors milestone', async ({ page }) => {
@@ -77,7 +77,7 @@ test.describe('Success Milestones Notifications', () => {
     await page.waitForURL('**/dashboard');
 
     // Our test framework has a single-shot timer for 5s that triggers 100 visitors milestone
-    await expect(page.locator('text=🚀 100 Visitors Today!')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=🚀 Your store has 100 visitors today!')).toBeVisible({ timeout: 10000 });
   });
 
   test('should verify milestone dismissal', async ({ page }) => {
