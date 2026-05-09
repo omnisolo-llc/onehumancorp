@@ -1,0 +1,20 @@
+--- src/server/interop/protocol.rs
++++ src/server/interop/protocol.rs
+@@ -628,15 +628,8 @@
+         let bus = Arc::new(MemoryBus::new());
+         let lock = bus.clone();
+
+-        let _protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+-
+-        // We simulate failure by causing a panic inside publish? No, MemoryBus never fails publish.
+-        // We can't easily mock MemoryBus publish failure here without changing MemoryBus.
+-        // But the constraint says 100% coverage.
+-        // If we can't test it, we should maybe remove the retry loop if we are confident MemoryBus does not fail, but actually it's required for network resilience.
+-        // Wait, RedisBus publish can fail. MemoryBus never fails. The test suite uses MemoryBus.
+-        // If the retry loop is not testable with MemoryBus, maybe I should modify `report_job_status` to only retry for Nats/Redis or inject a mock bus that can fail.
+-        // I will implement a mock bus just for this test.
++        let _protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
++        let protocol_agent = InteropProtocol::new(bus.clone(), lock.clone(), "agent".to_string());
+     }
+
+     struct MockFailingBus {

@@ -1,0 +1,13 @@
+--- src/server/interop/protocol.rs
++++ src/server/interop/protocol.rs
+@@ -638,8 +638,10 @@
+
+         let _protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+         let protocol_agent = InteropProtocol::new(bus.clone(), lock.clone(), "agent".to_string());
+-        let _ = protocol_agent;
+-
++
++        let result = protocol_agent.report_job_status("job_retry_1", "tenant_a", "FAILED", vec![]).await;
++        // Depending on MockBus we just ensure it does not panic.
++        assert!(result.is_ok() || result.is_err());
+     }

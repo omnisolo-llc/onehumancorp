@@ -1,0 +1,10 @@
+--- src/server/interop/protocol.rs
++++ src/server/interop/protocol.rs
+@@ -638,8 +638,10 @@
+
+         let _protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+         let protocol_agent = InteropProtocol::new(bus.clone(), lock.clone(), "agent".to_string());
++        let _ = protocol_agent;
+
+     }
++

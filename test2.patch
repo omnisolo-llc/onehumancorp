@@ -1,0 +1,12 @@
+--- src/server/interop/protocol.rs
++++ src/server/interop/protocol.rs
+@@ -628,8 +628,6 @@
+         let bus = Arc::new(MemoryBus::new());
+         let lock = bus.clone();
+
+-        let _protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+-        let protocol_agent = InteropProtocol::new(bus.clone(), lock.clone(), "agent".to_string());
+-
+     }
+
+     struct MockFailingBus {
