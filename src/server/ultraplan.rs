@@ -37,11 +37,17 @@ impl UltraPlanManager {
         let id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now();
         
+        let state_machine_str = serde_json::to_string(&state_machine).map_err(|e| e.to_string())?;
+        let compressed_base64 = compress_ultraplan_data(state_machine_str.as_bytes())?;
+        let compressed_state_machine = serde_json::json!({
+            "_compressed_base64": compressed_base64
+        });
+
         let plan = UltraPlan {
             id: id.clone(),
             mission_id,
             status: "DELIBERATING".to_string(),
-            state_machine,
+            state_machine: compressed_state_machine,
             created_at: now,
             updated_at: now,
         };
@@ -54,7 +60,38 @@ impl UltraPlanManager {
 
     pub fn get_ultra_plan(&self, plan_id: &str) -> Result<UltraPlan, String> {
         let plans = self.plans.read().unwrap();
-        plans.get(plan_id).cloned().ok_or_else(|| "ultra plan not found".to_string())
+        let mut plan = plans.get(plan_id).cloned().ok_or_else(|| "ultra plan not found".to_string())?;
+
+        if let Some(obj) = plan.state_machine.as_object() {
+            if let Some(compressed) = obj.get("_compressed_base64") {
+                if let Some(base64_str) = compressed.as_str() {
+                    let decompressed_bytes = decompress_ultraplan_data(base64_str)?;
+                    let decompressed_str = String::from_utf8(decompressed_bytes).map_err(|e| e.to_string())?;
+                    plan.state_machine = serde_json::from_str(&decompressed_str).map_err(|e| e.to_string())?;
+                }
+            }
+        }
+
+        Ok(plan)
+    }
+
+    pub fn update_plan_status(&self, plan_id: &str, status: &str, state_machine: Option<serde_json::Value>) -> Result<(), String> {
+        let mut plans = self.plans.write().unwrap();
+        if let Some(plan) = plans.get_mut(plan_id) {
+            plan.status = status.to_string();
+            plan.updated_at = Utc::now();
+
+            if let Some(sm) = state_machine {
+                let state_machine_str = serde_json::to_string(&sm).map_err(|e| e.to_string())?;
+                let compressed_base64 = compress_ultraplan_data(state_machine_str.as_bytes())?;
+                plan.state_machine = serde_json::json!({
+                    "_compressed_base64": compressed_base64
+                });
+            }
+            Ok(())
+        } else {
+            Err("ultra plan not found".to_string())
+        }
     }
 
 }
@@ -102,9 +139,28 @@ mod tests {
         
         assert_eq!(plan.mission_id, "mission1");
         assert_eq!(plan.status, "DELIBERATING");
-        assert_eq!(plan.state_machine, state_machine);
         
+        // Ensure it's stored compressed in the raw struct
+        let is_compressed = plan.state_machine.as_object().unwrap().contains_key("_compressed_base64");
+        assert!(is_compressed);
+
+        // But get_ultra_plan decompresses it seamlessly
         let fetched = manager.get_ultra_plan(&plan.id).unwrap();
         assert_eq!(fetched.id, plan.id);
+        assert_eq!(fetched.state_machine, state_machine);
+    }
+
+    #[test]
+    fn test_update_plan_status() {
+        let manager = UltraPlanManager::new();
+        let state_machine = serde_json::json!({"phase": "INIT"});
+        let plan = manager.create_plan("mission1".to_string(), state_machine.clone()).unwrap();
+
+        let updated_sm = serde_json::json!({"phase": "DONE"});
+        manager.update_plan_status(&plan.id, "COMPLETED", Some(updated_sm.clone())).unwrap();
+
+        let fetched = manager.get_ultra_plan(&plan.id).unwrap();
+        assert_eq!(fetched.status, "COMPLETED");
+        assert_eq!(fetched.state_machine, updated_sm);
     }
 }
