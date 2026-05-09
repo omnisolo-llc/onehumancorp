@@ -115,6 +115,7 @@ func HandleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
 		telemetry.AutoDreamQueryDuration.WithLabelValues(deploymentMode).Observe(time.Since(start).Seconds())
 	}()
 
+	w.Header().Set("Cache-Control", "public, max-age=300")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"results":[]}`))
 }

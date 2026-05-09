@@ -75,6 +75,11 @@ func TestHandleAutoDreamQuery(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
+
+	if cacheControl := rr.Header().Get("Cache-Control"); cacheControl != "public, max-age=300" {
+		t.Errorf("handler returned wrong cache-control header: got %v want %v",
+			cacheControl, "public, max-age=300")
+	}
 }
 
 func TestHandleMeshBroadcast(t *testing.T) {
