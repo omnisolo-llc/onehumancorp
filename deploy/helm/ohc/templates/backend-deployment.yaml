@@ -16,6 +16,7 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-backend
+        tenant_isolation: strict
     spec:
       containers:
         - name: backend

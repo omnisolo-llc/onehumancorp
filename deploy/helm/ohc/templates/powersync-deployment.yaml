@@ -12,6 +12,7 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-powersync
+        tenant_isolation: strict
     spec:
       containers:
         - name: powersync

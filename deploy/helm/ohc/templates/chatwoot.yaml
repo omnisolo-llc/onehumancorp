@@ -82,6 +82,7 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-chatwoot
+        tenant_isolation: strict
     spec:
       containers:
         - name: chatwoot
