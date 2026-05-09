@@ -50,12 +50,10 @@ func (s *SIPDB) DelegateMission(ctx context.Context, mission *AgentMission) erro
 	return nil
 }
 
+// ReportMissionHandover updates the status of an agent mission to 'blocked'
+// and appends the blockers to the mission log.
 func (s *SIPDB) ReportMissionHandover(ctx context.Context, missionID string, blockers string) error {
-	_, err := s.db.ExecContext(ctx, `
-		UPDATE agent_missions
-		SET status = 'blocked',
-		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '
-' END || $1
-		WHERE id = $2`, blockers, missionID)
+	query := "UPDATE agent_missions SET status = 'blocked', mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '\n' END || $1 WHERE id = $2"
+	_, err := s.db.ExecContext(ctx, query, blockers, missionID)
 	return err
 }

@@ -21,7 +21,8 @@ func setupSIPDB(t *testing.T) (*sql.DB, func()) {
 		id TEXT PRIMARY KEY,
 		status TEXT,
 		payload TEXT,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		mission_log TEXT
 	)`)
 	require.NoError(t, err)
 
@@ -180,4 +181,44 @@ func TestDelegateMission_DatabaseError(t *testing.T) {
 
 	err = sipdb.DelegateMission(context.Background(), mission)
 	assert.Error(t, err)
+}
+
+func TestReportMissionHandover_Success(t *testing.T) {
+	db, cleanup := setupSIPDB(t)
+	defer cleanup()
+
+	sipdb := NewSIPDB(db)
+
+	_, err := db.Exec("INSERT INTO agent_missions (id, status, payload) VALUES (?, ?, ?)", "m_handoff1", "PENDING", `{"task":"handoff"}`)
+	require.NoError(t, err)
+
+	err = sipdb.ReportMissionHandover(context.Background(), "m_handoff1", "Blocked by dependency.")
+	require.NoError(t, err)
+
+	var status, missionLog sql.NullString
+	err = db.QueryRow("SELECT status, mission_log FROM agent_missions WHERE id = ?", "m_handoff1").Scan(&status, &missionLog)
+	require.NoError(t, err)
+
+	assert.Equal(t, "blocked", status.String)
+	assert.Equal(t, "Blocked by dependency.", missionLog.String)
+}
+
+func TestReportMissionHandover_Append(t *testing.T) {
+	db, cleanup := setupSIPDB(t)
+	defer cleanup()
+
+	sipdb := NewSIPDB(db)
+
+	_, err := db.Exec("INSERT INTO agent_missions (id, status, payload, mission_log) VALUES (?, ?, ?, ?)", "m_handoff2", "blocked", `{"task":"handoff"}`, "Initial block.")
+	require.NoError(t, err)
+
+	err = sipdb.ReportMissionHandover(context.Background(), "m_handoff2", "Second block.")
+	require.NoError(t, err)
+
+	var status, missionLog sql.NullString
+	err = db.QueryRow("SELECT status, mission_log FROM agent_missions WHERE id = ?", "m_handoff2").Scan(&status, &missionLog)
+	require.NoError(t, err)
+
+	assert.Equal(t, "blocked", status.String)
+	assert.Equal(t, "Initial block.\nSecond block.", missionLog.String)
 }
