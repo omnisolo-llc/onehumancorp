@@ -65,24 +65,18 @@ impl DashboardService for MyDashboardService {
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             async {
-                tokio::task::spawn_blocking(move || {
-                    Ok::<_, String>(hub1.get_agents())
-                }).await.unwrap_or_else(|e| Err(e.to_string()))
+                Ok::<_, String>(hub1.get_agents())
             },
             async {
-                tokio::task::spawn_blocking(move || {
-                    Ok::<_, String>(hub2.get_meetings())
-                }).await.unwrap_or_else(|e| Err(e.to_string()))
+                Ok::<_, String>(hub2.get_meetings())
             },
             async {
-                tokio::task::spawn_blocking(move || {
-                    let cost_auditor = hub3.get_cost_auditor();
-                    Ok::<_, String>((
-                        cost_auditor.get_total_cost(),
-                        cost_auditor.get_total_tokens(),
-                        cost_auditor.get_agent_costs_snapshot(),
-                    ))
-                }).await.unwrap_or_else(|e| Err(e.to_string()))
+                let cost_auditor = hub3.get_cost_auditor();
+                Ok::<_, String>((
+                    cost_auditor.get_total_cost(),
+                    cost_auditor.get_total_tokens(),
+                    cost_auditor.get_agent_costs_snapshot(),
+                ))
             },
             async {
                 let org_id = org_id1;
@@ -257,6 +251,7 @@ impl DashboardService for MyDashboardService {
                     description: String::new(),
                     metadata_json: String::new(),
                     fulfillment_strategy: String::new(),
+                    currency: String::new(),
                     ..p
                 })
                 .collect()
@@ -270,6 +265,7 @@ impl DashboardService for MyDashboardService {
                 .map(|o| crate::ohc::app::Order {
                     product_id: String::new(),
                     status: String::new(),
+                    organization_id: String::new(),
                     ..o
                 })
                 .collect()
@@ -322,6 +318,14 @@ impl DashboardService for MyDashboardService {
         let mut original_prompts_len = 0;
         let mut compressed_prompts_len = 0;
 
+        let stop_words: std::collections::HashSet<&str> = [
+            "a", "an", "the", "is", "are", "and", "or", "but", "in", "on", "at", "to",
+            "for", "with", "by", "about", "as", "of",
+        ]
+        .iter()
+        .cloned()
+        .collect();
+
         let org_agents: Vec<_> = agents
             .iter()
             .filter(|a| {
@@ -336,14 +340,6 @@ impl DashboardService for MyDashboardService {
             if orig_len > 0 {
                 original_prompts_len += orig_len;
 
-                let stop_words: std::collections::HashSet<&str> = [
-                    "a", "an", "the", "is", "are", "and", "or", "but", "in", "on", "at", "to",
-                    "for", "with", "by", "about", "as", "of",
-                ]
-                .iter()
-                .cloned()
-                .collect();
-
                 let compressed = prompt
                     .split_whitespace()
                     .filter(|word| {
@@ -353,6 +349,23 @@ impl DashboardService for MyDashboardService {
                     .collect::<Vec<&str>>()
                     .join(" ");
 
+                compressed_prompts_len += compressed.len();
+            }
+        }
+
+        if let Some(ref o) = org {
+            let prompt = &o.name;
+            let orig_len = prompt.len();
+            if orig_len > 0 {
+                original_prompts_len += orig_len;
+                let compressed = prompt
+                    .split_whitespace()
+                    .filter(|word| {
+                        let clean_word = word.to_lowercase();
+                        !stop_words.contains(clean_word.as_str())
+                    })
+                    .collect::<Vec<&str>>()
+                    .join(" ");
                 compressed_prompts_len += compressed.len();
             }
         }
@@ -405,6 +418,8 @@ impl DashboardService for MyDashboardService {
                 o.domain = String::new();
                 o.members = vec![];
                 o.role_profiles = vec![];
+                o.ceo_id = String::new();
+                o.created_at_unix = 0;
                 o
             })
         } else {
@@ -626,9 +641,18 @@ mod tests {
         if let Some(org) = res_mobile.organization {
             assert_eq!(org.domain, "", "Mobile optimization should clear org domain");
             assert!(org.members.is_empty(), "Mobile optimization should clear org members");
+            assert_eq!(org.ceo_id, "", "Mobile optimization should clear ceo_id");
+            assert_eq!(org.created_at_unix, 0, "Mobile optimization should clear created_at_unix");
         }
         if !res_mobile.meetings.is_empty() {
             assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile optimization should clear meeting transcripts");
+        }
+        if !res_mobile.products.is_empty() {
+            assert_eq!(res_mobile.products[0].currency, "", "Mobile optimization should clear product currency");
+            assert_eq!(res_mobile.products[0].fulfillment_strategy, "", "Mobile optimization should clear fulfillment_strategy");
+        }
+        if !res_mobile.orders.is_empty() {
+            assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
         }
     }
 
