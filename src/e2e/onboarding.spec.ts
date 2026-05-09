@@ -69,9 +69,9 @@ test.describe('Onboarding Wizard', () => {
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
 
-    await expect(page.locator('button:has-text("Generate AI Description")')).toBeVisible();
-    await page.click('button:has-text("Generate AI Description")');
-    await page.waitForTimeout(1000);
+
+    await page.waitForTimeout(3000);
+    await expect(page.locator('input[placeholder="Brief description"]')).not.toBeEmpty();
 
     await page.click('button:has-text("Next")');
   });

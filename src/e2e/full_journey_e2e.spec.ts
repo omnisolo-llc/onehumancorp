@@ -36,8 +36,9 @@ test.describe('Onboarding Guide E2E Journey', () => {
     await page.fill('input[placeholder="What is the name of this product?"]', 'The Journey Book');
     await page.fill('input[placeholder="0.00"]', '29.99');
 
-    await expect(page.locator('button:has-text("Generate AI Description")')).toBeVisible();
-    await page.click('button:has-text("Generate AI Description")');
+
+    await page.waitForTimeout(3000);
+    await expect(page.locator('input[placeholder="Brief description"]')).not.toBeEmpty();
     await page.waitForLoadState("networkidle");
 
     await page.click('button:has-text("Next →")');

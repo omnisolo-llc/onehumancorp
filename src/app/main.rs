@@ -3485,6 +3485,65 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    // Debounce state for product description
+    let debounce_task = std::sync::Arc::new(tokio::sync::Mutex::new(None::<tokio::task::JoinHandle<()>>));
+
+    setup_wizard_ui.on_trigger_debounced_product_description({
+        let ui_weak = setup_wizard_handle.clone();
+        let debounce_task_clone = debounce_task.clone();
+        move |prod_name| {
+            let ui_handle = ui_weak.clone();
+            let prod_name = prod_name.to_string();
+            let task_handle = debounce_task_clone.clone();
+
+            // Abort previous task if it exists
+            tokio::spawn(async move {
+                let mut lock = task_handle.lock().await;
+                if let Some(t) = lock.take() {
+                    t.abort();
+                }
+
+                if prod_name.trim().is_empty() {
+                    return;
+                }
+
+                slint::invoke_from_event_loop({
+                    let ui = ui_handle.clone();
+                    move || {
+                        if let Some(ui) = ui.upgrade() {
+                            ui.set_is_generating_product_description(true);
+                        }
+                    }
+                }).unwrap();
+
+                let handle = tokio::spawn(async move {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
+                    let mut description = format!("A premium {}.", prod_name);
+                    if let Ok(mut client) = crate::ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let prompt = format!("Generate a short, enticing product description for \"{}\".", prod_name);
+                        let mut request = tonic::Request::new(crate::ohc::orchestration::ReasonRequest {
+                            prompt,
+                            from_agent_id: "setup_wizard".into(),
+                        });
+                        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system".parse().unwrap());
+                        let response: Result<tonic::Response<crate::ohc::orchestration::ReasonResponse>, tonic::Status> = client.reason(request).await;
+                        if let Ok(resp) = response {
+                            let inner: crate::ohc::orchestration::ReasonResponse = resp.into_inner();
+                            description = inner.content.trim().to_string();
+                        }
+                    }
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_handle.upgrade() {
+                            ui.set_product_description(description.into());
+                            ui.set_is_generating_product_description(false);
+                        }
+                    }).unwrap();
+                });
+                *lock = Some(handle);
+            });
+        }
+    });
+
     setup_wizard_ui.on_generate_product_description({
         let ui_weak = setup_wizard_handle.clone();
         move |prod_name| {
