@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:confetti/confetti.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wizard_provider.dart';
 import '../main.dart'; // For GlassContainer
@@ -31,6 +34,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
 
   late AnimationController _pulseAnimationController;
   late Animation<double> _pulseAnimation;
+  late ConfettiController _confettiController;
 
   bool _showWalkthrough = true;
 
@@ -54,6 +58,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
       CurvedAnimation(parent: _pulseAnimationController, curve: Curves.easeInOut),
     );
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
   }
 
   @override
@@ -64,6 +69,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     _adminNameController.dispose();
     _adminEmailController.dispose();
     _adminPasswordController.dispose();
+    _confettiController.dispose();
     super.dispose();
   }
 
@@ -94,6 +100,13 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 padding: const EdgeInsets.all(20),
                 child: _buildCurrentStep(state.currentStep, state),
               ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
             ),
           ),
           Positioned(
@@ -225,9 +238,10 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
           ),
           const SizedBox(height: 15),
           ElevatedButton.icon(
-            onPressed: () {
+            onPressed: () async {
               setState(() => _showWalkthrough = false);
-              _nextStep();
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google SSO mock successful!')));
+              await ref.read(wizardProvider.notifier).submitWizard();
             },
             icon: const Icon(Icons.g_mobiledata, color: Colors.white, size: 30),
             label: const Text('Continue with Google', style: TextStyle(fontSize: 16, color: Colors.white)),
@@ -241,9 +255,10 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
           ),
           const SizedBox(height: 10),
           ElevatedButton.icon(
-            onPressed: () {
+            onPressed: () async {
               setState(() => _showWalkthrough = false);
-              _nextStep();
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Apple SSO mock successful!')));
+              await ref.read(wizardProvider.notifier).submitWizard();
             },
             icon: const Icon(Icons.apple, color: Colors.white, size: 30),
             label: const Text('Continue with Apple', style: TextStyle(fontSize: 16, color: Colors.white)),
@@ -263,7 +278,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   const SnackBar(content: Text('Verification email resent!')),
                 );
               },
-              child: const Text('Resend Verification Email', style: TextStyle(color: Color(0xFF6B4EFF), fontSize: 14)),
+              child: const Text('Resend Verification Email', style: TextStyle(color: Color(0xFF6B4EFF), fontSize: 14, decoration: TextDecoration.underline)),
             ),
           ),
         ],
@@ -659,9 +674,9 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF6B4EFF).withOpacity(0.3) : Colors.white.withOpacity(0.05),
+                        color: isSelected ? const Color(0xFF6B4EFF).withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.05),
                         border: Border.all(
-                          color: isSelected ? const Color(0xFF6B4EFF) : Colors.white.withOpacity(0.1),
+                          color: isSelected ? const Color(0xFF6B4EFF) : Colors.white.withValues(alpha: 0.1),
                           width: 2,
                         ),
                         borderRadius: BorderRadius.circular(15),
@@ -689,7 +704,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                                 Container(
                                   height: 100,
                                   decoration: BoxDecoration(
-                                    color: template['id'] == 'modern' ? Colors.blue.withOpacity(0.1) : template['id'] == 'cozy' ? Colors.orange.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                                    color: template['id'] == 'modern' ? Colors.blue.withValues(alpha: 0.1) : template['id'] == 'cozy' ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(color: Colors.white24),
                                   ),
@@ -788,9 +803,11 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 ),
                 const SizedBox(height: 10),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    ref.read(wizardProvider.notifier).generateProductDescription();
+                  },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.1),
+                    backgroundColor: Colors.white.withValues(alpha: 0.1),
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
@@ -805,13 +822,13 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     initialValue: state.productPrice,
                     style: const TextStyle(color: Colors.white),
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: '0.00',
-                      prefixText: '\$ ',
-                      prefixStyle: TextStyle(color: Colors.white),
-                      hintStyle: TextStyle(color: Colors.white24),
+                      prefixText: '${NumberFormat.simpleCurrency().currencySymbol} ',
+                      prefixStyle: const TextStyle(color: Colors.white),
+                      hintStyle: const TextStyle(color: Colors.white24),
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(15),
+                      contentPadding: const EdgeInsets.all(15),
                     ),
                     onChanged: (value) {
                       ref.read(wizardProvider.notifier).updateProductDetails(price: value);
@@ -819,21 +836,26 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   ),
                 ),
                 const SizedBox(height: 20),
-                Container(
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.camera_alt, color: Colors.white54, size: 40),
-                        SizedBox(height: 10),
-                        Text('Tap to select an image', style: TextStyle(color: Colors.white54)),
-                      ],
+                InkWell(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mock photo uploaded & cropped!')));
+                  },
+                  child: Container(
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                    ),
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.camera_alt, color: Colors.white54, size: 40),
+                          SizedBox(height: 10),
+                          Text('Tap to select an image', style: TextStyle(color: Colors.white54)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -875,7 +897,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
               GlassContainer(
                 child: TextFormField(
                   key: const Key('domainField'),
-                  initialValue: state.domainChoice ?? '\${(state.companyName ?? "mybusiness").replaceAll(" ", "").toLowerCase()}.ohc.app',
+                  initialValue: state.domainChoice ?? '${(state.companyName ?? "mybusiness").replaceAll(" ", "").toLowerCase()}.ohc.app',
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
                     border: InputBorder.none,
@@ -967,8 +989,13 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   );
                 },
                 child: ElevatedButton(
+                  key: const Key('launchAIBtn'),
                   onPressed: () async {
                     await ref.read(wizardProvider.notifier).submitWizard();
+                    _confettiController.play();
+                    final domain = state.domainChoice ?? '${(state.companyName ?? "mybusiness").replaceAll(" ", "").toLowerCase()}.ohc.app';
+                    Clipboard.setData(ClipboardData(text: 'https://$domain'));
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Copied https://$domain to clipboard!')));
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF22C55E),
@@ -977,7 +1004,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
-                  key: const Key('launchAIBtn'), child: const Text('Launch My AI Team', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: const Text('Launch My AI Team', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ),
@@ -1010,13 +1037,21 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
           child: SingleChildScrollView(
             child: Column(
               children: [
-                _buildChecklistItem('✅ Business live', true),
+                _buildChecklistItem('✅ Business live', true, () {}),
                 const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Add 3 more products', false),
+                _buildChecklistItem('⬜ Add 3 more products', false, () {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigating to Add Products...')));
+                }),
                 const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Connect Instagram', false),
+                _buildChecklistItem('⬜ Connect Instagram', false, () {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigating to Instagram Connection...')));
+                }),
                 const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Share your link with a friend', false),
+                _buildChecklistItem('⬜ Share your link with a friend', false, () {
+                  final domain = state.domainChoice ?? '${(state.companyName ?? "mybusiness").replaceAll(" ", "").toLowerCase()}.ohc.app';
+                  Clipboard.setData(ClipboardData(text: 'https://$domain'));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Copied https://$domain to clipboard!')));
+                }),
               ],
             ),
           ),
@@ -1039,27 +1074,30 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
-  Widget _buildChecklistItem(String text, bool isCompleted) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: isCompleted ? Colors.green.withOpacity(0.1) : Colors.white.withOpacity(0.05),
-        border: Border.all(color: isCompleted ? Colors.green : Colors.white24),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: isCompleted ? Colors.greenAccent : Colors.white,
-                fontSize: 16,
+  Widget _buildChecklistItem(String text, bool isCompleted, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: isCompleted ? Colors.green.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.05),
+          border: Border.all(color: isCompleted ? Colors.green : Colors.white24),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: isCompleted ? Colors.greenAccent : Colors.white,
+                  fontSize: 16,
+                ),
               ),
             ),
-          ),
-          const Icon(Icons.chevron_right, color: Colors.white54),
-        ],
+            const Icon(Icons.chevron_right, color: Colors.white54),
+          ],
+        ),
       ),
     );
   }

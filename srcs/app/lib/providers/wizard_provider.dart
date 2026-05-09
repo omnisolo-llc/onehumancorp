@@ -77,15 +77,35 @@ class WizardNotifier extends Notifier<WizardState> {
     return WizardState();
   }
 
+  void _saveState(WizardState s) {
+    _apiService.saveWizardState({
+      'companyName': s.companyName,
+      'industry': s.industry,
+      'size': s.size,
+      'goals': s.goals,
+      'templateSelection': s.templateSelection,
+      'deploymentPreference': s.deploymentPreference,
+      'adminName': s.adminName,
+      'adminEmail': s.adminEmail,
+      'adminPassword': s.adminPassword,
+      'productName': s.productName,
+      'productDescription': s.productDescription,
+      'productPrice': s.productPrice,
+      'domainChoice': s.domainChoice,
+    });
+  }
+
   void nextStep() {
     if (state.currentStep < 11) {
       state = state.copyWith(currentStep: state.currentStep + 1);
+      _saveState(state);
     }
   }
 
   void prevStep() {
     if (state.currentStep > 0) {
       state = state.copyWith(currentStep: state.currentStep - 1);
+      _saveState(state);
     }
   }
 
@@ -95,6 +115,7 @@ class WizardNotifier extends Notifier<WizardState> {
       industry: industry ?? state.industry,
       size: size ?? state.size,
     );
+    _saveState(state);
   }
 
   void toggleGoal(String goal) {
@@ -105,14 +126,17 @@ class WizardNotifier extends Notifier<WizardState> {
       currentGoals.add(goal);
     }
     state = state.copyWith(goals: currentGoals);
+    _saveState(state);
   }
 
   void setTemplateSelection(String template) {
     state = state.copyWith(templateSelection: template);
+    _saveState(state);
   }
 
   void setDeploymentPreference(String preference) {
     state = state.copyWith(deploymentPreference: preference);
+    _saveState(state);
   }
 
   void updateAdminAccount({String? name, String? email, String? password}) {
@@ -121,6 +145,7 @@ class WizardNotifier extends Notifier<WizardState> {
       adminEmail: email ?? state.adminEmail,
       adminPassword: password ?? state.adminPassword,
     );
+    _saveState(state);
   }
 
   void updateProductDetails({String? name, String? description, String? price}) {
@@ -129,10 +154,18 @@ class WizardNotifier extends Notifier<WizardState> {
       productDescription: description ?? state.productDescription,
       productPrice: price ?? state.productPrice,
     );
+    _saveState(state);
+  }
+
+  void generateProductDescription() {
+    final name = state.productName ?? 'your product';
+    final description = 'A premium, high-quality $name crafted with care and built to exceed expectations.';
+    updateProductDetails(description: description);
   }
 
   void setDomainChoice(String? domain) {
     state = state.copyWith(domainChoice: domain);
+    _saveState(state);
   }
 
   Future<void> submitWizard() async {

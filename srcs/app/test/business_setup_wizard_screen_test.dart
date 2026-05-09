@@ -12,6 +12,11 @@ void main() {
       await tester.ensureVisible(emailField);
       await tester.enterText(emailField, 'test@test.com');
       await tester.enterText(find.byKey(const Key('signupPasswordField')), 'pw');
+
+      expect(find.text('Resend Verification Email'), findsOneWidget);
+      await tester.tap(find.text('Resend Verification Email'));
+      await tester.pumpAndSettle();
+
       final signupBtn = find.byKey(const Key('signupBtn'));
       await tester.ensureVisible(signupBtn);
       await tester.tap(signupBtn);
@@ -98,6 +103,11 @@ void main() {
       expect(find.text('Add your first product or service'), findsOneWidget);
       await tester.enterText(find.byKey(const Key('productNameField')), 'My Cool Product');
       await tester.enterText(find.byKey(const Key('productPriceField')), '99.99');
+
+      expect(find.text('✨ Auto-generate description'), findsOneWidget);
+      await tester.tap(find.text('✨ Auto-generate description'));
+      await tester.pumpAndSettle();
+
       await tester.tap(find.text('Next'));
       await tester.pump(const Duration(milliseconds: 500));
 
@@ -121,6 +131,9 @@ void main() {
       expect(find.text('✅ Business live'), findsOneWidget);
       expect(find.text('⬜ Add 3 more products'), findsOneWidget);
       expect(find.text('⬜ Connect Instagram'), findsOneWidget);
+
+      await tester.tap(find.text('⬜ Add 3 more products'));
+      await tester.pumpAndSettle();
     });
   });
 
