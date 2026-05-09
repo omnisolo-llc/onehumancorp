@@ -931,3 +931,194 @@ func TestSqliteTaskStore_GetTasksByOrganization_ParseDateError(t *testing.T) {
 	assert.True(t, tasks[0].CreatedAt.IsZero())
 	assert.True(t, tasks[0].UpdatedAt.IsZero())
 }
+
+func TestSqliteTaskStore_ClaimTask_Dependencies(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+	ctx := context.Background()
+
+	parentTask := &SharedTask{
+		ID:             "parent-1",
+		OrganizationID: "org-deps",
+		Title:          "Parent",
+		Status:         "PENDING",
+	}
+	err := store.CreateTask(ctx, parentTask)
+	require.NoError(t, err)
+
+	childTask := &SharedTask{
+		ID:             "child-1",
+		OrganizationID: "org-deps",
+		Title:          "Child",
+		Status:         "PENDING",
+		Dependencies:   json.RawMessage(`["parent-1"]`),
+	}
+	err = store.CreateTask(ctx, childTask)
+	require.NoError(t, err)
+
+	// Claim should return parent-1
+	claimed, err := store.ClaimTask(ctx, "org-deps", "agent-1")
+	require.NoError(t, err)
+	require.NotNil(t, claimed)
+	assert.Equal(t, "parent-1", claimed.ID)
+
+	// Claim again should return nil because child-1 is blocked by parent-1 (which is now ASSIGNED, not COMPLETED)
+	claimed2, err := store.ClaimTask(ctx, "org-deps", "agent-2")
+	require.NoError(t, err)
+	require.Nil(t, claimed2)
+
+	// Mark parent as COMPLETED
+	err = store.UpdateTaskStatus(ctx, "parent-1", "COMPLETED")
+	require.NoError(t, err)
+
+	// Now child-1 should be claimable
+	claimed3, err := store.ClaimTask(ctx, "org-deps", "agent-3")
+	require.NoError(t, err)
+	require.NotNil(t, claimed3)
+	assert.Equal(t, "child-1", claimed3.ID)
+}
+
+func TestPostgresTaskStore_ClaimTask_Dependencies(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+	ctx := context.Background()
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SET LOCAL app.current_tenant").WithArgs("org-deps").WillReturnResult(sqlmock.NewResult(0, 0))
+
+	rows := sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
+		AddRow("child-1", "org-deps", "Child", nil, "PENDING", nil, "P2", nil, nil, []byte(`["parent-1"]`), time.Now(), time.Now())
+
+	// Regex match for Postgres query
+	mock.ExpectQuery(`SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at\s+FROM shared_tasks t\s+WHERE status = 'PENDING' AND organization_id = \$1\s+AND NOT EXISTS \(\s+SELECT 1 FROM jsonb_array_elements_text\(CASE WHEN jsonb_typeof\(t\.dependencies\) = 'array' THEN t\.dependencies ELSE '\[\]'::jsonb END\) AS dep_id\s+JOIN shared_tasks d ON d\.id::text = dep_id\s+WHERE d\.status != 'COMPLETED'\s+\)\s+FOR UPDATE SKIP LOCKED\s+LIMIT 1`).
+		WithArgs("org-deps").
+		WillReturnRows(rows)
+
+	mock.ExpectQuery(`UPDATE shared_tasks\s+SET status = 'ASSIGNED', agent_id = \$1, updated_at = CURRENT_TIMESTAMP\s+WHERE id = \$2\s+RETURNING id`).
+		WithArgs("agent-1", "child-1").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("child-1"))
+
+	mock.ExpectCommit()
+
+	claimed, err := store.ClaimTask(ctx, "org-deps", "agent-1")
+	assert.NoError(t, err)
+	assert.NotNil(t, claimed)
+	assert.Equal(t, "child-1", claimed.ID)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSqliteTaskStore_PollDelegatedTasks(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+	ctx := context.Background()
+
+	parentTask := &SharedTask{
+		ID:             "parent-poll",
+		OrganizationID: "org-poll",
+		Title:          "Parent",
+		Status:         "PENDING",
+		Priority:       "DELEGATED",
+	}
+	err := store.CreateTask(ctx, parentTask)
+	require.NoError(t, err)
+
+	childTask := &SharedTask{
+		ID:             "child-poll",
+		OrganizationID: "org-poll",
+		Title:          "Child",
+		Status:         "PENDING",
+		Priority:       "DELEGATED",
+		Dependencies:   json.RawMessage(`["parent-poll"]`),
+	}
+	err = store.CreateTask(ctx, childTask)
+	require.NoError(t, err)
+
+	// Poll should return parent-poll but not child-poll because parent is not completed
+	tasks, err := store.PollDelegatedTasks(ctx, 10)
+	require.NoError(t, err)
+	require.Len(t, tasks, 1)
+	assert.Equal(t, "parent-poll", tasks[0].ID)
+
+	// Mark parent as COMPLETED
+	err = store.UpdateTaskStatus(ctx, "parent-poll", "COMPLETED")
+	require.NoError(t, err)
+
+	// Poll again should return child-poll
+	tasks2, err := store.PollDelegatedTasks(ctx, 10)
+	require.NoError(t, err)
+	require.Len(t, tasks2, 1)
+	assert.Equal(t, "child-poll", tasks2[0].ID)
+}
+
+func TestPostgresTaskStore_PollDelegatedTasks(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+	ctx := context.Background()
+
+	mock.ExpectBegin()
+	rows := sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
+		AddRow("poll-1", "org-poll", "Poll", nil, "PENDING", nil, "DELEGATED", nil, nil, []byte(`["parent-1"]`), time.Now(), time.Now())
+
+	mock.ExpectQuery(`SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at\s+FROM shared_tasks t\s+WHERE status = 'PENDING' AND priority = 'DELEGATED'\s+AND NOT EXISTS \(\s+SELECT 1 FROM jsonb_array_elements_text\(CASE WHEN jsonb_typeof\(t\.dependencies\) = 'array' THEN t\.dependencies ELSE '\[\]'::jsonb END\) AS dep_id\s+JOIN shared_tasks d ON d\.id::text = dep_id\s+WHERE d\.status != 'COMPLETED'\s+\)\s+FOR UPDATE SKIP LOCKED\s+LIMIT \$1`).
+		WithArgs(10).
+		WillReturnRows(rows)
+
+	mock.ExpectExec(`UPDATE shared_tasks SET status = 'ASSIGNED', updated_at = CURRENT_TIMESTAMP WHERE id = \$1`).
+		WithArgs("poll-1").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectCommit()
+
+	tasks, err := store.PollDelegatedTasks(ctx, 10)
+	assert.NoError(t, err)
+	assert.Len(t, tasks, 1)
+	assert.Equal(t, "poll-1", tasks[0].ID)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSqliteTaskStore_PollDelegatedTasks_Errors(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+	ctx := context.Background()
+
+    // Create a task that fails row scan due to bad parse... wait, we can just close db to test query err
+    db.Close()
+	_, err := store.PollDelegatedTasks(ctx, 10)
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_PollDelegatedTasks_Errors(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+	ctx := context.Background()
+
+	mock.ExpectBegin().WillReturnError(sql.ErrConnDone)
+	_, err = store.PollDelegatedTasks(ctx, 10)
+	assert.Error(t, err)
+
+    // Test query error
+    db, mock, err = sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+    store = NewPostgresTaskStore(db)
+
+    mock.ExpectBegin()
+    mock.ExpectQuery("SELECT id").WillReturnError(sql.ErrConnDone)
+    _, err = store.PollDelegatedTasks(ctx, 10)
+	assert.Error(t, err)
+}

@@ -56,8 +56,13 @@ func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string
 
 	query := `
 		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
-		FROM shared_tasks
+		FROM shared_tasks t
 		WHERE status = 'PENDING' AND organization_id = $1
+		  AND NOT EXISTS (
+			  SELECT 1 FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(t.dependencies) = 'array' THEN t.dependencies ELSE '[]'::jsonb END) AS dep_id
+			  JOIN shared_tasks d ON d.id::text = dep_id
+			  WHERE d.status != 'COMPLETED'
+		  )
 		FOR UPDATE SKIP LOCKED
 		LIMIT 1
 	`
@@ -217,8 +222,13 @@ func (s *PostgresTaskStore) PollDelegatedTasks(ctx context.Context, limit int) (
 
 	query := `
 		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
-		FROM shared_tasks
+		FROM shared_tasks t
 		WHERE status = 'PENDING' AND priority = 'DELEGATED'
+		  AND NOT EXISTS (
+			  SELECT 1 FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(t.dependencies) = 'array' THEN t.dependencies ELSE '[]'::jsonb END) AS dep_id
+			  JOIN shared_tasks d ON d.id::text = dep_id
+			  WHERE d.status != 'COMPLETED'
+		  )
 		FOR UPDATE SKIP LOCKED
 		LIMIT $1
 	`
@@ -351,8 +361,13 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 	// Find a pending task
 	query := `
 		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
-		FROM shared_tasks
+		FROM shared_tasks t
 		WHERE status = 'PENDING' AND organization_id = ?
+		  AND NOT EXISTS (
+			  SELECT 1 FROM json_each(t.dependencies) AS dep_id
+			  JOIN shared_tasks d ON d.id = dep_id.value
+			  WHERE d.status != 'COMPLETED'
+		  )
 		LIMIT 1
 	`
 	row := tx.QueryRowContext(ctx, query, organizationID)
@@ -472,8 +487,13 @@ func (s *SqliteTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]
 
 	query := `
 		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
-		FROM shared_tasks
+		FROM shared_tasks t
 		WHERE status = 'PENDING' AND priority = 'DELEGATED'
+		  AND NOT EXISTS (
+			  SELECT 1 FROM json_each(t.dependencies) AS dep_id
+			  JOIN shared_tasks d ON d.id = dep_id.value
+			  WHERE d.status != 'COMPLETED'
+		  )
 		LIMIT ?
 	`
 	rows, err := tx.QueryContext(ctx, query, limit)
