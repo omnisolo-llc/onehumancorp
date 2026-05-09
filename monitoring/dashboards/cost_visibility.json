@@ -1,0 +1,55 @@
+{
+  "title": "Cost Transparency Dashboard",
+  "panels": [
+    {
+      "title": "LLM Mission Cost",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_mission_cost_cents_total[5m])) / 100",
+          "legendFormat": "LLM Cost (USD)"
+        }
+      ]
+    },
+    {
+      "title": "Storage RW Cost",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_storage_rw_cost_total[5m]))",
+          "legendFormat": "Storage RW Cost"
+        }
+      ]
+    },
+    {
+      "title": "Email Send Cost",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_email_send_cost_total[5m]))",
+          "legendFormat": "Email Send Cost"
+        }
+      ]
+    },
+    {
+      "title": "API Call Cost",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_api_call_cost_total[5m]))",
+          "legendFormat": "API Call Cost"
+        }
+      ]
+    },
+    {
+      "title": "Cache Savings",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_cache_savings_cents_total[5m])) / 100",
+          "legendFormat": "Cache Savings (USD)"
+        }
+      ]
+    }
+  ]
+}

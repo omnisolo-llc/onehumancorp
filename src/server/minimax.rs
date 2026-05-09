@@ -103,8 +103,16 @@ impl MinimaxClient {
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         // 1. Check Cache
-        if let Some(cached) = self.cache.get(prompt) {
+        let (cached_opt, cost) = self.cache.get_with_cost_cents(prompt);
+        if let Some(cached) = cached_opt {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
+            let _ = crate::telemetry::buffer_metric(
+                &crate::db::get_pool(),
+                "ohc_cache_savings_cents",
+                "counter",
+                cost as f32,
+                serde_json::json!({"model": "minimax"})
+            ).await;
             return Ok(cached.text);
         }
 
