@@ -78,6 +78,7 @@ export component Dashboard inherits Window { // milestones
     callback action_manage_my_ai_team();
 
     in-out property <bool> show_upgrade_prompt: false;
+    callback action_upgrade();
     in-out property <string> upgrade_prompt_message: "";
 
     in-out property <bool> show_daily_briefing: false;
@@ -96,6 +97,7 @@ export component Dashboard inherits Window { // milestones
     if (show_upgrade_prompt) : UpgradePrompt {
         message: root.upgrade_prompt_message;
         action_dismiss => { root.show_upgrade_prompt = false; }
+        action_upgrade => { root.action_upgrade(); root.show_upgrade_prompt = false; }
     }
 
     Flickable {

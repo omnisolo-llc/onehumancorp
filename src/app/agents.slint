@@ -24,6 +24,7 @@ export component Agents inherits Window {
     in property <[UiAgent]> agents;
 
     in-out property <bool> show_upgrade_prompt: false;
+    callback action_upgrade();
     in-out property <string> upgrade_prompt_message: "";
 
     in-out property <bool> show_agent_hint: false;
@@ -39,6 +40,7 @@ export component Agents inherits Window {
     if (show_upgrade_prompt) : UpgradePrompt {
         message: root.upgrade_prompt_message;
         action_dismiss => { root.show_upgrade_prompt = false; }
+        action_upgrade => { root.action_upgrade(); root.show_upgrade_prompt = false; }
     }
 
     VerticalBox {

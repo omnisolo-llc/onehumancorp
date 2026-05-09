@@ -98,6 +98,7 @@ thread_local! {
     static GLOBAL_BUSINESS_SHARE: RefCell<Option<slint::Weak<app::BusinessShare>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
     static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
+    static GLOBAL_PRICING: RefCell<Option<slint::Weak<app::Pricing>>> = RefCell::new(None);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -116,6 +117,7 @@ thread_local! {
     static GLOBAL_ANALYTICS_CHARTS: RefCell<Option<slint::Weak<app::AnalyticsCharts>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
     static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
+    static GLOBAL_PRICING: RefCell<Option<slint::Weak<app::Pricing>>> = RefCell::new(None);
 }
 
 #[cfg(test)]
@@ -220,7 +222,22 @@ pub fn setup_welcome_checklist_routing(
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+
+    let pricing_ui = app::Pricing::new()?;
+    GLOBAL_PRICING.with(|g| *g.borrow_mut() = Some(pricing_ui.as_weak()));
+
     let agents_ui = app::Agents::new()?;
+
+    agents_ui.on_action_upgrade(|| {
+        GLOBAL_PRICING.with(|g| {
+            if let Some(weak) = g.borrow().as_ref() {
+                if let Some(ui) = weak.upgrade() {
+                    let _ = ui.show();
+                }
+            }
+        });
+    });
+
     agents_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let agents_handle_adv = agents_ui.as_weak();
     let ag_ui_weak = agents_handle_adv.clone();
@@ -496,6 +513,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
 
+                        dashboard.on_action_upgrade(|| {
+                            GLOBAL_PRICING.with(|g| {
+                                if let Some(weak) = g.borrow().as_ref() {
+                                    if let Some(ui) = weak.upgrade() {
+                                        let _ = ui.show();
+                                    }
+                                }
+                            });
+                        });
+
+
                         dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                         let dash_weak = dashboard.as_weak();
                         add_advanced_listener(Box::new(move |val| {
@@ -759,6 +787,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.hide().unwrap();
                     if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
+
+                        dashboard.on_action_upgrade(|| {
+                            GLOBAL_PRICING.with(|g| {
+                                if let Some(weak) = g.borrow().as_ref() {
+                                    if let Some(ui) = weak.upgrade() {
+                                        let _ = ui.show();
+                                    }
+                                }
+                            });
+                        });
+
 
                         dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                         let dash_weak = dashboard.as_weak();
@@ -1204,6 +1243,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let website_builder_ui = app::WebsiteBuilder::new()?;
     GLOBAL_WEBSITE_BUILDER.with(|g| *g.borrow_mut() = Some(website_builder_ui.as_weak()));
+
+    website_builder_ui.on_action_upgrade(|| {
+        GLOBAL_PRICING.with(|g| {
+            if let Some(weak) = g.borrow().as_ref() {
+                if let Some(ui) = weak.upgrade() {
+                    let _ = ui.show();
+                }
+            }
+        });
+    });
+
     website_builder_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
     let my_plan_ui_for_wb = app::MyPlan::new().unwrap();
@@ -2066,6 +2116,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
+
+                        dashboard.on_action_upgrade(|| {
+                            GLOBAL_PRICING.with(|g| {
+                                if let Some(weak) = g.borrow().as_ref() {
+                                    if let Some(ui) = weak.upgrade() {
+                                        let _ = ui.show();
+                                    }
+                                }
+                            });
+                        });
+
                 dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let dash_weak = dashboard.as_weak();
                 add_advanced_listener(Box::new(move |val| {
@@ -2086,6 +2147,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
+
+                        dashboard.on_action_upgrade(|| {
+                            GLOBAL_PRICING.with(|g| {
+                                if let Some(weak) = g.borrow().as_ref() {
+                                    if let Some(ui) = weak.upgrade() {
+                                        let _ = ui.show();
+                                    }
+                                }
+                            });
+                        });
+
                 dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let dash_weak = dashboard.as_weak();
                 add_advanced_listener(Box::new(move |val| {
@@ -2437,6 +2509,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
+
+                        dashboard.on_action_upgrade(|| {
+                            GLOBAL_PRICING.with(|g| {
+                                if let Some(weak) = g.borrow().as_ref() {
+                                    if let Some(ui) = weak.upgrade() {
+                                        let _ = ui.show();
+                                    }
+                                }
+                            });
+                        });
+
                 dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let dash_weak = dashboard.as_weak();
                 add_advanced_listener(Box::new(move |val| {
