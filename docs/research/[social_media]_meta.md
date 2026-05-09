@@ -6,8 +6,10 @@ Small business owners like Maya (Home Baker) and Priya (Boutique) are overwhelme
 **Research Report**:
 - **Tool**: Meta Graph API (Instagram Direct & Messenger) or a managed wrapper like ManyChat.
 - **Evaluation**: The Meta API allows full programmatic access to read and reply to DMs. By integrating this, OHC's "Customer Success" AI agent can draft and send replies based on the business's existing catalog, FAQs, and business hours.
+- **Advantages**: Direct integration with the source platforms means no intermediate failure points. Provides the raw data needed for AI-driven automated responses.
+- **Risks**: Meta API changes frequently and requires maintaining complex OAuth flows.
 - **Ease of Use**: Very easy for the user. They simply click "Log in with Facebook/Instagram" to grant permissions. No API keys to manage.
-- **Pricing**: Free to use the Meta API, though WhatsApp integration has per-conversation pricing.
+- **Pricing Estimate**: Free to use the Meta API for standard text/media. WhatsApp integration (if added later) has per-conversation pricing.
 - **Cloud vs. Standalone**: Works perfectly in Cloud mode (OHC manages the Meta App and Webhooks). In Standalone mode, it would be complex as the user would need to create their own Meta App.
 **Design Doc**:
 - The user navigates to a "Social Inbox" tab and clicks "Connect Instagram".
