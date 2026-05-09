@@ -36,6 +36,180 @@ pub struct GroupChatManager {
     pub llm: Arc<dyn crate::llm::LlmClient>,
 }
 
+
+/// Task state
+#[derive(Clone, Debug, PartialEq)]
+pub enum TaskState {
+    Pending,
+    InProgress,
+    Completed,
+}
+
+/// A sub-task in the task ledger
+#[derive(Clone, Debug)]
+pub struct LedgerTask {
+    pub id: usize,
+    pub description: String,
+    pub assigned_agent: Option<String>,
+    pub state: TaskState,
+    pub result: Option<String>,
+}
+
+/// The Task Ledger
+#[derive(Clone, Default)]
+pub struct TaskLedger {
+    pub tasks: Vec<LedgerTask>,
+}
+
+/// Magentic (Manager Agent dynamically updating a task ledger)
+pub struct MagenticManager {
+    pub agents: Vec<ChatAgent>,
+    pub llm: Arc<dyn crate::llm::LlmClient>,
+    pub max_iterations: usize,
+}
+
+impl MagenticManager {
+    pub fn new(agents: Vec<ChatAgent>, llm: Arc<dyn crate::llm::LlmClient>, max_iterations: usize) -> Self {
+        Self { agents, llm, max_iterations }
+    }
+
+    /// Run the magentic workflow.
+    pub async fn run_magentic(&self, objective: &str) -> Result<TaskLedger, String> {
+        if self.agents.is_empty() {
+            return Err("No agents available.".to_string());
+        }
+
+        // Initialize ledger
+        let mut ledger = TaskLedger::default();
+
+        let agents_desc = self.agents.iter().map(|a| format!("- {}: {}", a.name, a.description)).collect::<Vec<_>>().join("\n");
+
+        // 1. Break down objective into tasks
+        let plan_req = crate::types::ChatRequest {
+            model: "default".to_string(),
+            system: "You are a Manager Agent. Your job is to break down the user's objective into a list of specific tasks. Each task should be doable by one of the available agents. Output ONLY the tasks, one per line, prefixed by a dash (-).".to_string(),
+            messages: vec![
+                Message::user(&format!("Objective: {}\nAvailable Agents:\n{}", objective, agents_desc)),
+            ],
+            tools: vec![],
+            max_tokens: 500,
+            temperature: 0.0,
+        };
+
+        let plan_resp = self.llm.chat(plan_req).await.map_err(|e| e.to_string())?;
+        let tasks_text = plan_resp.message.content.trim();
+        for (i, line) in tasks_text.lines().filter(|l| l.trim().starts_with("-")).enumerate() {
+            let desc = line.trim_start_matches('-').trim().to_string();
+            ledger.tasks.push(LedgerTask {
+                id: i + 1,
+                description: desc,
+                assigned_agent: None,
+                state: TaskState::Pending,
+                result: None,
+            });
+        }
+
+        if ledger.tasks.is_empty() {
+            ledger.tasks.push(LedgerTask {
+                id: 1,
+                description: objective.to_string(),
+                assigned_agent: None,
+                state: TaskState::Pending,
+                result: None,
+            });
+        }
+
+        let mut iterations = 0;
+
+        while iterations < self.max_iterations {
+            iterations += 1;
+
+            // Find next pending task
+            let next_task_idx = ledger.tasks.iter().position(|t| t.state == TaskState::Pending);
+            let next_task_idx = match next_task_idx {
+                Some(idx) => idx,
+                None => break, // All tasks completed
+            };
+
+            ledger.tasks[next_task_idx].state = TaskState::InProgress;
+            let current_task_desc = ledger.tasks[next_task_idx].description.clone();
+
+            // 2. Select Agent
+            let select_req = crate::types::ChatRequest {
+                model: "default".to_string(),
+                system: "You are a Manager Agent. Decide which agent is best suited for the task. Output ONLY the exact name of the selected agent.".to_string(),
+                messages: vec![
+                    Message::user(&format!("Task: {}\nAvailable Agents:\n{}", current_task_desc, agents_desc)),
+                ],
+                tools: vec![],
+                max_tokens: 50,
+                temperature: 0.0,
+            };
+
+            let select_resp = self.llm.chat(select_req).await.map_err(|e| e.to_string())?;
+            let selected_name = select_resp.message.content.trim().to_string();
+
+            ledger.tasks[next_task_idx].assigned_agent = Some(selected_name.clone());
+
+            let worker_agent = self.agents.iter().find(|a| a.name.to_lowercase() == selected_name.to_lowercase() || selected_name.contains(&a.name));
+            let worker_agent = match worker_agent {
+                Some(w) => w,
+                None => {
+                    // Fallback to first agent if LLM hallucinated
+                    &self.agents[0]
+                }
+            };
+
+            // 3. Delegate to worker agent
+            let mut on_event = |_| {};
+            let mut run_cfg = worker_agent.run_config.clone();
+            let mut agent_messages = vec![Message::user(&format!("Your assigned task: {}", current_task_desc))];
+
+            // Add previous context
+            let mut context = String::new();
+            for task in &ledger.tasks {
+                if let Some(res) = &task.result {
+                    context.push_str(&format!("Task '{}' completed: {}\n", task.description, res));
+                }
+            }
+            if !context.is_empty() {
+                run_cfg.server_system_message = format!("Context of previously completed tasks:\n{}", context);
+            }
+
+            let result = match worker_agent.agent.run_langgraph(&run_cfg, "", worker_agent.agent.tools.clone(), &mut agent_messages, &mut on_event).await {
+                Ok(r) => r,
+                Err(e) => format!("Error executing task: {}", e),
+            };
+
+            ledger.tasks[next_task_idx].result = Some(result.clone());
+
+            // 4. Verify outcome
+            let verify_req = crate::types::ChatRequest {
+                model: "default".to_string(),
+                system: "You are a Manager Agent. Verify if the worker's output satisfies the task. Output 'DONE' if it does, or 'NEEDS_REVISION' if it doesn't.".to_string(),
+                messages: vec![
+                    Message::user(&format!("Task: {}\nOutput: {}", current_task_desc, result)),
+                ],
+                tools: vec![],
+                max_tokens: 50,
+                temperature: 0.0,
+            };
+
+            let verify_resp = self.llm.chat(verify_req).await.map_err(|e| e.to_string())?;
+            let verify_text = verify_resp.message.content.trim().to_uppercase();
+
+            if verify_text.contains("DONE") {
+                ledger.tasks[next_task_idx].state = TaskState::Completed;
+            } else {
+                // For simplicity, just mark it pending again to retry
+                ledger.tasks[next_task_idx].state = TaskState::Pending;
+            }
+        }
+
+        Ok(ledger)
+    }
+}
+
 impl GroupChatManager {
     pub fn new(chat: GroupChat, llm: Arc<dyn crate::llm::LlmClient>) -> Self {
         Self { chat, llm }
@@ -305,6 +479,48 @@ mod tests {
                 response_id: Some("mock-id".to_string()),
             })
         }
+    }
+
+    #[tokio::test]
+    async fn test_autogen_magentic_manager() {
+        let manager_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                "- Task A\n- Task B".to_string(), // Breakdown
+                "WorkerAgent".to_string(), // Select Agent
+                "DONE".to_string(), // Verify outcome A
+                "WorkerAgent".to_string(), // Select Agent
+                "DONE".to_string(), // Verify outcome B
+            ]),
+        });
+
+        let worker_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                "I finished Task A".to_string(),
+                "I finished Task B".to_string(),
+            ]),
+        });
+
+        let worker_agent = Arc::new(Agent::new(worker_llm, vec![]));
+        let cfg = AgentRunConfig::default();
+
+        let chat_agent = ChatAgent {
+            name: "WorkerAgent".to_string(),
+            description: "A versatile worker.".to_string(),
+            agent: worker_agent,
+            run_config: cfg.clone(),
+        };
+
+        let magentic = MagenticManager::new(vec![chat_agent], manager_llm, 10);
+        let result = magentic.run_magentic("Do A and B").await;
+
+        assert!(result.is_ok());
+        let ledger = result.unwrap();
+
+        assert_eq!(ledger.tasks.len(), 2);
+        assert_eq!(ledger.tasks[0].state, TaskState::Completed);
+        assert!(ledger.tasks[0].result.as_ref().unwrap().contains("I finished Task A"));
+        assert_eq!(ledger.tasks[1].state, TaskState::Completed);
+        assert!(ledger.tasks[1].result.as_ref().unwrap().contains("I finished Task B"));
     }
 
     #[tokio::test]
