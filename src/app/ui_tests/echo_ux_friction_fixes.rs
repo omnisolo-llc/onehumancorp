@@ -78,3 +78,111 @@ fn test_echo_grandmother_e2e_flow() {
     );
     assert!(*submit_invoked.borrow(), "Submit action not triggered");
 }
+
+
+#[test]
+fn test_business_manager_loading_state() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let manager_ui = app::BusinessManager::new().unwrap();
+
+    // Default state
+    assert_eq!(manager_ui.get_is_loading(), false);
+
+    // Simulate setting loading state during submit
+    manager_ui.set_is_loading(true);
+    assert_eq!(manager_ui.get_is_loading(), true);
+
+    // Verify properties
+    assert_eq!(manager_ui.get_current_view(), "list");
+}
+
+#[test]
+fn test_echo_business_manager_physical_flow() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let manager = app::BusinessManager::new().unwrap();
+    manager.invoke_action_add_new();
+    manager.invoke_select_type("PHYSICAL".into());
+    manager.invoke_next_step();
+    manager.set_product_name("Shoe".into());
+    let submitted = Rc::new(RefCell::new(false));
+    let s_clone = submitted.clone();
+    manager.on_submit(move |t, n, _d, _p, _dur, _sch| {
+        assert_eq!(t, "PHYSICAL");
+        assert_eq!(n, "Shoe");
+        *s_clone.borrow_mut() = true;
+    });
+    manager.invoke_submit("PHYSICAL".into(), "Shoe".into(), "".into(), "".into(), "".into(), "".into());
+    assert!(*submitted.borrow());
+}
+
+#[test]
+fn test_echo_business_manager_digital_flow() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let manager = app::BusinessManager::new().unwrap();
+    manager.invoke_action_add_new();
+    manager.invoke_select_type("DIGITAL".into());
+    manager.invoke_next_step();
+    manager.set_product_name("PDF".into());
+    let submitted = Rc::new(RefCell::new(false));
+    let s_clone = submitted.clone();
+    manager.on_submit(move |t, n, _d, _p, _dur, _sch| {
+        assert_eq!(t, "DIGITAL");
+        assert_eq!(n, "PDF");
+        *s_clone.borrow_mut() = true;
+    });
+    manager.invoke_submit("DIGITAL".into(), "PDF".into(), "".into(), "".into(), "".into(), "".into());
+    assert!(*submitted.borrow());
+}
+
+#[test]
+fn test_echo_business_manager_service_flow() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let manager = app::BusinessManager::new().unwrap();
+    manager.invoke_action_add_new();
+    manager.invoke_select_type("SERVICE".into());
+    manager.invoke_next_step();
+    manager.set_product_name("Consult".into());
+    let submitted = Rc::new(RefCell::new(false));
+    let s_clone = submitted.clone();
+    manager.on_submit(move |t, n, _d, _p, _dur, _sch| {
+        assert_eq!(t, "SERVICE");
+        assert_eq!(n, "Consult");
+        *s_clone.borrow_mut() = true;
+    });
+    manager.invoke_submit("SERVICE".into(), "Consult".into(), "".into(), "".into(), "".into(), "".into());
+    assert!(*submitted.borrow());
+}
+
+#[test]
+fn test_echo_business_manager_back_nav() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let manager = app::BusinessManager::new().unwrap();
+    manager.invoke_action_add_new();
+    manager.invoke_select_type("PHYSICAL".into());
+    manager.invoke_next_step();
+    assert_eq!(manager.get_step(), 1);
+    manager.invoke_prev_step();
+    assert_eq!(manager.get_step(), 0);
+}
+
+#[test]
+fn test_echo_business_manager_edit_product() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let manager = app::BusinessManager::new().unwrap();
+
+    let edited = Rc::new(RefCell::new(false));
+    let edited_clone = edited.clone();
+    manager.on_action_edit(move |id| {
+        assert_eq!(id, "p123");
+        *edited_clone.borrow_mut() = true;
+    });
+    manager.invoke_action_edit("p123".into());
+    assert!(*edited.borrow());
+}

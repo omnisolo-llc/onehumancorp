@@ -17,6 +17,7 @@ export component BusinessManager inherits Window {
     out property <string> test_title: root.title;
     // "list" | "add"
     in-out property <string> current_view: "list";
+    in-out property <bool> is_loading: false;
 
     in property <[UiProduct]> products;
 
@@ -55,7 +56,7 @@ export component BusinessManager inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: current_view == "list" ? "My Offerings" : "Add Offering"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: current_view == "list" ? "My Products & Services" : "Add Product or Service"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
             if (current_view == "add") : Button { text: "Back to List"; clicked => { current_view = "list"; } }
             if (current_view == "list") : Button { text: "Close"; clicked => { close(); } }
@@ -116,7 +117,7 @@ export component BusinessManager inherits Window {
             GlassCard {
                 height: 52px;
                 background: rgba(168, 85, 247, 0.8);
-                VerticalBox { alignment: center; Text { text: "+ Add New Offering"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: "+ Add Product or Service"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => { action_add_new(); } }
             }
         }
@@ -127,7 +128,7 @@ export component BusinessManager inherits Window {
             HorizontalBox {
                 alignment: start;
                 spacing: 8px;
-                Text { text: "What type of offering are you creating?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; vertical-alignment: center; } // Validation dummy comment
+                Text { text: "What are you selling?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; vertical-alignment: center; } // Validation dummy comment
                 Button { text: "?"; width: 44px; height: 44px; clicked => { show_offering_hint = !show_offering_hint; } }
             }
             if (show_offering_hint) : Text {
@@ -251,12 +252,15 @@ export component BusinessManager inherits Window {
             if (step == 1) : GlassCard {
                 width: 160px;
                 height: 44px;
-                background: rgba(168, 85, 247, 1.0);
-                VerticalBox { alignment: center; Text { text: "Create"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                background: root.is_loading ? rgba(168, 85, 247, 0.5) : rgba(168, 85, 247, 1.0);
+                VerticalBox { alignment: center; Text { text: root.is_loading ? "Creating..." : "Create"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea {
+                    enabled: !root.is_loading;
                     clicked => {
+                        root.is_loading = true;
                         submit(selected_type, product_name, product_description, product_price, service_duration, service_schedule);
                         close();
+                        root.is_loading = false;
                     }
                 }
             }
