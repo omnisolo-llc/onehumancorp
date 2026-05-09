@@ -582,19 +582,28 @@ impl PromoterWorker {
         let mut promoter_rx = hub.subscribe_teammate_mesh("promoter_inbox".to_string());
         let mut product_rx = hub.subscribe_teammate_mesh("products_inbox".to_string());
 
-        // Handle product creation for social auto-posting
+        // Handle product creation and updates for social auto-posting
         let db_social = db.clone();
         tokio::spawn(async move {
             while let Ok(event) = product_rx.recv().await {
-                if event.action == "ProductCreated" {
+                if event.action == "ProductCreated" || event.action == "ProductUpdated" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                             let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("a new product");
                             let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
 
-                            let prompt = format!("Generate a catchy and engaging social media post (Instagram/X) for our new product: '{}'. Include relevant hashtags and emojis. Be professional but exciting.", product_name);
+                            let is_new = event.action == "ProductCreated";
+                            let prompt = if is_new {
+                                format!("Generate a catchy and engaging social media post (Instagram/X) for our new product: '{}'. Include relevant hashtags and emojis. Be professional but exciting.", product_name)
+                            } else {
+                                format!("Generate a catchy and engaging social media post (Instagram/X) for our updated product: '{}'. Include relevant hashtags and emojis. Be professional but exciting.", product_name)
+                            };
 
-                            let mut drafted_post = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
+                            let mut drafted_post = if is_new {
+                                format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name)
+                            } else {
+                                format!("Check out the latest updates to our product: {}! 🚀 #update #ohc", product_name)
+                            };
 
                             if let Ok(mut client) = crate::ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                                 let reason_req = crate::ohc::orchestration::ReasonRequest {
