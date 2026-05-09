@@ -25,6 +25,7 @@ go_test(
         "local_buffer_test.go",
         "pii_test.go",
         "pii_leakage_ast_test.go",
+        "sovereignty_test.go",
     ],
     data = ["//srcs/server:all_go_files"],
     embed = [":telemetry"],
