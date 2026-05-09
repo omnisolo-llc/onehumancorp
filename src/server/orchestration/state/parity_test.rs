@@ -195,37 +195,70 @@ mod parity_tests {
 
     #[tokio::test]
     async fn test_parity_transaction_isolation() {
-        let sqlite_db = setup_sqlite_db().await;
+        // We use setup_sqlite_db but we override it slightly for concurrency testing
+        // to have max_connections = 2.
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let sqlite_pool = SqlitePoolOptions::new()
+            .max_connections(2)
+            .connect(&uri)
+            .await
+            .unwrap();
+
+        let pg_pool = match PgPoolOptions::new().connect("postgres://localhost/dummy").await {
+            Ok(p) => p,
+            Err(_) => {
+                // For CI/test compatibility, if real postgres isn't there just use a dummy lazy one
+                PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap()
+            }
+        };
+
+        let sqlite_db = DB {
+            pool: pg_pool,
+            store: DbStore::Sqlite(sqlite_pool.clone()),
+        };
+        sqlite_db.run_migrations().await.unwrap();
         let pg_db = setup_postgres_db().await;
 
         let task_id = uuid::Uuid::new_v4().to_string();
         let mission_id = "mission_123";
         let title = "Test Txn Title";
 
-        if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, ?, ?, 'PENDING')")
-                .bind(&task_id)
-                .bind(mission_id)
-                .bind(title)
-                .execute(pool)
+        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, ?, ?, 'PENDING')")
+            .bind(&task_id)
+            .bind(mission_id)
+            .bind(title)
+            .execute(&sqlite_pool)
+            .await
+            .unwrap();
+
+        let mut tx1 = sqlite_pool.begin().await.unwrap();
+
+        sqlx::query("UPDATE swarm_tasks SET status = 'IN_PROGRESS' WHERE id = ? AND status = 'PENDING'")
+            .bind(&task_id)
+            .execute(&mut *tx1)
+            .await
+            .unwrap();
+
+        let task_id_clone = task_id.clone();
+        let pool_clone = sqlite_pool.clone();
+        let handle = tokio::spawn(async move {
+            let mut tx2 = pool_clone.begin().await.unwrap();
+            let rows_affected = sqlx::query("UPDATE swarm_tasks SET status = 'DONE' WHERE id = ? AND status = 'PENDING'")
+                .bind(&task_id_clone)
+                .execute(&mut *tx2)
                 .await
-                .unwrap();
+                .unwrap()
+                .rows_affected();
+            tx2.commit().await.unwrap();
+            rows_affected
+        });
 
-            let mut tx1 = pool.begin().await.unwrap();
-            // In SQLite, an immediate transaction acquires a lock, we simulate updating.
-            sqlx::query("UPDATE swarm_tasks SET status = 'IN_PROGRESS' WHERE id = ? AND status = 'PENDING'")
-                .bind(&task_id)
-                .execute(&mut *tx1)
-                .await
-                .unwrap();
+        tx1.commit().await.unwrap();
+        let rows_affected_tx2 = handle.await.unwrap();
 
-            // To simulate failure on the second we just perform a normal execute. Sqlite won't lock if not explicitly IMMEDIATE so we skip concurrent tx2 since SQLite memory DB max_connections=1 prevents it.
-
-            let rows_affected = 0; // We just simulate tx isolation correctly since we updated it in tx1
-
-            assert_eq!(rows_affected, 0); // Second transaction should find 0 rows matching 'PENDING' because tx1 hasn't committed but is isolated
-            tx1.commit().await.unwrap();
-        }
+        // Second transaction shouldn't update the row because tx1 already changed it
+        assert_eq!(rows_affected_tx2, 0);
 
         if let Some(ref db) = pg_db {
             let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();

@@ -158,7 +158,7 @@ impl HandoffManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent::mesh::transport::{MemoryTransport, MeshTransport};
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use sqlx::Row;
     use std::str::FromStr;
@@ -207,63 +207,85 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-        let m_arc = manager_arc.clone();
-        tokio::spawn(async move {
-            let _ = m_arc
-                .initiate_handoff(
-                    "tenant1",
-                    "state1",
-                    b"some_state".to_vec(),
-                    "agent_memories",
-                )
-                .await;
+        let transport_clone = transport.clone();
+
+        let handler = Box::new(move |msg: ohc_builtin_agent::mesh::transport::Message| {
+            if let Ok(mut handoff) = SyncStateHandoff::decode(&msg.payload[..]) {
+                // To allow start_listener to process it (preventing reflection drop), we modify the mode_source and republish it manually!
+                // But wait, the original message is already broadcasted to both this handler and the listener.
+                // The listener will drop it if it has "standalone".
+                // We don't want to re-publish on mesh:state:handoff here, because that would cause an infinite loop.
+                // We just want to mock the ACK here.
+
+                let transport_clone_inner = transport_clone.clone();
+                let msg_id_for_ack = msg.msg_id.clone();
+                tokio::spawn(async move {
+                    // Send ACK to fulfill the publish_with_ack expectation.
+                    let mut ack_msg = ohc_builtin_agent::mesh::transport::Message::default();
+                    ack_msg.action = format!("mesh:ack:{}", msg_id_for_ack);
+                    ack_msg.agent_id = "test".to_string();
+                    ack_msg.status = "ok".to_string();
+                    ack_msg.payload = b"ack".to_vec();
+                    ack_msg.msg_id = uuid::Uuid::new_v4().to_string();
+                    let _ = transport_clone_inner.publish(&format!("mesh:ack:{}", msg_id_for_ack), ack_msg).await;
+                });
+            }
         });
 
-        let res: Result<(), String> = Err("Mock Timeout".to_string());
+        // Use a different mock topic to intercept the ack but not the main event
+        // Actually, start_listener listens to "mesh:state:handoff".
+        // MemoryTransport broadcasts to all subscribers.
+        // We can just subscribe to it to provide the ACK!
+        transport.subscribe("mesh:state:handoff", handler).await.unwrap();
 
-        // Let listener process loop
+        // But wait, if we call initiate_handoff, it will have mode_source="standalone", which start_listener will drop.
+        // We will call initiate_handoff, but to test start_listener's DB insertion separately, we could just send a message directly, OR
+        // we can test the behavior using a direct mock publish with "cloud" source.
+        // Let's do both.
 
-        for _ in 0..15 {
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-            let row = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'state1'")
-                .fetch_optional(&pool)
-                .await
-                .unwrap();
-            if let Some(r) = row {
-                let content: Vec<u8> = r.get("raw_content");
-                assert_eq!(content, b"some_state".to_vec());
+        let res = manager_arc
+            .initiate_handoff(
+                "tenant1",
+                "state1",
+                b"some_state".to_vec(),
+                "agent_memories",
+            )
+            .await;
 
-                break;
-            }
-        }
-        // In the test setup using MemoryTransport, `start_listener`'s `tokio::spawn`
-        // doesn't run fast enough to handle the lock AND publish `ack` before `initiate_handoff`
-        // completes its retries (since backoff is 100ms, total 100+200+400+800=1.5s).
-        // Since it's testing the HandoffManager, not the actual transport, and the `res` failure
-        // is because of the ack logic waiting inside `MemoryTransport` test loop, let's just
-        // verify it doesn't crash.
-        // It failed with `Err("Failed to receive ack after retries")` which proves it went through
-        // the publish_with_ack loop!
-        assert!(res.is_ok() || res.is_err());
+        assert!(res.is_ok());
 
-        // Wait to make sure background task has enough time to insert the state
+        // Now, to test the listener DB insertion part, we publish a message with mode_source = "cloud"
+        // so it doesn't get dropped by the listener's reflection check.
+        let handoff = SyncStateHandoff {
+            tenant_id: "tenant1".to_string(),
+            state_id: "state_from_cloud".to_string(),
+            serialized_state: b"cloud_state".to_vec(),
+            mode_source: "cloud".to_string(),
+            timestamp: chrono::Utc::now().timestamp(),
+            entity_type: "agent_memories".to_string(),
+        };
+
+        let mut buf = Vec::new();
+        handoff.encode(&mut buf).unwrap();
+        manager_arc.mesh.publish("mesh:state:handoff", buf).await.unwrap();
+
+        let mut found = false;
         for _ in 0..30 {
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-            let row = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'state1'")
+            let row = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'state_from_cloud'")
                 .fetch_optional(&pool)
                 .await
                 .unwrap();
             if let Some(r) = row {
                 let content: Vec<u8> = r.get("raw_content");
-                if content == b"some_state".to_vec() {
+                if content == b"cloud_state".to_vec() {
+                    found = true;
                     break;
                 }
             }
         }
 
-        // We skip assert!(found) because the tokio::spawn with Err("Mock Timeout") breaks
-        // the regular flow and fails to insert, but this test block's purpose was to
-        // verify it doesn't crash during `initiate_handoff` and backoff.
+        assert!(found);
 
         cancel();
     }
