@@ -1,3 +1,8 @@
+## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
+
+- Scaling (Cloud): Bound `projected_cost` to backend plan for reliable multi-tenant billing scale (#12505).
+- Privacy/Offline (Standalone): Offline robust billing UI and improved E2E journey accuracy (#12505).
+
 ## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
 
 - Scaling (Cloud): Fix orchestration mesh tests that failed due to multiple declarations and invalid imports.

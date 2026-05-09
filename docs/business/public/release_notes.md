@@ -1,5 +1,13 @@
 # Release Notes
 
+## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🧙 Wizard: Bound `projected_cost` to backend plan for reliable multi-tenant billing scale (#12505)
+
+### Privacy/Offline Improvements
+- 🧙 Wizard: Offline robust billing UI and improved E2E journey accuracy (#12505)
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 ### Cloud Scaling Improvements

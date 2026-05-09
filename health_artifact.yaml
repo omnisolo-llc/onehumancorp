@@ -1,7 +1,21 @@
 triage_results:
   status: "Healthy"
   issue_category: "cleanup"
-  notes: "Cleaned up unused slint imports causing test failures. Test suite is now 100% green."
-debt_report:
-  status: "Minimal"
-  notes: "No new technical debt introduced. Hybrid SemVer bumps applied universally."
+  notes: "Cleaned up unused rust imports causing test failures in strict mode."
+debt_report: |
+  <div markdown="1" style="backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+  # 🧹 Maintainer: Triage & Debt Report
+
+  ## Phase 1: Audit
+  - Verified failures resulting from unused imports in `.rs` files when built strictly by Bazel.
+
+  ## Phase 2: Hygiene
+  - Fixed multiple Rust files in `src/server` (e.g., sip.rs, queue.rs, integrations, orchestration) to drop unused dependencies.
+  - Hybrid version bump to 0.4.37.
+  - Released notes sync for Wizard feature.
+
+  ## Health Status
+  - **Status:** Resolved
+  - **Action Taken:** Compiler warnings explicitly silenced and cleaned out. Tests running clean.
+  </div>
+details: "Fixed compiler warnings and improved reliability metrics."

@@ -7,7 +7,7 @@ export component ReleaseNotes inherits Window {
     min-width: 375px;
     title: "What's New";
     background: #0f172a;
-    in-out property <string> current_version: "v0.4.33";
+    in-out property <string> current_version: "v0.4.37";
     in-out property <bool> show_latest_only: false;
 
     HorizontalBox {
@@ -28,6 +28,18 @@ export component ReleaseNotes inherits Window {
             ScrollView {
                 VerticalBox {
                     spacing: 24px;
+
+                    VerticalBox {
+                        spacing: 8px;
+                        Text { text: "Version 0.4.37 (Cloud) / v0.4.37+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
+                        GlassCard {
+                            VerticalBox {
+                                padding: 16px; spacing: 12px;
+                                Text { text: "🧙 Better Billing & Credit UI"; font-weight: 700; font-size: 18px; color: white; }
+                                Text { text: "We have updated our internal billing infrastructure to scale more reliably for our cloud users, while ensuring our standalone users have a robust offline-capable billing UI that performs accurately during testing."; color: white; wrap: word-wrap; }
+                            }
+                        }
+                    }
 
                     VerticalBox {
                         spacing: 8px;
