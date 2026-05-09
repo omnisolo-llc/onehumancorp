@@ -15,5 +15,13 @@ CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE shared_tasks_decomposition ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition;
+CREATE POLICY tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition
+    USING (organization_id = current_setting('app.current_tenant', true));
+
 -- +goose Down
+ALTER TABLE shared_tasks_decomposition DISABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition;
 DROP TABLE IF EXISTS shared_tasks_decomposition;

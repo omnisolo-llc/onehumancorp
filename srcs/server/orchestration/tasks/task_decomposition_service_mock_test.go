@@ -239,3 +239,119 @@ func TestTaskDecompositionService_RowsScanErr(t *testing.T) {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
+
+func TestTaskDecompositionService_UpdateCommitErr(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	svc := NewDBTaskDecompositionService(db, false)
+	ctx := context.Background()
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("^SELECT status FROM shared_tasks_decomposition WHERE id = \\$1$").
+		WithArgs("task-1").
+		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
+
+	mock.ExpectExec("^UPDATE shared_tasks_decomposition SET status = \\$1 WHERE id = \\$2$").
+		WithArgs("COMPLETED", "task-1").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectExec("^INSERT INTO state_machine_transitions").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectCommit().WillReturnError(errors.New("commit err"))
+
+	err = svc.UpdateTaskStatus(ctx, "task-1", "COMPLETED", "agent", "reason")
+	if err == nil || err.Error() != "commit err" {
+		t.Fatalf("expected commit err, got %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestTaskDecompositionService_UpdateTransInsertErr(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	svc := NewDBTaskDecompositionService(db, false)
+	ctx := context.Background()
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("^SELECT status FROM shared_tasks_decomposition WHERE id = \\$1$").
+		WithArgs("task-1").
+		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
+
+	mock.ExpectExec("^UPDATE shared_tasks_decomposition SET status = \\$1 WHERE id = \\$2$").
+		WithArgs("COMPLETED", "task-1").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectExec("^INSERT INTO state_machine_transitions").
+		WillReturnError(errors.New("insert err"))
+
+	mock.ExpectRollback()
+
+	err = svc.UpdateTaskStatus(ctx, "task-1", "COMPLETED", "agent", "reason")
+	if err == nil || err.Error() != "insert err" {
+		t.Fatalf("expected insert err, got %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestTaskDecompositionService_UpdateBeginTxErr(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	svc := NewDBTaskDecompositionService(db, false)
+	ctx := context.Background()
+
+	mock.ExpectBegin().WillReturnError(errors.New("begin err"))
+
+	err = svc.UpdateTaskStatus(ctx, "task-1", "COMPLETED", "agent", "reason")
+	if err == nil || err.Error() != "begin err" {
+		t.Fatalf("expected begin err, got %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestTaskDecompositionService_UpdateQueryErr(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	svc := NewDBTaskDecompositionService(db, false)
+	ctx := context.Background()
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("^SELECT status FROM shared_tasks_decomposition WHERE id = \\$1$").
+		WithArgs("task-1").
+		WillReturnError(errors.New("query err"))
+	mock.ExpectRollback()
+
+	err = svc.UpdateTaskStatus(ctx, "task-1", "COMPLETED", "agent", "reason")
+	if err == nil || err.Error() != "query err" {
+		t.Fatalf("expected query err, got %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}

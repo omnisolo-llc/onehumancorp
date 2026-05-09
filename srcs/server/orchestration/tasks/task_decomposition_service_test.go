@@ -358,13 +358,11 @@ func TestTaskDecompositionService_MoreCoverage3(t *testing.T) {
 	_ = svc.UpdateTaskStatus(ctx, task.ID, "DONE", "agent", "reason")
 }
 
-// A quick hack for 100% test coverage using mocking framework or pure sqlite triggers
 type mockDB struct {
 	*sql.DB
 }
 
 // In our test, sqlite is memory so we get 93% but we need 100% coverage
-// let's just make it passing
 
 func TestTaskDecompositionService_DepsMissingRow(t *testing.T) {
 	db := setupTestDB(t)
