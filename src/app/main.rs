@@ -433,7 +433,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let my_plan_ui = app::MyPlan::new().unwrap();
                                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
-                                        let billing_ui = app::Billing::new().unwrap();
+                                        let billing_ui = app::Pricing::new().unwrap();
+                                        billing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+                                        billing_ui.on_save_state({
+                                            let ui_handle = billing_ui.as_weak();
+                                            move || {
+                                                if let Some(ui) = ui_handle.upgrade() {
+                                                    IS_ADVANCED.with(|ia| *ia.borrow_mut() = ui.get_is_advanced());
+                                                }
+                                            }
+                                        });
                                         let billing_handle_clone = billing_ui.as_weak();
                                         dashboard.on_open_billing(move || {
                                             if let Some(ui) = billing_handle_clone.upgrade() {
@@ -626,7 +635,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                         let my_plan_ui = app::MyPlan::new().unwrap();
                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
-                        let billing_ui = app::Billing::new().unwrap();
+                        let billing_ui = app::Pricing::new().unwrap();
+                                        billing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+                                        billing_ui.on_save_state({
+                                            let ui_handle = billing_ui.as_weak();
+                                            move || {
+                                                if let Some(ui) = ui_handle.upgrade() {
+                                                    IS_ADVANCED.with(|ia| *ia.borrow_mut() = ui.get_is_advanced());
+                                                }
+                                            }
+                                        });
                         let billing_handle_clone = billing_ui.as_weak();
                         dashboard.on_open_billing(move || {
                             if let Some(ui) = billing_handle_clone.upgrade() {
@@ -2314,7 +2332,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                let billing_ui_inner = app::Billing::new().unwrap();
+                let billing_ui_inner = app::Pricing::new().unwrap();
+                billing_ui_inner.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                 let billing_handle_clone_dashboard = billing_ui_inner.as_weak();
                 dashboard.on_open_billing(move || {
                     if let Some(ui) = billing_handle_clone_dashboard.upgrade() {
@@ -2571,7 +2590,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let agent_hire_ui = app::AgentHire::new()?;
     let fix_agent_ui = app::FixAgent::new()?;
     let upgrade_ui = app::Upgrade::new()?;
-    let billing_ui = app::Billing::new()?;
+    let billing_ui = app::Pricing::new()?;
 
     fix_agent_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     upgrade_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
@@ -2595,6 +2614,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let billing_handle = billing_ui.as_weak();
     let bi_ui_weak = billing_handle.clone();
+    billing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+    billing_ui.on_save_state({
+        let ui_handle = billing_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                IS_ADVANCED.with(|ia| *ia.borrow_mut() = ui.get_is_advanced());
+            }
+        }
+    });
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = bi_ui_weak.upgrade() {
             ui.set_is_advanced(val);
@@ -4336,9 +4364,9 @@ mod tests {
         app::Upgrade::new().unwrap();
     }
     #[test]
-    fn test_billing_creation() {
+    fn test_billing_creation_disabled() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::Billing::new().unwrap();
+        app::Pricing::new().unwrap();
     }
     #[test]
     fn test_grow_business_creation() {

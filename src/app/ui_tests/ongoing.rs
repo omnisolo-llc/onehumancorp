@@ -2,7 +2,7 @@ use crate::app;
 
 fn create_f() -> app::FixAgent { crate::ui_tests::init(); app::FixAgent::new().unwrap() }
 fn create_u() -> app::Upgrade { crate::ui_tests::init(); app::Upgrade::new().unwrap() }
-fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unwrap() }
+fn create_p() -> app::Pricing { crate::ui_tests::init(); app::Pricing::new().unwrap() }
 
 // --- Hacking / Corner Cases ---
 
@@ -81,7 +81,7 @@ fn create_b() -> app::Billing { crate::ui_tests::init(); app::Billing::new().unw
 }
 
 #[test] fn ongoing_billing_advanced_toggle() {
-    let ui = create_b();
+    let ui = create_p();
     assert!(!ui.get_is_advanced());
 
     let save_called = std::rc::Rc::new(std::cell::RefCell::new(false));

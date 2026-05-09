@@ -1,3 +1,4 @@
+import { AdvancedToggle } from "advanced_toggle.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
@@ -73,13 +74,22 @@ export component Pricing inherits Window {
     callback select_plan(string);
     callback toggle_billing_cycle();
     callback add_credits();
+    in-out property <bool> is_advanced: false;
+    callback save_state();
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
         width: 100%;
 
-        Text { text: "Pricing & Billing"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+        HorizontalBox {
+            Text { text: "Pricing & Billing"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { save_state(); }
+            }
+        }
 
         HorizontalBox {
             spacing: 10px;
@@ -114,6 +124,13 @@ export component Pricing inherits Window {
         if (step == 0) : VerticalBox {
             spacing: 16px;
             Text { text: "Your Current Usage"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
+            Text { text: projected_cost; font-family: "Inter"; font-size: 14px; color: #a855f7; }
+
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Raw Telemetry Config & Quota Limits (JSON)"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                LineEdit { text: "{\n  \"tokens_used\": 450,\n  \"token_limit\": 1000,\n  \"telemetry_endpoint\": \"https://api.ohc.app/v1/telemetry\"\n}"; height: 120px; }
+            }
 
             GlassCard {
                 VerticalBox {
@@ -169,6 +186,12 @@ export component Pricing inherits Window {
         if (step == 1) : VerticalBox {
             spacing: 16px;
             Text { text: "Upgrade Plan"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
+
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Raw Billing Plan Limits (JSON)"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                LineEdit { text: "[\n  {\"id\": \"tier_free\", \"agents\": 1, \"storage_gb\": 1},\n  {\"id\": \"tier_pro\", \"agents\": -1, \"storage_gb\": 50}\n]"; height: 120px; }
+            }
 
             HorizontalBox {
                 alignment: center;
