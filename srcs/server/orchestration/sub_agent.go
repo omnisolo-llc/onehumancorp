@@ -3,14 +3,16 @@ package orchestration
 import (
 	"context"
 	"encoding/json"
-	"gopkg.in/yaml.v3"
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	harness_mcp "onehumancorp/srcs/server/integrations/mcp/harness"
 )
 
 var ErrTokenBudgetExceeded = errors.New("token budget exceeded")
@@ -159,7 +161,26 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 
 	}
 
-	_, _ = harness.RunAttempt("ls")
+	// Use the streaming API to retrieve the execution command
+	cmd, err := harness.RunStreamingAttempt("ls")
+	if err == nil && cmd != nil {
+		agentStdin, errIn := cmd.StdinPipe()
+		agentStdout, errOut := cmd.StdoutPipe()
+
+		if errIn == nil && errOut == nil {
+			if startErr := cmd.Start(); startErr == nil {
+				bridge := harness_mcp.NewUniversalBridge(agentStdout, agentStdin, task.ID)
+				if bridge != nil {
+					defer bridge.Close()
+				}
+				go func() {
+					_ = cmd.Wait()
+				}()
+			}
+		}
+	} else {
+		_, _ = harness.RunAttempt("ls")
+	}
 	// Check token budget BEFORE executing
 	if err := checkTokenBudget(task.OrganizationID); err != nil {
 		return err
@@ -224,9 +245,9 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 
 // Simulated server-side token budget tracking
 var tokenBudgets = map[string]int{
-	"org-1":      1000,
-	"org-chaos":  1000,
-	"org-parity": 1000,
+	"org-1":           1000,
+	"org-chaos":       1000,
+	"org-parity":      1000,
 	"org-budget-fail": 0,
 }
 var tokenMu sync.Mutex

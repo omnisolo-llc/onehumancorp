@@ -16,6 +16,8 @@ type AgentHarness interface {
 	RunAttempt(cmd string) (*AttemptResult, error)
 	Compact() error
 	Reset() error
+
+	RunStreamingAttempt(cmd string) (*exec.Cmd, error)
 }
 
 type AssistantAgentHarness struct {
@@ -67,4 +69,12 @@ func (h *AssistantAgentHarness) Compact() error {
 
 func (h *AssistantAgentHarness) Reset() error {
 	return nil
+}
+
+func (h *AssistantAgentHarness) RunStreamingAttempt(cmd string) (*exec.Cmd, error) {
+	wrappedCmd, err := h.manager.WrapCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	return exec.Command("sh", "-c", wrappedCmd), nil
 }

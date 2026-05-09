@@ -1,6 +1,7 @@
 package harness
 
 import (
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -20,6 +21,10 @@ func (m *MockHarness) Compact() error {
 
 func (m *MockHarness) Reset() error {
 	return nil
+}
+
+func (m *MockHarness) RunStreamingAttempt(cmd string) (*exec.Cmd, error) {
+	return exec.Command("echo", "mock streaming"), nil
 }
 
 func TestMockHarness(t *testing.T) {
