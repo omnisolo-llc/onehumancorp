@@ -70,24 +70,18 @@ impl DashboardService for MyDashboardService {
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             async {
-                tokio::task::spawn_blocking(move || {
-                    Ok::<_, String>(hub1.get_agents())
-                }).await.unwrap_or_else(|e| Err(e.to_string()))
+                Ok::<_, String>(hub1.get_agents().await)
             },
             async {
-                tokio::task::spawn_blocking(move || {
-                    Ok::<_, String>(hub2.get_meetings())
-                }).await.unwrap_or_else(|e| Err(e.to_string()))
+                Ok::<_, String>(hub2.get_meetings().await)
             },
             async {
-                tokio::task::spawn_blocking(move || {
-                    let cost_auditor = hub3.get_cost_auditor();
-                    Ok::<_, String>((
-                        cost_auditor.get_total_cost(),
-                        cost_auditor.get_total_tokens(),
-                        cost_auditor.get_agent_costs_snapshot(),
-                    ))
-                }).await.unwrap_or_else(|e| Err(e.to_string()))
+                let cost_auditor = hub3.get_cost_auditor();
+                Ok::<_, String>((
+                    cost_auditor.get_total_cost(),
+                    cost_auditor.get_total_tokens(),
+                    cost_auditor.get_agent_costs_snapshot(),
+                ))
             },
             async {
                 let org_id = org_id1; // Caching layer logic (Phase 4)

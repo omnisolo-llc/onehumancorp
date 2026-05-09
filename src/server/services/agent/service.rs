@@ -25,12 +25,12 @@ impl MyAgentManagerService {
         let hub2 = self.hub.clone();
         let hub3 = self.hub.clone();
         let (agents_res, meetings_res, cost_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings()),
-            tokio::task::spawn_blocking(move || {
+            async { Ok::<_, String>(hub1.get_agents().await) },
+            async { Ok::<_, String>(hub2.get_meetings().await) },
+            async {
                 let cost_auditor = hub3.get_cost_auditor();
-                (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-            })
+                Ok::<_, String>((cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot()))
+            }
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
@@ -161,7 +161,7 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<IdentitiesResponse>, Status> {
-        let agents = self.hub.get_agents();
+        let agents = self.hub.get_agents().await;
         let now = Utc::now();
         let identities = agents.iter().map(|a| a.clone()).map(|a| AgentIdentity {
             agent_id: a.id.clone(),
@@ -230,8 +230,8 @@ impl AgentManagerService for MyAgentManagerService {
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
         let (agents_res, meetings_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings())
+            async { Ok::<_, String>(hub1.get_agents().await) },
+            async { Ok::<_, String>(hub2.get_meetings().await) }
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;

@@ -88,7 +88,7 @@ impl TelemetrySyncDaemon {
                     break;
                 }
 
-                handles.push(tokio::task::spawn_blocking(move || {
+                handles.push(tokio::spawn(async move {
                     let mut chunk_res = Vec::with_capacity(chunk.len());
                     for (id, metric_name, metric_type, value, labels_json, timestamp) in chunk {
                         let json = serde_json::json!({
