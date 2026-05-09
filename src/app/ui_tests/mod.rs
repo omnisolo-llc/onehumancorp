@@ -100,6 +100,7 @@ pub mod ai_team_e2e;
 pub mod lens_audit_tests;
 pub mod booking_quote_e2e;
 pub mod echo_dashboard;
+pub mod echo_ux_friction_fixes;
 pub mod miser_e2e;
 pub mod guide_onboarding_e2e;
 pub mod guide_onboarding_e2e_extended;
