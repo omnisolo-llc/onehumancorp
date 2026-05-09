@@ -20,10 +20,10 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: 64M
+          memory: 48M
         reservations:
           cpus: "0.1"
-          memory: 64M
+          memory: 48M
     build:
       context: ..
       dockerfile: deploy/docker/ohc-core/Dockerfile
@@ -50,7 +50,7 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: 128M
+          memory: 96M
         reservations:
           cpus: "0.1"
           memory: 64M
@@ -296,6 +296,7 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
     volumes:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
+      - ./helm/ohc/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - prometheus
     deploy:
