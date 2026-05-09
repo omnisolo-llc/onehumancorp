@@ -59,7 +59,7 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
     await page.click('button:has-text("Connect Apps")');
 
     // Verify API screen uses grandma-friendly terms
-    await expect(page.locator('text=Custom Integration')).toBeVisible();
+    await expect(page.locator('text="Connect my Instagram, get order notifications, and connect other tools to your store."')).toBeVisible();
   });
 
   test('Flow 5: User initiates guided setup process from login screen', async ({ page }) => {

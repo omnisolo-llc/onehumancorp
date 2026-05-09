@@ -494,7 +494,7 @@ test.describe('API Documentation', () => {
   test('should display api docs page', async ({ page }) => {
     await page.locator('button:has-text("Menu")').first().click();
     await page.locator('button:has-text("Connect Apps")').first().click();
-    await expect(page.locator('text=/Custom Integration/i').first()).toBeVisible();
+    await expect(page.locator('text="Connect my Instagram, get order notifications, and connect other tools to your store."').first()).toBeVisible();
   });
 
   test('should toggle advanced developer documentation', async ({ page }) => {

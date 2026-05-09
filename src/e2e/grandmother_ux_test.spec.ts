@@ -24,7 +24,7 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
     await expect(page.locator('text=Connect Custom Software')).toBeVisible();
   });
 
-  test('API Docs screen uses Custom Integration label', async ({ page }) => {
+  test('API Docs screen uses Connect Apps label', async ({ page }) => {
     await page.goto('/');
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
@@ -33,7 +33,7 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
     await page.click('button:has-text("Menu")');
     await page.click('button:has-text("Connect Apps")');
 
-    await expect(page.locator('text=Custom Integration')).toBeVisible();
+    await expect(page.locator('text="Connect my Instagram, get order notifications, and connect other tools to your store."')).toBeVisible();
   });
 
   test('API Docs screen replaces GET /v1/products with Read Product List', async ({ page }) => {

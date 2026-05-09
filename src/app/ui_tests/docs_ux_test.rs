@@ -41,7 +41,7 @@ fn test_e2e_api_docs_navigation_flow() {
 
     // Verify the destination component renders correctly
     let ui = crate::app::ApiDocs::new().unwrap();
-    assert_eq!(ui.get_test_title(), slint::SharedString::from("Custom Integration"));
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Connect Apps"));
 
     let endpoint_tested = std::rc::Rc::new(std::cell::RefCell::new(false));
     let endpoint_tested_clone = endpoint_tested.clone();
