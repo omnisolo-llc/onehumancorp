@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use reqwest::Client;
+use opentelemetry::global;
 
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 use super::LlmClient;
@@ -352,6 +353,12 @@ impl LlmClient for OpenAIClient {
                 cache_creation_input_tokens: 0,
             })
             .unwrap_or_default();
+
+        let tenant_id = std::env::var("OHC_TENANT_ID").unwrap_or_else(|_| "default".to_string());
+        global::meter("ohc.llm").u64_counter("ohc_tokens_consumed_total").build().add(
+            usage.input_tokens as u64 + usage.output_tokens as u64,
+            &[opentelemetry::KeyValue::new("tenant_id", tenant_id)]
+        );
 
         Ok(ChatResponse {
             message: Message {

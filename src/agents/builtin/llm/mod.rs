@@ -39,8 +39,16 @@ pub fn minify_json_string(input: &str) -> String {
 
 pub fn minify_chat_request(mut req: ChatRequest) -> ChatRequest {
     req.system = minify_json_string(&req.system);
+    if req.system.chars().count() > 100000 {
+        let truncated_system: String = req.system.chars().take(100000).collect();
+        req.system = format!("{}... [truncated]", truncated_system);
+    }
     for m in &mut req.messages {
         m.content = minify_json_string(&m.content);
+        if m.content.chars().count() > 100000 {
+            let truncated_content: String = m.content.chars().take(100000).collect();
+            m.content = format!("{}... [truncated]", truncated_content);
+        }
         for tr in &mut m.tool_results {
             tr.content = minify_json_string(&tr.content);
         }

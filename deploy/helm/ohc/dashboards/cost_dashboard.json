@@ -1,0 +1,60 @@
+{
+  "title": "Cost Transparency & Metering",
+  "tags": ["ohc", "cost", "billing"],
+  "style": "dark",
+  "timezone": "browser",
+  "panels": [
+    {
+      "title": "Token Consumption (Input + Output)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(ohc_tokens_consumed_total[5m])",
+          "legendFormat": "Tokens consumed/sec",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "spanNulls": false
+          }
+        }
+      },
+      "transparent": true
+    },
+    {
+      "title": "Storage Metrics",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(ohc_storage_bytes_written_total[5m])",
+          "legendFormat": "Bytes Written",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(ohc_storage_bytes_read_total[5m])",
+          "legendFormat": "Bytes Read",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "spanNulls": false
+          },
+          "unit": "bytes"
+        }
+      },
+      "transparent": true
+    }
+  ]
+}

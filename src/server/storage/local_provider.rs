@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use chrono::DateTime;
 use std::fs;
 use std::io;
+use opentelemetry::global;
 
 use std::path::{Path, PathBuf};
 use crate::billing::Tracker;
@@ -100,7 +101,10 @@ impl Provider for LocalProvider {
 
     async fn read_blob(&self, key: &str) -> io::Result<Vec<u8>> {
         let path = self.get_local_path(key)?;
-        tokio::fs::read(path).await
+        let data = tokio::fs::read(&path).await?;
+        let t_id = key.split('/').next().unwrap_or("default");
+        global::meter("ohc.storage").u64_counter("ohc.storage.bytes_read").build().add(data.len() as u64, &[opentelemetry::KeyValue::new("tenant_id", t_id.to_string())]);
+        Ok(data)
     }
 
     async fn write_blob(&self, key: &str, data: &[u8]) -> io::Result<()> {
@@ -128,6 +132,7 @@ impl Provider for LocalProvider {
             }
         }
 
+        global::meter("ohc.storage").u64_counter("ohc.storage.bytes_written").build().add(final_data.len() as u64, &[opentelemetry::KeyValue::new("tenant_id", t_id.to_string())]);
         tokio::fs::write(path, &final_data).await
     }
 }
