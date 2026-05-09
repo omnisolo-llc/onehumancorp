@@ -40,5 +40,15 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     };
     catalog.push(twilio_provider);
 
+    let meta_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "meta".to_string(),
+            name: "Meta Graph API".to_string(),
+            category: "social_media".to_string(),
+            base_url: "https://graph.facebook.com".to_string(),
+        }
+    };
+    catalog.push(meta_provider);
+
     catalog
 }

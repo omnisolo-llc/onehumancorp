@@ -1395,6 +1395,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
         .with_state(webhook_state);
 
+    let meta_router = axum::Router::new()
+        .route("/api/v1/webhooks/meta", axum::routing::get(api::meta::meta_webhook_verify).post(api::meta::meta_webhook_handler))
+        .with_state(hub.clone());
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -1411,6 +1415,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ))
         .with_state(mesh_transport)
         .merge(webhook_router)
+        .merge(meta_router)
         .merge(health_router);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
