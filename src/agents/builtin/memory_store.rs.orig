@@ -657,10 +657,10 @@ impl OHCMemory for FileBasedMemory {
     async fn write(&self, namespace: &str, key: &str, data: &[u8]) -> Result<(), String> {
         let dir = self.secure_join(&[namespace])?;
         tokio::fs::create_dir_all(&dir).await.map_err(|e| e.to_string())?;
-        
+
         let path = self.secure_join(&[namespace, key])?;
         tokio::fs::write(path, data).await.map_err(|e| e.to_string())?;
-        
+
         Ok(())
     }
 
@@ -753,7 +753,7 @@ mod tests {
 pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     /// Retrieve relevant past conversations or state based on a query
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
-    
+
     /// Store a new piece of memory (e.g., an architectural decision or summary)
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String>;
 
@@ -1019,83 +1019,13 @@ impl RedisMemoryStore {
     }
 }
 
-/// Memory: Long-term (OpenAI/LangGraph) namespace-organized JSON Stores
-#[derive(Debug)]
-pub struct NamespaceOrganizedJsonMemoryStore {
-    base_dir: std::path::PathBuf,
-    namespace: String,
-}
-
-impl NamespaceOrganizedJsonMemoryStore {
-    pub fn new<P: AsRef<std::path::Path>>(base_dir: P, namespace: &str) -> Self {
-        NamespaceOrganizedJsonMemoryStore {
-            base_dir: base_dir.as_ref().to_path_buf(),
-            namespace: namespace.to_string(),
-        }
-    }
-
-    fn get_namespace_dir(&self) -> std::path::PathBuf {
-        self.base_dir.join(&self.namespace)
-    }
-}
-
-#[async_trait]
-impl LongTermMemory for NamespaceOrganizedJsonMemoryStore {
-    async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
-        let ns_dir = self.get_namespace_dir();
-        if !ns_dir.exists() {
-            return Ok(vec![]);
-        }
-
-        let mut results = Vec::new();
-        let mut dir = tokio::fs::read_dir(&ns_dir).await.map_err(|e| e.to_string())?;
-
-        while let Ok(Some(entry)) = dir.next_entry().await {
-            if entry.path().extension().and_then(|s| s.to_str()) == Some("json") {
-                if let Ok(content) = tokio::fs::read_to_string(entry.path()).await {
-                    if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&content) {
-                        let text_content = json_val.get("content").and_then(|v| v.as_str()).unwrap_or("");
-                        if text_content.to_lowercase().contains(&query.to_lowercase()) {
-                            results.push(text_content.to_string());
-                            if results.len() >= limit {
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        Ok(results)
-    }
-
-    async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
-        let ns_dir = self.get_namespace_dir();
-        tokio::fs::create_dir_all(&ns_dir).await.map_err(|e| e.to_string())?;
-
-        let id = uuid::Uuid::new_v4().to_string();
-        let file_path = ns_dir.join(format!("{}.json", id));
-
-        let data = serde_json::json!({
-            "id": id,
-            "content": content,
-            "tags": tags,
-            "timestamp": chrono::Utc::now().to_rfc3339(),
-        });
-
-        let json_str = serde_json::to_string_pretty(&data).map_err(|e| e.to_string())?;
-        tokio::fs::write(&file_path, json_str).await.map_err(|e| e.to_string())?;
-
-        Ok(())
-    }
-}
-
 #[async_trait]
 impl LongTermMemory for RedisMemoryStore {
     async fn retrieve(&self, _query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let key = format!("{}:memory", self.namespace);
-        
-        // Simple LRANGE to get recent memories. 
+
+        // Simple LRANGE to get recent memories.
         // Real implementation would embed the query and use FT.SEARCH
         let results: Vec<String> = redis::cmd("LRANGE")
             .arg(&key)
@@ -1104,21 +1034,21 @@ impl LongTermMemory for RedisMemoryStore {
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
-            
+
         Ok(results)
     }
 
     async fn store(&self, content: &str, _tags: Vec<String>) -> Result<(), String> {
         let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let key = format!("{}:memory", self.namespace);
-        
+
         let _: () = redis::cmd("LPUSH")
             .arg(&key)
             .arg(content)
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
-            
+
         Ok(())
     }
 }
@@ -2564,26 +2494,5 @@ mod e2e_consolidation_tests {
         assert!(!remaining_ids.contains(&"prune_1".to_string()), "Should have pruned old, un-overridden record");
         assert!(remaining_ids.contains(&"keep_1".to_string()), "Should have kept the one with owner override");
         assert!(remaining_ids.contains(&"keep_2".to_string()), "Should have kept the recent record");
-    }
-
-    #[tokio::test]
-    async fn test_namespace_organized_json_memory_store() {
-        use super::*;
-        let temp_dir = tempfile::tempdir().unwrap();
-        let store = NamespaceOrganizedJsonMemoryStore::new(temp_dir.path(), "agent_alpha");
-
-        store.store("The architectural decision is to use Rust", vec!["architecture".to_string()]).await.unwrap();
-        store.store("The frontend uses Slint UI", vec!["ui".to_string()]).await.unwrap();
-
-        let retrieved = store.retrieve("rust", 10).await.unwrap();
-        assert_eq!(retrieved.len(), 1);
-        assert!(retrieved[0].contains("use Rust"));
-
-        let retrieved_ui = store.retrieve("slint", 10).await.unwrap();
-        assert_eq!(retrieved_ui.len(), 1);
-        assert!(retrieved_ui[0].contains("Slint UI"));
-
-        let retrieved_empty = store.retrieve("python", 10).await.unwrap();
-        assert_eq!(retrieved_empty.len(), 0);
     }
 }
