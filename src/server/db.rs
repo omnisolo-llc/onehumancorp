@@ -280,6 +280,19 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS agent_approvals (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        department TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        action_risk TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+
                     CREATE TABLE IF NOT EXISTS swarm_tasks (
                         id TEXT PRIMARY KEY,
                         mission_id TEXT NOT NULL,
