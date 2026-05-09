@@ -18,34 +18,18 @@ impl StandaloneStateManager {
     pub fn new(db: Arc<DB>, mesh: Arc<dyn TeammateMesh>) -> Self {
         Self { db, mesh }
     }
-}
 
-
-
-#[async_trait]
-impl StateManager for StandaloneStateManager {
-    async fn transition_state(
+    async fn transition_state_inner(
         &self,
         task_id: &str,
-        tenant_id: &str,
+        _tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
         reason: Option<&str>,
+        _lock_guard: &MeshLockGuard,
+        sqlite_pool: &sqlx::Pool<sqlx::Sqlite>,
     ) -> Result<(), String> {
-        let sqlite_pool = match &self.db.store {
-            DbStore::Sqlite(pool) => pool,
-            _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
-        };
-
-        let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
-        let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30);
-        let _lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_future).await {
-            Ok(Ok(guard)) => guard,
-            Ok(Err(e)) => return Err(e),
-            Err(_) => return Err("Timeout acquiring lock".to_string()),
-        };
-
         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
         // 1. Verify current state
@@ -136,6 +120,37 @@ impl StateManager for StandaloneStateManager {
         tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
+    }
+}
+
+#[async_trait]
+impl StateManager for StandaloneStateManager {
+    async fn transition_state(
+        &self,
+        task_id: &str,
+        tenant_id: &str,
+        from_state: &str,
+        to_state: &str,
+        agent_id: Option<&str>,
+        reason: Option<&str>,
+    ) -> Result<(), String> {
+        let sqlite_pool = match &self.db.store {
+            DbStore::Sqlite(pool) => pool,
+            _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
+        };
+
+        let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
+
+        let transition_future = async {
+            let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
+            self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard, sqlite_pool).await
+        };
+
+        match tokio::time::timeout(std::time::Duration::from_secs(2), transition_future).await {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(e)) => Err(e),
+            Err(_) => Err("Timeout acquiring lock or writing database transition".to_string()),
+        }
     }
 
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
