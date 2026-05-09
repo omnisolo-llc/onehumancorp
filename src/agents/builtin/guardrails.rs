@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::ToolCall;
+use ohc_builtin_agent_lib_core::types::ToolCall;
 
 #[derive(Debug, Clone)]
 pub struct GuardrailConfig {

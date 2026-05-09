@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
-use ohc_builtin_agent::memory_store::{VectorRepository, VectorMemoryStore};
+use ohc_builtin_agent_lib::memory_store::{VectorRepository, VectorMemoryStore};
 
 pub async fn prune_stale(repository: Arc<VectorRepository>, older_than: DateTime<Utc>) -> Result<(), String> {
     match (*repository).get_store() {
@@ -28,7 +28,7 @@ mod pruning_tests {
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::str::FromStr;
     use sqlx::Row;
-    use ohc_builtin_agent::memory_store::EmbeddingRecord;
+    use ohc_builtin_agent_lib::memory_store::EmbeddingRecord;
 
     #[tokio::test]
     async fn test_prune_stale_sqlite() {

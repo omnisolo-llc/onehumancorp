@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use ohc_builtin_agent::mesh::transport::MeshTransport;
+use ohc_builtin_agent_lib::mesh::transport::MeshTransport;
 use crate::ohc::orchestration::TeammateMeshEvent;
 
 pub struct PubSubManager {
@@ -111,7 +111,7 @@ impl PubSubManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent_lib::mesh::transport::MemoryTransport;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
 

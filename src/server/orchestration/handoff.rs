@@ -1,7 +1,7 @@
 use crate::db::{DbStore, DB};
 use crate::ohc::orchestration::SyncStateHandoff;
 use crate::orchestration::mesh::TeammateMesh;
-use ohc_builtin_agent::mesh::transport::Message as MeshMessage;
+use ohc_builtin_agent_lib::mesh::transport::Message as MeshMessage;
 use prost::Message;
 use std::sync::Arc;
 
@@ -158,7 +158,7 @@ impl HandoffManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent_lib::mesh::transport::MemoryTransport;
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use sqlx::Row;
     use std::str::FromStr;

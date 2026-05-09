@@ -1,4 +1,4 @@
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
+use ohc_builtin_agent_lib::mesh::transport::{MeshTransport, Message};
 use crate::ohc::orchestration::TeammateMeshEvent;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
@@ -162,7 +162,7 @@ impl TeammateMesh for CentrifugeNode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent_lib::mesh::transport::MemoryTransport;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::time::{sleep, Duration};
 
@@ -292,7 +292,7 @@ mod tests {
 
 pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn TeammateMesh>, String> {
     if let Ok(nats_url) = std::env::var("NATS_URL") {
-        if let Ok(transport) = ohc_builtin_agent::mesh::transport::NatsTransport::new(&nats_url).await {
+        if let Ok(transport) = ohc_builtin_agent_lib::mesh::transport::NatsTransport::new(&nats_url).await {
             return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
         }
     }
@@ -300,14 +300,14 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
     match db_store {
         crate::db::DbStore::Postgres => {
             let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-            let transport = ohc_builtin_agent::mesh::transport::RedisTransport::new(&redis_url).await
+            let transport = ohc_builtin_agent_lib::mesh::transport::RedisTransport::new(&redis_url).await
                 .map_err(|e| format!("Failed to create RedisTransport: {}", e))?;
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }
         crate::db::DbStore::Sqlite(pool) => {
             if let Ok(pg_url) = std::env::var("DATABASE_URL") {
                 if pg_url.starts_with("postgres://") || pg_url.starts_with("postgresql://") {
-                    match ohc_builtin_agent::mesh::transport::PgTransport::new(&pg_url).await {
+                    match ohc_builtin_agent_lib::mesh::transport::PgTransport::new(&pg_url).await {
                         Ok(transport) => {
                             let t_clone = transport.clone();
                             tokio::spawn(async move { t_clone.start_worker().await; });
@@ -321,7 +321,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                 }
             }
 
-            match ohc_builtin_agent::mesh::transport::SqliteTransport::new(pool.clone()).await {
+            match ohc_builtin_agent_lib::mesh::transport::SqliteTransport::new(pool.clone()).await {
                 Ok(transport) => {
                     let t_clone = transport.clone();
                     tokio::spawn(async move { t_clone.start_worker().await; });
@@ -329,7 +329,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                 }
                 Err(e) => {
                     tracing::error!("Failed to initialize SqliteTransport: {}. Falling back to MemoryTransport.", e);
-                    let transport = ohc_builtin_agent::mesh::transport::MemoryTransport::new();
+                    let transport = ohc_builtin_agent_lib::mesh::transport::MemoryTransport::new();
                     Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
                 }
             }

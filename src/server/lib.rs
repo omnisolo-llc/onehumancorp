@@ -1199,8 +1199,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Memory Consolidation Worker
     let vector_repo = std::sync::Arc::new(match &db.store {
-        crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
-        crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+        crate::db::DbStore::Postgres => ohc_builtin_agent_lib::memory_store::VectorRepository::new(db.pool.clone()),
+        crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent_lib::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
     let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
     consolidation_worker.start();
@@ -1299,7 +1299,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Mesh API server
     let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
-    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
+    let mesh_transport = ohc_builtin_agent_lib::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
         is_cloud
     ).await.expect("Failed to create MeshTransport");
@@ -1349,7 +1349,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
         let _health_cancel = builtin_mesh.start_health_responder().await;
 
-        let cfg = ohc_builtin_agent::service::AgentConfig {
+        let cfg = ohc_builtin_agent_lib::service::AgentConfig {
             llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
             model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
             llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
@@ -1359,9 +1359,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             max_iterations: std::env::var("OHC_MAX_ITERATIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(100),
             max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES").ok().and_then(|v| v.parse().ok()).unwrap_or(80),
         };
-        let auth = ohc_builtin_agent::auth::auth_mode_from_env();
+        let auth = ohc_builtin_agent_lib::auth::auth_mode_from_env();
         let agent_id_clone = agent_id.clone();
-        let mut svc_impl = ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, auth);
+        let mut svc_impl = ohc_builtin_agent_lib::service::AgentServiceImpl::new(agent_id, cfg, auth);
         svc_impl.init_memory().await;
         let svc = std::sync::Arc::new(svc_impl);
 
@@ -1375,7 +1375,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             }
         });
 
-        ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
+        ohc_builtin_agent_lib::start_builtin_agent(builtin_transport, svc).await;
     });
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());

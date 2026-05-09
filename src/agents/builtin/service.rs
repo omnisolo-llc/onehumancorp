@@ -5,7 +5,7 @@ use tonic::{Request, Response, Status};
 
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use crate::auth::AuthMode;
-use ohc_builtin_agent_llm::{
+use crate::llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
 };
 use crate::memory::inject_memories_into_prompt;
@@ -14,7 +14,7 @@ use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SubAgentRequest, SubAgentResponse,
 };
-use ohc_builtin_agent_tools::{
+use crate::tools::{
     sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
     SharedTodos,
 };
@@ -394,7 +394,7 @@ impl AgentServiceImpl {
         let mailbox = Arc::new(RwLock::new(Mailbox::default()));
         let observation_store = Arc::new(dashmap::DashMap::new());
         
-        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None, observation_store.clone());
+        let tools = crate::tools::all_tools(todos, task_store, mailbox, None, None, observation_store.clone());
         let mut unarc_agent = Agent::new(llm, tools);
         unarc_agent.observation_store = observation_store;
         if let Some(wd) = &run_cfg.workspace_path {
@@ -451,7 +451,7 @@ impl AgentService for AgentServiceImpl {
         } else { None };
         let observation_store = Arc::new(dashmap::DashMap::new());
 
-        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, accessor, observation_store.clone());
+        let all_tools = crate::tools::all_tools(todos, task_store, mailbox, None, accessor, observation_store.clone());
         let tools = if !task_req.department.is_empty() {
             if let Ok(dep) = Department::from_str(&task_req.department) {
                 let dep_cfg = get_department_config(dep);
@@ -661,7 +661,7 @@ impl AgentService for AgentServiceImpl {
             let observation_store = Arc::new(dashmap::DashMap::new());
 
             let working_dir = if sub_req.working_dir.is_empty() { None } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
-            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir, None, observation_store.clone());
+            let tools = crate::tools::all_tools(todos, task_store, mailbox, working_dir, None, observation_store.clone());
             let mut agent = Agent::new(llm, tools);
             agent.observation_store = observation_store;
 

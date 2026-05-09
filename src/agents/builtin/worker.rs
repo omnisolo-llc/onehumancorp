@@ -3,9 +3,9 @@
 use std::sync::Arc;
 use tracing::{info, debug, error};
 use tokio::sync::Mutex;
-use ohc_builtin_agent::plane::Client as PlaneClient;
+use ohc_builtin_agent_lib::plane::Client as PlaneClient;
 use crate::hub::Hub;
-use ohc_builtin_agent::plane::Issue;
+use ohc_builtin_agent_lib::plane::Issue;
 
 pub struct TaskWorker {
     plane_client: Arc<PlaneClient>,

@@ -2,7 +2,7 @@
 mod tests {
     use crate::db::ScoutDb;
     use crate::agent::ScoutAgent;
-    use ohc_builtin_agent_core::pubsub::SubagentBus;
+    use ohc_builtin_agent_lib_core::pubsub::SubagentBus;
     use sqlx::sqlite::SqlitePoolOptions;
     use std::sync::Arc;
 

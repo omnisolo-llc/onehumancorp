@@ -1,5 +1,5 @@
 use crate::agent::{Agent, AgentRunConfig};
-use ohc_builtin_agent_core::types::Message;
+use ohc_builtin_agent_lib_core::types::Message;
 use std::sync::Arc;
 use serde_json::Value;
 
@@ -111,7 +111,7 @@ impl Flow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, ToolCall};
+    use ohc_builtin_agent_lib_core::types::{ChatRequest, ChatResponse, Usage, ToolCall};
     use crate::llm::client::LlmClient;
     use tokio::sync::Mutex;
 

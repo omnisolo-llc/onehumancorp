@@ -3,7 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 rust_library(
     name = "llm",
     srcs = glob(["**/*.rs"]),
-    crate_name = "ohc_builtin_agent_llm",
+    crate_name = "ohc_builtin_agent_lib_llm",
     crate_root = "mod.rs",
     edition = "2024",
     proc_macro_deps = [

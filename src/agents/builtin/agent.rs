@@ -1,13 +1,13 @@
-use ohc_builtin_agent_core::types::ToolError;
+use ohc_builtin_agent_lib_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use opentelemetry::{global, KeyValue};
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailConfig;
-use ohc_builtin_agent_llm::LlmClient;
-use ohc_builtin_agent_tools::Tool;
-use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
+use ohc_builtin_agent_lib_llm::LlmClient;
+use ohc_builtin_agent_lib_tools::Tool;
+use ohc_builtin_agent_lib_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
 
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
@@ -59,7 +59,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub state_scratchpad_path: Option<String>,
     pub workspace_path: Option<String>,
     pub project_trusted: bool,
-    pub injected_context: Option<Vec<ohc_builtin_agent_core::types::Message>>,
+    pub injected_context: Option<Vec<ohc_builtin_agent_lib_core::types::Message>>,
     pub allowed_tools: Option<Vec<String>>,
     pub high_risk_tools: Vec<String>,
     pub approved_tool_calls: Vec<String>,
@@ -2350,7 +2350,7 @@ mod tests {
     }
 
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatResponse, Message, Role, ToolCall, Usage};
+    use ohc_builtin_agent_lib_core::types::{ChatResponse, Message, Role, ToolCall, Usage};
     use tokio::sync::Mutex;
     use std::sync::Arc;
 
@@ -2624,13 +2624,13 @@ mod tests {
                     response_id: None,
                 previous_response_id: None,
                     },
-                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    usage: ohc_builtin_agent_lib_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: Message::assistant("Final answer"),
-                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    usage: ohc_builtin_agent_lib_core::types::Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
@@ -2688,7 +2688,7 @@ mod tests {
                     response_id: None,
                 previous_response_id: None,
                     },
-                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    usage: ohc_builtin_agent_lib_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
@@ -2732,7 +2732,7 @@ mod tests {
                     response_id: None,
                 previous_response_id: None,
                     },
-                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    usage: ohc_builtin_agent_lib_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
@@ -2766,8 +2766,8 @@ mod tests {
     }
 
 
-    use ohc_builtin_agent_core::types::{ChatRequest};
-    use ohc_builtin_agent_tools::ToolExecutor;
+    use ohc_builtin_agent_lib_core::types::{ChatRequest};
+    use ohc_builtin_agent_lib_tools::ToolExecutor;
     use serde_json::Value;
 
     struct MockLlmClient {
@@ -4590,7 +4590,7 @@ mod stream_tests {
 
     #[tokio::test]
     async fn test_time_travel_rewind_mechanic() {
-        use ohc_builtin_agent_tools::ToolExecutor;
+        use ohc_builtin_agent_lib_tools::ToolExecutor;
         use crate::checkpointer::{CheckpointSaver, Checkpoint};
 
         struct MockCheckpointerRewind {
@@ -4724,7 +4724,7 @@ mod stream_tests {
 
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
-        use ohc_builtin_agent_tools::ToolExecutor;
+        use ohc_builtin_agent_lib_tools::ToolExecutor;
         use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLightweightRewind {

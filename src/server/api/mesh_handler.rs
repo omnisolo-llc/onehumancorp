@@ -3,7 +3,7 @@ use axum::{
     response::IntoResponse,
 };
 use std::sync::Arc;
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
+use ohc_builtin_agent_lib::mesh::transport::{MeshTransport, Message as MeshMessage};
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::mpsc;
 use serde::Deserialize;
@@ -103,7 +103,7 @@ mod tests {
     };
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent_lib::mesh::transport::MemoryTransport;
     use tokio_tungstenite::connect_async;
     use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 

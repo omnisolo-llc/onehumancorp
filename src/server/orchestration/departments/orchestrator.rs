@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use crate::orchestration::departments::types::{DepartmentType, DepartmentConfig, DepartmentEvent, ApprovalRequest, ApprovalStatus};
 use crate::db::DbStore;
-use ohc_builtin_agent::memory_store::VectorRepository;
+use ohc_builtin_agent_lib::memory_store::VectorRepository;
 use opentelemetry::global;
 use opentelemetry::KeyValue;
 use crate::orchestration::mesh::TeammateMesh;
@@ -372,7 +372,7 @@ impl DepartmentOrchestrator {
 mod tests {
     use super::*;
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent_lib::mesh::transport::MemoryTransport;
 
     #[tokio::test]
     async fn test_orchestrator_initialization() {

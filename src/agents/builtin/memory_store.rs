@@ -765,14 +765,14 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> { None }
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> { None }
 }
 
 pub struct PersistentMemoryStore {
     pub repo: std::sync::Arc<VectorRepository>,
     pub tenant_id: String,
     pub agent_id: String,
-    pub llm: std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>,
+    pub llm: std::sync::Arc<dyn crate::llm::LlmClient>,
 }
 
 impl std::fmt::Debug for PersistentMemoryStore {
@@ -879,7 +879,7 @@ impl Anthropic3TierMemoryStore {
 }
 
 #[async_trait]
-impl ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
+impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
         let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
         let path = self.topics_dir.join(format!("{}.md", safe_name));
@@ -983,7 +983,7 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
         }
         Ok(results)
     }
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
         Some(std::sync::Arc::new(self.clone()))
     }
 }
@@ -1895,8 +1895,8 @@ mod get_conflicts_tests {
     #[tokio::test]
     async fn test_persistent_memory_store_retrieve_store() {
         use std::sync::Arc;
-        use ohc_builtin_agent_llm::LlmClient;
-        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, Message};
+        use crate::llm::LlmClient;
+        use ohc_builtin_agent_lib_core::types::{ChatRequest, ChatResponse, Usage, Message};
 
         struct MockLlm;
         #[async_trait::async_trait]

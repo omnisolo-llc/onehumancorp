@@ -1,5 +1,5 @@
 use crate::agent::{Agent, AgentRunConfig};
-use ohc_builtin_agent_core::types::Message;
+use ohc_builtin_agent_lib_core::types::Message;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -64,7 +64,7 @@ impl GroupChatManager {
         };
 
         for msg in tail_msgs {
-            if msg.role == ohc_builtin_agent_core::types::Role::Assistant {
+            if msg.role == ohc_builtin_agent_lib_core::types::Role::Assistant {
                 history.push_str(&format!("{}\n", msg.content));
             } else {
                 history.push_str(&format!("{}: {}\n", msg.role, msg.content));
@@ -76,7 +76,7 @@ impl GroupChatManager {
             agents_desc
         );
 
-        let req = ohc_builtin_agent_core::types::ChatRequest {
+        let req = ohc_builtin_agent_lib_core::types::ChatRequest {
             model: "default".to_string(), // The mock or underlying LLM determines this
             system: system_prompt,
             messages: vec![Message::user(format!(
@@ -279,7 +279,7 @@ mod tests {
     }
 
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
+    use ohc_builtin_agent_lib_core::types::{ChatRequest, ChatResponse, Usage};
 
     struct AutoGenMockLlmClient {
         responses: tokio::sync::Mutex<Vec<String>>,

@@ -1,6 +1,6 @@
 use crate::db::{DB, DbStore};
 use crate::orchestration::mesh::TeammateMesh;
-use ohc_builtin_agent::mesh::transport::Message;
+use ohc_builtin_agent_lib::mesh::transport::Message;
 
 use async_trait::async_trait;
 
@@ -59,20 +59,20 @@ impl TeammateMesh for CorruptedMockMesh {
 }
 
 struct RacingLockMesh {
-    transport: ohc_builtin_agent::mesh::transport::MemoryTransport,
+    transport: ohc_builtin_agent_lib::mesh::transport::MemoryTransport,
 }
 
 impl RacingLockMesh {
     fn new() -> Self {
         Self {
-            transport: ohc_builtin_agent::mesh::transport::MemoryTransport::new(),
+            transport: ohc_builtin_agent_lib::mesh::transport::MemoryTransport::new(),
         }
     }
 }
 
 #[async_trait]
 impl TeammateMesh for RacingLockMesh {
-    async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> { self.transport.publish(topic, ohc_builtin_agent::mesh::transport::TeammateMeshEvent { agent_id: "sys".into(), action: topic.into(), status: "ok".into(), payload, msg_id: "m1".into() }).await }
+    async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> { self.transport.publish(topic, ohc_builtin_agent_lib::mesh::transport::TeammateMeshEvent { agent_id: "sys".into(), action: topic.into(), status: "ok".into(), payload, msg_id: "m1".into() }).await }
     async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { self.transport.subscribe(topic, handler).await }
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
@@ -97,22 +97,22 @@ impl TeammateMesh for RacingLockMesh {
 
 // A mock transport that occasionally drops messages to test Pub/Sub message loss resilience
 struct DroppingMockTransport {
-    transport: ohc_builtin_agent::mesh::transport::MemoryTransport,
+    transport: ohc_builtin_agent_lib::mesh::transport::MemoryTransport,
     drop_rate: std::sync::atomic::AtomicUsize,
 }
 
 impl DroppingMockTransport {
     fn new(drop_rate: usize) -> Self {
         Self {
-            transport: ohc_builtin_agent::mesh::transport::MemoryTransport::new(),
+            transport: ohc_builtin_agent_lib::mesh::transport::MemoryTransport::new(),
             drop_rate: std::sync::atomic::AtomicUsize::new(drop_rate),
         }
     }
 }
 
 #[async_trait]
-impl ohc_builtin_agent::mesh::transport::MeshTransport for DroppingMockTransport {
-    async fn publish(&self, topic: &str, event: ohc_builtin_agent::mesh::transport::TeammateMeshEvent) -> Result<(), String> {
+impl ohc_builtin_agent_lib::mesh::transport::MeshTransport for DroppingMockTransport {
+    async fn publish(&self, topic: &str, event: ohc_builtin_agent_lib::mesh::transport::TeammateMeshEvent) -> Result<(), String> {
         let rate = self.drop_rate.load(std::sync::atomic::Ordering::SeqCst);
         let should_drop = (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as usize) % 100 < rate;
         if should_drop {
@@ -121,7 +121,7 @@ impl ohc_builtin_agent::mesh::transport::MeshTransport for DroppingMockTransport
         }
         self.transport.publish(topic, event).await
     }
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(ohc_builtin_agent_lib::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.transport.subscribe(topic, handler).await
     }
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
