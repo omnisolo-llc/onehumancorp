@@ -31,6 +31,7 @@ export component BusinessManager inherits Window {
     // Service specific
     in-out property <string> service_duration: "60";
     in-out property <bool> show_offering_hint: false;
+    in-out property <bool> show_details_hint: false;
     in-out property <string> service_schedule: "{}";
 
     callback next_step();
@@ -176,7 +177,18 @@ export component BusinessManager inherits Window {
         // Step 1: Details
         if (current_view == "add" && step == 1) : VerticalBox {
             spacing: 16px;
-            Text { text: "Details"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "Details"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                Button { text: "?"; width: 44px; height: 44px; clicked => { show_details_hint = !show_details_hint; } }
+            }
+            if (show_details_hint) : Text {
+                text: "Fill in these details to help your customers understand exactly what they are getting.";
+                color: #cbd5e1;
+                font-size: 14px;
+                wrap: word-wrap;
+            }
 
             VerticalBox {
                 spacing: 8px;
