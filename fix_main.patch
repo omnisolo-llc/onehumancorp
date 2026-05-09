@@ -1,0 +1,29 @@
+--- src/app/main.rs
++++ src/app/main.rs
+@@ -2220,15 +2220,15 @@
+
+     // Setup handler for getting the cost dashboard
+     let hub_client_clone = Arc::clone(&hub_client_arc);
+-    let ui_weak = ui.as_weak();
++    let ui_weak_cost = ui.as_weak();
+     ui.on_get_cost_dashboard(move |tenant_id| {
+         let tenant_id_str = tenant_id.to_string();
+         let hub_client = Arc::clone(&hub_client_clone);
+-        let ui_weak = ui_weak.clone();
++        let ui_weak_cost = ui_weak_cost.clone();
+         slint::spawn_local(async move {
+             match hub_client.get_cost_dashboard(tenant_id_str).await {
+                 Ok(resp) => {
+-                    if let Some(ui) = ui_weak.upgrade() {
++                    if let Some(ui) = ui_weak_cost.upgrade() {
+                         ui.set_cost_dashboard(CostDashboardData {
+                             tenant_id: resp.tenant_id.into(),
+                             monthly_budget: resp.monthly_budget as f32,
+@@ -2256,7 +2256,7 @@
+                 Err(e) => {
+                     eprintln!("Error fetching cost dashboard: {:?}", e);
+                 }
+             }
+-        });
++        }).unwrap();
+     });

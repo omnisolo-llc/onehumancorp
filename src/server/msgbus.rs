@@ -161,7 +161,8 @@ impl Bus for RedisBus {
     }
 
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        use futures_util::StreamExt;
+        use futures::StreamExt;
+
 
         let mut pubsub = self.client.get_async_pubsub().await.map_err(|e| e.to_string())?;
         pubsub.subscribe(&topic).await.map_err(|e| e.to_string())?;
@@ -398,7 +399,8 @@ impl Bus for NatsBus {
     }
 
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        use futures_util::StreamExt;
+        use futures::StreamExt;
+
 
         let mut subscriber = self.client.subscribe(topic.clone()).await.map_err(|e| e.to_string())?;
 

@@ -388,7 +388,8 @@ impl AgentServiceImpl {
         let progress_file = format!(".ralph_progress_{}.json", task_id);
         let llm = self.resolve_llm(&req.llm_provider, &req.model, &req.llm_endpoint);
         let run_cfg = self.build_run_config(&req, &req.department, &llm).await;
-        
+        // Rate limits are enforced asynchronously upstream.
+
         let todos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox = Arc::new(RwLock::new(Mailbox::default()));

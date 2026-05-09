@@ -227,11 +227,15 @@ impl HubService for MyHubService {
 
         let storage_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-        let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
-
-        let payment_fees_f64 = total_revenue_f64 * 0.029;
-
+        let storage_cost_f64 = storage_gb * 0.10;
+        // ACH Transaction Fee Optimization
+        let payment_fees_f64 = if total_revenue_f64 > 1000.0 {
+            total_revenue_f64 * 0.01
+        } else {
+            total_revenue_f64 * 0.029
+        };
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
+
 
         Ok(tonic::Response::new(crate::ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,

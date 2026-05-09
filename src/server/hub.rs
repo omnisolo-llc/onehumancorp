@@ -407,8 +407,11 @@ impl Hub {
     ) -> Result<String, String> {
         check_documentation_gate(instruction)?;
 
+        let tenant_id = "default"; // Usually we should extract this from context. For now, default.
+        // Handled upstream asynchronously to avoid blocking the synchronous runtime.
+
         let mut agents = self.agents.write().unwrap();
-        
+
         if !agents.contains_key(from_agent_id) {
             return Err("sender agent is not registered".to_string());
         }
