@@ -1,3 +1,4 @@
+import { GlassCard } from "glass_card.slint";
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component VectorMemoryVisualizer inherits Window {
@@ -22,7 +23,7 @@ export component VectorMemoryVisualizer inherits Window {
             spacing: 20px;
 
             // Left Side: Memories being saved
-            Rectangle {
+            GlassCard {
                 background: rgba(0, 0, 0, 0.2);
                 border-radius: 8px;
                 padding: 12px;
@@ -52,7 +53,7 @@ export component VectorMemoryVisualizer inherits Window {
             }
 
             // Right Side: Memories being searched
-            Rectangle {
+            GlassCard {
                 background: rgba(0, 0, 0, 0.2);
                 border-radius: 8px;
                 padding: 12px;
