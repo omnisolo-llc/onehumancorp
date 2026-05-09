@@ -5,6 +5,7 @@ use rand::RngCore;
 pub struct ReferralTracker {
     total_referrals: RwLock<i32>,
     user_referrals: RwLock<HashMap<String, i32>>,
+    user_credits: RwLock<HashMap<String, i32>>,
     user_codes: RwLock<HashMap<String, String>>,
     code_to_user: RwLock<HashMap<String, String>>,
     channel_stats: RwLock<HashMap<String, i32>>,
@@ -15,6 +16,7 @@ impl ReferralTracker {
         ReferralTracker {
             total_referrals: RwLock::new(0),
             user_referrals: RwLock::new(HashMap::new()),
+            user_credits: RwLock::new(HashMap::new()),
             user_codes: RwLock::new(HashMap::new()),
             code_to_user: RwLock::new(HashMap::new()),
             channel_stats: RwLock::new(HashMap::new()),
@@ -38,12 +40,18 @@ impl ReferralTracker {
         code
     }
 
-    pub fn record_referral(&self, code: &str) -> bool {
+    pub fn record_referral(&self, code: &str, new_user_id: &str) -> bool {
         let code_to_user = self.code_to_user.read().unwrap();
         if let Some(user_id) = code_to_user.get(code) {
             let mut user_referrals = self.user_referrals.write().unwrap();
             let current = user_referrals.entry(user_id.clone()).or_insert(0);
             *current += 1;
+
+            let mut user_credits = self.user_credits.write().unwrap();
+            let credit = user_credits.entry(user_id.clone()).or_insert(0);
+            *credit += 1; // 1 month free Pro per referral
+            let new_user_credit = user_credits.entry(new_user_id.to_string()).or_insert(0);
+            *new_user_credit += 1; // Referee also gets 1 month free Pro
 
             let mut total_referrals = self.total_referrals.write().unwrap();
             *total_referrals += 1;
@@ -54,21 +62,27 @@ impl ReferralTracker {
         }
     }
 
-    pub fn record_referral_with_channel(&self, code: &str, channel: &str) -> bool {
+    pub fn record_referral_with_channel(&self, code: &str, channel: &str, new_user_id: &str) -> bool {
         let code_to_user = self.code_to_user.read().unwrap();
         if let Some(user_id) = code_to_user.get(code) {
             let mut user_referrals = self.user_referrals.write().unwrap();
             let current = user_referrals.entry(user_id.clone()).or_insert(0);
             *current += 1;
 
-            let mut total_referrals = self.total_referrals.write().unwrap();
-            *total_referrals += 1;
+            let mut user_credits = self.user_credits.write().unwrap();
+            let credit = user_credits.entry(user_id.clone()).or_insert(0);
+            *credit += 1; // 1 month free Pro per referral
+            let new_user_credit = user_credits.entry(new_user_id.to_string()).or_insert(0);
+            *new_user_credit += 1; // Referee also gets 1 month free Pro
 
             if !channel.is_empty() {
                 let mut channel_stats = self.channel_stats.write().unwrap();
                 let current = channel_stats.entry(channel.to_string()).or_insert(0);
                 *current += 1;
             }
+
+            let mut total_referrals = self.total_referrals.write().unwrap();
+            *total_referrals += 1;
 
             true
         } else {
@@ -79,6 +93,11 @@ impl ReferralTracker {
     pub fn get_user_referrals(&self, user_id: &str) -> i32 {
         let user_referrals = self.user_referrals.read().unwrap();
         *user_referrals.get(user_id).unwrap_or(&0)
+    }
+
+    pub fn get_user_credits(&self, user_id: &str) -> i32 {
+        let user_credits = self.user_credits.read().unwrap();
+        *user_credits.get(user_id).unwrap_or(&0)
     }
 
     pub fn get_total_referrals(&self) -> i32 {
@@ -128,14 +147,18 @@ mod tests {
         let code2 = tracker.generate_referral_code("user1");
         assert_eq!(code, code2);
         
-        assert!(tracker.record_referral(&code));
+        assert!(tracker.record_referral(&code, "new_user_1"));
         assert_eq!(tracker.get_user_referrals("user1"), 1);
+        assert_eq!(tracker.get_user_credits("user1"), 1);
+        assert_eq!(tracker.get_user_credits("new_user_1"), 1);
         assert_eq!(tracker.get_total_referrals(), 1);
         
-        assert!(!tracker.record_referral("invalid_code"));
+        assert!(!tracker.record_referral("invalid_code", "new_user_2"));
         
-        assert!(tracker.record_referral_with_channel(&code, "twitter"));
+        assert!(tracker.record_referral_with_channel(&code, "twitter", "new_user_3"));
         assert_eq!(tracker.get_user_referrals("user1"), 2);
+        assert_eq!(tracker.get_user_credits("user1"), 2);
+        assert_eq!(tracker.get_user_credits("new_user_3"), 1);
         
         let stats = tracker.get_channel_stats();
         assert_eq!(*stats.get("twitter").unwrap(), 1);
