@@ -344,6 +344,7 @@ export component Dashboard inherits Window { // milestones
                     TooltipElement { tooltip_id: "social_posting"; Button { text: "Social"; height: 44px; clicked => { action_open_social_posting(); } } }
                     TooltipElement { tooltip_id: "kairos_orchestration"; Button { text: "Automations"; height: 44px; clicked => { action_open_kairos_orchestration(); } } }
                     Button { text: "Test Order"; height: 44px; clicked => { action_simulate_order(); } }
+                    Button { text: "Share Store"; height: 44px; clicked => { action_share_store(); } }
                     if (new_orders_count > 0) : Button {
                         text: "Ship Order";
                         height: 44px;
