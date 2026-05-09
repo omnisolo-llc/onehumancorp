@@ -60,7 +60,7 @@ test.describe('Business Manager UI', () => {
 
     // Verify we are now on the "Add Offering" view
     await expect(page.locator('text=Add Offering')).toBeVisible();
-    await expect(page.locator('text=What are you offering?')).toBeVisible();
+    await expect(page.locator('text=What type of offering are you creating?')).toBeVisible();
   });
 
   test('should navigate back to list view when "Back to List" is clicked', async ({ page }) => {
@@ -118,4 +118,32 @@ test.describe('Business Manager UI', () => {
     await expect(page.locator('text=My Offerings')).toBeVisible();
   });
 
+
+  test('should flow correctly for Digital Item creation', async ({ page }) => {
+    await page.locator('text="+ Add New Offering"').click();
+    await page.locator('text=💻 Digital Download').click();
+    await page.locator('text="Next →"').click();
+    await expect(page.locator('text=Details')).toBeVisible();
+    await page.fill('input[placeholder="E.g. Custom Vegan Cake"]', 'Test Digital Product');
+    await page.fill('input[placeholder="Brief description"]', 'A downloadable PDF');
+    await page.fill('input[placeholder="0.00"]', '9.99');
+    await expect(page.locator('text=Duration (minutes)')).toBeHidden();
+    await page.locator('text="Create"').click();
+    await expect(page.locator('text=My Offerings')).toBeVisible();
+  });
+
+  test('should flow correctly for Service Item creation', async ({ page }) => {
+    await page.locator('text="+ Add New Offering"').click();
+    await page.locator('text=⏱️ My Time / Service').click();
+    await page.locator('text="Next →"').click();
+    await expect(page.locator('text=Details')).toBeVisible();
+    await page.fill('input[placeholder="E.g. Custom Vegan Cake"]', 'Test Service Booking');
+    await page.fill('input[placeholder="Brief description"]', '1 hour consultation');
+    await page.fill('input[placeholder="0.00"]', '100.00');
+    await expect(page.locator('text=Duration (minutes)')).toBeVisible();
+    await page.fill('input[placeholder="60"]', '60');
+    await page.fill('input[placeholder="e.g. Mon-Fri 9am-5pm"]', 'Mon-Fri 9am-5pm');
+    await page.locator('text="Create"').click();
+    await expect(page.locator('text=My Offerings')).toBeVisible();
+  });
 });
