@@ -3545,7 +3545,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), payment_pref.to_string()),
                 ("admin_name".to_string(), admin_name.to_string()),
                 ("admin_email".to_string(), admin_email.to_string()),
-                ("admin_password".to_string(), admin_password.to_string()),
                 ("website_template".to_string(), website_template.to_string()),
                 ("product_name".to_string(), product_name.to_string()),
                 ("product_price".to_string(), product_price.to_string()),

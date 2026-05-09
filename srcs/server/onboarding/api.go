@@ -82,6 +82,16 @@ func (h *APIHandler) HandleSaveState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Strip admin_password from state JSON to prevent persisting sensitive information
+	var stateMap map[string]interface{}
+	if err := json.Unmarshal([]byte(req.State), &stateMap); err == nil {
+		delete(stateMap, "adminPassword")
+		delete(stateMap, "admin_password")
+		if sanitizedState, err := json.Marshal(stateMap); err == nil {
+			req.State = string(sanitizedState)
+		}
+	}
+
 	if err := h.service.SaveTenantState(r.Context(), tenantID, req.State); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

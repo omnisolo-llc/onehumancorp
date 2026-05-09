@@ -131,7 +131,9 @@ class WizardNotifier extends Notifier<WizardState> {
 
   Future<void> _saveCurrentState() async {
     if (_tenantId != null) {
-      await _apiService.saveState(state.toJson(), _tenantId!);
+      final data = state.toJson();
+      data.remove('adminPassword');
+      await _apiService.saveState(data, _tenantId!);
     }
   }
 
