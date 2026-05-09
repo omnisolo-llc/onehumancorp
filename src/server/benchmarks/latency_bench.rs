@@ -228,12 +228,11 @@ pub async fn bench_dashboard_snapshot() {
     let res_desktop = dashboard_service.get_dashboard(req_desktop_t).await.unwrap().into_inner();
 
     println!("Mobile optimized meetings length: {}, desktop: {}", res_mobile.meetings.len(), res_desktop.meetings.len());
-    if !res_mobile.meetings.is_empty() {
-        println!("Mobile meeting 0 transcript len: {}", res_mobile.meetings[0].transcript.len());
-        println!("Desktop meeting 0 transcript len: {}", res_desktop.meetings[0].transcript.len());
-        assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
-        assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop payload should contain transcripts");
-    }
+    assert!(!res_mobile.meetings.is_empty(), "Meetings should not be empty");
+    println!("Mobile meeting 0 transcript len: {}", res_mobile.meetings[0].transcript.len());
+    println!("Desktop meeting 0 transcript len: {}", res_desktop.meetings[0].transcript.len());
+    assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
+    assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop payload should contain transcripts");
 
     println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 }
