@@ -49,3 +49,27 @@ def go_deps():
         sum = "h1:bTLqdHv7xrGlFbvf5/TXNxy/iUwwdkjhqQTJDjW7aj0=",
         version = "v0.0.0-20260209163413-e7419c687ee4",
     )
+    go_repository(
+        name = "com_github_redis_rueidis",
+        importpath = "github.com/redis/rueidis",
+        sum = "h1:J5ZNyxMqX+sDQxQztRI928W6TrERpo+pHSwhftnX7NA=",
+        version = "v1.0.35",
+    )
+    go_repository(
+        name = "com_github_alicebob_miniredis_v2",
+        importpath = "github.com/alicebob/miniredis/v2",
+        sum = "h1:1wKzOa0D1J7o2Xp6wR3zNl2LgD3P81Q3w0o2w9X0QxI=",
+        version = "v2.37.0",
+    )
+    go_repository(
+        name = "com_github_yuin_gopher_lua",
+        importpath = "github.com/yuin/gopher-lua",
+        sum = "h1:R5QAZKx+H3B9U9nUv302uC/uR1dOEQyY2859G5D/53A=",
+        version = "v1.1.1",
+    )
+    go_repository(
+        name = "com_github_alicebob_gopher_json",
+        importpath = "github.com/alicebob/gopher-json",
+        sum = "h1:1M+pA47l6J4Tngc+9r5tI7l01z7mI1e0n+A5wL4cOQw=",
+        version = "v0.0.0-20230218143504-906a9b012302",
+    )

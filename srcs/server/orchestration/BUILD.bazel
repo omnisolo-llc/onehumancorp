@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "autodream.go",
         "mesh.go",
+        "teammate_mesh_hub.go",
         "tasks_db.go",
         "state_machine.go",
         "sip.go",
@@ -18,7 +19,10 @@ go_library(
     importpath = "onehumancorp/srcs/server/orchestration",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/db:db",
         "//srcs/server/pb:pb",
+        "@com_github_redis_rueidis//:rueidis",
+        "//srcs/server/orchestration/kairos",
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//:metric",
@@ -31,6 +35,7 @@ go_test(
         "autodream_test.go",
         "mesh_test.go",
         "mesh_system_test.go",
+        "teammate_mesh_hub_test.go",
         "tasks_db_test.go",
         "state_machine_test.go",
         "state_machine_coverage_test.go",
@@ -44,7 +49,11 @@ go_test(
     ],
     embed = [":orchestration"],
     deps = [
+        "//srcs/server/db:db",
         "//srcs/server/pb:pb",
+        "@com_github_redis_rueidis//:rueidis",
+        "//srcs/server/orchestration/kairos",
+        "@com_github_alicebob_miniredis_v2//:miniredis",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
         "@com_github_mattn_go_sqlite3//:go_sqlite3",
