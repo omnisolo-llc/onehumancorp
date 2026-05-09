@@ -17,6 +17,11 @@ pub struct IntegrationsRegistry {
     issues: RwLock<std::collections::HashMap<String, Vec<Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
+    ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
+    calcom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calcom::provider::CalComProvider>>>,
+    listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
+    easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
+    jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
 }
 
@@ -41,6 +46,11 @@ impl IntegrationsRegistry {
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            calcom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
         }
     }
@@ -141,6 +151,26 @@ impl IntegrationsRegistry {
             api_token: creds.api_token.clone(),
             from_phone: creds.from_phone.clone(),
         });
+        if integration_id == "jitsi" {
+            let mut clients = self.jitsi_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::jitsi::provider::JitsiProvider::new(base_url.to_string())));
+        }
+        if integration_id == "easypost" {
+            let mut clients = self.easypost_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::easypost::provider::EasyPostProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "listmonk" {
+            let mut clients = self.listmonk_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::listmonk::provider::ListmonkProvider::new(base_url.to_string(), creds.api_token.clone())));
+        }
+        if integration_id == "calcom" {
+            let mut clients = self.calcom_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::calcom::provider::CalComProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "ayrshare" {
+            let mut clients = self.ayrshare_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::ayrshare::provider::AyrshareProvider::new(creds.api_token.clone())));
+        }
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));

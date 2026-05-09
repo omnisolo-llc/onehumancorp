@@ -291,6 +291,151 @@ export component Integrations inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
+            Rectangle {
+
+                background: white;
+
+                border-color: #e2e8f0;
+
+                border-width: 1px;
+
+                border-radius: 8px;
+
+                width: 220px;
+
+
+
+                VerticalBox {
+
+                    padding: 16px;
+
+                    spacing: 8px;
+
+                    Text { text: "🔗 Ayrshare"; font-weight: 700; color: #1e293b; }
+
+                    Text { text: "Unified Social Media Hub"; color: #64748b; wrap: word-wrap; }
+
+                    Button {
+
+                        text: "Configure";
+
+                        clicked => { configure_integration("Ayrshare"); }
+
+                    }
+
+                }
+
+            }
+
+            Rectangle {
+
+                background: white;
+
+                border-color: #e2e8f0;
+
+                border-width: 1px;
+
+                border-radius: 8px;
+
+                width: 220px;
+
+
+
+                VerticalBox {
+
+                    padding: 16px;
+
+                    spacing: 8px;
+
+                    Text { text: "📧 Listmonk"; font-weight: 700; color: #1e293b; }
+
+                    Text { text: "Self-hosted Newsletters"; color: #64748b; wrap: word-wrap; }
+
+                    Button {
+
+                        text: "Configure";
+
+                        clicked => { configure_integration("Listmonk"); }
+
+                    }
+
+                }
+
+            }
+
+            Rectangle {
+
+                background: white;
+
+                border-color: #e2e8f0;
+
+                border-width: 1px;
+
+                border-radius: 8px;
+
+                width: 220px;
+
+
+
+                VerticalBox {
+
+                    padding: 16px;
+
+                    spacing: 8px;
+
+                    Text { text: "📦 EasyPost"; font-weight: 700; color: #1e293b; }
+
+                    Text { text: "Shipping Labels & Tracking"; color: #64748b; wrap: word-wrap; }
+
+                    Button {
+
+                        text: "Configure";
+
+                        clicked => { configure_integration("EasyPost"); }
+
+                    }
+
+                }
+
+            }
+
+            Rectangle {
+
+                background: white;
+
+                border-color: #e2e8f0;
+
+                border-width: 1px;
+
+                border-radius: 8px;
+
+                width: 220px;
+
+
+
+                VerticalBox {
+
+                    padding: 16px;
+
+                    spacing: 8px;
+
+                    Text { text: "📹 Jitsi"; font-weight: 700; color: #1e293b; }
+
+                    Text { text: "Open Source Video Conferencing"; color: #64748b; wrap: word-wrap; }
+
+                    Button {
+
+                        text: "Configure";
+
+                        clicked => { configure_integration("Jitsi"); }
+
+                    }
+
+                }
+
+            }
+
+
                     Text { text: "📹 Zoom"; font-weight: 700; color: #1e293b; }
                     Text { text: "Native Link Generation"; color: #64748b; wrap: word-wrap; }
                     Button {
