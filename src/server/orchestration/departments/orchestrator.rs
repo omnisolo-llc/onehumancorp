@@ -187,7 +187,27 @@ impl DepartmentOrchestrator {
         Ok(())
     }
 
-        pub async fn execute_action(&self, department: DepartmentType, description: String, tenant_id: String, risk: ActionRisk, _action_payload: serde_json::Value) -> Result<(), String> {
+    pub async fn check_ai_budget(&self, tenant_id: &str, points: i32) -> Result<bool, String> {
+
+        let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(self.db.clone());
+
+        throttler.check_and_consume_budget(tenant_id, points).await
+
+    }
+
+    pub async fn execute_action(
+        &self,
+        department: DepartmentType,
+        description: String,
+        tenant_id: String,
+        risk: ActionRisk,
+        _action_payload: serde_json::Value,
+    ) -> Result<ApprovalRequest, String> {
+        let cost = 1;
+        if !self.check_ai_budget(&tenant_id, cost).await.unwrap_or(false) {
+            return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
+        }
+
         match risk {
             ActionRisk::AutoExecute => {
                 let req = ApprovalRequest {
@@ -198,8 +218,8 @@ impl DepartmentOrchestrator {
                     status: ApprovalStatus::Approved,
                     action_risk: "LOW".to_string(),
                 };
-                self.add_approval_request(req).await;
-                Ok(())
+                self.add_approval_request(req.clone()).await;
+                Ok(req.clone())
             }
             ActionRisk::DraftForReview => {
                 let req = ApprovalRequest {
@@ -210,8 +230,8 @@ impl DepartmentOrchestrator {
                     status: ApprovalStatus::Pending,
                     action_risk: "HIGH".to_string(),
                 };
-                self.add_approval_request(req).await;
-                Ok(())
+                self.add_approval_request(req.clone()).await;
+                Ok(req.clone())
             }
         }
     }
