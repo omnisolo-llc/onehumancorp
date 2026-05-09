@@ -71,14 +71,14 @@ impl DB {
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
                                 tracing::error!("Failed to securely create DB directory: {}", e);
-                                return Err(e.into());
+                                panic!("Failed to securely update existing standalone database file permissions: {}", e);
                             }
                         }
                         #[cfg(not(unix))]
                         {
                             if let Err(e) = std::fs::create_dir_all(parent) {
                                 tracing::error!("Failed to create DB directory: {}", e);
-                                return Err(e.into());
+                                panic!("Failed to securely update existing standalone database file permissions: {}", e);
                             }
                         }
                     }
@@ -103,7 +103,7 @@ impl DB {
                                 perms.set_mode(0o600);
                                 if let Err(e) = file.set_permissions(perms) {
                                     tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
-                                    return Err(e.into());
+                                    panic!("Failed to securely update existing standalone database file permissions: {}", e);
                                 }
                             }
                         }

@@ -46,7 +46,17 @@ func main() {
         dsn = dbPath + "?_pragma_key=" + dbKey
     }
 
-	db, err := sql.Open("sqlite3", dsn)
+	db, err := sql.Open("sqlcipher", dsn)
+	if dbPath != ":memory:" {
+        db, err = sql.Open("sqlite3", dsn)
+    }
+	if dbPath != ":memory:" && err == nil {
+		db.Close()
+		db, err = sql.Open("sqlite3", dsn)
+	if dbPath != ":memory:" {
+        db, err = sql.Open("sqlite3", dsn)
+    }
+	}
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}

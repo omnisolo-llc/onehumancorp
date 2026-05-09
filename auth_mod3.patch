@@ -1,0 +1,126 @@
+--- src/server/auth/mod.rs
++++ src/server/auth/mod.rs
+@@ -268,13 +268,18 @@
+     pub fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
+         let by_name = self.by_name.read().unwrap();
+         let users = self.users.read().unwrap();
+
++        let is_multitenant = crate::config::get().multitenant;
++        if is_multitenant && org_id.is_empty() {
++            return Err("invalid credentials".to_string());
++        }
++
+         let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
+         let mut user_id_opt = by_name.get(&name_key).cloned();
+
+-        if user_id_opt.is_none() && org_id.is_empty() {
++        if user_id_opt.is_none() && org_id.is_empty() && !is_multitenant {
+             user_id_opt = by_name.get(&TenantKey { org_id: "".to_string(), key: username.to_string() }).cloned();
+         }
+
+         let user_id = user_id_opt.ok_or_else(|| "invalid credentials".to_string())?;
+         let user = users.get(&user_id).ok_or_else(|| "invalid credentials".to_string())?;
+@@ -282,14 +287,18 @@
+         if !user.active {
+             return Err("account disabled".to_string());
+         }
+
+-        if let Some(ref user_org) = user.organization_id {
++        if is_multitenant {
++            if user.organization_id.as_deref() != Some(org_id) {
++                return Err("invalid credentials".to_string());
++            }
++        } else if let Some(ref user_org) = user.organization_id {
+             if !org_id.is_empty() && user_org != org_id {
+                 return Err("invalid credentials".to_string());
+             }
+         }
+
+         if verify(password, &user.password_hash).unwrap_or(false) {
+             Ok(user.clone())
+         } else {
+             Err("invalid credentials".to_string())
+@@ -298,12 +307,19 @@
+
+     pub fn get_user(&self, id: &str, org_id: &str) -> Option<User> {
+         let users = self.users.read().unwrap();
+         let u = users.get(id)?;
+
+-        if !org_id.is_empty() {
++        let is_multitenant = crate::config::get().multitenant;
++        if is_multitenant {
++            if org_id.is_empty() {
++                return None;
++            }
++            if u.organization_id.as_deref() != Some(org_id) {
++                return None;
++            }
++        } else if !org_id.is_empty() {
+             if let Some(ref user_org) = u.organization_id {
+                 if user_org != org_id {
+                     return None;
+                 }
+             } else {
+@@ -314,13 +330,21 @@
+     }
+
+     pub fn list_users(&self, org_id: &str) -> Vec<User> {
++        let is_multitenant = crate::config::get().multitenant;
++        if is_multitenant && org_id.is_empty() {
++            return vec![];
++        }
+         let users = self.users.read().unwrap();
+         users.values()
+             .filter(|u| {
+-                org_id.is_empty() || u.organization_id.as_deref() == Some(org_id)
++                if is_multitenant {
++                    u.organization_id.as_deref() == Some(org_id)
++                } else {
++                    org_id.is_empty() || u.organization_id.as_deref() == Some(org_id)
++                }
+             })
+             .cloned()
+             .collect()
+     }
+
+@@ -326,12 +350,19 @@
+         let mut users = self.users.write().unwrap();
+         let mut by_email = self.by_email.write().unwrap();
+
+         let u = users.get_mut(id).ok_or_else(|| "user not found".to_string())?;
+
+-        if !org_id.is_empty() {
++        let is_multitenant = crate::config::get().multitenant;
++        if is_multitenant {
++            if org_id.is_empty() {
++                return Err("user not found".to_string());
++            }
++            if u.organization_id.as_deref() != Some(org_id) {
++                return Err("user not found".to_string());
++            }
++        } else if !org_id.is_empty() {
+              if u.organization_id.as_deref() != Some(org_id) {
+                  return Err("user not found".to_string());
+              }
+         }
+
+@@ -367,12 +398,19 @@
+         let mut by_email = self.by_email.write().unwrap();
+         let mut by_oidc = self.by_oidc.write().unwrap();
+
+         let u = users.get(id).ok_or_else(|| "user not found".to_string())?;
+
+-        if !org_id.is_empty() {
++        let is_multitenant = crate::config::get().multitenant;
++        if is_multitenant {
++            if org_id.is_empty() {
++                return Err("user not found".to_string());
++            }
++            if u.organization_id.as_deref() != Some(org_id) {
++                return Err("user not found".to_string());
++            }
++        } else if !org_id.is_empty() {
+              if u.organization_id.as_deref() != Some(org_id) {
+                  return Err("user not found".to_string());
+              }
+         }

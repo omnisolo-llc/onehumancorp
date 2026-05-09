@@ -1,0 +1,102 @@
+--- src/server/auth/mod.rs
++++ src/server/auth/mod.rs
+@@ -268,6 +268,11 @@
+     pub fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
+         let by_name = self.by_name.read().unwrap();
+         let users = self.users.read().unwrap();
+
++        let is_multitenant = crate::config::get().multitenant;
++        if is_multitenant && org_id.is_empty() {
++            return Err("invalid credentials".to_string());
++        }
++
+         let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
+         let mut user_id_opt = by_name.get(&name_key).cloned();
+
+-        if user_id_opt.is_none() && org_id.is_empty() {
++        if user_id_opt.is_none() && org_id.is_empty() && !is_multitenant {
+             user_id_opt = by_name.get(&TenantKey { org_id: "".to_string(), key: username.to_string() }).cloned();
+         }
+
+@@ -285,7 +290,11 @@
+             return Err("account disabled".to_string());
+         }
+
+-        if let Some(ref user_org) = user.organization_id {
++        if is_multitenant {
++            if user.organization_id.as_deref() != Some(org_id) {
++                return Err("invalid credentials".to_string());
++            }
++        } else if let Some(ref user_org) = user.organization_id {
+             if !org_id.is_empty() && user_org != org_id {
+                 return Err("invalid credentials".to_string());
+             }
+@@ -298,7 +307,14 @@
+         let users = self.users.read().unwrap();
+         let u = users.get(id)?;
+
+-        if !org_id.is_empty() {
++        let is_multitenant = crate::config::get().multitenant;
++        if is_multitenant {
++            if org_id.is_empty() {
++                return None;
++            }
++            if u.organization_id.as_deref() != Some(org_id) {
++                return None;
++            }
++        } else if !org_id.is_empty() {
+             if let Some(ref user_org) = u.organization_id {
+                 if user_org != org_id {
+                     return None;
+@@ -314,9 +330,17 @@
+     pub fn list_users(&self, org_id: &str) -> Vec<User> {
++        let is_multitenant = crate::config::get().multitenant;
++        if is_multitenant && org_id.is_empty() {
++            return vec![];
++        }
+         let users = self.users.read().unwrap();
+         users.values()
+             .filter(|u| {
+-                org_id.is_empty() || u.organization_id.as_deref() == Some(org_id)
++                if is_multitenant {
++                    u.organization_id.as_deref() == Some(org_id)
++                } else {
++                    org_id.is_empty() || u.organization_id.as_deref() == Some(org_id)
++                }
+             })
+             .cloned()
+             .collect()
+@@ -326,7 +350,14 @@
+
+         let u = users.get_mut(id).ok_or_else(|| "user not found".to_string())?;
+
+-        if !org_id.is_empty() {
++        let is_multitenant = crate::config::get().multitenant;
++        if is_multitenant {
++            if org_id.is_empty() {
++                return Err("user not found".to_string());
++            }
++            if u.organization_id.as_deref() != Some(org_id) {
++                return Err("user not found".to_string());
++            }
++        } else if !org_id.is_empty() {
+              if u.organization_id.as_deref() != Some(org_id) {
+                  return Err("user not found".to_string());
+              }
+@@ -367,7 +398,14 @@
+
+         let u = users.get(id).ok_or_else(|| "user not found".to_string())?;
+
+-        if !org_id.is_empty() {
++        let is_multitenant = crate::config::get().multitenant;
++        if is_multitenant {
++            if org_id.is_empty() {
++                return Err("user not found".to_string());
++            }
++            if u.organization_id.as_deref() != Some(org_id) {
++                return Err("user not found".to_string());
++            }
++        } else if !org_id.is_empty() {
+              if u.organization_id.as_deref() != Some(org_id) {
+                  return Err("user not found".to_string());
+              }

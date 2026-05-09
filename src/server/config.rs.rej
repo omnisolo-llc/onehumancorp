@@ -1,0 +1,17 @@
+--- src/server/config.rs
++++ src/server/config.rs
+@@ -103,13 +103,13 @@
+             .mode(0o600)
+             .open(db_path)
+         {
+             Ok(file) => {
+                 if let Ok(metadata) = file.metadata() {
+                     let mut perms = metadata.permissions();
+                     if perms.mode() & 0o777 != 0o600 {
+                         perms.set_mode(0o600);
+                         if let Err(e) = file.set_permissions(perms) {
+                             tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
+-                            // Fail-closed gracefully in future, currently just log
++                            panic!("Failed to securely update existing standalone database file permissions: {}", e);
+                         }
+                     }

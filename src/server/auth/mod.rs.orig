@@ -149,7 +149,7 @@ impl Store {
 
         let mut roles = HashMap::new();
         let now = Utc::now();
-        
+
         roles.insert(ROLE_ADMIN.to_string(), Role {
             id: ROLE_ADMIN.to_string(),
             name: ROLE_ADMIN.to_string(),
@@ -201,7 +201,7 @@ impl Store {
         let hash = hash(admin_pass, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
 
         let id = hex::encode(random_bytes(8));
-        
+
         let admin = User {
             id: id.clone(),
             username: admin_user.clone(),
@@ -315,7 +315,7 @@ impl Store {
         let is_multitenant = crate::config::get().multitenant;
         let users = self.users.read().unwrap();
         let u = users.get(id)?;
-        
+
         if is_multitenant {
             if org_id.is_empty() {
                 return None;
@@ -436,7 +436,7 @@ impl Store {
     pub fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
         let mut revoked = self.revoked.write().unwrap();
         revoked.insert(jti, exp);
-        
+
         let now = Utc::now();
         revoked.retain(|_, v| *v > now);
     }
@@ -525,7 +525,7 @@ impl AuthServiceServerImpl {
 impl AuthService for AuthServiceServerImpl {
     async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
-        
+
         if crate::config::get().multitenant && req.organization_id.is_empty() {
             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
         }
@@ -559,7 +559,7 @@ impl AuthService for AuthServiceServerImpl {
         } else {
             req.roles
         };
-        
+
         match self.store.create_user(req.username, req.email, req.password, roles, req.organization_id) {
             Ok(user) => {
                 match self.store.issue_token(&user) {
@@ -638,7 +638,7 @@ impl AuthService for AuthServiceServerImpl {
             updated_at_unix: u.updated_at.timestamp(),
             oidc_subject: u.oidc_subject.unwrap_or_default(),
         }).collect();
-        
+
         Ok(Response::new(ListUsersResponse { users: proto_users }))
     }
 
@@ -712,7 +712,7 @@ impl AuthService for AuthServiceServerImpl {
             permissions: r.permissions.clone(),
             created_at_unix: r.created_at.timestamp(),
         }).collect();
-        
+
         Ok(Response::new(ListRolesResponse { roles: proto_roles }))
     }
 
@@ -721,21 +721,21 @@ impl AuthService for AuthServiceServerImpl {
         if req.name.is_empty() {
             return Err(Status::invalid_argument("role name is required"));
         }
-        
+
         let mut roles = self.store.roles.write().unwrap();
         if roles.contains_key(&req.name) {
             return Err(Status::already_exists(format!("role {} already exists", req.name)));
         }
-        
+
         let r = Role {
             id: req.name.clone(),
             name: req.name.clone(),
             permissions: req.permissions.clone(),
             created_at: Utc::now(),
         };
-        
+
         roles.insert(req.name.clone(), r.clone());
-        
+
         Ok(Response::new(RoleProto {
             id: r.id,
             name: r.name,
@@ -748,7 +748,7 @@ impl AuthService for AuthServiceServerImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_new_store_admin_user_created() {
         // SAFETY: Test-only code setting environment variables
@@ -757,7 +757,7 @@ mod tests {
             std::env::set_var("ADMIN_PASSWORD", "secret99");
             std::env::set_var("ADMIN_EMAIL", "testadmin@test.com");
         }
-        
+
         unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         let users = s.list_users("");
         assert_eq!(users.len(), 1);
@@ -768,10 +768,10 @@ mod tests {
     fn test_store_create_and_authenticate() {
         unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("alice".to_string(), "alice@test.com".to_string(), "hunter2!".to_string(), vec![ROLE_VIEWER.to_string()], "".to_string()).unwrap();
-        
+
         let got = s.authenticate("alice", "hunter2!", "").unwrap();
         assert_eq!(got.id, u.id);
-        
+
         assert!(s.authenticate("alice", "wrongpass", "").is_err());
         assert!(s.authenticate("nobody", "x", "").is_err());
     }
@@ -793,14 +793,14 @@ mod tests {
     fn test_store_update_and_delete_user() {
         unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("charlie".to_string(), "c@test.com".to_string(), "p@ssw0rd".to_string(), vec![ROLE_VIEWER.to_string()], "".to_string()).unwrap();
-        
+
         let new_email = "charlie2@test.com".to_string();
         let active = false;
         let updated = s.update_user(&u.id, Some(new_email.clone()), Some(vec![ROLE_OPERATOR.to_string()]), Some(active), "").unwrap();
-        
+
         assert_eq!(updated.email, new_email);
         assert_eq!(updated.active, active);
-        
+
         s.delete_user(&u.id, "").unwrap();
         assert!(s.get_user(&u.id, "").is_none());
     }
@@ -809,10 +809,10 @@ mod tests {
     async fn test_jwt_round_trip() {
         unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("jwt-user".to_string(), "jwt@test.com".to_string(), "jwtpass1".to_string(), vec![ROLE_OPERATOR.to_string()], "".to_string()).unwrap();
-        
+
         let token = s.issue_token(&u).unwrap();
         assert!(!token.is_empty());
-        
+
         let claims = s.validate_token(&token).await.unwrap();
         assert_eq!(claims.sub, u.id);
         assert_eq!(claims.username, "jwt-user");
@@ -876,10 +876,10 @@ mod tests {
         unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("revoke-me".to_string(), "revoke@test.com".to_string(), "revpass1".to_string(), vec![], "".to_string()).unwrap();
         let token = s.issue_token(&u).unwrap();
-        
+
         let claims = s.validate_token(&token).await.unwrap();
         s.revoke_token(claims.jti.clone(), Utc::now() + chrono::Duration::hours(24), "");
-        
+
         assert!(s.validate_token(&token).await.is_err());
     }
 
@@ -912,7 +912,7 @@ mod tests {
             password: "admin".to_string(),
             organization_id: "".to_string(),
         });
-        
+
         let resp = AuthServiceServerImpl::new(s).login(req).await.unwrap();
         let resp = resp.into_inner();
         assert!(!resp.token.is_empty());
@@ -928,7 +928,7 @@ mod tests {
             roles: vec![],
             organization_id: "".to_string(),
         });
-        
+
         let resp = AuthServiceServerImpl::new(s).register(req).await.unwrap();
         let resp = resp.into_inner();
         assert!(!resp.token.is_empty());
@@ -940,7 +940,7 @@ mod tests {
         let req = Request::new(ListUsersRequest {
             organization_id: "".to_string(),
         });
-        
+
         let resp = AuthServiceServerImpl::new(s).list_users(req).await.unwrap();
         let resp = resp.into_inner();
         assert_eq!(resp.users.len(), 1);
@@ -954,7 +954,7 @@ mod tests {
             name: "new_role".to_string(),
             permissions: vec!["read".to_string()],
         });
-        
+
         let resp = AuthServiceServerImpl::new(s).create_role(req).await.unwrap();
         let resp = resp.into_inner();
         assert_eq!(resp.name, "new_role");
@@ -974,21 +974,21 @@ pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), String> {
     if !spiffe_id.starts_with("spiffe://") {
         return Err(format!("invalid SPIFFE ID format: {}", spiffe_id));
     }
-    
+
     let trimmed = &spiffe_id["spiffe://".len()..];
     if trimmed.contains("..") || trimmed.contains("//") {
         return Err(format!("invalid SPIFFE ID format: {}", spiffe_id));
     }
-    
+
     let parts: Vec<&str> = trimmed.split('/').collect();
     if parts.len() < 2 {
         return Err(format!("SPIFFE ID lacks required path segments for agent identity: {}", spiffe_id));
     }
-    
+
     let domain = parts[0];
     let agent_id: String;
     let org_id: String;
-    
+
     if domain == "onehumancorp.io" {
         if parts.len() != 3 {
             return Err(format!("invalid SPIFFE ID path structure for domain onehumancorp.io: {}", spiffe_id));
@@ -1016,7 +1016,7 @@ pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), String> {
     } else {
         return Err(format!("unsupported SPIFFE trust domain in ID: {}", spiffe_id));
     }
-    
+
     Ok((org_id, agent_id))
 }
 
@@ -1053,8 +1053,6 @@ mod isolation_tests {
     #[tokio::test]
     async fn test_multitenant_requires_org_id() {
         // Using unsafe to modify environment for the test configuration scope
-        // We don't actually need to mock multitenant inside the test via OHC_MULTITENANT env var directly because Config get loads the OnceLock
-        // To prevent OnceLock caching issues, we will just pass if the test throws auth errors
         unsafe {
             std::env::set_var("OHC_MULTITENANT", "true");
             std::env::set_var("JWT_SECRET", "test_secret");

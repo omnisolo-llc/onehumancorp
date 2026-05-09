@@ -1,0 +1,30 @@
+--- src/server/auth/mod.rs
++++ src/server/auth/mod.rs
+@@ -357,11 +357,11 @@
+
+         if is_multitenant {
+             if org_id.is_empty() {
+-                return None;
++                return Err("user not found".to_string());
+             }
+             if u.organization_id.as_deref() != Some(org_id) {
+-                return None;
++                return Err("user not found".to_string());
+             }
+         } else if !org_id.is_empty() {
+              if u.organization_id.as_deref() != Some(org_id) {
+                  return Err("user not found".to_string());
+@@ -403,11 +403,11 @@
+
+         if is_multitenant {
+             if org_id.is_empty() {
+-                return None;
++                return Err("user not found".to_string());
+             }
+             if u.organization_id.as_deref() != Some(org_id) {
+-                return None;
++                return Err("user not found".to_string());
+             }
+         } else if !org_id.is_empty() {
+              if u.organization_id.as_deref() != Some(org_id) {
+                  return Err("user not found".to_string());
