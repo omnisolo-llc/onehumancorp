@@ -313,6 +313,7 @@ impl Worker {
 
     pub async fn start(&self, mut shutdown_rx: tokio::sync::broadcast::Receiver<()>) {
         let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(100));
+        let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
         
         loop {
             tokio::select! {
@@ -320,30 +321,38 @@ impl Worker {
                     match self.queue.dequeue(self.roles.clone()).await {
                         Ok(Some(job)) => {
                             tracing::debug!("Worker processing job: {}", job.id);
-                            let handle_res = tokio::time::timeout(tokio::time::Duration::from_secs(60), self.handler.handle(job.clone())).await;
-                            let handler_res = match handle_res {
-                                Ok(Ok(())) => Ok(()),
-                                Ok(Err(e)) => Err(e),
-                                Err(_) => Err("Timeout executing job".to_string()),
-                            };
-                            match handler_res {
-                                Ok(_) => {
-                                    tracing::info!("Worker successfully processed job: {}", job.id);
-                                    let _ = self.queue.complete(&job.id, &job.tenant_id).await;
-                                }
-                                Err(e) => {
-                                    tracing::error!("Worker failed to process job: {}, error: {}", job.id, e);
-                                    if job.attempts < job.max_attempts {
-                                        let mut retry_job = job.clone();
-                                        retry_job.attempts += 1;
-                                        retry_job.status = "PENDING".to_string();
-                                        retry_job.run_after = chrono::Utc::now() + chrono::Duration::seconds(5);
-                                        let _ = self.queue.requeue(retry_job).await;
-                                    } else {
-                                        let _ = self.queue.fail(&job.id, &job.tenant_id, &e).await;
+
+                            let handler_clone = self.handler.clone();
+                            let queue_clone = self.queue.clone();
+                            let permit = semaphore.clone().acquire_owned().await.unwrap();
+
+                            tokio::spawn(async move {
+                                let _permit = permit;
+                                let handle_res = tokio::time::timeout(tokio::time::Duration::from_secs(60), handler_clone.handle(job.clone())).await;
+                                let handler_res = match handle_res {
+                                    Ok(Ok(())) => Ok(()),
+                                    Ok(Err(e)) => Err(e),
+                                    Err(_) => Err("Timeout executing job".to_string()),
+                                };
+                                match handler_res {
+                                    Ok(_) => {
+                                        tracing::info!("Worker successfully processed job: {}", job.id);
+                                        let _ = queue_clone.complete(&job.id, &job.tenant_id).await;
+                                    }
+                                    Err(e) => {
+                                        tracing::error!("Worker failed to process job: {}, error: {}", job.id, e);
+                                        if job.attempts < job.max_attempts {
+                                            let mut retry_job = job.clone();
+                                            retry_job.attempts += 1;
+                                            retry_job.status = "PENDING".to_string();
+                                            retry_job.run_after = chrono::Utc::now() + chrono::Duration::seconds(5);
+                                            let _ = queue_clone.requeue(retry_job).await;
+                                        } else {
+                                            let _ = queue_clone.fail(&job.id, &job.tenant_id, &e).await;
+                                        }
                                     }
                                 }
-                            }
+                            });
                         }
                         Ok(None) => {
                             // No job available
@@ -567,10 +576,11 @@ impl QueueManager {
 
     pub async fn start_polling<F, Fut>(&self, worker_id: &str, interval: Duration, handler: F, mut shutdown_rx: tokio::sync::broadcast::Receiver<()>)
     where
-        F: Fn(SubAgentJob) -> Fut + Send + Sync + 'static,
+        F: Fn(SubAgentJob) -> Fut + Send + Sync + Clone + 'static,
         Fut: std::future::Future<Output = Result<(), String>> + Send + 'static,
     {
         let mut interval = tokio::time::interval(interval);
+        let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
         
         loop {
             tokio::select! {
@@ -579,32 +589,39 @@ impl QueueManager {
                         match self.poll(worker_id).await {
                             Ok(Some(job)) => {
                                 tracing::debug!("QueueManager dispatched job: {}", job.id);
-                                let mut attempts = job.payload.get("attempts").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-                                let max_attempts = job.payload.get("max_attempts").and_then(|v| v.as_i64()).unwrap_or(3) as i32;
-                                attempts += 1;
-                                let handle_res = tokio::time::timeout(tokio::time::Duration::from_secs(60), handler(job.clone())).await;
-                                let handler_res = match handle_res {
-                                    Ok(Ok(())) => Ok(()),
-                                    Ok(Err(e)) => Err(e),
-                                    Err(_) => Err("Timeout executing job".to_string()),
-                                };
-                                match handler_res {
-                                    Ok(_) => {
-                                        tracing::info!("Job handler succeeded: {}", job.id);
-                                        let _ = self.mark_completed(&job.id, &job.organization_id).await;
-                                    }
-                                    Err(e) => {
-                                        tracing::error!("Job handler failed: {}, error: {}", job.id, e);
-                                        if attempts < max_attempts {
-                                            let mut retry_job = job.clone();
-                                            retry_job.payload["attempts"] = serde_json::json!(attempts);
-                                            retry_job.payload["max_attempts"] = serde_json::json!(max_attempts);
-                                            let _ = self.requeue(&job.id, &job.organization_id, retry_job.payload).await;
-                                        } else {
-                                            let _ = self.mark_failed(&job.id, &e, &job.organization_id).await;
+                                let handler_clone = handler.clone();
+                                let qm_clone = QueueManager { pool: self.pool.clone() };
+                                let permit = semaphore.clone().acquire_owned().await.unwrap();
+
+                                tokio::spawn(async move {
+                                    let _permit = permit;
+                                    let mut attempts = job.payload.get("attempts").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                                    let max_attempts = job.payload.get("max_attempts").and_then(|v| v.as_i64()).unwrap_or(3) as i32;
+                                    attempts += 1;
+                                    let handle_res = tokio::time::timeout(tokio::time::Duration::from_secs(60), handler_clone(job.clone())).await;
+                                    let handler_res = match handle_res {
+                                        Ok(Ok(())) => Ok(()),
+                                        Ok(Err(e)) => Err(e),
+                                        Err(_) => Err("Timeout executing job".to_string()),
+                                    };
+                                    match handler_res {
+                                        Ok(_) => {
+                                            tracing::info!("Job handler succeeded: {}", job.id);
+                                            let _ = qm_clone.mark_completed(&job.id, &job.organization_id).await;
+                                        }
+                                        Err(e) => {
+                                            tracing::error!("Job handler failed: {}, error: {}", job.id, e);
+                                            if attempts < max_attempts {
+                                                let mut retry_job = job.clone();
+                                                retry_job.payload["attempts"] = serde_json::json!(attempts);
+                                                retry_job.payload["max_attempts"] = serde_json::json!(max_attempts);
+                                                let _ = qm_clone.requeue(&job.id, &job.organization_id, retry_job.payload).await;
+                                            } else {
+                                                let _ = qm_clone.mark_failed(&job.id, &e, &job.organization_id).await;
+                                            }
                                         }
                                     }
-                                }
+                                });
                             }
                             Ok(None) => {
                                 break;

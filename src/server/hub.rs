@@ -135,6 +135,7 @@ impl Hub {
         self.cost_auditor.clone()
     }
 
+    pub fn get_redis_client(&self) -> Option<redis::Client> { self.redis_client.clone() }
     pub fn get_telemetry_tx(&self) -> tokio::sync::mpsc::UnboundedSender<crate::services::billing::auditor::AuditEvent> {
         self.telemetry_tx.clone()
     }

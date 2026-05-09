@@ -9,7 +9,7 @@ use std::sync::RwLock;
 use std::collections::HashMap;
 
 static PRODUCTS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::organization::Product>>>> = OnceLock::new();
-
+static ORG_CACHE: OnceLock<RwLock<HashMap<String, crate::ohc::organization::Organization>>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -51,13 +51,27 @@ impl DashboardService for MyDashboardService {
 
 
                 let _cache_key = format!("hub:products:{}", org_id);
-                let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(guard) = cache.read() {
-                    if let Some(products) = guard.get(&org_id) {
-                        return Ok::<_, String>(products.clone());
+
+                let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+                if !is_standalone {
+                    if let Some(client) = self.hub.get_redis_client() {
+                        if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                            let result: Result<Option<String>, redis::RedisError> = redis::cmd("GET").arg(&_cache_key).query_async(&mut conn).await;
+                            if let Ok(Some(cached_str)) = result {
+                                if let Ok(products) = serde_json::from_str::<Vec<crate::ohc::organization::Product>>(&cached_str) {
+                                    return Ok::<_, String>(products);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+                    if let Ok(guard) = cache.read() {
+                        if let Some(products) = guard.get(&org_id) {
+                            return Ok::<_, String>(products.clone());
+                        }
                     }
                 }
-
 
                 let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
                 use sqlx::Row;
@@ -100,9 +114,23 @@ impl DashboardService for MyDashboardService {
                 }
 
 
-                let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(mut guard) = cache.write() {
-                    guard.insert(org_id, results.clone());
+                let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+                if !is_standalone {
+                    if let Some(client) = self.hub.get_redis_client() {
+                        if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                            if let Ok(val) = serde_json::to_string(&results) {
+                                let _: Result<(), redis::RedisError> = redis::cmd("SET").arg(&_cache_key).arg(val).arg("EX").arg(3600).query_async(&mut conn).await;
+                            }
+                        }
+                    }
+                } else {
+                    let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+                    if let Ok(mut guard) = cache.write() {
+                        if guard.len() > 1000 {
+                            guard.clear();
+                        }
+                        guard.insert(org_id, results.clone());
+                    }
                 }
                 Ok::<_, String>(results)
             },
@@ -153,6 +181,29 @@ impl DashboardService for MyDashboardService {
 
             async {
                 let org_id = req.organization_id.clone();
+                let _cache_key = format!("hub:org:{}", org_id);
+
+                let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+                if !is_standalone {
+                    if let Some(client) = self.hub.get_redis_client() {
+                        if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                            let result: Result<Option<String>, redis::RedisError> = redis::cmd("GET").arg(&_cache_key).query_async(&mut conn).await;
+                            if let Ok(Some(cached_str)) = result {
+                                if let Ok(org) = serde_json::from_str::<crate::ohc::organization::Organization>(&cached_str) {
+                                    return Ok::<_, String>(Some(org));
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    let cache = ORG_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+                    if let Ok(guard) = cache.read() {
+                        if let Some(cached_org) = guard.get(&org_id) {
+                            return Ok::<_, String>(Some(cached_org.clone()));
+                        }
+                    }
+                }
+
                 let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
                 use sqlx::Row;
                 let mut org = None;
@@ -186,6 +237,27 @@ impl DashboardService for MyDashboardService {
                         }
                     },
                 }
+
+                if let Some(ref o) = org {
+                    if !is_standalone {
+                        if let Some(client) = self.hub.get_redis_client() {
+                            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                                if let Ok(val) = serde_json::to_string(o) {
+                                    let _: Result<(), redis::RedisError> = redis::cmd("SET").arg(&_cache_key).arg(val).arg("EX").arg(3600).query_async(&mut conn).await;
+                                }
+                            }
+                        }
+                    } else {
+                        let cache = ORG_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+                        if let Ok(mut guard) = cache.write() {
+                            if guard.len() > 1000 {
+                                guard.clear();
+                            }
+                            guard.insert(org_id, o.clone());
+                        }
+                    }
+                }
+
                 Ok::<_, String>(org)
             }
         );
@@ -206,6 +278,15 @@ impl DashboardService for MyDashboardService {
             }).collect()
         } else {
             products
+        };
+
+        let orders = if req.mobile_optimized {
+            orders.into_iter().map(|mut o| {
+                o.organization_id = String::new(); // Already known in request scope
+                o
+            }).collect()
+        } else {
+            orders
         };
 
         let mut out_meetings: Vec<crate::ohc::app::MeetingRoom> = Vec::new();
@@ -244,10 +325,7 @@ impl DashboardService for MyDashboardService {
         let mut original_prompts_len = 0;
         let mut compressed_prompts_len = 0;
 
-        let all_hub_agents = self.hub.get_agents();
-        let org_agents: Vec<_> = all_hub_agents.iter().filter(|a| a.organization_id == req.organization_id || a.id.starts_with(&format!("{}-", req.organization_id))).collect();
-
-        for agent in org_agents {
+        for agent in &_filtered_agents {
             // Note: we fetch the agent system prompts here (this simulation fetches basic descriptive info or we assume generic size if absent)
             let prompt = &agent.name; // In full architecture this is loaded from db/roles, but since the Agent structure doesn't have a direct 'system_prompt' field exposed here, we compress role/name as representative text.
             let orig_len = prompt.len();
