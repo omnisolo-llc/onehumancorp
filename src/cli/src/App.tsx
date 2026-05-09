@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Text } from 'ink';
 import { AgentStatus } from './components/AgentStatus';
 import { ToolProgress } from './components/ToolProgress';
 import { MarkdownText } from './components/MarkdownText';
+import { PromptInput } from './components/PromptInput';
+import { ErrorState } from './components/ErrorState';
 import { useOrchestrator } from './hooks/useOrchestrator';
 
 export const App = () => {
-  const { status, tools } = useOrchestrator();
+  const { status, tools, error } = useOrchestrator();
+  const [inputs, setInputs] = useState<string[]>([]);
   const markdown = `# OHC Interactive Harness\n\n- Powered by Ink\n- React in the CLI`;
 
   return (
@@ -16,12 +19,29 @@ export const App = () => {
         <Text> - Standalone Agent Mode </Text>
       </Box>
 
-      <AgentStatus status={status} />
-      <ToolProgress tools={tools} />
+      {error ? (
+        <ErrorState error={error} />
+      ) : (
+        <>
+          <AgentStatus status={status} />
+          <ToolProgress tools={tools} />
 
-      <Box borderStyle="single" borderColor="gray" padding={1} marginTop={1}>
-        <MarkdownText content={markdown} />
-      </Box>
+          <Box borderStyle="single" borderColor="gray" padding={1} marginTop={1} marginBottom={1}>
+            <MarkdownText content={markdown} />
+          </Box>
+
+          <Box flexDirection="column">
+            {inputs.map((input, idx) => (
+               <Box key={idx} marginBottom={1}>
+                 <Text color="green">User: </Text>
+                 <Text>{input}</Text>
+               </Box>
+            ))}
+          </Box>
+
+          <PromptInput onSubmit={(val) => setInputs([...inputs, val])} promptText="Ask Agent >" />
+        </>
+      )}
     </Box>
   );
 };
