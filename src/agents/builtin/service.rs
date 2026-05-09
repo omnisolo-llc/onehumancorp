@@ -3,7 +3,7 @@ use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
-use crate::agent::{Agent, AgentEvent, AgentRunConfig};
+use crate::agent::{Agent, AgentEvent, AgentRunConfig, PermissionMode};
 use crate::auth::AuthMode;
 use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
@@ -378,6 +378,7 @@ impl AgentServiceImpl {
             enable_langgraph_mechanic: false,
             // Long-term memory store for cross-department context sharing
             long_term_memory,
+            permission_mode: PermissionMode::Restrictive,
         }
     }
 
@@ -644,6 +645,7 @@ impl AgentService for AgentServiceImpl {
                 injected_context,
                 enable_langgraph_mechanic: false,
                 long_term_memory: None,
+                permission_mode: PermissionMode::Restrictive,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));

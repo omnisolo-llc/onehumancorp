@@ -23,6 +23,13 @@ pub enum AgentEvent {
     Handoff { target_agent: String },
 }
 
+#[derive(Clone, PartialEq, Default, Debug)]
+pub enum PermissionMode {
+    Permissive,
+    #[default]
+    Restrictive,
+}
+
 /// Configuration for a single agent run.
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
@@ -68,6 +75,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
+    pub permission_mode: PermissionMode,
 }
 
 impl Default for AgentRunConfig {
@@ -114,6 +122,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
             long_term_memory: None,
+            permission_mode: PermissionMode::Restrictive,
         }
     }
 }
@@ -1808,6 +1817,11 @@ impl Agent {
 
     // Anthropic Mechanic: 3-Stage Tool Gating
     fn check_tool_gating(tc: &ToolCall, is_read_only: bool, cfg: &AgentRunConfig) -> Result<(), ToolError> {
+        // Permission Architecture Mechanic: Permissive (auto-approve) vs Restrictive (require approval)
+        if cfg.permission_mode == PermissionMode::Permissive {
+            return Ok(());
+        }
+
         // Stage 1: Trust establishment at project load
         if !cfg.project_trusted && !is_read_only {
             return Err(ToolError::Fatal("Project not trusted. Mutating tools are disabled.".to_string()));
@@ -4371,5 +4385,62 @@ mod stream_tests {
 
         let has_task_complete = events.iter().any(|e| matches!(e, AgentEvent::TaskComplete { .. }));
         assert!(has_task_complete, "Stream should eventually emit TaskComplete event");
+    }
+}
+
+#[cfg(test)]
+mod permission_tests {
+    use super::*;
+    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolResult};
+    use crate::tools::{Tool, ToolExecutor};
+    use std::sync::Arc;
+    use serde_json::Value;
+
+    struct DummyExecutor;
+    #[async_trait::async_trait]
+    impl ToolExecutor for DummyExecutor {
+        async fn execute(&self, _args: Value) -> Result<String, crate::types::ToolError> {
+            Ok("Success".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_permissive_mode_auto_approves_high_risk_tools() {
+        let tool = Tool {
+            name: "dangerous_tool".to_string(),
+            description: "A tool that usually requires approval".to_string(),
+            is_read_only: false,
+            parameters: Value::Null,
+            execute: Arc::new(DummyExecutor),
+        };
+
+        let tc = ToolCall {
+            id: "tc_123".to_string(),
+            name: "dangerous_tool".to_string(),
+            arguments: Value::Null,
+        };
+
+        // Restrictive mode should fail
+        let mut cfg_restrictive = AgentRunConfig::default();
+        cfg_restrictive.permission_mode = PermissionMode::Restrictive;
+        cfg_restrictive.project_trusted = true;
+        cfg_restrictive.high_risk_tools = vec!["dangerous_tool".to_string()];
+
+        let result_restrictive = Agent::check_tool_gating(&tc, false, &cfg_restrictive);
+        assert!(result_restrictive.is_err(), "Expected restrictive mode to block unapproved high-risk tool");
+        if let Err(crate::types::ToolError::UserFixable(msg)) = result_restrictive {
+            assert!(msg.contains("requires explicit user confirmation"));
+        } else {
+            panic!("Expected UserFixable error");
+        }
+
+        // Permissive mode should succeed automatically
+        let mut cfg_permissive = AgentRunConfig::default();
+        cfg_permissive.permission_mode = PermissionMode::Permissive;
+        cfg_permissive.project_trusted = true; // Technically permissive bypasses this too, but we set it just in case
+        cfg_permissive.high_risk_tools = vec!["dangerous_tool".to_string()];
+
+        let result_permissive = Agent::check_tool_gating(&tc, false, &cfg_permissive);
+        assert!(result_permissive.is_ok(), "Expected permissive mode to auto-approve high-risk tool");
     }
 }
