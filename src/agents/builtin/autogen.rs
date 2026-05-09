@@ -227,6 +227,97 @@ Provide your response, which will be passed to the next agent in the sequence.",
     }
 }
 
+/// The Orchestrator that manages a concurrent fan-out/fan-in flow.
+pub struct ConcurrentChatManager {
+    pub worker_agents: Vec<ChatAgent>,
+    pub aggregator_agent: Option<ChatAgent>,
+}
+
+impl ConcurrentChatManager {
+    pub fn new(worker_agents: Vec<ChatAgent>, aggregator_agent: Option<ChatAgent>) -> Self {
+        Self { worker_agents, aggregator_agent }
+    }
+
+    /// Run the concurrent chat loop (fan-out), and aggregate the results (fan-in).
+    pub async fn run_concurrent(&self, initial_task: &str) -> Result<Vec<Message>, String> {
+        let mut transcript = Vec::new();
+        transcript.push(Message::user(format!("Admin: {}", initial_task)));
+
+        let mut futures = Vec::new();
+        for agent_cfg in &self.worker_agents {
+            let agent_cfg = agent_cfg.clone();
+            let task = initial_task.to_string();
+
+            futures.push(tokio::spawn(async move {
+                let prompt_context = format!(
+                    "You are participating in a concurrent workflow as {}.
+
+Your input task/context is:
+{}
+
+Provide your response based on your area of expertise.",
+                    agent_cfg.name, task
+                );
+
+                let mut run_cfg = agent_cfg.run_config.clone();
+                run_cfg.server_system_message =
+                    format!("You are {}. {}", agent_cfg.name, agent_cfg.description);
+
+                let mut on_event = |_| {};
+                let response_text = agent_cfg
+                    .agent
+                    .run(&run_cfg, &prompt_context, &mut on_event)
+                    .await
+                    .map_err(|e| format!("Agent {} failed: {}", agent_cfg.name, e))?;
+
+                Ok::<String, String>(format!("{}: {}", agent_cfg.name, response_text))
+            }));
+        }
+
+        let results = futures::future::join_all(futures).await;
+        let mut aggregated_responses = Vec::new();
+
+        for res in results {
+            match res {
+                Ok(Ok(text)) => {
+                    aggregated_responses.push(text.clone());
+                    transcript.push(Message::assistant(text));
+                }
+                Ok(Err(e)) => return Err(e),
+                Err(e) => return Err(format!("Task panicked: {}", e)),
+            }
+        }
+
+        if let Some(aggregator) = &self.aggregator_agent {
+            let combined_responses = aggregated_responses.join("\n\n");
+            let prompt_context = format!(
+                "You are participating in a concurrent workflow as {}.
+
+Your task is to aggregate the following outputs from worker agents into a final response:
+{}
+
+Provide your final aggregated response.",
+                aggregator.name, combined_responses
+            );
+
+            let mut run_cfg = aggregator.run_config.clone();
+            run_cfg.server_system_message =
+                format!("You are {}. {}", aggregator.name, aggregator.description);
+
+            let mut on_event = |_| {};
+            let response_text = aggregator
+                .agent
+                .run(&run_cfg, &prompt_context, &mut on_event)
+                .await
+                .map_err(|e| format!("Aggregator {} failed: {}", aggregator.name, e))?;
+
+            transcript.push(Message::assistant(format!("{}: {}", aggregator.name, response_text)));
+        }
+
+        Ok(transcript)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -362,5 +453,84 @@ mod tests {
         assert!(transcript[2]
             .content
             .contains("Agent2: I am Agent2. Everything looks good. TERMINATE"));
+    }
+
+    #[tokio::test]
+    async fn test_autogen_concurrent_fan_out_fan_in() {
+        let worker1_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                "I am Worker1. Here is my analysis.".to_string(),
+            ]),
+        });
+        let worker1 = Arc::new(Agent::new(worker1_llm, vec![]));
+
+        let worker2_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                "I am Worker2. Here is my analysis.".to_string(),
+            ]),
+        });
+        let worker2 = Arc::new(Agent::new(worker2_llm, vec![]));
+
+        let aggregator_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                "I have aggregated the results.".to_string(),
+            ]),
+        });
+        let aggregator = Arc::new(Agent::new(aggregator_llm, vec![]));
+
+        let cfg = AgentRunConfig::default();
+
+        let chat_worker1 = ChatAgent {
+            name: "Worker1".to_string(),
+            description: "A backend expert.".to_string(),
+            agent: worker1,
+            run_config: cfg.clone(),
+        };
+
+        let chat_worker2 = ChatAgent {
+            name: "Worker2".to_string(),
+            description: "A frontend expert.".to_string(),
+            agent: worker2,
+            run_config: cfg.clone(),
+        };
+
+        let chat_aggregator = ChatAgent {
+            name: "Aggregator".to_string(),
+            description: "A tech lead.".to_string(),
+            agent: aggregator,
+            run_config: cfg.clone(),
+        };
+
+        let manager = ConcurrentChatManager::new(
+            vec![chat_worker1, chat_worker2],
+            Some(chat_aggregator),
+        );
+
+        let result = manager.run_concurrent("Analyze the new feature.").await;
+        assert!(result.is_ok());
+
+        let transcript = result.unwrap();
+
+        // 1 User Admin message
+        // 2 Worker responses
+        // 1 Aggregator response
+        assert_eq!(transcript.len(), 4);
+        assert!(transcript[0].content.contains("Analyze the new feature."));
+
+        let mut has_worker1 = false;
+        let mut has_worker2 = false;
+
+        for msg in &transcript[1..3] {
+            if msg.content.contains("Worker1: I am Worker1") {
+                has_worker1 = true;
+            } else if msg.content.contains("Worker2: I am Worker2") {
+                has_worker2 = true;
+            }
+        }
+
+        assert!(has_worker1);
+        assert!(has_worker2);
+
+        assert!(transcript[3].content.contains("Aggregator: I have aggregated the results."));
     }
 }
