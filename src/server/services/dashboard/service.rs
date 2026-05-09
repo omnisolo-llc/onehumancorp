@@ -5,11 +5,13 @@ use std::sync::Arc;
 
 
 use std::sync::OnceLock;
-use std::sync::RwLock;
-use std::collections::HashMap;
+use dashmap::DashMap;
+use tokio::sync::OnceCell;
 
-static PRODUCTS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::organization::Product>>>> = OnceLock::new();
-static ORDERS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::app::Order>>>> = OnceLock::new();
+static PRODUCTS_CACHE: OnceLock<DashMap<String, (std::time::Instant, Vec<crate::ohc::organization::Product>)>> = OnceLock::new();
+static ORDERS_CACHE: OnceLock<DashMap<String, (std::time::Instant, Vec<crate::ohc::app::Order>)>> = OnceLock::new();
+static ORG_CACHE: OnceLock<DashMap<String, (std::time::Instant, crate::ohc::organization::Organization)>> = OnceLock::new();
+static REDIS_CONNECTION: OnceCell<redis::aio::MultiplexedConnection> = OnceCell::const_new();
 
 
 pub struct MyDashboardService {
@@ -53,34 +55,94 @@ impl DashboardService for MyDashboardService {
         let org_id2 = req.organization_id.clone();
         let org_id3 = req.organization_id.clone();
 
+        let db1_ref = db1.clone();
+        let db2_ref = db2.clone();
+        let db3_ref = db3.clone();
+
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::task::spawn(async move { hub1.get_agents() }),
-            tokio::task::spawn(async move { hub2.get_meetings() }),
-            tokio::task::spawn(async move {
+            async move { hub1.get_agents() },
+            async move { hub2.get_meetings() },
+            async move {
                 let cost_auditor = hub3.get_cost_auditor();
-                (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-            }),
-            tokio::task::spawn(async move {
+                Ok::<_, String>((cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot()))
+            },
+            async move {
                 let org_id = org_id1;
 
-                // Caching layer logic (Phase 4)
+                if let Ok(redis_url) = std::env::var("REDIS_URL") {
+                    let con_res = REDIS_CONNECTION.get_or_try_init(|| async {
+                        let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
+                        client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())
+                    }).await;
 
+                    if let Ok(con) = con_res {
+                        let mut con = con.clone();
+                        let cache_key = format!("cache:products:{}", org_id);
+                        let cached: Result<String, _> = redis::AsyncCommands::get(&mut con, &cache_key).await;
+                        if let Ok(data) = cached {
+                            if let Ok(parsed) = serde_json::from_str(&data) {
+                                return Ok::<Vec<crate::ohc::organization::Product>, String>(parsed);
+                            }
+                        }
 
-                let _cache_key = format!("hub:products:{}", org_id);
-                let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(guard) = cache.read() {
-                    if let Some(products) = guard.get(&org_id) {
-                        return Ok::<_, String>(products.clone());
+                        // Query DB
+                        let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
+                        use sqlx::Row;
+                        let mut results = Vec::new();
+                        match &db1_ref.store {
+                            crate::db::DbStore::Postgres => {
+                                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db1_ref.pool).await {
+                                    for r in rows {
+                                        let p = crate::ohc::organization::Product {
+                                            id: r.try_get("id").unwrap_or_default(),
+                                            organization_id: r.try_get("organization_id").unwrap_or_default(),
+                                            name: r.try_get("name").unwrap_or_default(),
+                                            description: "".to_string(),
+                                            price_cents: 0,
+                                            currency: "USD".to_string(),
+                                            fulfillment_strategy: "".to_string(),
+                                            metadata_json: "".to_string(),
+                                        };
+                                        results.push(p);
+                                    }
+                                }
+                            },
+                            crate::db::DbStore::Sqlite(pool) => {
+                                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                                    for r in rows {
+                                        let p = crate::ohc::organization::Product {
+                                            id: r.try_get("id").unwrap_or_default(),
+                                            organization_id: r.try_get("organization_id").unwrap_or_default(),
+                                            name: r.try_get("name").unwrap_or_default(),
+                                            description: "".to_string(),
+                                            price_cents: 0,
+                                            currency: "USD".to_string(),
+                                            fulfillment_strategy: "".to_string(),
+                                            metadata_json: "".to_string(),
+                                        };
+                                        results.push(p);
+                                    }
+                                }
+                            },
+                        }
+                        let _: Result<(), _> = redis::AsyncCommands::set_ex(&mut con, &cache_key, serde_json::to_string(&results).unwrap(), 3600).await;
+                        return Ok::<_, String>(results);
                     }
                 }
 
-
+                // Standalone mode or Redis failed
+                let cache_key = format!("cache:products:{}", org_id);
+                if let Some(entry) = PRODUCTS_CACHE.get_or_init(DashMap::new).get(&cache_key) {
+                    if entry.value().0.elapsed().as_secs() < 3600 {
+                        return Ok::<Vec<crate::ohc::organization::Product>, String>(entry.value().1.clone());
+                    }
+                }
                 let q = "SELECT id, organization_id, COALESCE(title, type, '') as name, COALESCE(price, 0) as price_cents FROM products WHERE organization_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
-                match &db1.store {
+                match &db1_ref.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db1.pool).await {
+                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db1_ref.pool).await {
                             for r in rows {
                                 let p = crate::ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
@@ -114,29 +176,81 @@ impl DashboardService for MyDashboardService {
                         }
                     },
                 }
-
-
-                let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(mut guard) = cache.write() {
-                    guard.insert(org_id, results.clone());
-                }
+                PRODUCTS_CACHE.get_or_init(DashMap::new).insert(cache_key, (std::time::Instant::now(), results.clone()));
                 Ok::<_, String>(results)
-            }),
-
-            tokio::task::spawn(async move {
+            },
+            async move {
                 let org_id = org_id2;
-                                let cache = ORDERS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(guard) = cache.read() {
-                    if let Some(orders) = guard.get(&org_id) {
-                        return Ok::<_, String>(orders.clone());
+                if let Ok(redis_url) = std::env::var("REDIS_URL") {
+                    let con_res = REDIS_CONNECTION.get_or_try_init(|| async {
+                        let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
+                        client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())
+                    }).await;
+
+                    if let Ok(con) = con_res {
+                        let mut con = con.clone();
+                        let cache_key = format!("cache:orders:{}", org_id);
+                        let cached: Result<String, _> = redis::AsyncCommands::get(&mut con, &cache_key).await;
+                        if let Ok(data) = cached {
+                            if let Ok(parsed) = serde_json::from_str(&data) {
+                                return Ok::<Vec<crate::ohc::app::Order>, String>(parsed);
+                            }
+                        }
+                        let q = "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10";
+                        use sqlx::Row;
+                        let mut results = Vec::new();
+                        match &db2_ref.store {
+                            crate::db::DbStore::Postgres => {
+                                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db2_ref.pool).await {
+                                    for r in rows {
+                                        let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
+                                        let o = crate::ohc::app::Order {
+                                            id: r.try_get("id").unwrap_or_default(),
+                                            organization_id: r.try_get("tenant_id").unwrap_or_default(),
+                                            product_id: "".to_string(),
+                                            amount_cents: (amount_real * 100.0) as i64,
+                                            status: r.try_get("status").unwrap_or_default(),
+                                            created_at_unix: 0,
+                                        };
+                                        results.push(o);
+                                    }
+                                }
+                            },
+                            crate::db::DbStore::Sqlite(pool) => {
+                                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                                    for r in rows {
+                                        let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
+                                        let o = crate::ohc::app::Order {
+                                            id: r.try_get("id").unwrap_or_default(),
+                                            organization_id: r.try_get("tenant_id").unwrap_or_default(),
+                                            product_id: "".to_string(),
+                                            amount_cents: (amount_real * 100.0) as i64,
+                                            status: r.try_get("status").unwrap_or_default(),
+                                            created_at_unix: 0,
+                                        };
+                                        results.push(o);
+                                    }
+                                }
+                            },
+                        }
+                        let _: Result<(), _> = redis::AsyncCommands::set_ex(&mut con, &cache_key, serde_json::to_string(&results).unwrap(), 10).await;
+                        return Ok::<_, String>(results);
+                    }
+                }
+
+                // Standalone mode or Redis failed
+                let cache_key = format!("cache:orders:{}", org_id);
+                if let Some(entry) = ORDERS_CACHE.get_or_init(DashMap::new).get(&cache_key) {
+                    if entry.value().0.elapsed().as_secs() < 10 {
+                        return Ok::<Vec<crate::ohc::app::Order>, String>(entry.value().1.clone());
                     }
                 }
                 let q = "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
-                match &db2.store {
+                match &db2_ref.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db2.pool).await {
+                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db2_ref.pool).await {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = crate::ohc::app::Order {
@@ -168,23 +282,79 @@ impl DashboardService for MyDashboardService {
                         }
                     },
                 }
-
-
-                                let cache = ORDERS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(mut guard) = cache.write() {
-                    guard.insert(org_id, results.clone());
-                }
+                ORDERS_CACHE.get_or_init(DashMap::new).insert(cache_key, (std::time::Instant::now(), results.clone()));
                 Ok::<_, String>(results)
-            }),
-
-            tokio::task::spawn(async move {
+            },
+            async move {
                 let org_id = org_id3;
+
+                if let Ok(redis_url) = std::env::var("REDIS_URL") {
+                    let con_res = REDIS_CONNECTION.get_or_try_init(|| async {
+                        let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
+                        client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())
+                    }).await;
+
+                    if let Ok(con) = con_res {
+                        let mut con = con.clone();
+                        let cache_key = format!("cache:org:{}", org_id);
+                        let cached: Result<String, _> = redis::AsyncCommands::get(&mut con, &cache_key).await;
+                        if let Ok(data) = cached {
+                            if let Ok(parsed) = serde_json::from_str(&data) {
+                                return Ok::<Option<crate::ohc::organization::Organization>, String>(parsed);
+                            }
+                        }
+                        let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
+                        use sqlx::Row;
+                        let mut org = None;
+                        match &db3_ref.store {
+                            crate::db::DbStore::Postgres => {
+                                if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(&db3_ref.pool).await {
+                                    org = Some(crate::ohc::organization::Organization {
+                                        id: row.try_get("tenant_id").unwrap_or_default(),
+                                        name: row.try_get("business_name").unwrap_or_default(),
+                                        domain: "".to_string(),
+                                        ceo_id: "".to_string(),
+                                        created_at_unix: 0,
+                                        members: vec![],
+                                        role_profiles: vec![],
+                                        tier: row.try_get("tier").unwrap_or_default(),
+                                    });
+                                }
+                            },
+                            crate::db::DbStore::Sqlite(pool) => {
+                                if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(pool).await {
+                                    org = Some(crate::ohc::organization::Organization {
+                                        id: row.try_get("tenant_id").unwrap_or_default(),
+                                        name: row.try_get("business_name").unwrap_or_default(),
+                                        domain: "".to_string(),
+                                        ceo_id: "".to_string(),
+                                        created_at_unix: 0,
+                                        members: vec![],
+                                        role_profiles: vec![],
+                                        tier: row.try_get("tier").unwrap_or_default(),
+                                    });
+                                }
+                            },
+                        }
+                        let _: Result<(), _> = redis::AsyncCommands::set_ex(&mut con, &cache_key, serde_json::to_string(&org).unwrap(), 3600).await;
+                        return Ok::<_, String>(org);
+                    }
+                }
+
+                // Standalone mode or Redis failed
+                let cache_key = format!("cache:org:{}", org_id);
+                if let Some(entry) = ORG_CACHE.get_or_init(DashMap::new).get(&cache_key) {
+                    if entry.value().0.elapsed().as_secs() < 3600 {
+                        return Ok::<Option<crate::ohc::organization::Organization>, String>(Some(entry.value().1.clone()));
+                    }
+                }
+
                 let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
                 use sqlx::Row;
                 let mut org = None;
-                match &db3.store {
+                match &db3_ref.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(&db3.pool).await {
+                        if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(&db3_ref.pool).await {
                             org = Some(crate::ohc::organization::Organization {
                                 id: row.try_get("tenant_id").unwrap_or_default(),
                                 name: row.try_get("business_name").unwrap_or_default(),
@@ -212,16 +382,29 @@ impl DashboardService for MyDashboardService {
                         }
                     },
                 }
+                if let Some(org_val) = &org {
+                    ORG_CACHE.get_or_init(DashMap::new).insert(cache_key, (std::time::Instant::now(), org_val.clone()));
+                }
                 Ok::<_, String>(org)
-            })
+            }
         );
 
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let agents = agents_res;
+        let _meetings = meetings_res;
         let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
-        let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
+        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
+        let org_opt = org_res.map_err(|e| Status::internal(e.to_string()))?;
+        let org = org_opt.unwrap_or(crate::ohc::organization::Organization {
+            id: req.organization_id.clone(),
+            name: "Unknown Org".to_string(),
+            domain: "".to_string(),
+            ceo_id: "".to_string(),
+            created_at_unix: 0,
+            members: vec![],
+            role_profiles: vec![],
+            tier: "free".to_string(),
+        });
 
         let products = if req.mobile_optimized {
             products.into_iter().map(|p| crate::ohc::organization::Product {
@@ -327,7 +510,7 @@ impl DashboardService for MyDashboardService {
         }
 
         Ok(Response::new(DashboardSnapshot {
-            organization: org,
+            organization: Some(org),
             agents: final_agents,
             meetings: out_meetings,
             cost_summary: Some(cost_summary),
