@@ -1,0 +1,15 @@
+--- src/app/main.rs
++++ src/app/main.rs
+@@ -1691,6 +1691,12 @@
+             }
+         });
+
++        dash.on_action_share_store(move || {
++            if let Some(ui) = bs_handle_clone_for_dash.upgrade() {
++                let _ = ui.show();
++            }
++        });
++
+         let ac_handle = ac_handle_for_dash.clone();
+         dash.on_action_see_analytics(move || {
+             if let Some(ui) = ac_handle.upgrade() {
