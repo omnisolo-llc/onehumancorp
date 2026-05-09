@@ -34,6 +34,7 @@ export component ApiDocs inherits Window {
 
             Text {
                 text: "Custom Integration";
+                font-family: "Outfit";
                 font-size: 24px;
                 font-weight: 700;
                 color: white;
@@ -41,6 +42,7 @@ export component ApiDocs inherits Window {
 
             Text {
                 text: "Connect other tools to your store to automate your work.";
+                font-family: "Inter";
                 color: #ef4444; // red warning
                 wrap: word-wrap;
             }
@@ -65,15 +67,17 @@ export component ApiDocs inherits Window {
                                     spacing: 12px;
                                     Text {
                                         text: ep.method;
+                                        font-family: "Outfit";
                                         font-weight: 700;
                                         color: ep.method == "GET" ? #10b981 : (ep.method == "POST" ? #3b82f6 : #f59e0b);
                                     }
-                                    Text { text: ep.path; font-weight: 700; color: white; }
+                                    Text { text: ep.path; font-family: "Outfit"; font-weight: 700; color: white; }
                                 }
-                                Text { text: ep.description; color: #cbd5e1; wrap: word-wrap; }
+                                Text { text: ep.description; font-family: "Inter"; color: #cbd5e1; wrap: word-wrap; }
                                 TooltipElement {
                                     tooltip_id: "api_test_button";
                                     Button {
+                                        height: 44px;
                                         text: "Run Test";
                                         clicked => { root.test_endpoint(ep.path); root.active_endpoint = ep.path; }
                                     }

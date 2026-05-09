@@ -60,11 +60,13 @@ export component InteractiveWalkthrough inherits Window {
                             spacing: 12px;
 
                             Button {
+                                height: 44px;
                                 text: "Skip tour";
                                 clicked => { root.visible = false; }
                             }
 
                             Button {
+                                height: 44px;
                                 text: current_step < 3 ? "Next" : "Done";
                                 clicked => {
                                     if (current_step < 3) {

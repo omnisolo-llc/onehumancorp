@@ -42,12 +42,14 @@ export component HelpCenter inherits Window {
 
             Text {
                 text: "How can we help?";
+                font-family: "Outfit";
                 font-size: 24px;
                 font-weight: 700;
                 color: white;
             }
 
             LineEdit {
+                height: 44px;
                 placeholder-text: "Search help articles...";
                 text <=> search_query;
             }
@@ -59,12 +61,12 @@ export component HelpCenter inherits Window {
                     for article in articles : VerticalBox {
                         spacing: 16px;
 
-                        Text { text: article.category; font-weight: 700; font-size: 18px; color: white; }
+                        Text { text: article.category; font-family: "Outfit"; font-weight: 700; font-size: 18px; color: white; }
                         GlassCard {
                             VerticalBox {
                                 padding: 12px;
-                                Text { text: article.title; font-weight: 700; font-size: 16px; color: white; }
-                                Text { text: article.description; color: white; wrap: word-wrap; }
+                                Text { text: article.title; font-family: "Outfit"; font-weight: 700; font-size: 16px; color: white; }
+                                Text { text: article.description; font-family: "Inter"; color: white; wrap: word-wrap; }
                             }
                         }
                     }
@@ -88,6 +90,7 @@ export component HelpCenter inherits Window {
 
             Text {
                 text: "?";
+                font-family: "Outfit";
                 color: white;
                 font-size: 24px;
                 font-weight: 700;

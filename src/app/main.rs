@@ -538,6 +538,61 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| { crate::get_tooltip_text(id.as_str()) });
                                         let ai_help_chat_ui = app::AiHelpChat::new().unwrap();
                                         let ai_help_chat_handle = ai_help_chat_ui.as_weak();
+
+                                        let ai_chat_weak = ai_help_chat_ui.as_weak();
+                                        ai_help_chat_ui.on_send_message(move || {
+                                            if let Some(ui) = ai_chat_weak.upgrade() {
+                                                let text = ui.get_user_input();
+                                                let mut messages = ui.get_messages().iter().collect::<Vec<_>>();
+                                                messages.push(app::ChatMessage {
+                                                    sender: "User".into(),
+                                                    text: text.clone(),
+                                                    article_link: "".into(),
+                                                });
+
+                                                // Minimal stub for routing to a Help Agent using the help center content as context
+                                                let response_text = if text.to_lowercase().contains("product") {
+                                                    "To add a product, please visit the 'My Store' page and click 'Add Product'."
+                                                } else {
+                                                    "I am a specialized Help Agent. You can find more details in our Help Center."
+                                                };
+
+                                                messages.push(app::ChatMessage {
+                                                    sender: "AI".into(),
+                                                    text: response_text.into(),
+                                                    article_link: "getting-started".into(),
+                                                });
+                                                let model = std::rc::Rc::new(slint::VecModel::from(messages));
+                                                ui.set_messages(model.into());
+                                                ui.set_user_input("".into());
+                                            }
+                                        });
+
+
+                                        let ai_chat_weak = ai_help_chat_ui.as_weak();
+                                        ai_help_chat_ui.on_send_message(move || {
+                                            if let Some(ui) = ai_chat_weak.upgrade() {
+                                                let text = ui.get_user_input();
+                                                let mut messages = ui.get_messages().iter().collect::<Vec<_>>();
+                                                messages.push(app::ChatMessage {
+                                                    sender: "User".into(),
+                                                    text: text.clone(),
+                                                    article_link: "".into(),
+                                                });
+
+                                                let response_text = "I am a specialized Help Agent. You can find more details in our Help Center.";
+
+                                                messages.push(app::ChatMessage {
+                                                    sender: "AI".into(),
+                                                    text: response_text.into(),
+                                                    article_link: "getting-started".into(),
+                                                });
+                                                let model = std::rc::Rc::new(slint::VecModel::from(messages));
+                                                ui.set_messages(model.into());
+                                                ui.set_user_input("".into());
+                                            }
+                                        });
+
                                         dashboard.on_open_ai_chat(move || {
                                             if let Some(ui) = ai_help_chat_handle.upgrade() {
                                                 let _ = ui.show();

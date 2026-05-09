@@ -40,6 +40,7 @@ export component VideoTutorials inherits Window {
 
             Text {
                 text: "Watch & Learn";
+                font-family: "Outfit";
                 font-size: 24px;
                 font-weight: 700;
                 color: white;
@@ -56,10 +57,10 @@ export component VideoTutorials inherits Window {
                                 height: 200px;
                                 background: #0f172a;
                                 border-radius: 8px;
-                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
+                                Text { text: "▶ Play Video"; font-family: "Outfit"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
                             }
-                            Text { text: video.title; font-weight: 700; font-size: 18px; color: white; }
-                            Text { text: video.description; color: white; wrap: word-wrap; }
+                            Text { text: video.title; font-family: "Outfit"; font-weight: 700; font-size: 18px; color: white; }
+                            Text { text: video.description; font-family: "Inter"; color: white; wrap: word-wrap; }
                         }
                     }
                 }

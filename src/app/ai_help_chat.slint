@@ -41,20 +41,25 @@ export component AiHelpChat inherits Window {
                             spacing: 8px;
                             Text {
                                 text: msg.sender == "User" ? "You" : "Helper";
+                                font-family: "Outfit";
                                 color: #94a3b8;
                                 font-size: 12px;
                             }
                             Text {
                                 text: msg.text;
+                                font-family: "Inter";
                                 color: white;
                                 wrap: word-wrap;
                             }
                             if msg.article_link != "": TouchArea {
+                                height: 44px;
                                 clicked => { root.open_article(msg.article_link); }
                                 Text {
                                     text: "Read the full article →";
+                                    font-family: "Inter";
                                     color: #0ea5e9; // Action color
                                     font-size: 14px;
+                                    vertical-alignment: center;
                                 }
                             }
                         }
@@ -65,12 +70,14 @@ export component AiHelpChat inherits Window {
             HorizontalBox {
                 spacing: 8px;
                 LineEdit {
+                    height: 44px;
                     placeholder-text: "Type your question here...";
                     text <=> user_input;
                 }
                 TooltipElement {
                     tooltip_id: "ai_chat_send";
                     Button {
+                        height: 44px;
                         text: "Send";
                         clicked => { send_message(); }
                     }
