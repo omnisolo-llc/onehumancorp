@@ -20,8 +20,8 @@ type AgentPresence struct {
 type TeammateMesh interface {
 	Publish(ctx context.Context, topic string, payload []byte) error
 	Subscribe(ctx context.Context, topic string, handler func(msg []byte)) (Subscription, error)
-	AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error)
-	ReleaseLock(ctx context.Context, key string) error
+	AcquireLock(ctx context.Context, key string, owner string, ttl time.Duration) (bool, error)
+	ReleaseLock(ctx context.Context, key string, owner string) error
 	RegisterPresence(ctx context.Context, agentID string, status string) error
 	GetActiveAgents(ctx context.Context) ([]AgentPresence, error)
 	Acknowledge(ctx context.Context, messageID string) error
@@ -68,12 +68,33 @@ func (m *RedisTeammateMesh) Subscribe(ctx context.Context, topic string, handler
 	return &redisSubscription{pubsub: pubsub}, nil
 }
 
-func (m *RedisTeammateMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
-	return m.client.SetNX(ctx, key, "1", ttl).Result()
+func (m *RedisTeammateMesh) AcquireLock(ctx context.Context, key string, owner string, ttl time.Duration) (bool, error) {
+	script := `
+		local current = redis.call("GET", KEYS[1])
+		if current == false or current == ARGV[1] then
+			redis.call("SET", KEYS[1], ARGV[1], "PX", ARGV[2])
+			return 1
+		else
+			return 0
+		end
+	`
+	ttlMs := int64(ttl / time.Millisecond)
+	res, err := m.client.Eval(ctx, script, []string{key}, owner, ttlMs).Result()
+	if err != nil {
+		return false, err
+	}
+	return res.(int64) == 1, nil
 }
 
-func (m *RedisTeammateMesh) ReleaseLock(ctx context.Context, key string) error {
-	return m.client.Del(ctx, key).Err()
+func (m *RedisTeammateMesh) ReleaseLock(ctx context.Context, key string, owner string) error {
+	script := `
+		if redis.call("GET", KEYS[1]) == ARGV[1] then
+			return redis.call("DEL", KEYS[1])
+		else
+			return 0
+		end
+	`
+	return m.client.Eval(ctx, script, []string{key}, owner).Err()
 }
 
 func (m *RedisTeammateMesh) RegisterPresence(ctx context.Context, agentID string, status string) error {
@@ -127,10 +148,15 @@ func (s *localSubscription) Unsubscribe() error {
 	return nil
 }
 
+type localLockInfo struct {
+	owner  string
+	expire time.Time
+}
+
 type LocalTeammateMesh struct {
 	mu       sync.RWMutex
 	subs     map[string][]localSubInfo
-	locks    map[string]time.Time
+	locks    map[string]localLockInfo
 	presence map[string]string
 	nextID   int64
 }
@@ -138,7 +164,7 @@ type LocalTeammateMesh struct {
 func NewLocalTeammateMesh() *LocalTeammateMesh {
 	return &LocalTeammateMesh{
 		subs:     make(map[string][]localSubInfo),
-		locks:    make(map[string]time.Time),
+		locks:    make(map[string]localLockInfo),
 		presence: make(map[string]string),
 	}
 }
@@ -181,23 +207,28 @@ func (m *LocalTeammateMesh) Subscribe(ctx context.Context, topic string, handler
 	}, nil
 }
 
-func (m *LocalTeammateMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+func (m *LocalTeammateMesh) AcquireLock(ctx context.Context, key string, owner string, ttl time.Duration) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	expire, exists := m.locks[key]
-	if exists && time.Now().Before(expire) {
+	lockInfo, exists := m.locks[key]
+	if exists && time.Now().Before(lockInfo.expire) && lockInfo.owner != owner {
 		return false, nil
 	}
 
-	m.locks[key] = time.Now().Add(ttl)
+	m.locks[key] = localLockInfo{
+		owner:  owner,
+		expire: time.Now().Add(ttl),
+	}
 	return true, nil
 }
 
-func (m *LocalTeammateMesh) ReleaseLock(ctx context.Context, key string) error {
+func (m *LocalTeammateMesh) ReleaseLock(ctx context.Context, key string, owner string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	delete(m.locks, key)
+	if lockInfo, exists := m.locks[key]; exists && lockInfo.owner == owner {
+		delete(m.locks, key)
+	}
 	return nil
 }
 

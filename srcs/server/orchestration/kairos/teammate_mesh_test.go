@@ -45,22 +45,39 @@ func runTeammateMeshTests(t *testing.T, mesh TeammateMesh, isLocal bool) {
 	t.Run("Acquire and Release Lock", func(t *testing.T) {
 		ctx := context.Background()
 		lockKey := "ohc:lock:system:task:testlock"
+		owner1 := "agent-owner-1"
+		owner2 := "agent-owner-2"
 
-		acquired, err := mesh.AcquireLock(ctx, lockKey, 1*time.Second)
+		acquired, err := mesh.AcquireLock(ctx, lockKey, owner1, 1*time.Second)
 		require.NoError(t, err)
 		assert.True(t, acquired)
 
-		acquired, err = mesh.AcquireLock(ctx, lockKey, 1*time.Second)
+		// Owner 1 can extend
+		acquired, err = mesh.AcquireLock(ctx, lockKey, owner1, 1*time.Second)
+		require.NoError(t, err)
+		assert.True(t, acquired)
+
+		// Owner 2 cannot acquire
+		acquired, err = mesh.AcquireLock(ctx, lockKey, owner2, 1*time.Second)
 		require.NoError(t, err)
 		assert.False(t, acquired)
 
-		err = mesh.ReleaseLock(ctx, lockKey)
+		// Owner 2 cannot release
+		err = mesh.ReleaseLock(ctx, lockKey, owner2)
+		require.NoError(t, err)
+		acquired, err = mesh.AcquireLock(ctx, lockKey, owner2, 1*time.Second)
+		require.NoError(t, err)
+		assert.False(t, acquired)
+
+		// Owner 1 releases
+		err = mesh.ReleaseLock(ctx, lockKey, owner1)
 		require.NoError(t, err)
 
-		acquired, err = mesh.AcquireLock(ctx, lockKey, 1*time.Second)
+		// Owner 2 can acquire now
+		acquired, err = mesh.AcquireLock(ctx, lockKey, owner2, 1*time.Second)
 		require.NoError(t, err)
 		assert.True(t, acquired)
-		mesh.ReleaseLock(ctx, lockKey)
+		mesh.ReleaseLock(ctx, lockKey, owner2)
 	})
 
 	t.Run("Register Presence and Get Active Agents", func(t *testing.T) {
@@ -135,14 +152,16 @@ func TestLocalTeammateMesh_LockExpiry(t *testing.T) {
 	mesh := NewLocalTeammateMesh()
 	ctx := context.Background()
 	lockKey := "ohc:lock:system:task:expirylock"
+	owner1 := "owner-1"
+	owner2 := "owner-2"
 
-	acquired, err := mesh.AcquireLock(ctx, lockKey, 50*time.Millisecond)
+	acquired, err := mesh.AcquireLock(ctx, lockKey, owner1, 50*time.Millisecond)
 	require.NoError(t, err)
 	assert.True(t, acquired)
 
 	time.Sleep(60 * time.Millisecond)
 
-	acquired, err = mesh.AcquireLock(ctx, lockKey, 50*time.Millisecond)
+	acquired, err = mesh.AcquireLock(ctx, lockKey, owner2, 50*time.Millisecond)
 	require.NoError(t, err)
 	assert.True(t, acquired)
 }
