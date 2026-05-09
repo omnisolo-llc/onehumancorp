@@ -1,26 +1,26 @@
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
 use chrono::Utc;
-use crate::orchestration::departments::memory::pruning::prune_stale;
-use crate::orchestration::departments::memory::conflict::auto_resolve_conflicts;
+use crate::orchestration::departments::memory::MemoryConsolidator;
 
 pub struct MemoryConsolidationWorker {
-    pub repository: Arc<VectorRepository>,
+    pub consolidator: Arc<MemoryConsolidator>,
     pub poll_interval: std::time::Duration,
     pub prune_threshold_days: i64,
 }
 
 impl MemoryConsolidationWorker {
     pub fn new(repository: Arc<VectorRepository>) -> Self {
+        let consolidator = Arc::new(MemoryConsolidator::new(repository));
         Self {
-            repository,
+            consolidator,
             poll_interval: std::time::Duration::from_secs(3600), // 1 hour
             prune_threshold_days: 180, // Default to 180 days
         }
     }
 
     pub fn start(&self) {
-        let repository = self.repository.clone();
+        let consolidator = self.consolidator.clone();
         let interval_duration = self.poll_interval;
         let prune_threshold_days = self.prune_threshold_days;
         tokio::spawn(async move {
@@ -28,11 +28,8 @@ impl MemoryConsolidationWorker {
             loop {
                 interval.tick().await;
                 let older_than = Utc::now() - chrono::Duration::days(prune_threshold_days);
-                if let Err(e) = prune_stale(repository.clone(), older_than).await {
-                    tracing::error!("Failed to prune stale context: {}", e);
-                }
-                if let Err(e) = auto_resolve_conflicts(repository.clone()).await {
-                    tracing::error!("Failed to resolve memory conflicts: {}", e);
+                if let Err(e) = consolidator.run_consolidation_pipeline(older_than).await {
+                    tracing::error!("Failed to run consolidation pipeline: {}", e);
                 }
             }
         });
@@ -42,12 +39,12 @@ impl MemoryConsolidationWorker {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ohc_builtin_agent::memory_store::VectorRepository;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_worker_start() {
-        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-        use std::str::FromStr;
-
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
@@ -63,22 +60,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_worker_initialization() {
-        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-        use std::str::FromStr;
-
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
         let worker = MemoryConsolidationWorker::new(repo);
         assert_eq!(worker.poll_interval.as_secs(), 3600);
-}
+    }
+
     #[tokio::test]
     async fn test_worker_pipeline_execution() {
-        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-        use std::str::FromStr;
-
-        // Safe database initialization without Err(_) => return
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse SQLite connection string");
         let pool = SqlitePoolOptions::new()
             .connect_with(conn_opts)
@@ -142,4 +133,3 @@ mod tests {
         assert_eq!(row.0, 0, "Stale record should be pruned by worker pipeline");
     }
 }
-// Touching file to make a commit

@@ -4,6 +4,8 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 use chrono::Utc;
 use std::str::FromStr;
+use crate::orchestration::departments::memory::MemoryConsolidator;
+use crate::minimax::LocalLLMClient;
 
 use crate::orchestration::departments::types::{DepartmentType, DepartmentConfig, DepartmentEvent, ApprovalRequest, ApprovalStatus};
 use crate::db::DbStore;
@@ -85,15 +87,45 @@ pub struct DepartmentOrchestrator {
     db: Arc<crate::db::DB>,
     departments: RwLock<HashMap<DepartmentType, Arc<tokio::sync::RwLock<dyn Department>>>>,
     event_subscriptions: RwLock<HashMap<String, Vec<DepartmentType>>>,
+    pub memory_consolidator: Arc<MemoryConsolidator>,
 }
 
 impl DepartmentOrchestrator {
-    pub fn new(db: Arc<crate::db::DB>) -> Self {
+    pub fn new(db: Arc<crate::db::DB>, memory_consolidator: Arc<MemoryConsolidator>) -> Self {
         Self {
             db,
             departments: RwLock::new(HashMap::new()),
             event_subscriptions: RwLock::new(HashMap::new()),
+            memory_consolidator,
         }
+    }
+
+    pub fn share_context(
+        &self,
+        tenant_id: &str,
+        department: DepartmentType,
+        content: &str,
+    ) {
+        let client = LocalLLMClient::new();
+        let tenant_id = tenant_id.to_string();
+        let content = content.to_string();
+        let consolidator = self.memory_consolidator.clone();
+        tokio::spawn(async move {
+            if let Ok(embedding) = client.generate_embedding(&content).await {
+                let _ = consolidator.layer.store_context(&tenant_id, department, &content, embedding, 100).await;
+            }
+        });
+    }
+
+    pub async fn query_shared_context(
+        &self,
+        tenant_id: &str,
+        query: &str,
+        limit: i64,
+    ) -> Result<Vec<ohc_builtin_agent::memory_store::EmbeddingRecord>, String> {
+        let client = LocalLLMClient::new();
+        let embedding = client.generate_embedding(query).await.map_err(|e| e.to_string())?;
+        self.memory_consolidator.layer.retrieve_cross_department_context(tenant_id, &embedding, limit).await
     }
 
     pub async fn register_department(&self, department: Arc<tokio::sync::RwLock<dyn Department>>) {
@@ -267,4 +299,188 @@ impl DepartmentOrchestrator {
         }
     }
 
+}
+
+pub async fn setup_dummy_orchestrator(db: Arc<crate::db::DB>) -> Arc<DepartmentOrchestrator> {
+    let repo = Arc::new(ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect_lazy("sqlite::memory:").unwrap()));
+    let consolidator = Arc::new(MemoryConsolidator::new(repo));
+    let orchestrator = Arc::new(DepartmentOrchestrator::new(db, consolidator));
+
+    let operations = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::Operations,
+        vec!["system:order_created".to_string(), "operations:audit".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(operations.clone()).await;
+
+    let marketing = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::Marketing,
+        vec!["system:new_product".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(marketing.clone()).await;
+
+    let sales = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::Sales,
+        vec!["system:lead_captured".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(sales.clone()).await;
+
+    let customer_success = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::CustomerSuccess,
+        vec!["system:ticket_opened".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(customer_success.clone()).await;
+
+    let finance = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::Finance,
+        vec!["system:payment_failed".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(finance.clone()).await;
+
+    let legal = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::Legal,
+        vec!["system:contract_signed".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(legal.clone()).await;
+
+    let advisory = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+        DepartmentType::BusinessAdvisory,
+        vec!["system:monthly_report_generated".to_string()],
+        orchestrator.clone()
+    )));
+    orchestrator.register_department(advisory.clone()).await;
+
+    orchestrator
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::DbStore;
+
+    #[tokio::test]
+    async fn test_orchestrator_routing() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Failed to initialize database");
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = Arc::new(crate::db::DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) });
+
+        let repo = Arc::new(ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect_lazy("sqlite::memory:").unwrap()));
+        let consolidator = Arc::new(MemoryConsolidator::new(repo));
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db, consolidator));
+
+        let operations = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+            DepartmentType::Operations,
+            vec!["OrderPlaced".to_string()],
+            orchestrator.clone()
+        )));
+        orchestrator.register_department(operations.clone()).await;
+
+        let finance = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+            DepartmentType::Finance,
+            vec!["OrderPlaced".to_string()],
+            orchestrator.clone()
+        )));
+        orchestrator.register_department(finance.clone()).await;
+
+        let marketing = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+            DepartmentType::Marketing,
+            vec!["NewProductAdded".to_string()],
+            orchestrator.clone()
+        )));
+        orchestrator.register_department(marketing.clone()).await;
+
+
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: "tenant1".to_string(),
+            event_type: "OrderPlaced".to_string(),
+            payload: serde_json::json!({"order_id": "123"}),
+        };
+
+        let result = orchestrator.dispatch_event(event).await;
+        assert!(result.is_ok());
+
+        // Verify routing works
+        let ops_lock = operations.read().await;
+        assert_eq!(ops_lock.received_events.lock().unwrap().len(), 1);
+
+        let fin_lock = finance.read().await;
+        assert_eq!(fin_lock.received_events.lock().unwrap().len(), 1);
+
+        let mkt_lock = marketing.read().await;
+        assert_eq!(mkt_lock.received_events.lock().unwrap().len(), 0);
+
+    }
+
+    #[tokio::test]
+    async fn test_approval_workflow_tenant_isolation() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Failed to initialize database");
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = Arc::new(crate::db::DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) });
+
+        if let DbStore::Sqlite(pool) = &db.store {
+            let _ = sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_approvals (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    action_risk TEXT NOT NULL DEFAULT 'HIGH',
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                );"
+            )
+            .execute(pool)
+            .await;
+        }
+
+        let orchestrator = setup_dummy_orchestrator(db).await;
+
+        let req = ApprovalRequest {
+            id: "req1".to_string(),
+            tenant_id: "tenant1".to_string(),
+            department: DepartmentType::CustomerSuccess,
+            description: "Reply to angry customer".to_string(),
+            status: ApprovalStatus::Pending,
+            action_risk: "HIGH".to_string(),
+        };
+
+        orchestrator.add_approval_request(req).await;
+
+        // Tenant 2 shouldn't see Tenant 1's approvals
+        let pending_t2 = orchestrator.get_pending_approvals("tenant2").await;
+        assert_eq!(pending_t2.len(), 0);
+
+        // Tenant 1 should see it
+        let pending_t1 = orchestrator.get_pending_approvals("tenant1").await;
+        assert_eq!(pending_t1.len(), 1);
+
+        // Tenant 2 cannot approve Tenant 1's request
+        let result = orchestrator.decide_approval("req1", "tenant2", true).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Unauthorized");
+
+        // Tenant 1 can approve
+        let result = orchestrator.decide_approval("req1", "tenant1", true).await;
+        assert!(result.is_ok());
+
+        let pending_after = orchestrator.get_pending_approvals("tenant1").await;
+        assert_eq!(pending_after.len(), 0);
+    }
 }
