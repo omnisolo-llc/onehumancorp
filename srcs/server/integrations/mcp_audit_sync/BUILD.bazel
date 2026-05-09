@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mcp_audit_sync",
+    srcs = ["tool.go"],
+    importpath = "ohc/server/integrations/mcp_audit_sync",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "//srcs/server/telemetry",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "mcp_audit_sync_test",
+    srcs = ["tool_test.go"],
+    embed = [":mcp_audit_sync"],
+)
