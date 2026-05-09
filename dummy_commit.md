@@ -1,1 +1,1 @@
-Maintainer: Zero WIP exit
+🧙 Wizard: Zero WIP exit
