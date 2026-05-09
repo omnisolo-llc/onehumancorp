@@ -1,3 +1,12 @@
+## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Added distinct E2E tests for the onboarding functionality to ensure reliable scaling.
+
+### Privacy/Offline Improvements
+- No specific privacy/offline changes in this release.
+
+
 ## v0.4.40 (Cloud) / v0.4.40+1 (Standalone)
 
 ### Cloud Scaling Improvements
