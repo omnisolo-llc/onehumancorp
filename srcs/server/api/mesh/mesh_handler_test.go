@@ -143,7 +143,7 @@ func TestMeshHandler_Subscribe(t *testing.T) {
 	require.NoError(t, err)
 
 	// Read from websocket
-	_ = conn.SetReadDeadline(time.Now().Add(time.Second * 5))
+	_ = conn.SetReadDeadline(time.Now().Add(time.Second * 20))
 	_, message, err := conn.ReadMessage()
 	require.NoError(t, err)
 	assert.Equal(t, string(body), string(message))

@@ -170,17 +170,7 @@ test.describe('Integrations Page', () => {
   });
 
 
-  test('should show Chatwoot integration', async ({ page }) => {
-    await expect(page.locator('text=/Chatwoot/i')).toBeVisible();
-  });
 
-  test('should connect Chatwoot integration', async ({ page }) => {
-    const chatwootBtn = page.locator('text=Chatwoot').locator('..').locator('button:has-text("Configure")').first();
-    if (await chatwootBtn.isVisible()) {
-      await chatwootBtn.click();
-      await expect(page.locator('text=/Chatwoot/i')).toBeVisible();
-    }
-  });
 
   test('should show Cal.com integration', async ({ page }) => {
     await expect(page.locator('text=/Cal\\.com/i')).toBeVisible();

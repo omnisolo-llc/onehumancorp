@@ -1,7 +1,6 @@
 pub mod catalog;
 pub mod registry;
 pub mod chat;
-pub mod chatwoot;
 pub mod githubissues;
 pub mod imessage;
 pub mod jira;

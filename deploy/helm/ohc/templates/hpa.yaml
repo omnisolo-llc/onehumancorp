@@ -60,39 +60,6 @@ spec:
           averageUtilization: {{ .Values.ohcCore.autoscaling.targetMemoryUtilizationPercentage }}
 {{- end }}
 ---
-{{- if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled }}
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: {{ include "ohc.fullname" . }}-chatwoot
-  labels:
-    {{- include "ohc.labels" . | nindent 4 }}
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: {{ include "ohc.fullname" . }}-chatwoot
-  minReplicas: {{ .Values.chatwoot.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.chatwoot.autoscaling.maxReplicas }}
-  metrics:
-    - type: ContainerResource
-      containerResource:
-        name: cpu
-        container: chatwoot
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.chatwoot.autoscaling.targetCPUUtilizationPercentage }}
-{{- if .Values.chatwoot.autoscaling.targetMemoryUtilizationPercentage }}
-    - type: ContainerResource
-      containerResource:
-        name: memory
-        container: chatwoot
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.chatwoot.autoscaling.targetMemoryUtilizationPercentage }}
-{{- end }}
-{{- end }}
----
 {{- if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
