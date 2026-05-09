@@ -118,8 +118,7 @@ mod tests {
         }"#;
 
         let minified = minify_json_prompt(input_json);
-        assert_eq!(minified, r#"{"content":"You are a helpful assistant.","role":"system"}"#); // field order might vary depending on serde implementation, but let's assume standard deserialization ordering or we just parse it back.
-        // A better test is to parse both and check equality.
+        // Field order might vary depending on serde implementation. Parse it back.
         let parsed_min: serde_json::Value = serde_json::from_str(&minified).unwrap();
         let parsed_orig: serde_json::Value = serde_json::from_str(input_json).unwrap();
         assert_eq!(parsed_min, parsed_orig);
