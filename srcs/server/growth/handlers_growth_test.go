@@ -114,3 +114,63 @@ func TestHandleTeamInviteAccept(t *testing.T) {
 		t.Errorf("expected Status 'ACCEPTED', got '%s'", resp.Status)
 	}
 }
+
+func TestHandleReferralClick_MissingID(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	svc := NewGrowthService(db)
+
+	reqBody := `{"id": ""}`
+	req, err := http.NewRequest("POST", "/api/growth/referrals/click", bytes.NewBufferString(reqBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(svc.HandleReferralClick)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
+	}
+}
+
+func TestHandleReferralConvert_MissingID(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	svc := NewGrowthService(db)
+
+	reqBody := `{"id": ""}`
+	req, err := http.NewRequest("POST", "/api/growth/referrals/convert", bytes.NewBufferString(reqBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(svc.HandleReferralConvert)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
+	}
+}
+
+func TestHandleTeamInviteAccept_MissingID(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	svc := NewGrowthService(db)
+
+	reqBody := `{"id": ""}`
+	req, err := http.NewRequest("POST", "/api/growth/team-invites/accept", bytes.NewBufferString(reqBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(svc.HandleTeamInviteAccept)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
+	}
+}

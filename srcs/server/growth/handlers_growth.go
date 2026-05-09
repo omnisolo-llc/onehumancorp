@@ -57,6 +57,10 @@ func (s *GrowthService) HandleReferralClick(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
+	if req.ID == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
+		return
+	}
 
 	var ref Referral
 	err := s.db.QueryRow(`
@@ -86,6 +90,10 @@ func (s *GrowthService) HandleReferralConvert(w http.ResponseWriter, r *http.Req
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
+	if req.ID == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
+		return
+	}
 
 	var ref Referral
 	err := s.db.QueryRow(`
@@ -113,6 +121,10 @@ func (s *GrowthService) HandleTeamInviteAccept(w http.ResponseWriter, r *http.Re
 	var req IDRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+	if req.ID == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
 		return
 	}
 
