@@ -35,7 +35,7 @@ mod tests {
                     .execute(&mut *tx).await;
 
                 // Insert a customer for tenant 2
-                let _ = sqlx::query("INSERT INTO customers (id, tenant_id, name) VALUES ($1, $2, 'Test Customer') ON CONFLICT DO NOTHING")
+                let _ = sqlx::query("INSERT INTO test_customer (id, tenant_id, name) VALUES ($1, $2, 'Test Customer') ON CONFLICT DO NOTHING")
                     .bind(customer_id)
                     .bind(org_id)
                     .execute(&mut *tx).await;
@@ -54,7 +54,7 @@ mod tests {
             Ok(mut tx) => {
                 // Call the actual vulnerable function to test application logic
                 crate::utils::auth_utils::set_org_context(&mut *tx, "").await.expect("Failed to call set_org_context");
-                let result = sqlx::query("SELECT COUNT(*) FROM customers")
+                let result = sqlx::query("SELECT COUNT(*) FROM test_customer")
                     .fetch_one(&mut *tx).await;
                 let row = result.expect("Query failed to execute");
                 let count: i64 = row.get(0);
@@ -71,7 +71,7 @@ mod tests {
                 tx.execute(format!("SET LOCAL app.current_tenant = '{}'", tenant_1).as_str()).await.expect("Failed to set tenant context");
 
                 // Query with a different tenant_id (tenant_2)
-                let result = sqlx::query("SELECT COUNT(*) FROM customers WHERE tenant_id = '00000000-0000-0000-0000-000000000002'")
+                let result = sqlx::query("SELECT COUNT(*) FROM test_customer WHERE tenant_id = '00000000-0000-0000-0000-000000000002'")
                     .fetch_one(&mut *tx).await;
 
                 let row = result.expect("Query failed to execute");
