@@ -2,84 +2,62 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Wizard Refinement E2E', () => {
 
-  test('Full Setup Wizard journey (Day One)', async ({ page }) => {
-    await page.goto('/login');
-    // Simulate navigation to Setup Wizard
-    await page.locator('button:has-text("🚀 Start My Business")').first().click();
+  test('Full Setup Wizard journey (Day One Conversational Onboarding)', async ({ page }) => {
+    await page.goto('/');
 
-    // Step 1: Business Type
+    // Step 1: Start chat with Promoter
     await expect(page.locator('text=/What kind of business/i')).toBeVisible();
-    await page.locator('text=Online Store').first().click();
 
-    // Step 2: Name & Description
-    await page.fill('input[placeholder*="Maya\'s Cakes"]', 'E2E Bakery');
-    await page.locator('button:has-text("Next")').click();
+    // Enter prompt simulating a user building a custom bakery storefront
+    const input = page.locator('input[placeholder*="e.g."]');
+    await input.fill('I bake custom cakes');
 
-    // Step 3: What do you sell
-    await page.locator('text=Physical products').first().click();
-    await page.locator('button:has-text("Next")').click();
+    // Press the send button
+    const sendBtn = page.locator('button').locator('nth=1'); // fallback if key not accessible
+    await sendBtn.click();
 
-    // Step 4: Payments
-    await page.locator('text=Online only').first().click();
+    // AI Processing state
+    await expect(page.locator('text=I have generated a storefront preview for you.')).toBeVisible({ timeout: 10000 });
 
-    // Step 5: Admin Account
-    await page.fill('input[placeholder*="you@email.com"]', 'admin@e2e.test');
-    await page.locator('button:has-text("Next")').click();
+    // Wait for transition to preview
+    await page.waitForTimeout(1500);
 
-    // Step 6: Template
-    await page.locator('text=Modern').first().click();
-
-    // Step 7: Product
-    await page.fill('input[placeholder*="Birthday Cake"]', 'Test Cake');
-    await page.locator('button:has-text("Next")').click();
-
-    // Step 8: Domain
-    await page.locator('text=Free OHC Domain').first().click();
-
-    // Step 9: Review & Launch
-    await expect(page.locator('text=/Ready to launch/i')).toBeVisible();
-    await expect(page.locator('text=Business: E2E Bakery')).toBeVisible();
+    // Verify Preview State
+    await expect(page.locator('text=Live Preview')).toBeVisible();
+    await expect(page.locator('text=Custom Bakery')).toBeVisible();
 
     const launchBtn = page.locator('button:has-text("Launch My Business")').first();
     await expect(launchBtn).toBeVisible();
     await launchBtn.click();
 
-    // Verify Success State
-    await expect(page.locator('text=/Success! Your business is live/i')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('button:has-text("Copy Store Link")')).toBeVisible();
+    // Navigate to Dashboard Check
+    await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 5000 });
   });
-
 
   test('Zero to Live - Full Journey & Dashboard Verification', async ({ page }) => {
     // 1. Onboarding
-    await page.goto('/login');
-    await page.locator('button:has-text("🚀 Start My Business")').first().click();
+    await page.goto('/');
 
-    // Setup Wizard steps
+    // Start chat with Promoter
     await expect(page.locator('text=/What kind of business/i')).toBeVisible();
-    await page.locator('text=Online Store').first().click();
-    await page.fill('input[placeholder*="Maya\'s Cakes"]', 'My New Bakery');
-    await page.locator('button:has-text("Next")').click();
-    await page.locator('text=Physical products').first().click();
-    await page.locator('button:has-text("Next")').click();
-    await page.locator('text=Online only').first().click();
-    await page.fill('input[placeholder*="you@email.com"]', 'founder@bakery.test');
-    await page.locator('button:has-text("Next")').click();
-    await page.locator('text=Modern').first().click();
-    await page.fill('input[placeholder*="Birthday Cake"]', 'Signature Cake');
-    await page.locator('button:has-text("Next")').click();
-    await page.locator('text=Free OHC Domain').first().click();
+    const input = page.locator('input[placeholder*="e.g."]');
+    await input.fill('My New Bakery');
 
-    // Review & Launch
-    await expect(page.locator('text=/Ready to launch/i')).toBeVisible();
+    // Press the send button
+    const sendBtn = page.locator('button').locator('nth=1'); // fallback if key not accessible
+    await sendBtn.click();
+
+    await expect(page.locator('text=I have generated a storefront preview for you.')).toBeVisible({ timeout: 10000 });
+
+    // Wait for transition to preview
+    await page.waitForTimeout(1500);
+
     const launchBtn = page.locator('button:has-text("Launch My Business")').first();
+    await expect(launchBtn).toBeVisible();
     await launchBtn.click();
 
-    // Verify Success State
-    await expect(page.locator('text=/Success! Your business is live/i')).toBeVisible({ timeout: 10000 });
-
-    // Navigate to Dashboard
-    await page.goto('/');
+    // Navigate to Dashboard Check
+    await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 5000 });
 
     // 2. Verify Dashboard Mobile-First Layout
     // Check Top: Weekly Revenue + Actionable Insights

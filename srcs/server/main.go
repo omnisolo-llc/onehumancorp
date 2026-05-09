@@ -110,6 +110,7 @@ func main() {
 	onboardingAPI := onboarding.NewAPIHandler(onboardingService)
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/api/onboarding/chat", onboardingAPI.HandleChat)
 	mux.HandleFunc("/api/onboarding/start", onboardingAPI.HandleStartOnboarding)
 	mux.HandleFunc("/api/onboarding/status", onboarding.TenantAuthMiddleware(onboardingAPI.HandleGetStatus))
 	mux.HandleFunc("/api/onboarding/state", onboarding.TenantAuthMiddleware(func(w http.ResponseWriter, r *http.Request) {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/unified_inbox_screen.dart';
 import 'screens/business_setup_wizard_screen.dart';
+import 'screens/conversational_onboarding_screen.dart';
 import 'screens/help/help_center_screen.dart';
 import 'screens/help/ai_help_chat_screen.dart';
 import 'screens/help/video_tutorials_screen.dart';
@@ -30,7 +31,7 @@ class OHCApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
       ),
-      home: const BusinessSetupWizardScreen(),
+      home: const ConversationalOnboardingScreen(),
     );
   }
 }
