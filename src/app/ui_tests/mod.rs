@@ -105,3 +105,4 @@ pub mod miser_e2e;
 pub mod guide_onboarding_e2e;
 pub mod guide_onboarding_e2e_extended;
 pub mod website_builder_e2e_tests;
+pub mod echo_ux_friction_fixes_e2e;
