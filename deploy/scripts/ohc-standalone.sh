@@ -78,7 +78,7 @@ echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 # Launch the Prometheus agent
 if [ "$OHC_TELEMETRY_ENABLED" = "true" ]; then
   docker rm -f ohc-prometheus-agent >/dev/null 2>&1 || true
-  docker run -d --name ohc-prometheus-agent \
+  docker run -d --name ohc-prometheus-agent --rm \
     --memory="64m" --cpus="0.05" \
     --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
     --network host \
@@ -100,7 +100,6 @@ function cleanup {
   find ".cache/" -type f -delete > /dev/null 2>&1 || true
 
   docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
-  docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
 
   # Wait for processes to exit
   wait $APP_PID 2>/dev/null || true
@@ -114,4 +113,4 @@ trap cleanup EXIT INT TERM
 
 echo -e "\n${BOLD}${GREEN}Standalone Runtime is active. Press Ctrl+C to terminate.${RESET}"
 # Wait indefinitely for processes
-wait $APP_PID $SERVER_PID 2>/dev/null || true
+wait $APP_PID $SERVER_PID $PRUNE_PID 2>/dev/null || true
