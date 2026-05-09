@@ -195,7 +195,7 @@ impl PgTransport {
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
-        let subscriber_id = "builtin_agent_node".to_string();
+        let subscriber_id = std::env::var("INSTANCE_ID").unwrap_or_else(|_| "builtin_agent_node".to_string());
         let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = $1")
             .bind(&subscriber_id)
             .fetch_optional(&pool)
@@ -266,11 +266,6 @@ impl MeshTransport for PgTransport {
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
-
-        // Deliver to local subscribers without polling delay
-        if let Some(tx) = self.subs.get(topic) {
-            let _ = tx.send(message);
-        }
 
         Ok(())
     }
@@ -423,7 +418,7 @@ impl SqliteTransport {
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
-        let subscriber_id = "builtin_agent_node".to_string();
+        let subscriber_id = std::env::var("INSTANCE_ID").unwrap_or_else(|_| "builtin_agent_node".to_string());
         let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
             .bind(&subscriber_id)
             .fetch_optional(&pool)
@@ -490,11 +485,6 @@ impl MeshTransport for SqliteTransport {
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
-
-        // Deliver to local subscribers without polling delay
-        if let Some(tx) = self.subs.get(topic) {
-            let _ = tx.send(message);
-        }
 
         Ok(())
     }

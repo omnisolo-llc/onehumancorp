@@ -258,7 +258,7 @@ impl IpcBus {
         let subs = self.subs.clone();
 
         tokio::spawn(async move {
-            let subscriber_id = "standalone_node".to_string();
+            let subscriber_id = std::env::var("INSTANCE_ID").unwrap_or_else(|_| "standalone_node".to_string());
             let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM bus_checkpoints WHERE subscriber_id = ?")
                 .bind(&subscriber_id)
                 .fetch_optional(&pool)
