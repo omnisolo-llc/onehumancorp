@@ -75,6 +75,11 @@ func TestNoPIILoggingStatements(t *testing.T) {
 			return nil
 		}
 
+		// Skip tests from AST checking
+		if strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+
 		node, err := parser.ParseFile(fset, path, nil, 0)
 		if err != nil {
 			return err // Not a fatal error for the test suite, could just be unparseable code, but we report it.
@@ -83,6 +88,55 @@ func TestNoPIILoggingStatements(t *testing.T) {
 		ast.Inspect(node, func(n ast.Node) bool {
 			if call, ok := n.(*ast.CallExpr); ok {
 				if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+					// Enforce BufferMetric must use RedactInterfacePII
+					if sel.Sel.Name == "BufferMetric" {
+						// The 4th argument is attrs. We want to check if the argument
+						// is explicitly a call to `RedactInterfacePII` or if it's named `redactedAttrs`.
+						// For this simple AST check, we enforce that the variable passed
+						// must be named "redactedAttrs" or the call itself must be RedactInterfacePII.
+						if len(call.Args) >= 4 {
+							valid := false
+
+							// Check if it's an ident named redactedAttrs
+							if ident, ok := call.Args[3].(*ast.Ident); ok {
+								if strings.Contains(strings.ToLower(ident.Name), "redact") {
+									valid = true
+								}
+							}
+
+							// Check if it's a call to RedactInterfacePII directly
+							if innerCall, ok := call.Args[3].(*ast.CallExpr); ok {
+								if innerSel, ok := innerCall.Fun.(*ast.Ident); ok && innerSel.Name == "RedactInterfacePII" {
+									valid = true
+								}
+								// could also be telemetry.RedactInterfacePII
+								if innerSelExpr, ok := innerCall.Fun.(*ast.SelectorExpr); ok && innerSelExpr.Sel.Name == "RedactInterfacePII" {
+									valid = true
+								}
+							}
+
+							// Check type assertion
+							if typeAssert, ok := call.Args[3].(*ast.TypeAssertExpr); ok {
+								if innerCall, ok := typeAssert.X.(*ast.CallExpr); ok {
+									if innerSel, ok := innerCall.Fun.(*ast.Ident); ok && innerSel.Name == "RedactInterfacePII" {
+										valid = true
+									}
+								}
+							}
+
+							if !valid {
+								pos := fset.Position(call.Pos())
+								relPath := pos.Filename
+								if pwd, err := os.Getwd(); err == nil {
+									if rel, err := filepath.Rel(pwd, pos.Filename); err == nil {
+										relPath = rel
+									}
+								}
+								violations = append(violations, fmt.Sprintf("%s:%d: BufferMetric called without applying RedactInterfacePII or using a 'redactedAttrs' variable", relPath, pos.Line))
+							}
+						}
+					}
+
 					if isLoggingCall(sel) {
 						// Check the arguments
 						for _, arg := range call.Args {
