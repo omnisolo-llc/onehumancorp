@@ -4142,13 +4142,20 @@ mod e2e_tests {
         assert_eq!(ui.get_step(), 100);
         assert_eq!(ui.get_launching(), false);
 
+        let checklist_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let checklist_opened_clone = checklist_opened.clone();
+        ui.on_show_welcome_checklist(move || {
+            *checklist_opened_clone.borrow_mut() = true;
+        });
+        ui.invoke_show_welcome_checklist();
+        assert!(*checklist_opened.borrow(), "Checklist should be opened from Setup Wizard");
+
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let dashboard_opened_clone = dashboard_opened.clone();
-        ui.on_show_welcome_checklist(move || {
+        ui.on_go_to_dashboard(move || {
             *dashboard_opened_clone.borrow_mut() = true;
         });
-
-        ui.invoke_show_welcome_checklist();
+        ui.invoke_go_to_dashboard();
         assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
 
         let add_products_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -4855,10 +4862,10 @@ mod docs_tests {
         // Step 7: Go to Dashboard
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let dashboard_opened_clone = dashboard_opened.clone();
-        ui.on_show_welcome_checklist(move || {
+        ui.on_go_to_dashboard(move || {
             *dashboard_opened_clone.borrow_mut() = true;
         });
-        ui.invoke_show_welcome_checklist();
+        ui.invoke_go_to_dashboard();
         assert!(*dashboard_opened.borrow(), "Dashboard should be opened from Setup Wizard");
 
         // Final state verification
