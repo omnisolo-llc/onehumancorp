@@ -2495,4 +2495,51 @@ mod e2e_consolidation_tests {
         assert!(remaining_ids.contains(&"keep_1".to_string()), "Should have kept the one with owner override");
         assert!(remaining_ids.contains(&"keep_2".to_string()), "Should have kept the recent record");
     }
+
+    #[tokio::test]
+    async fn test_e2e_auto_resolve_no_conflicts() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[1] = 1.0; // distinctly different, no conflict
+
+        let record_a = EmbeddingRecord {
+            id: "no_conflict_a".to_string(),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "sales".to_string(),
+            content: "Cake price is 50".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: chrono::Utc::now() - chrono::Duration::days(2),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "no_conflict_b".to_string(),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "sales".to_string(),
+            content: "Cake price is 55".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: chrono::Utc::now() - chrono::Duration::days(1),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 2,
+            reliability_score: 80,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        // Auto resolve conflicts
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0, "Should have resolved 0 conflict pairs");
+    }
 }
