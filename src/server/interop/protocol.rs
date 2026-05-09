@@ -67,8 +67,8 @@ impl InteropProtocol {
             state_snapshot_json: state_payload.clone(),
         };
 
-        let mut buf = Vec::new();
-        handoff_msg.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let buf = handoff_msg.encode_to_vec();
 
         let msg = Message {
             topic: "system:state_handoff".to_string(),
@@ -101,17 +101,16 @@ impl InteropProtocol {
                         timestamp_ms: chrono::Utc::now().timestamp_millis(),
                         target_node_id: decoded.source_node_id.clone(),
                     };
-                    let mut buf = Vec::new();
-                    if ack.encode(&mut buf).is_ok() {
-                        let ack_msg = Message {
-                            topic: format!("system:health_ack:{}", decoded.source_node_id),
-                            payload: buf,
-                        };
-                        let bus_clone = bus.clone();
-                        tokio::spawn(async move {
-                            let _ = bus_clone.publish(ack_msg).await;
-                        });
-                    }
+
+                    let buf = ack.encode_to_vec();
+                    let ack_msg = Message {
+                        topic: format!("system:health_ack:{}", decoded.source_node_id),
+                        payload: buf,
+                    };
+                    let bus_clone = bus.clone();
+                    tokio::spawn(async move {
+                        let _ = bus_clone.publish(ack_msg).await;
+                    });
                 }
             }
         });
@@ -142,8 +141,8 @@ impl InteropProtocol {
             source_node_id: self.node_id.clone(),
         };
 
-        let mut buf = Vec::new();
-        ping.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let buf = ping.encode_to_vec();
 
         let msg = Message {
             topic: "system:health_ping".to_string(),
@@ -190,8 +189,8 @@ impl InteropProtocol {
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 
-        let mut buf = Vec::new();
-        dispatch.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let buf = dispatch.encode_to_vec();
 
         let msg = Message {
             topic: format!("system:job_dispatch:{}", tenant_id),
@@ -246,27 +245,26 @@ impl InteropProtocol {
                         node_id: node_id.clone(),
                         timestamp_ms: chrono::Utc::now().timestamp_millis(),
                     };
-                    let mut buf = Vec::new();
-                    if ack.encode(&mut buf).is_ok() {
-                        let ack_msg = Message {
-                            topic: format!("system:job_ack:{}", decoded.job_id),
-                            payload: buf,
-                        };
-                        let bus_clone = bus.clone();
-                        tokio::spawn(async move {
-                            // Retry mechanism to ensure ACK reaches the dispatcher
-                            let mut retries = 0;
-                            let mut delay_ms = 50;
-                            while retries < 5 {
-                                if bus_clone.publish(ack_msg.clone()).await.is_ok() {
-                                    break;
-                                }
-                                retries += 1;
-                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                                delay_ms *= 2; // Exponential backoff
+
+                    let buf = ack.encode_to_vec();
+                    let ack_msg = Message {
+                        topic: format!("system:job_ack:{}", decoded.job_id),
+                        payload: buf,
+                    };
+                    let bus_clone = bus.clone();
+                    tokio::spawn(async move {
+                        // Retry mechanism to ensure ACK reaches the dispatcher
+                        let mut retries = 0;
+                        let mut delay_ms = 50;
+                        while retries < 5 {
+                            if bus_clone.publish(ack_msg.clone()).await.is_ok() {
+                                break;
                             }
-                        });
-                    }
+                            retries += 1;
+                            tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                            delay_ms *= 2; // Exponential backoff
+                        }
+                    });
                 }
             }
         });
@@ -414,8 +412,8 @@ mod tests {
             source_node_id: "sender_node".to_string(),
         };
 
-        let mut buf = Vec::new();
-        ping.encode(&mut buf).unwrap();
+
+        let buf = ping.encode_to_vec();
 
         let msg = Message {
             topic: "system:health_ping".to_string(),
@@ -460,8 +458,8 @@ mod tests {
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 
-        let mut buf = Vec::new();
-        dispatch.encode(&mut buf).unwrap();
+
+        let buf = dispatch.encode_to_vec();
 
         let msg = Message {
             topic: "system:job_dispatch:tenant_x".to_string(),

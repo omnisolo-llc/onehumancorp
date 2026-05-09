@@ -131,8 +131,8 @@ impl HandoffManager {
             entity_type: entity_type.to_string(),
         };
 
-        let mut buf = Vec::new();
-        handoff.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let buf = handoff.encode_to_vec();
 
         self.mesh.publish_with_ack("mesh:state:handoff", buf).await
     }
@@ -242,8 +242,8 @@ mod tests {
             entity_type: "agent_memories".to_string(),
         };
 
-        let mut buf = Vec::new();
-        handoff.encode(&mut buf).unwrap();
+
+        let buf = handoff.encode_to_vec();
 
         mesh.publish("mesh:state:handoff", buf).await.unwrap();
 
@@ -267,8 +267,8 @@ mod tests {
             timestamp: chrono::Utc::now().timestamp() - 100, // Older timestamp
             entity_type: "agent_memories".to_string(),
         };
-        let mut buf_older = Vec::new();
-        older_handoff.encode(&mut buf_older).unwrap();
+
+        let buf_older = older_handoff.encode_to_vec();
         mesh.publish("mesh:state:handoff", buf_older).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -289,8 +289,8 @@ mod tests {
             timestamp: chrono::Utc::now().timestamp() + 100, // Newer timestamp
             entity_type: "agent_memories".to_string(),
         };
-        let mut buf_newer = Vec::new();
-        newer_handoff.encode(&mut buf_newer).unwrap();
+
+        let buf_newer = newer_handoff.encode_to_vec();
         mesh.publish("mesh:state:handoff", buf_newer).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -312,8 +312,8 @@ mod tests {
             entity_type: "agent_memories".to_string(),
         };
 
-        let mut buf2 = Vec::new();
-        handoff2.encode(&mut buf2).unwrap();
+
+        let buf2 = handoff2.encode_to_vec();
 
         mesh.publish("mesh:state:handoff", buf2).await.unwrap();
 
@@ -379,8 +379,8 @@ mod tests {
             proposed_content: "".to_string(),
         };
 
-        let mut task_buf = Vec::new();
-        shared_task.encode(&mut task_buf).unwrap();
+
+        let task_buf = shared_task.encode_to_vec();
 
         let handoff = SyncStateHandoff {
             tenant_id: "test_tenant".to_string(),
@@ -391,8 +391,8 @@ mod tests {
             entity_type: "shared_tasks".to_string(),
         };
 
-        let mut buf = Vec::new();
-        handoff.encode(&mut buf).unwrap();
+
+        let buf = handoff.encode_to_vec();
 
         mesh.publish("mesh:state:handoff", buf).await.unwrap();
 

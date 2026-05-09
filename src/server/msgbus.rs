@@ -138,8 +138,8 @@ impl Bus for RedisBus {
     async fn publish(&self, msg: Message) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
         use prost::Message as ProstMessage;
-        let mut buf = Vec::new();
-        msg.encode(&mut buf).unwrap();
+
+        let buf = msg.encode_to_vec();
 
         let mut retries = 0;
         loop {
@@ -303,8 +303,8 @@ impl IpcBus {
 impl Bus for IpcBus {
     async fn publish(&self, msg: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
-        let mut payload = Vec::new();
-        msg.encode(&mut payload).unwrap();
+
+        let payload = msg.encode_to_vec();
 
         let mut retries = 0;
         loop {
@@ -379,8 +379,8 @@ impl NatsBus {
 impl Bus for NatsBus {
     async fn publish(&self, msg: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
-        let mut buf = Vec::new();
-        msg.encode(&mut buf).unwrap();
+
+        let buf = msg.encode_to_vec();
 
         let mut retries = 0;
         loop {
@@ -422,25 +422,27 @@ impl Bus for NatsBus {
 impl DistributedLock for NatsBus {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
-        let payload = format!("{}:{}", owner, expires_at);
+        use prost::Message;
+        let payload_msg = crate::interop::protocol::proto::LockPayload {
+            owner: owner.to_string(),
+            expires_at,
+        };
+        let payload = payload_msg.encode_to_vec();
 
         if let Ok(Some(entry)) = self.kv.entry(resource).await {
-            let entry_str = String::from_utf8_lossy(&entry.value);
-            if let Some((stored_owner, stored_exp)) = entry_str.split_once(':') {
-                if let Ok(exp) = stored_exp.parse::<i64>() {
-                    if exp <= chrono::Utc::now().timestamp() || stored_owner == owner {
-                        match self.kv.update(resource, payload.clone().into_bytes().into(), entry.revision).await {
-                            Ok(_) => return Ok(true),
-                            Err(_) => return Ok(false),
-                        }
-                    } else {
-                        return Ok(false);
+            if let Ok(stored_payload) = crate::interop::protocol::proto::LockPayload::decode(&entry.value[..]) {
+                if stored_payload.expires_at <= chrono::Utc::now().timestamp() || stored_payload.owner == owner {
+                    match self.kv.update(resource, payload.clone().into(), entry.revision).await {
+                        Ok(_) => return Ok(true),
+                        Err(_) => return Ok(false),
                     }
+                } else {
+                    return Ok(false);
                 }
             }
         }
 
-        match self.kv.create(resource, payload.into_bytes().into()).await {
+        match self.kv.create(resource, payload.into()).await {
             Ok(_) => Ok(true),
             Err(e) => {
                 if e.to_string().contains("wrong last sequence") {
@@ -454,12 +456,16 @@ impl DistributedLock for NatsBus {
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         if let Ok(Some(entry)) = self.kv.entry(resource).await {
-            let entry_str = String::from_utf8_lossy(&entry.value);
-            if let Some((stored_owner, _)) = entry_str.split_once(':') {
-                if stored_owner == owner {
+            use prost::Message;
+            if let Ok(stored_payload) = crate::interop::protocol::proto::LockPayload::decode(&entry.value[..]) {
+                if stored_payload.owner == owner {
                     // Update with immediately expired lock to allow atomic replacement
-                    let payload = format!("{}:0", owner);
-                    let _ = self.kv.update(resource, payload.into_bytes().into(), entry.revision).await;
+                    let payload_msg = crate::interop::protocol::proto::LockPayload {
+                        owner: owner.to_string(),
+                        expires_at: 0,
+                    };
+                    let payload = payload_msg.encode_to_vec();
+                    let _ = self.kv.update(resource, payload.into(), entry.revision).await;
                 }
             }
         }
@@ -578,8 +584,9 @@ impl HealthMonitor {
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             source_node_id: node_id,
         };
-        let mut buf = Vec::new();
-        prost::Message::encode(&ping, &mut buf).map_err(|e| e.to_string())?;
+
+        use prost::Message as ProstMessage;
+        let buf = ping.encode_to_vec();
 
         let msg = Message {
             topic: "system:health_ping".to_string(),

@@ -39,8 +39,8 @@ impl PubSubManager {
             payload: payload.clone(),
             msg_id: uuid::Uuid::new_v4().to_string(),
         };
-        let mut buf = Vec::new();
-        let _ = event.encode(&mut buf);
+
+        let buf = event.encode_to_vec();
 
         let message = crate::ohc::orchestration::TeammateMeshEvent {
             agent_id: "mcp".to_string(),

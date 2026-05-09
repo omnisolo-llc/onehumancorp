@@ -211,8 +211,8 @@ impl TaskDecompositionService {
 
                 let proto_task = task.clone().into_proto();
                 use prost::Message;
-                let mut payload_bytes = Vec::new();
-                let _ = proto_task.encode(&mut payload_bytes);
+
+                let payload_bytes = proto_task.encode_to_vec();
                 let _ = self.mesh.publish_with_ack("task.assigned", payload_bytes).await;
 
                 Ok(Some(task))
@@ -312,8 +312,8 @@ impl TaskDecompositionService {
 
                 let proto_task = task.clone().into_proto();
                 use prost::Message;
-                let mut payload_bytes = Vec::new();
-                let _ = proto_task.encode(&mut payload_bytes);
+
+                let payload_bytes = proto_task.encode_to_vec();
                 let _ = self.mesh.publish_with_ack("task.assigned", payload_bytes).await;
 
                 Ok(Some(task))

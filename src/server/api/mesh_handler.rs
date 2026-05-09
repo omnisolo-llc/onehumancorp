@@ -60,14 +60,11 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
 
     let mut send_task = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
-            let mut buf = Vec::new();
-            if msg.encode(&mut buf).is_ok() {
-                let text = STANDARD.encode(&buf);
-                if sender.send(WsMessage::Text(text.into())).await.is_err() {
-                    break;
-                }
-            } else {
-                tracing::error!("Failed to encode mesh message to protobuf");
+
+            let buf = msg.encode_to_vec();
+            let text = STANDARD.encode(&buf);
+            if sender.send(WsMessage::Text(text.into())).await.is_err() {
+                break;
             }
         }
     });
@@ -140,8 +137,8 @@ mod tests {
             payload: b"ws_test".to_vec(),
             msg_id: uuid::Uuid::new_v4().to_string(),
         };
-        let mut buf = Vec::new();
-        test_msg.encode(&mut buf).unwrap();
+
+        let buf = test_msg.encode_to_vec();
         let b64 = base64::engine::general_purpose::STANDARD.encode(&buf);
         ws_stream.send(TungsteniteMessage::Text(b64.into())).await.unwrap();
 
