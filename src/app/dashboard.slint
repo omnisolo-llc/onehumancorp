@@ -163,10 +163,10 @@ export component Dashboard inherits Window { // milestones
                 HorizontalBox {
                     spacing: 16px;
                     alignment: start;
-                    StatCard { label: "Store Rating"; value: generative_score; value_color: #34d399; }
+                    StatCard { label: "Business Health"; value: generative_score; value_color: #34d399; }
                     Button { text: "?"; width: 44px; height: 44px; clicked => { show_health_hint = !show_health_hint; } }
                 }
-                if (show_health_hint) : Text { text: "Your Store Rating is an AI-calculated score of your business's overall health and performance."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+                if (show_health_hint) : Text { text: "Your Business Health is an AI-calculated score of your business's overall health and performance."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             }
 
             // Small Screen (List)
@@ -181,13 +181,13 @@ export component Dashboard inherits Window { // milestones
                 HorizontalBox {
                     spacing: 16px;
                     StatCard { label: "Ongoing Tasks"; value: tasks_in_progress_count; value_color: #f59e0b; }
-                    StatCard { label: "Store Rating"; value: generative_score; value_color: #34d399; }
+                    StatCard { label: "Business Health"; value: generative_score; value_color: #34d399; }
                 }
                 HorizontalBox {
                     alignment: start;
-                    Button { text: "? Learn about Store Rating"; height: 44px; clicked => { show_health_hint = !show_health_hint; } }
+                    Button { text: "? Learn about Business Health"; height: 44px; clicked => { show_health_hint = !show_health_hint; } }
                 }
-                if (show_health_hint) : Text { text: "Your Store Rating is an AI-calculated score of your business's overall health and performance."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+                if (show_health_hint) : Text { text: "Your Business Health is an AI-calculated score of your business's overall health and performance."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             }
         }
 
