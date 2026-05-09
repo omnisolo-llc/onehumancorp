@@ -425,6 +425,48 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                         dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
                         let dash_weak = dashboard.as_weak();
+
+                                        // -------------------------------------------------------------------------
+                                        // Scribe Documentation Feature Wiring
+                                        // -------------------------------------------------------------------------
+                                        let scribe_dashboard = app::ScribeFeatureDashboard::new().unwrap();
+                                        let scribe_dashboard_weak = scribe_dashboard.as_weak();
+
+                                        let help_center = app::HelpCenter::new().unwrap();
+                                        let ai_chat = app::AiHelpChat::new().unwrap();
+                                        let walkthrough = app::InteractiveWalkthrough::new().unwrap();
+                                        let videos = app::VideoTutorials::new().unwrap();
+                                        let api_docs = app::ApiDocs::new().unwrap();
+                                        let release_notes = app::ReleaseNotes::new().unwrap();
+
+                                        let hc_weak = help_center.as_weak();
+                                        let ai_weak = ai_chat.as_weak();
+                                        let wt_weak = walkthrough.as_weak();
+                                        let vid_weak = videos.as_weak();
+                                        let api_weak = api_docs.as_weak();
+                                        let rn_weak = release_notes.as_weak();
+
+                                        scribe_dashboard.on_open_help_center(move || { if let Some(w) = hc_weak.upgrade() { w.show().unwrap(); } });
+                                        scribe_dashboard.on_open_ai_chat(move || { if let Some(w) = ai_weak.upgrade() { w.show().unwrap(); } });
+                                        scribe_dashboard.on_open_walkthrough(move || { if let Some(w) = wt_weak.upgrade() { w.show().unwrap(); } });
+                                        scribe_dashboard.on_open_video_tutorials(move || { if let Some(w) = vid_weak.upgrade() { w.show().unwrap(); } });
+                                        scribe_dashboard.on_open_api_docs(move || { if let Some(w) = api_weak.upgrade() { w.show().unwrap(); } });
+                                        scribe_dashboard.on_open_release_notes(move || { if let Some(w) = rn_weak.upgrade() { w.show().unwrap(); } });
+
+                                        Box::leak(Box::new(scribe_dashboard));
+                                        Box::leak(Box::new(help_center));
+                                        Box::leak(Box::new(ai_chat));
+                                        Box::leak(Box::new(walkthrough));
+                                        Box::leak(Box::new(videos));
+                                        Box::leak(Box::new(api_docs));
+                                        Box::leak(Box::new(release_notes));
+
+                                        dashboard.on_open_scribe_dashboard(move || {
+                                            if let Some(w) = scribe_dashboard_weak.upgrade() {
+                                                w.show().unwrap();
+                                            }
+                                        });
+
                         add_advanced_listener(Box::new(move |val| {
                             if let Some(ui) = dash_weak.upgrade() {
                                 ui.set_is_advanced(val);
