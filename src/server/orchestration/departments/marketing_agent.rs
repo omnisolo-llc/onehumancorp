@@ -2,41 +2,32 @@ use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerTyp
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest};
 use serde_json::Value;
 
-pub struct CustomerSuccessAgent {
+pub struct MarketingAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
 }
 
-impl CustomerSuccessAgent {
+impl MarketingAgent {
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
         Self { orchestrator }
     }
 }
 
 #[async_trait::async_trait]
-impl Department for CustomerSuccessAgent {
+impl Department for MarketingAgent {
     fn department_type(&self) -> DepartmentType {
-        DepartmentType::CustomerSuccess
+        DepartmentType::Marketing
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.order.fulfillment_ready".to_string()]
+        vec!["tenant.insight.trending".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        let config = self.get_config(&event.tenant_id);
-        let risk = if let Some(cfg) = config {
-            if cfg.auto_approve_limits > 0.0 {
-                ActionRisk::AutoExecute
-            } else {
-                ActionRisk::DraftForReview
-            }
-        } else {
-            ActionRisk::DraftForReview
-        };
+        let risk = ActionRisk::DraftForReview;
 
         self.orchestrator.execute_action(
-            DepartmentType::CustomerSuccess,
-            "Send personalized thank you & shipping ETA".to_string(),
+            DepartmentType::Marketing,
+            "Draft social media campaign for trending item".to_string(),
             event.tenant_id.clone(),
             risk,
             event.payload.clone(),
@@ -60,9 +51,9 @@ impl Department for CustomerSuccessAgent {
 }
 
 #[async_trait::async_trait]
-impl BaseAgent for CustomerSuccessAgent {
+impl BaseAgent for MarketingAgent {
     fn agent_id(&self) -> String {
-        "customer_success_agent".to_string()
+        "marketing_agent".to_string()
     }
 
     fn trigger_type(&self) -> AgentTriggerType {
