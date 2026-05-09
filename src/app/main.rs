@@ -1489,45 +1489,114 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let business_manager_ui = app::BusinessManager::new().unwrap();
 
-    let dummy_products = vec![
-        app::UiProduct {
-            id: "prod_1".into(),
-            name: "Custom Vegan Cake".into(),
-            type_label: "Physical".into(),
-            price: "$40.00".into(),
-            inventory_count: 5,
-            is_out_of_stock: false,
-        },
-        app::UiProduct {
-            id: "prod_2".into(),
-            name: "Website Template".into(),
-            type_label: "Digital".into(),
-            price: "$19.00".into(),
-            inventory_count: 0,
-            is_out_of_stock: false,
-        },
-        app::UiProduct {
-            id: "prod_3".into(),
-            name: "Plumbing Repair".into(),
-            type_label: "Service".into(),
-            price: "$150.00".into(),
-            inventory_count: 0,
-            is_out_of_stock: true,
-        },
-    ];
-    let product_model = slint::VecModel::from(dummy_products);
-    let product_model_rc = std::rc::Rc::new(product_model);
-    business_manager_ui.set_products(product_model_rc.clone().into());
 
-    business_manager_ui.on_action_edit({
-        move |_id| {
+    let bm_handle_initial = business_manager_ui.as_weak();
 
+    let load_products = {
+        let bm_handle_inner = bm_handle_initial.clone();
+        async move {
+            let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+            if let Ok(mut dash_client) = ohc::api::v1::dashboard_service_client::DashboardServiceClient::connect(url).await {
+                let mut req = tonic::Request::new(ohc::api::v1::GetDashboardRequest {
+                    organization_id: "system".into(),
+                    mobile_optimized: false,
+                });
+                req.metadata_mut().insert("x-spiffe-id", tonic::metadata::MetadataValue::from_static("spiffe://system"));
+                if let Ok(resp) = dash_client.get_dashboard(req).await {
+                   let snap = resp.into_inner();
+                   let _ = slint::invoke_from_event_loop(move || {
+                       if let Some(ui) = bm_handle_inner.upgrade() {
+                            let products: Vec<app::UiProduct> = snap.products.into_iter().map(|p| app::UiProduct {
+                                id: p.id.into(),
+                                name: p.name.into(),
+                                price: format!("${:.2}", p.price_cents as f64 / 100.0).into(),
+                                type_label: "Physical".into(),
+                                inventory_count: 0,
+                                is_out_of_stock: false,
+                            }).collect();
+                            ui.set_products(slint::ModelRc::new(slint::VecModel::from(products)));
+                       }
+                   });
+                }
+            }
         }
-    });
+    };
 
-    business_manager_ui.on_action_archive({
-        move |_id| {
+    #[cfg(not(target_arch = "wasm32"))]
+    tokio::spawn(load_products);
 
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_futures::spawn_local(load_products);
+
+
+    business_manager_ui.on_action_edit(move |_id| { });
+    business_manager_ui.on_action_archive(move |_id| { });
+
+    let business_manager_handle_submit = business_manager_ui.as_weak();
+
+    business_manager_ui.on_submit({
+        let bm_handle_inner = business_manager_handle_submit.clone();
+        move |type_val, name, desc, price, dur, sch| {
+            let name_str = name.to_string();
+            let desc_str = desc.to_string();
+            let price_str = price.to_string();
+            let strategy = type_val.to_string();
+
+            let value = bm_handle_inner.clone();
+
+            let submit_action = async move {
+                let url_submit_clone2 = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+                if let Ok(mut dash_client) = ohc::api::v1::dashboard_service_client::DashboardServiceClient::connect(url_submit_clone2).await {
+                    let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
+                    let payload = serde_json::json!({
+                        "name": name_str,
+                        "description": desc_str,
+                        "price_cents": price_cents,
+                        "strategy": strategy
+                    }).to_string();
+
+                    let mut req1 = tonic::Request::new(ohc::api::v1::SeedDashboardRequest {
+                        scenario: format!("add_product:{}", payload)
+                    });
+                    req1.metadata_mut().insert("x-spiffe-id", tonic::metadata::MetadataValue::from_static("spiffe://system"));
+
+                    if let Err(e) = dash_client.seed_dashboard(req1).await {
+                        tracing::error!("Error seeding dashboard product: {:?}", e);
+                    }
+
+                    let mut req2 = tonic::Request::new(ohc::api::v1::GetDashboardRequest {
+                        organization_id: "system".into(),
+                        mobile_optimized: false,
+                    });
+                    req2.metadata_mut().insert("x-spiffe-id", tonic::metadata::MetadataValue::from_static("spiffe://system"));
+
+                    if let Ok(resp) = dash_client.get_dashboard(req2).await {
+                       let snap = resp.into_inner();
+                       let _ = slint::invoke_from_event_loop(move || {
+                           if let Some(ui) = value.upgrade() {
+                                let products: Vec<app::UiProduct> = snap.products.into_iter().map(|p| app::UiProduct {
+                                    id: p.id.into(),
+                                    name: p.name.into(),
+                                    price: format!("${:.2}", p.price_cents as f64 / 100.0).into(),
+                                    type_label: "Physical".into(),
+                                    inventory_count: 0,
+                                    is_out_of_stock: false,
+                                }).collect();
+                                ui.set_products(slint::ModelRc::new(slint::VecModel::from(products)));
+                           }
+                       });
+                    }
+                }
+            };
+
+            #[cfg(not(target_arch = "wasm32"))]
+            tokio::spawn(submit_action);
+
+            #[cfg(target_arch = "wasm32")]
+            wasm_bindgen_futures::spawn_local(submit_action);
+
+            // avoid warning on unused vars
+            let _ = type_val; let _ = name; let _ = desc; let _ = price; let _ = dur; let _ = sch;
         }
     });
 
@@ -1584,50 +1653,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let analytics_charts_handle = analytics_charts_ui.as_weak();
 
     // Setup mock data for analytics charts
-    let mock_charts = vec![
-        app::UiChartData {
-            title: "Revenue Over Time".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Mon".into(), value: 40.0, display_value: "$400".into() },
-                app::UiDataPoint { label: "Tue".into(), value: 65.0, display_value: "$650".into() },
-                app::UiDataPoint { label: "Wed".into(), value: 30.0, display_value: "$300".into() },
-                app::UiDataPoint { label: "Thu".into(), value: 80.0, display_value: "$800".into() },
-                app::UiDataPoint { label: "Fri".into(), value: 120.0, display_value: "$1.2k".into() },
-                app::UiDataPoint { label: "Sat".into(), value: 150.0, display_value: "$1.5k".into() },
-                app::UiDataPoint { label: "Sun".into(), value: 100.0, display_value: "$1.0k".into() },
-            ])),
-        },
-        app::UiChartData {
-            title: "Orders by Day".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Mon".into(), value: 20.0, display_value: "10".into() },
-                app::UiDataPoint { label: "Tue".into(), value: 40.0, display_value: "20".into() },
-                app::UiDataPoint { label: "Wed".into(), value: 30.0, display_value: "15".into() },
-                app::UiDataPoint { label: "Thu".into(), value: 50.0, display_value: "25".into() },
-                app::UiDataPoint { label: "Fri".into(), value: 80.0, display_value: "40".into() },
-                app::UiDataPoint { label: "Sat".into(), value: 100.0, display_value: "50".into() },
-                app::UiDataPoint { label: "Sun".into(), value: 70.0, display_value: "35".into() },
-            ])),
-        },
-        app::UiChartData {
-            title: "Top Products".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Vegan Cake".into(), value: 100.0, display_value: "120".into() },
-                app::UiDataPoint { label: "Latte".into(), value: 75.0, display_value: "90".into() },
-                app::UiDataPoint { label: "Cookies".into(), value: 50.0, display_value: "60".into() },
-            ])),
-        },
-        app::UiChartData {
-            title: "Traffic Sources".into(),
-            points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Direct".into(), value: 80.0, display_value: "40%".into() },
-                app::UiDataPoint { label: "Social".into(), value: 60.0, display_value: "30%".into() },
-                app::UiDataPoint { label: "Search".into(), value: 40.0, display_value: "20%".into() },
-                app::UiDataPoint { label: "Referral".into(), value: 20.0, display_value: "10%".into() },
-            ])),
-        },
-    ];
-    analytics_charts_ui.set_charts(slint::ModelRc::new(slint::VecModel::from(mock_charts)));
+
+    let analytics_charts_handle_initial = analytics_charts_ui.as_weak();
+
+    let load_charts = {
+        let handle_inner = analytics_charts_handle_initial.clone();
+        async move {
+            let url_charts = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+            if let Ok(mut dash_client) = ohc::api::v1::dashboard_service_client::DashboardServiceClient::connect(url_charts).await {
+                let mut req = tonic::Request::new(ohc::api::v1::GetDashboardRequest {
+                    organization_id: "system".into(),
+                    mobile_optimized: false,
+                });
+                req.metadata_mut().insert("x-spiffe-id", tonic::metadata::MetadataValue::from_static("spiffe://system"));
+                if let Ok(resp) = dash_client.get_dashboard(req).await {
+                   let snap = resp.into_inner();
+                   let _ = slint::invoke_from_event_loop(move || {
+                       if let Some(ui) = handle_inner.upgrade() {
+                            let mut charts = Vec::new();
+
+                            if snap.orders.len() > 0 {
+                                let mut rev_points = Vec::new();
+                                rev_points.push(app::UiDataPoint { label: "Total".into(), value: snap.orders.len() as f32 * 10.0, display_value: format!("${}", snap.orders.len() * 10).into() });
+                                charts.push(app::UiChartData {
+                                    title: "Revenue (from Real Orders)".into(),
+                                    points: slint::ModelRc::new(slint::VecModel::from(rev_points)),
+                                });
+                            }
+
+                            if snap.products.len() > 0 {
+                                let mut prod_points = Vec::new();
+                                for (_, p) in snap.products.iter().enumerate().take(5) {
+                                    prod_points.push(app::UiDataPoint { label: p.name.clone().into(), value: (p.price_cents as f32) / 100.0, display_value: format!("${:.2}", (p.price_cents as f32)/100.0).into() });
+                                }
+                                charts.push(app::UiChartData {
+                                    title: "Top Products".into(),
+                                    points: slint::ModelRc::new(slint::VecModel::from(prod_points)),
+                                });
+                            }
+
+                            ui.set_charts(slint::ModelRc::new(slint::VecModel::from(charts)));
+                       }
+                   });
+                }
+            }
+        }
+    };
+
+    #[cfg(not(target_arch = "wasm32"))]
+    tokio::spawn(load_charts);
+
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_futures::spawn_local(load_charts);
 
     let ac_close_handle = analytics_charts_handle.clone();
     analytics_charts_ui.on_close(move || {

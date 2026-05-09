@@ -517,11 +517,72 @@ impl DashboardService for MyDashboardService {
         Err(Status::unimplemented("Not implemented"))
     }
 
+
     async fn seed_dashboard(
         &self,
-        _request: Request<SeedDashboardRequest>,
+        request: Request<SeedDashboardRequest>,
     ) -> Result<Response<SeedDashboardResponse>, Status> {
-        Err(Status::unimplemented("Not implemented"))
+        let auth_info = request
+            .extensions()
+            .get::<crate::auth::orchestration::AuthInfo>()
+            .cloned()
+            .unwrap_or(crate::auth::orchestration::AuthInfo {
+                org_id: "system".to_string(),
+                agent_id: "system".to_string(),
+                spiffe_id: "spiffe://system".to_string()
+            });
+
+        let req = request.into_inner();
+        let org_id = auth_info.org_id;
+
+        if req.scenario.starts_with("add_product:") {
+            if let Some(payload_str) = req.scenario.strip_prefix("add_product:") {
+                if let Ok(payload) = serde_json::from_str::<serde_json::Value>(payload_str) {
+                    let name = payload.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown Product");
+                    let description = payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                    let strategy = payload.get("strategy").and_then(|v| v.as_str()).unwrap_or("physical");
+                    let price_cents = payload.get("price_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+
+                    let id = format!("prod-{}", uuid::Uuid::new_v4());
+                    match &self.db.store {
+                        crate::db::DbStore::Postgres => {
+                            if let Err(e) = sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                                .bind(&id)
+                                .bind(&org_id)
+                                .bind(name)
+                                .bind(description)
+                                .bind(price_cents)
+                                .bind(strategy)
+                                .bind(serde_json::json!({}).to_string())
+                                .execute(&self.db.pool)
+                                .await
+                            {
+                                tracing::error!("Error creating product in Postgres: {}", e);
+                            }
+                        }
+                        crate::db::DbStore::Sqlite(pool) => {
+                            if let Err(e) = sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                                .bind(&id)
+                                .bind(&org_id)
+                                .bind(name)
+                                .bind(description)
+                                .bind(price_cents)
+                                .bind(strategy)
+                                .bind(serde_json::json!({}).to_string())
+                                .execute(pool)
+                                .await
+                            {
+                                tracing::error!("Error creating product in SQLite: {}", e);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(Response::new(SeedDashboardResponse {
+            snapshot: None,
+        }))
     }
 
     async fn get_onboarding_state(

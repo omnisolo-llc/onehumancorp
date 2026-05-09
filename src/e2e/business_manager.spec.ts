@@ -21,32 +21,6 @@ test.describe('Business Manager UI', () => {
   test('should display "My Offerings" product list view', async ({ page }) => {
     // Should show "My Offerings" title instead of "Add Offering" initially
     await expect(page.locator('text=My Offerings')).toBeVisible();
-
-    // Should display the 3 dummy products from main.rs
-    await expect(page.locator('text=Custom Vegan Cake')).toBeVisible();
-    await expect(page.locator('text=Website Template')).toBeVisible();
-    await expect(page.locator('text=Plumbing Repair')).toBeVisible();
-
-    // Verify badges
-    await expect(page.locator('text=5 in stock')).toBeVisible();
-    await expect(page.locator('text=⚠️ Out of Stock')).toBeVisible();
-
-    // Verify prices
-    await expect(page.locator('text=$40.00')).toBeVisible();
-    await expect(page.locator('text=$150.00')).toBeVisible();
-
-    // Edit/Archive buttons should exist and have proper touch target size
-    const editBtn = page.locator('button:has-text("Edit")').first();
-    const archiveBtn = page.locator('button:has-text("Archive")').first();
-
-    await expect(editBtn).toBeVisible();
-    await expect(archiveBtn).toBeVisible();
-
-    const editBox = await editBtn.boundingBox();
-    expect(editBox?.height).toBeGreaterThanOrEqual(44);
-
-    const archiveBox = await archiveBtn.boundingBox();
-    expect(archiveBox?.height).toBeGreaterThanOrEqual(44);
   });
 
   test('should navigate to "Add Offering" view when "+ Add New Offering" is clicked', async ({ page }) => {
@@ -116,6 +90,21 @@ test.describe('Business Manager UI', () => {
 
     // Should go back to the list view after creation
     await expect(page.locator('text=My Offerings')).toBeVisible();
-  });
 
-});
+    // Verify the newly created product appears in the list (Full Stack Verification)
+    await expect(page.locator('text=Test Physical Product')).toBeVisible();
+    await expect(page.locator('text=$19.99')).toBeVisible();
+
+    // Ensure that Edit/Archive buttons are shown for the new product
+    const editBtn = page.locator('button:has-text("Edit")').first();
+    const archiveBtn = page.locator('button:has-text("Archive")').first();
+
+    await expect(editBtn).toBeVisible();
+    await expect(archiveBtn).toBeVisible();
+
+    const editBox = await editBtn.boundingBox();
+    expect(editBox?.height).toBeGreaterThanOrEqual(44);
+
+    const archiveBox = await archiveBtn.boundingBox();
+    expect(archiveBox?.height).toBeGreaterThanOrEqual(44);
+  });
