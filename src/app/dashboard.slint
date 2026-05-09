@@ -109,12 +109,13 @@ export component Dashboard inherits Window { // milestones
             VerticalBox {
                 alignment: center;
                 Text { text: "My Store"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
-                if (is_loading) : Rectangle {
+                if (is_loading) : GlassCard {
                     height: 12px;
                     width: 100px;
-                    background: #334155; // Slate 700
                     border-radius: 6px;
-                    animate background { duration: 1500ms; iteration-count: -1; easing: ease-in-out; }
+                    background: rgba(255, 255, 255, 0.1);
+                    opacity: 0.5;
+                    animate opacity { duration: 1500ms; iteration-count: -1; easing: ease-in-out; }
                 }
             }
             Rectangle {} // Spacer
@@ -476,28 +477,55 @@ export component Dashboard inherits Window { // milestones
         }
     }
 
-    // Floating Create Post (Bottom Left for another quick action)
-    Rectangle {
+    // Floating Create Post & Share Store (Bottom Left quick actions)
+    HorizontalBox {
         y: parent.height - 80px;
         x: 20px;
-        width: 60px;
-        height: 60px;
-        background: #3b82f6;
-        border-radius: 30px;
-        drop-shadow-blur: 10px;
-        drop-shadow-color: rgba(0, 0, 0, 0.5);
+        spacing: 16px;
 
-        Text {
-            text: "✍️";
-            color: white;
-            font-size: 24px;
-            horizontal-alignment: center;
-            vertical-alignment: center;
+        Rectangle {
+            width: 60px;
+            height: 60px;
+            background: #3b82f6;
+            border-radius: 30px;
+            drop-shadow-blur: 10px;
+            drop-shadow-color: rgba(0, 0, 0, 0.5);
+
+            Text {
+                text: "✍️";
+                color: white;
+                font-size: 24px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            TouchArea {
+                clicked => {
+                    action_open_social_posting();
+                }
+            }
         }
 
-        TouchArea {
-            clicked => {
-                action_open_social_posting();
+        Rectangle {
+            width: 60px;
+            height: 60px;
+            background: #10b981; // Emerald
+            border-radius: 30px;
+            drop-shadow-blur: 10px;
+            drop-shadow-color: rgba(0, 0, 0, 0.5);
+
+            Text {
+                text: "🔗";
+                color: white;
+                font-size: 24px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            TouchArea {
+                clicked => {
+                    action_share_store();
+                }
             }
         }
     }
