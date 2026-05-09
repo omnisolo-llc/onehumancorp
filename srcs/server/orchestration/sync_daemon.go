@@ -109,7 +109,8 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 	mode := getSyncMode()
 	start := time.Now()
 
-	rows, err := d.db.QueryContext(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
+	threshold := time.Now().Add(-5 * time.Minute)
+	rows, err := d.db.QueryContext(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' AND (sync_error IS NULL OR last_synced_at < $1) LIMIT 100", threshold)
 	if err != nil {
 		if syncDaemonErrorTotal != nil {
 			syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "DB_ERROR")))
@@ -159,6 +160,11 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		err = d.syncToCloud(ctx, m.id, m.payload)
 
 		if err != nil {
+			_, dbErr := d.db.ExecContext(ctx, "UPDATE agent_missions SET sync_error = $1, last_synced_at = CURRENT_TIMESTAMP WHERE id = $2", err.Error(), m.id)
+			if dbErr != nil {
+				log.Printf("Failed to update sync_error for mission %s: %v", m.id, dbErr)
+			}
+
 			// Release semaphore on error
 			<-throttleSemaphore
 			if syncDaemonErrorTotal != nil {
@@ -168,7 +174,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		}
 
 		// Mark as synced locally
-		_, err = d.db.ExecContext(ctx, "UPDATE agent_missions SET synced_to_cloud = true WHERE id = $1", m.id)
+		_, err = d.db.ExecContext(ctx, "UPDATE agent_missions SET synced_to_cloud = true, sync_error = NULL, last_synced_at = CURRENT_TIMESTAMP WHERE id = $1", m.id)
 
 		// Release semaphore after db transaction
 		<-throttleSemaphore
