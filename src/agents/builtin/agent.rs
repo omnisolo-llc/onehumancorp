@@ -24,10 +24,17 @@ pub enum AgentEvent {
     RewindOccurred { iteration: i32, checkpoint_id: String, reason: String },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PermissionArchitecture {
+    Permissive,
+    Restrictive,
+}
+
 /// Configuration for a single agent run.
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
     pub agent_id: String,
+    pub permission_architecture: PermissionArchitecture,
     /// Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
     pub max_retries: usize,
     pub model: String,
@@ -77,6 +84,7 @@ impl Default for AgentRunConfig {
     fn default() -> Self {
         Self {
             agent_id: "default-agent".to_string(),
+            permission_architecture: PermissionArchitecture::Restrictive,
             max_retries: 2,
             model: String::new(),
             server_system_message: String::new(),
@@ -2003,8 +2011,10 @@ impl Agent {
         }
 
         // Stage 3: Explicit user confirmation for high-risk operations
-        if cfg.high_risk_tools.contains(&tc.name) && !cfg.approved_tool_calls.contains(&tc.id) {
-            return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+        if cfg.permission_architecture == PermissionArchitecture::Restrictive {
+            if cfg.high_risk_tools.contains(&tc.name) && !cfg.approved_tool_calls.contains(&tc.id) {
+                return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+            }
         }
 
         Ok(())
@@ -2871,6 +2881,46 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
+    }
+
+    #[test]
+    fn test_permission_architecture_permissive() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.project_trusted = true;
+        cfg.permission_architecture = PermissionArchitecture::Permissive;
+        cfg.high_risk_tools = vec!["nuke_db".to_string()];
+
+        let tc = ToolCall {
+            id: "call_1".to_string(),
+            name: "nuke_db".to_string(),
+            arguments: serde_json::json!({}),
+        };
+
+        // Permissive should bypass high-risk confirmation
+        assert!(Agent::check_tool_gating(&tc, false, &cfg).is_ok());
+    }
+
+    #[test]
+    fn test_permission_architecture_restrictive() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.project_trusted = true;
+        cfg.permission_architecture = PermissionArchitecture::Restrictive;
+        cfg.high_risk_tools = vec!["nuke_db".to_string()];
+
+        let tc = ToolCall {
+            id: "call_1".to_string(),
+            name: "nuke_db".to_string(),
+            arguments: serde_json::json!({}),
+        };
+
+        // Restrictive should enforce high-risk confirmation
+        let res = Agent::check_tool_gating(&tc, false, &cfg);
+        assert!(res.is_err());
+        if let Err(ToolError::UserFixable(msg)) = res {
+            assert!(msg.contains("requires explicit user confirmation"));
+        } else {
+            panic!("Expected UserFixable error");
+        }
     }
 
     #[tokio::test]

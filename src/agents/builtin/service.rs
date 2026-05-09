@@ -3,7 +3,7 @@ use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
-use crate::agent::{Agent, AgentEvent, AgentRunConfig};
+use crate::agent::{Agent, AgentEvent, AgentRunConfig, PermissionArchitecture};
 use crate::auth::AuthMode;
 use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
@@ -336,6 +336,7 @@ impl AgentServiceImpl {
         };
 
         AgentRunConfig {
+            permission_architecture: PermissionArchitecture::Restrictive,
             max_retries: 2,
             enable_single_agent_maximization: false,
             enable_lazy_tool_loading: false,
@@ -607,9 +608,10 @@ impl AgentService for AgentServiceImpl {
 
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
+                permission_architecture: PermissionArchitecture::Restrictive,
                 max_retries: 2,
                 enable_single_agent_maximization: false,
-            enable_lazy_tool_loading: false,
+                enable_lazy_tool_loading: false,
                 agent_id: self.agent_id.clone(),
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
                 server_system_message: self.cfg.system_prompt.clone(),
