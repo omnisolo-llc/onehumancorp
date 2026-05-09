@@ -1,3 +1,10 @@
+## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
+### Cloud Scaling Improvements
+- 🧹 Cleaner: Fix Go tests and cleanup redundant PII code (#12679)
+
+### Privacy/Offline Improvements
+- 🧹 Cleaner: Fix Go tests and cleanup redundant PII code (#12679)
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
