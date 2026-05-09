@@ -345,6 +345,7 @@ impl AgentServiceImpl {
 
         AgentRunConfig {
             max_retries: 2,
+            permission_architecture: "permissive".to_string(),
             enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
@@ -625,6 +626,7 @@ impl AgentService for AgentServiceImpl {
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
                 max_retries: 2,
+                permission_architecture: "permissive".to_string(),
                 enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,

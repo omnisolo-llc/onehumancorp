@@ -30,6 +30,7 @@ pub struct AgentRunConfig {
     pub agent_id: String,
     /// Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
     pub max_retries: usize,
+    pub permission_architecture: String,
     pub model: String,
     pub server_system_message: String,
     pub developer_instructions: String,
@@ -79,6 +80,7 @@ impl Default for AgentRunConfig {
         Self {
             agent_id: "default-agent".to_string(),
             max_retries: 2,
+            permission_architecture: "permissive".to_string(),
             model: String::new(),
             server_system_message: String::new(),
             developer_instructions: String::new(),
@@ -2003,16 +2005,20 @@ impl Agent {
             return Err(ToolError::Fatal("Project not trusted. Mutating tools are disabled.".to_string()));
         }
 
-        // Stage 2: Permission check before each tool call
-        if let Some(allowed) = &cfg.allowed_tools {
-            if !allowed.contains(&tc.name) {
-                return Err(ToolError::Fatal(format!("Tool '{}' is not in the allowed list.", tc.name)));
+        // Stage 2 & 3: Permission Architecture
+        // Permissive (auto-approve) vs Restrictive (require approval)
+        if cfg.permission_architecture == "restrictive" {
+            // Stage 2: Permission check before each tool call
+            if let Some(allowed) = &cfg.allowed_tools {
+                if !allowed.contains(&tc.name) {
+                    return Err(ToolError::Fatal(format!("Tool '{}' is not in the allowed list.", tc.name)));
+                }
             }
-        }
 
-        // Stage 3: Explicit user confirmation for high-risk operations
-        if cfg.high_risk_tools.contains(&tc.name) && !cfg.approved_tool_calls.contains(&tc.id) {
-            return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+            // Stage 3: Explicit user confirmation for high-risk operations
+            if cfg.high_risk_tools.contains(&tc.name) && !cfg.approved_tool_calls.contains(&tc.id) {
+                return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+            }
         }
 
         Ok(())
@@ -2716,6 +2722,7 @@ mod tests {
         // Test 2: Permission check blocks unallowed tools
         let mut cfg = AgentRunConfig::default();
         cfg.project_trusted = true;
+        cfg.permission_architecture = "restrictive".to_string();
         cfg.allowed_tools = Some(vec!["allowed_tool".to_string()]);
 
         let mut events = vec![];
@@ -2759,6 +2766,7 @@ mod tests {
 
         let mut cfg = AgentRunConfig::default();
         cfg.project_trusted = true;
+        cfg.permission_architecture = "restrictive".to_string();
         cfg.high_risk_tools = vec!["high_risk_tool".to_string()];
         // Not in approved_tool_calls
 
@@ -4814,4 +4822,41 @@ mod stream_tests {
         let rewind_emitted = events.iter().any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
+    }
+
+    #[tokio::test]
+    async fn test_permission_architecture_restrictive() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.permission_architecture = "restrictive".to_string();
+        cfg.high_risk_tools = vec!["nuke".to_string()];
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "nuke".to_string(),
+            arguments: serde_json::Value::Null,
+        };
+
+        let res = Agent::check_tool_gating(&tc, false, &cfg);
+        assert!(res.is_err());
+        if let Err(crate::types::ToolError::UserFixable(msg)) = res {
+            assert!(msg.contains("requires explicit user confirmation"));
+        } else {
+            panic!("Expected UserFixable error for restrictive architecture");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_permission_architecture_permissive() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.permission_architecture = "permissive".to_string();
+        cfg.high_risk_tools = vec!["nuke".to_string()];
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "nuke".to_string(),
+            arguments: serde_json::Value::Null,
+        };
+
+        let res = Agent::check_tool_gating(&tc, false, &cfg);
+        assert!(res.is_ok(), "Permissive architecture should auto-approve high-risk tools");
     }
