@@ -15,7 +15,7 @@ pub async fn health_handler(
         "local_to_cloud_sync_queue": 0,
     }));
 
-    let stuck_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'")
+    let stuck_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'FAILED'")
         .fetch_one(&hub.pool)
         .await
         .unwrap_or(0);
