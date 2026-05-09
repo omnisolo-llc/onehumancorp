@@ -41,8 +41,6 @@ func (m *MockTelemetry) IncrementCounter(name string, value int64, tags map[stri
 		m.IncrementCounterFunc(name, value, tags)
 	}
 }
-func (m *MockTelemetry) SetGauge(name string, value float64, tags map[string]string) {}
-func (m *MockTelemetry) RecordHistogram(name string, value float64, tags map[string]string) {}
 
 func TestSyncAuditLogsToCloud_Success(t *testing.T) {
 	mockDB := &MockDB{

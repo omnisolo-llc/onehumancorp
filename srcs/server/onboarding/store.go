@@ -29,10 +29,6 @@ type PostgresTenantStore struct {
 	db *sql.DB
 }
 
-func NewPostgresTenantStore(db *sql.DB) *PostgresTenantStore {
-	return &PostgresTenantStore{db: db}
-}
-
 func (s *PostgresTenantStore) CreateTenant(ctx context.Context, tenant *Tenant) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
