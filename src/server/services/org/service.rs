@@ -74,7 +74,15 @@ impl OrgService for MyOrgService {
         let (agents_res, meetings_res, summary_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),
             tokio::task::spawn_blocking(move || hub2.get_meetings()),
-            tokio::task::spawn_blocking(move || hub3.tracker().summary("system"))
+            tokio::task::spawn_blocking(move || {
+                let sum = hub3.tracker().summary("system");
+                // Fallback to auditor if tracker has no tokens (fixes billing metrics)
+                if sum.total_tokens == 0 {
+                    crate::billing::TokenSummary { total_tokens: hub3.get_cost_auditor().get_total_tokens() as i64 }
+                } else {
+                    sum
+                }
+            })
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;

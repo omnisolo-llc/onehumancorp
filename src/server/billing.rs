@@ -12,11 +12,12 @@ pub struct Tracker {
     rate_limiter: Option<Arc<RedisRateLimiter>>,
     pub stripe_client: Option<Arc<StripeClient>>,
     pub mercadopago_client: Option<Arc<MercadoPagoClient>>,
+    token_counter: Arc<std::sync::atomic::AtomicI64>,
 }
 
 impl Tracker {
     pub fn new() -> Self {
-        Tracker { rate_limiter: None, stripe_client: None, mercadopago_client: None }
+        Tracker { rate_limiter: None, stripe_client: None, mercadopago_client: None, token_counter: Arc::new(std::sync::atomic::AtomicI64::new(0)) }
     }
 
     pub fn new_with_redis(redis_url: &str) -> Self {
@@ -29,9 +30,10 @@ impl Tracker {
                 rate_limiter: Some(Arc::new(RedisRateLimiter::new(client))),
                 stripe_client,
                 mercadopago_client: mercadopago_client.clone(),
+                token_counter: Arc::new(std::sync::atomic::AtomicI64::new(0)),
             }
         } else {
-            Tracker { rate_limiter: None, stripe_client, mercadopago_client }
+            Tracker { rate_limiter: None, stripe_client, mercadopago_client, token_counter: Arc::new(std::sync::atomic::AtomicI64::new(0)) }
         }
     }
 
@@ -184,14 +186,29 @@ impl Tracker {
         }
     }
 
+    pub async fn record_tokens(&self, tenant_id: &str, tokens: i64) -> Result<(), String> {
+        self.token_counter.fetch_add(tokens, std::sync::atomic::Ordering::SeqCst);
+        if let Some(ref limiter) = self.rate_limiter {
+            let mut conn = limiter.get_connection().await.map_err(|e| e.to_string())?;
+            let key = format!("tenant:{}:token_usage", tenant_id);
+            let _: () = redis::AsyncCommands::incr(&mut conn, key, tokens).await.map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+
     pub fn summary(&self, _scope: &str) -> TokenSummary {
-        TokenSummary::default()
+        TokenSummary { total_tokens: self.token_counter.load(std::sync::atomic::Ordering::SeqCst) }
     }
 }
 
-#[derive(Default)]
 pub struct TokenSummary {
     pub total_tokens: i64,
+}
+
+impl Default for TokenSummary {
+    fn default() -> Self {
+        TokenSummary { total_tokens: 0 }
+    }
 }
 
 impl Default for Tracker {

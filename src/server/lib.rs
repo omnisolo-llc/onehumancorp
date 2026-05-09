@@ -966,7 +966,11 @@ impl HubService for MyHubService {
         
         let client = minimax::MinimaxClient::new(api_key);
         match client.reason(&req.prompt).await {
-            Ok(content) => Ok(Response::new(ReasonResponse { content })),
+            Ok(content) => {
+                let estimated_tokens = (req.prompt.len() + content.len()) as i64 / 4;
+                let _ = self.hub.tracker().record_tokens("system", estimated_tokens).await;
+                Ok(Response::new(ReasonResponse { content }))
+            },
             Err(e) => Err(Status::internal(e)),
         }
     }

@@ -28,6 +28,8 @@ export component Pricing inherits Window {
     in property <string> projected_cost: "$9.00 / month";
     in property <float> usage_progress: 0.45;
 
+    property <bool> faq_expanded: false;
+
     in property <[UiPricingTier]> tiers: [
         {
             name: "Free",
@@ -290,6 +292,42 @@ export component Pricing inherits Window {
                     }
                 }
             }
+
+
+            // Plan comparison text
+            Text { text: "Plan Comparison"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; }
+
+            // Badges
+            HorizontalBox {
+                alignment: center;
+                spacing: 16px;
+                GlassCard {
+                    padding: 8px;
+                    Text { text: "🛡️ SSL Secure Checkout"; font-family: "Inter"; color: #22c55e; }
+                }
+                GlassCard {
+                    padding: 8px;
+                    Text { text: "💸 30-Day Money Back Guarantee"; font-family: "Inter"; color: #3b82f6; }
+                }
+            }
+
+            // FAQ Section
+            VerticalBox {
+                spacing: 8px;
+                Text { text: "Frequently Asked Questions (FAQ)"; font-family: "Outfit"; font-size: 18px; font-weight: 700; color: white; }
+
+                GlassCard {
+                    property <string> custom_class: "faq question";
+                    padding: 12px;
+                    VerticalBox {
+                        spacing: 8px;
+                        Text { text: "What happens if I exceed my limits?"; font-family: "Inter"; color: white; }
+                        if faq_expanded : Text { text: "Answer: We will notify you and kindly ask you to upgrade."; font-family: "Inter"; color: #94a3b8; wrap: word-wrap; }
+                    }
+                    TouchArea { clicked => { faq_expanded = !faq_expanded; } }
+                }
+            }
+
 
             HorizontalBox {
                 GlassCard {
