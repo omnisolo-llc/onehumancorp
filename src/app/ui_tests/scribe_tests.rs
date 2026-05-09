@@ -136,3 +136,39 @@ fn test_scribe_release_notes_latest_only_toggle() {
     ui.set_show_latest_only(false);
     assert_eq!(ui.get_show_latest_only(), false);
 }
+
+#[test]
+fn test_scribe_all_features_exist() {
+    // This test acts as a comprehensive check that all features
+    // mandated by the scribe mission are fully integrated and accessible.
+    crate::ui_tests::init();
+
+    // Help Center
+    let help_ui = app::HelpCenter::new().unwrap();
+    assert!(help_ui.get_articles().row_count() >= 7, "Help Center must have at least 7 articles");
+
+    // AI Help Chat
+    let ai_ui = app::AiHelpChat::new().unwrap();
+    assert!(ai_ui.get_messages().row_count() >= 1, "AI Help Chat must have at least 1 message");
+
+    // Interactive Walkthrough
+    let walk_ui = app::InteractiveWalkthrough::new().unwrap();
+    walk_ui.set_current_step(1);
+    assert_eq!(walk_ui.get_current_step(), 1, "Interactive Walkthrough step tracking failed");
+
+    // Video Tutorials
+    let video_ui = app::VideoTutorials::new().unwrap();
+    assert!(video_ui.get_videos().row_count() >= 10, "Video Tutorials must have at least 10 videos");
+
+    // API Docs
+    let api_ui = app::ApiDocs::new().unwrap();
+    assert!(!api_ui.get_is_advanced(), "API Docs should not be in advanced mode by default");
+
+    // Release Notes
+    let notes_ui = app::ReleaseNotes::new().unwrap();
+    assert!(!notes_ui.get_show_latest_only(), "Release Notes should not filter latest only by default");
+
+    // Scribe Feature Dashboard
+    let dashboard_ui = app::ScribeFeatureDashboard::new().unwrap();
+    assert_eq!(dashboard_ui.get_test_title(), slint::SharedString::from("Documentation Overview"));
+}
