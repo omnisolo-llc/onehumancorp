@@ -115,7 +115,7 @@ func (w *AutoDreamWorker) StartDaemon(ctx context.Context, memoryDir string, int
 
 	// Run once immediately
 	if err := w.ScanAndProcessMemories(ctx, memoryDir); err != nil {
-		log.Printf("autodream daemon error: %v", err)
+		log.Printf("autodream daemon error")
 	}
 
 	for {
@@ -124,7 +124,7 @@ func (w *AutoDreamWorker) StartDaemon(ctx context.Context, memoryDir string, int
 			return
 		case <-ticker.C:
 			if err := w.ScanAndProcessMemories(ctx, memoryDir); err != nil {
-				log.Printf("autodream daemon error: %v", err)
+				log.Printf("autodream daemon error")
 			}
 		}
 	}

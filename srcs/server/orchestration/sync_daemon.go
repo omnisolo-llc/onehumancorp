@@ -85,7 +85,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 	for rows.Next() {
 		var m mission
 		if err := rows.Scan(&m.id, &m.status, &m.payload); err != nil {
-			log.Printf("sync_daemon: [DEBUG] failed to scan row: %v", err)
+			log.Printf("sync_daemon: [DEBUG] failed to scan row")
 			continue
 		}
 		missions = append(missions, m)
@@ -113,7 +113,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		if err != nil {
 			// Release semaphore on error
 			<-throttleSemaphore
-			log.Printf("sync_daemon: [DEBUG] failed to sync mission %s: %v", m.id, err)
+			log.Printf("sync_daemon: [DEBUG] failed to sync mission: %v", err)
 			continue
 		}
 
@@ -123,7 +123,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		// Release semaphore after db transaction
 		<-throttleSemaphore
 		if err != nil {
-			log.Printf("sync_daemon: [DEBUG] failed to update synced_to_cloud flag for mission %s: %v", m.id, err)
+			log.Printf("sync_daemon: [DEBUG] failed to update synced_to_cloud flag for mission: %v", err)
 			continue
 		}
 
@@ -182,14 +182,14 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status,
 			&task.AgentID, &task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
 		); err != nil {
-			log.Printf("Error scanning local task: %v", err)
+			log.Printf("Error scanning local task")
 			continue
 		}
 
 		if len(payloadBytes) > 0 {
 			sanitized, err := SanitizePayload(string(payloadBytes))
 			if err != nil {
-				log.Printf("Error sanitizing task %s", task.ID)
+				log.Printf("Error sanitizing task")
 				continue
 			}
 			sanitizedRaw := json.RawMessage(sanitized)
@@ -205,7 +205,7 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 		// Insert into cloud DB
 		err = cloudDB.CreateTask(ctx, &task)
 		if err != nil {
-			log.Printf("Error creating task in cloud DB: %v", err)
+			log.Printf("Error creating task in cloud DB")
 			continue
 		}
 
@@ -246,7 +246,7 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			log.Printf("Error scanning local task ID: %v", err)
+			log.Printf("Error scanning local task ID")
 			continue
 		}
 		taskIDs = append(taskIDs, id)
@@ -260,7 +260,7 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 		cloudTask, err := cloudDB.GetTask(ctx, id)
 		if err != nil {
 			if err != sql.ErrNoRows {
-				log.Printf("Error getting task from cloud DB: %v", err)
+				log.Printf("Error getting task from cloud DB")
 			}
 			continue
 		}

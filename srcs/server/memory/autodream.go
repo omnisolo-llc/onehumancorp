@@ -88,7 +88,7 @@ func (d *AutoDreamDaemon) processDirectories(ctx context.Context) {
 			return nil
 		})
 		if err != nil {
-			log.Printf("Error walking directory %s: %v", dir, err)
+			log.Printf("Error walking directory")
 		}
 	}
 }
@@ -96,7 +96,7 @@ func (d *AutoDreamDaemon) processDirectories(ctx context.Context) {
 func (d *AutoDreamDaemon) processFile(ctx context.Context, path string) {
 	contentBytes, err := os.ReadFile(path)
 	if err != nil {
-		log.Printf("Failed to read file %s: %v", path, err)
+		log.Printf("Failed to read file")
 		return
 	}
 	content := string(contentBytes)
@@ -109,14 +109,14 @@ func (d *AutoDreamDaemon) processFile(ctx context.Context, path string) {
 	// Generate embedding
 	embedding, err := d.llmClient.GenerateEmbedding(ctx, content)
 	if err != nil {
-		log.Printf("Failed to generate embedding for %s: %v", path, err)
+		log.Printf("Failed to generate embedding")
 		return
 	}
 
 	// Convert []float32 to []byte (JSON encoding for simplicity, actual pgvector would use specific byte format or pg type)
 	embeddingBytes, err := json.Marshal(embedding)
 	if err != nil {
-		log.Printf("Failed to marshal embedding for %s: %v", path, err)
+		log.Printf("Failed to marshal embedding")
 		return
 	}
 
@@ -150,7 +150,7 @@ func (d *AutoDreamDaemon) processFile(ctx context.Context, path string) {
 	// Upsert into DB
 	err = d.upsertMemory(ctx, base, orgID, agentID, taskID, content, embeddingBytes)
 	if err != nil {
-		log.Printf("Failed to upsert memory for %s: %v", path, err)
+		log.Printf("Failed to upsert memory")
 		return
 	}
 

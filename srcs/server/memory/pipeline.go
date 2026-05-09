@@ -42,13 +42,13 @@ func (d *AutoDreamDaemon) SweepCompletedTasks(ctx context.Context) error {
 
 		embedding, err := d.llmClient.GenerateEmbedding(ctx, content)
 		if err != nil {
-			log.Printf("Failed to generate embedding for task %s: %v", task.ID, err)
+			log.Printf("Failed to generate embedding for task")
 			continue
 		}
 
 		embeddingBytes, err := json.Marshal(embedding)
 		if err != nil {
-			log.Printf("Failed to marshal embedding for task %s: %v", task.ID, err)
+			log.Printf("Failed to marshal embedding for task")
 			continue
 		}
 
@@ -56,7 +56,7 @@ func (d *AutoDreamDaemon) SweepCompletedTasks(ctx context.Context) error {
 
 		err = d.upsertMemory(ctx, id, task.OrganizationID, task.AgentID, task.ID, content, embeddingBytes)
 		if err != nil {
-			log.Printf("Failed to upsert memory for task %s: %v", task.ID, err)
+			log.Printf("Failed to upsert memory for task")
 			continue
 		}
 
@@ -67,7 +67,7 @@ func (d *AutoDreamDaemon) SweepCompletedTasks(ctx context.Context) error {
 		// For now, let's update it to 'ARCHIVED'.
 		_, err = d.db.ExecContext(ctx, "UPDATE shared_tasks SET status = 'ARCHIVED' WHERE id = $1", task.ID)
 		if err != nil {
-			log.Printf("Failed to update status for task %s: %v", task.ID, err)
+			log.Printf("Failed to update status for task")
 		}
 	}
 

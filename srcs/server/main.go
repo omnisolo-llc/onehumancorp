@@ -11,7 +11,6 @@ import (
 	"onehumancorp/srcs/server/memory"
 	"onehumancorp/srcs/server/onboarding"
 	"onehumancorp/srcs/server/orchestration"
-	"onehumancorp/srcs/server/growth"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -81,10 +80,6 @@ func main() {
 	mux.HandleFunc("/api/onboarding/start", onboardingAPI.HandleStartOnboarding)
 	mux.HandleFunc("/api/onboarding/status", onboarding.TenantAuthMiddleware(onboardingAPI.HandleGetStatus))
 
-	growthSvc := growth.NewGrowthService(db)
-	mux.HandleFunc("/api/growth/referrals/click", growthSvc.HandleReferralClick)
-	mux.HandleFunc("/api/growth/referrals/convert", growthSvc.HandleReferralConvert)
-	mux.HandleFunc("/api/growth/team-invites/accept", growthSvc.HandleTeamInviteAccept)
 
 	go func() {
 		log.Println("Listening on :8080...")
