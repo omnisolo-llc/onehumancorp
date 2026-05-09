@@ -1,6 +1,6 @@
 issue_category: cleanup
 debt_report: |
-  <div markdown="1" style="backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+  <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
   # 🧹 Maintainer: Triage & Debt Report
 
   ## Phase 1: Audit
@@ -26,5 +26,5 @@ debt_report: |
   </div>
 
 status: completed
-visual_excellence: "Applied Glassmorphism UI standards (backdrop-filter: blur(15px)) conceptually to report output generation."
+visual_excellence: "Applied Glassmorphism UI standards (backdrop-filter: blur(20px)) conceptually to report output generation."
 details: "Removed unused imports and variables in Rust test suite and fixed broken Go tests."

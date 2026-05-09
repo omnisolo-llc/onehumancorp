@@ -23,13 +23,13 @@ The following wireframe represents the OHC Premium UI for the Telemetry-MCP Brid
 
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
     <!-- Stat Box 1 -->
-    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); backdrop-filter: blur(10px);">
+    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); backdrop-filter: blur(20px);">
       <p style="margin: 0 0 10px 0; font-size: 0.85em; color: #888; text-transform: uppercase; letter-spacing: 1px;">Queue Size</p>
       <div style="font-size: 2.2em; font-weight: 300; font-family: 'Outfit', sans-serif; color: #fff;">142<span style="font-size: 0.4em; color: #888; margin-left: 5px;">events</span></div>
     </div>
 
     <!-- Stat Box 2 -->
-    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); backdrop-filter: blur(10px);">
+    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); backdrop-filter: blur(20px);">
       <p style="margin: 0 0 10px 0; font-size: 0.85em; color: #888; text-transform: uppercase; letter-spacing: 1px;">Sync Latency</p>
       <div style="font-size: 2.2em; font-weight: 300; font-family: 'Outfit', sans-serif; color: #fff;">45<span style="font-size: 0.4em; color: #888; margin-left: 5px;">ms</span></div>
     </div>

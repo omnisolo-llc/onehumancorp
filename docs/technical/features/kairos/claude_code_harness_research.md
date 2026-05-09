@@ -39,6 +39,6 @@ Key security mechanics observed in `src/tools/BashTool/bashSecurity.ts`:
 | **Sandbox Isolation** | OS-level generic boundaries | Strict FS/Network per-command rules | Integrate scoped sandbox policies |
 | **Extensibility** | Manual Tool Porting | Zero-friction `.mcp.json` imports | Expose OHC internal tools as MCP schemas |
 
-<div class="glass-btn" style="background: rgba(0, 122, 255, 0.2); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); padding: 10px 20px; border-radius: 8px; text-align: center; font-weight: bold;">
+<div class="glass-btn" style="background: rgba(0, 122, 255, 0.2); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.3); padding: 10px 20px; border-radius: 8px; text-align: center; font-weight: bold;">
   Market Action: Immediate implementation of GitHub Missions #4910 & #4911 required to achieve parity.
 </div>
