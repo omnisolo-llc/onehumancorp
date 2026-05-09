@@ -18,6 +18,7 @@ var sensitiveKeys = []string{
 	"org_id",
 	"session_data",
 	"session_id",
+	"payload",
 	"token",
 	"email",
 	"password",
