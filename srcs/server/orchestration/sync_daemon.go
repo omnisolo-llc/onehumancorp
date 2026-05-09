@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -28,33 +27,25 @@ func init() {
 		"ohc.sync.escalations.count",
 		metric.WithDescription("Number of local missions escalated to the cloud"),
 	)
-	if err != nil {
-		log.Printf("Failed to initialize escalationsCounter: %v", err)
-	}
+	_ = err // Ignore err
 
 	syncDaemonErrorTotal, err = meter.Int64Counter(
 		"sync_daemon_error_total",
 		metric.WithDescription("Total number of sync errors"),
 	)
-	if err != nil {
-		log.Printf("Failed to initialize syncDaemonErrorTotal: %v", err)
-	}
+	_ = err // Ignore err
 
 	syncLatencyMs, err = meter.Float64Histogram(
 		"sync_latency_ms",
 		metric.WithDescription("Latency of sync operations in ms"),
 	)
-	if err != nil {
-		log.Printf("Failed to initialize syncLatencyMs: %v", err)
-	}
+	_ = err // Ignore err
 
 	syncDaemonBatchSize, err = meter.Int64Counter(
 		"sync_daemon_batch_size",
 		metric.WithDescription("Batch size of sync operations"),
 	)
-	if err != nil {
-		log.Printf("Failed to initialize syncDaemonBatchSize: %v", err)
-	}
+	_ = err // Ignore err
 }
 
 func getSyncMode() string {
@@ -246,7 +237,6 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 			if syncDaemonErrorTotal != nil {
 				syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "DB_ITERATION_ERROR")))
 			}
-			log.Printf("Error scanning local task: %v", err)
 			continue
 		}
 
@@ -256,7 +246,6 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 				if syncDaemonErrorTotal != nil {
 					syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "SANITIZE_ERROR")))
 				}
-				log.Printf("Error sanitizing task %s", task.ID)
 				continue
 			}
 			sanitizedRaw := json.RawMessage(sanitized)
@@ -275,7 +264,6 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 			if syncDaemonErrorTotal != nil {
 				syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "CLOUD_SYNC_ERROR")))
 			}
-			log.Printf("Error creating task in cloud DB: %v", err)
 			continue
 		}
 
@@ -324,7 +312,6 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			log.Printf("Error scanning local task ID: %v", err)
 			continue
 		}
 		taskIDs = append(taskIDs, id)
@@ -337,9 +324,6 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 		// Check cloud DB
 		cloudTask, err := cloudDB.GetTask(ctx, id)
 		if err != nil {
-			if err != sql.ErrNoRows {
-				log.Printf("Error getting task from cloud DB: %v", err)
-			}
 			continue
 		}
 

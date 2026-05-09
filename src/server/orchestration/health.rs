@@ -33,21 +33,17 @@ pub async fn run_health_monitor(
         }
 
         // New Health-check probe for local-to-cloud mission sync
-        if let Ok(health) = monitor_hub.check_health().await {
-            if let Some(sync_errors) = health.get("sync_error_count").and_then(|v| v.as_i64()) {
-                if sync_errors > 10 {
-                    tracing::warn!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
-                } else if sync_errors > 0 {
-                    tracing::trace!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
-                }
-            }
+        let sync_queue = monitor_hub.check_health().await.ok().and_then(|h| h.get("local_to_cloud_sync_queue").and_then(|v| v.as_i64())).unwrap_or(0);
+        let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
+
+        if !is_cloud && sync_queue > 50 {
+            tracing::warn!("HEALTH MONITOR PROBE: Local-to-cloud sync queue is backed up ({} missions). Hybrid-mode performance degraded.", sync_queue);
         }
+
 
         let mut to_fire_now: Vec<String> = Vec::new();
         match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.get_active_agents()).await {
             Ok(Ok(agents)) => {
-                let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
-
                 if agents.is_empty() {
                     tracing::trace!("HEALTH MONITOR: No active agents found."); // Reduced noise
                 }
