@@ -30,18 +30,18 @@ fn test_mission_business_manager_interaction_flow() {
     ui.set_current_view("add".into());
     ui.set_step(0);
 
-    // Toggle offering hint
-    assert!(!ui.get_show_offering_hint());
-    ui.set_show_offering_hint(true);
-    assert!(ui.get_show_offering_hint());
+    let tr = ui.global::<app::TooltipRegistry>();
+    tr.on_request_tooltip_text(|_| "test text".into());
+
+    tr.invoke_show_tooltip("offering_hint".into(), 10.0, 10.0);
+    assert!(tr.get_is_visible());
 
     // Move to step 1
     ui.set_step(1);
 
-    // Toggle details hint
-    assert!(!ui.get_show_details_hint());
-    ui.set_show_details_hint(true);
-    assert!(ui.get_show_details_hint());
+    tr.invoke_hide_tooltip();
+    tr.invoke_show_tooltip("details_hint".into(), 10.0, 10.0);
+    assert!(tr.get_is_visible());
 }
 
 #[test]

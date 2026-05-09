@@ -20,5 +20,7 @@
   "social_posting": "Post updates to your social media.",
   "kairos_orchestration": "Let AI run complex tasks in the background. This saves you time on daily operations.",
   "video_tutorials": "Watch short videos to learn how to use the app. They are all under 90 seconds.",
-  "release_notes": "See what new features we just added to the app."
+  "release_notes": "See what new features we just added to the app.",
+  "offering_hint": "Choose Physical for items you ship, Digital for files like PDFs, or Service for bookings and your time.",
+  "details_hint": "Fill in these details to help your customers understand exactly what they are getting."
 }
