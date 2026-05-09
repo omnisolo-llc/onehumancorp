@@ -31,6 +31,7 @@ pub struct CostAuditor {
     total_network_cost: Mutex<f64>,
     agent_revenues: Mutex<HashMap<String, f64>>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
+    agent_storage_bytes: Mutex<HashMap<String, i64>>,
     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
     llm_cost_counter: Counter<f64>,
     storage_savings_counter: Counter<f64>,
@@ -55,6 +56,7 @@ impl CostAuditor {
             total_network_cost: Mutex::new(0.0),
             agent_revenues: Mutex::new(HashMap::new()),
             agent_output_tokens: Mutex::new(HashMap::new()),
+            agent_storage_bytes: Mutex::new(HashMap::new()),
             telemetry_tx: None,
             llm_cost_counter,
             storage_savings_counter,
@@ -128,7 +130,11 @@ impl CostAuditor {
         *caching_savings
     }
 
-    pub fn record_storage_compression(&self, original_bytes: i64, compressed_bytes: i64) -> f64 {
+    pub fn record_storage_compression(&self, agent_id: &str, original_bytes: i64, compressed_bytes: i64) -> f64 {
+        let mut agent_storage = self.agent_storage_bytes.lock().unwrap();
+        let current_storage = agent_storage.entry(agent_id.to_string()).or_insert(0);
+        *current_storage += compressed_bytes;
+
         let savings = calculator::calculate_storage_savings(original_bytes, compressed_bytes, &self.config);
         
         let mut storage_savings = self.storage_savings.lock().unwrap();
@@ -149,17 +155,19 @@ impl CostAuditor {
         *total_cost
     }
 
-    pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64)> {
+    pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64, i64)> {
         let agent_costs = self.agent_costs.lock().unwrap();
         let agent_revenues = self.agent_revenues.lock().unwrap();
         let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
+        let agent_storage_bytes = self.agent_storage_bytes.lock().unwrap();
         let mut result = Vec::new();
         for (agent_id, cost) in agent_costs.iter() {
             let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
             let output_tokens = agent_output_tokens.get(agent_id).unwrap_or(&0);
             let roi = self.calculate_roi(*cost, *revenue);
             let efficiency = self.calculate_efficiency(*cost, *output_tokens);
-            result.push((agent_id.clone(), *cost, *output_tokens, roi, efficiency));
+            let storage_bytes = agent_storage_bytes.get(agent_id).unwrap_or(&0);
+            result.push((agent_id.clone(), *cost, *output_tokens, roi, efficiency, *storage_bytes));
         }
         result
     }
@@ -219,6 +227,7 @@ impl CostAuditor {
         let total_network_cost = self.total_network_cost.lock().unwrap();
         let agent_revenues = self.agent_revenues.lock().unwrap();
         let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
+        let agent_storage_bytes = self.agent_storage_bytes.lock().unwrap();
 
         let mut report = format!("Total Cost: ${:.4}\n", *total_cost);
         report += &format!("Total Savings via Caching: ${:.4}\n", *caching_savings);
@@ -342,7 +351,7 @@ mod tests {
         let original_bytes = 1024 * 1024 * 1024 * 2; // 2GB
         let compressed_bytes = 1024 * 1024 * 1024 * 1; // 1GB
 
-        let savings = auditor.record_storage_compression(original_bytes, compressed_bytes);
+        let savings = auditor.record_storage_compression("agent1", original_bytes, compressed_bytes);
         assert_eq!(savings, 0.1);
         assert_eq!(auditor.get_total_storage_savings(), 0.1);
     }

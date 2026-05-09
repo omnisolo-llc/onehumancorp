@@ -1147,7 +1147,8 @@ impl Agent {
                 _ => 15.0,
             };
 
-            let turn_cost = (turn_input_tokens as f64 * input_cost_per_m / 1_000_000.0) +
+            let turn_cost = ((turn_input_tokens - resp.usage.cache_read_input_tokens as i32) as f64 * input_cost_per_m / 1_000_000.0) +
+                            (resp.usage.cache_read_input_tokens as f64 * (input_cost_per_m * 0.1) / 1_000_000.0) +
                             (output_tokens as f64 * output_cost_per_m / 1_000_000.0);
 
             if turn_cost > 0.0 {

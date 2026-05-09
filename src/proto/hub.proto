@@ -1215,6 +1215,7 @@ message AgentCostSummary {
   double roi = 3;
   double efficiency = 4;
   float pct = 5;
+  string storage_usage = 6;
 }
 
 message DashboardSnapshot {
@@ -1621,6 +1622,7 @@ message MyPlanResponse {
   int64 storage_used_bytes = 4;
   optional int64 storage_limit_bytes = 5;
   int64 next_bill_estimated = 6;
+  string upgrade_prompt_message = 7;
 }
 
 message CostDashboardResponse {

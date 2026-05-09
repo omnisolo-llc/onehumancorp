@@ -37,14 +37,21 @@ impl MyAgentManagerService {
         let (total_cost, total_tokens, agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut agent_costs = Vec::new();
-        for (name, cost, _token_used, roi, efficiency) in agent_costs_data {
+        for (name, cost, _token_used, roi, efficiency, storage_bytes) in agent_costs_data {
             let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
+            let storage_mb = storage_bytes as f64 / 1_048_576.0;
+            let storage_usage = if storage_mb >= 1024.0 {
+                format!("{:.1}GB", storage_mb / 1024.0)
+            } else {
+                format!("{:.1}MB", storage_mb)
+            };
             agent_costs.push(AgentCostSummary {
                 name,
                 cost_usd: cost,
                 roi,
                 efficiency,
                 pct,
+                storage_usage,
             });
         }
 

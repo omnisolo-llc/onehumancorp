@@ -202,6 +202,13 @@ impl HubService for MyHubService {
             crate::pricing::rate_limit::PlanTier::Business => 79,
         };
 
+        let mut upgrade_prompt_message = String::new();
+        if let Ok(status) = self.hub.tracker().check_agent_quota(tenant_id).await {
+            if status.soft_limit_reached {
+                upgrade_prompt_message = status.user_message.unwrap_or_default();
+            }
+        }
+
         Ok(tonic::Response::new(crate::ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
             ai_actions_used: ai_used as i32,
@@ -209,6 +216,7 @@ impl HubService for MyHubService {
             storage_used_bytes: storage_used_bytes,
             storage_limit_bytes: storage_limit,
             next_bill_estimated: next_bill_estimated,
+            upgrade_prompt_message,
         }))
     }
 

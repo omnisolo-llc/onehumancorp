@@ -1814,7 +1814,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 cost: format!("${:.2}", ac.cost_usd).into(),
                                 roi: format!("{:.1}%", ac.roi).into(),
                                 efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
-                                storage_usage: "0MB".into(),
+                                storage_usage: ac.storage_usage.into(),
                                 pct: ac.pct,
                             }
                         }).collect();
@@ -1857,7 +1857,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     cost: format!("${:.2}", ac.cost_usd).into(),
                                     roi: format!("{:.1}%", ac.roi).into(),
                                     efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
-                                    storage_usage: "0MB".into(),
+                                    storage_usage: ac.storage_usage.into(),
                                     pct: ac.pct,
                                 }
                             }).collect();
@@ -1943,6 +1943,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
 
                     ui.set_estimated_bill(format!("${}.00", plan.next_bill_estimated).into());
+                    if !plan.upgrade_prompt_message.is_empty() {
+                        ui.set_upgrade_prompt_message(plan.upgrade_prompt_message.into());
+                    }
                 }
             }
         }
@@ -1973,7 +1976,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             cost: format!("${:.2}", ac.cost_usd).into(),
                             roi: format!("{:.1}%", ac.roi).into(),
                             efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
-                            storage_usage: "0MB".into(),
+                            storage_usage: ac.storage_usage.into(),
                             pct: ac.pct,
                         }
                     }).collect();

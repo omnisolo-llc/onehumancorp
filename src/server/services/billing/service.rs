@@ -26,11 +26,14 @@ impl BillingService for MyBillingService {
             agent_id: req.agent_id.clone(),
             input_tokens: req.prompt_tokens,
             output_tokens: req.completion_tokens,
-            cached_input_tokens: 0, // Proto doesn't have it yet, maybe add it later
+            cached_input_tokens: req.cache_creation_input_tokens + req.cache_read_input_tokens,
             local_embedding_tokens: 0,
         };
 
-        self.auditor.record_event(event);
+        self.auditor.record_event(event.clone());
+        if event.cached_input_tokens > 0 {
+            self.auditor.record_cache_hit(event);
+        }
 
         Ok(Response::new(req))
     }
@@ -46,8 +49,14 @@ impl BillingService for MyBillingService {
         let total_tokens = self.auditor.get_total_tokens();
 
         let mut agents = Vec::new();
-        for (agent_id, cost, token_used, roi, eff) in self.auditor.get_agent_costs_snapshot() {
+        for (agent_id, cost, token_used, roi, eff, storage_bytes) in self.auditor.get_agent_costs_snapshot() {
             let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
+            let storage_mb = storage_bytes as f64 / 1_048_576.0;
+            let storage_usage = if storage_mb >= 1024.0 {
+                format!("{:.1}GB", storage_mb / 1024.0)
+            } else {
+                format!("{:.1}MB", storage_mb)
+            };
             agents.push(AgentCostSummary {
                 agent_id,
                 cost_usd: cost,
@@ -55,6 +64,7 @@ impl BillingService for MyBillingService {
                 roi,
                 efficiency: eff,
                 pct,
+                storage_usage,
             });
         }
 
@@ -91,6 +101,8 @@ mod tests {
             completion_tokens: 500,
             cost_usd: 0.0,
             occurred_at_unix: 0,
+            cache_creation_input_tokens: 0,
+            cache_read_input_tokens: 0,
         };
 
         let request = Request::new(req.clone());
@@ -123,6 +135,8 @@ mod tests {
             completion_tokens: 500,
             cost_usd: 0.0,
             occurred_at_unix: 0,
+            cache_creation_input_tokens: 0,
+            cache_read_input_tokens: 0,
         };
         let _ = service.track_token_usage(Request::new(req)).await;
 
@@ -134,6 +148,8 @@ mod tests {
             completion_tokens: 0,
             cost_usd: 0.0,
             occurred_at_unix: 0,
+            cache_creation_input_tokens: 0,
+            cache_read_input_tokens: 0,
         };
 
         let response = service.get_cost_summary(Request::new(req_summary)).await;
