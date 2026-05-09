@@ -28,7 +28,7 @@ func TestMeshSystem_BroadcastAndDiscover(t *testing.T) {
 	err := localMesh.Subscribe(ctx, "mesh:tasks", func(data []byte) {
 		var msg MeshMessage
 		err := json.Unmarshal(data, &msg)
-		if err == nil && msg.Action == "DEPLOY" {
+		if err == nil && msg.EventType == "DEPLOY" {
 			atomic.AddInt32(&receivedCount, 1)
 		}
 	})
@@ -48,10 +48,11 @@ func TestMeshSystem_BroadcastAndDiscover(t *testing.T) {
 	cloudClient := NewCentrifugeMesh(ts.URL)
 
 	// Cloud client publishes
+	dataPayload := json.RawMessage(`{"status": "IN_PROGRESS"}`)
 	msg := MeshMessage{
-		AgentID: "cloud-agent",
-		Action:  "DEPLOY",
-		Status:  "IN_PROGRESS",
+		AgentID:   "cloud-agent",
+		EventType: "DEPLOY",
+		Data:      &dataPayload,
 	}
 	data, _ := json.Marshal(msg)
 	err = cloudClient.Publish(ctx, "mesh:tasks", data)
