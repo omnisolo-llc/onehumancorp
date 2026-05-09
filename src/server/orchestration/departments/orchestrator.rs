@@ -386,6 +386,10 @@ impl DepartmentOrchestrator {
         let records = self.memory_repo.semantic_search(tenant_id, query_embedding, limit).await?;
         Ok(records.into_iter().map(|r| r.content).collect())
     }
+
+    pub async fn write_long_term_memory(&self, record: ohc_builtin_agent::memory_store::EmbeddingRecord) -> Result<(), String> {
+        self.memory_repo.upsert(&record).await.map_err(|e| e.to_string())
+    }
 }
 
 #[cfg(test)]
