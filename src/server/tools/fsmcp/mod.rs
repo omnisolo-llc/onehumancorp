@@ -222,7 +222,7 @@ mod additional_tests {
             local_base_dir: PathBuf::from("/tmp"),
             storage_provider: Some(Arc::new(MockProvider)),
         };
-        let mut claims = Claims {
+        let claims = Claims {
             sub: "".to_string(),
             username: "".to_string(),
             email: "".to_string(),
