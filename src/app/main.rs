@@ -4580,10 +4580,10 @@ mod tests {
 
         let example_added = std::rc::Rc::new(std::cell::RefCell::new(false));
         let example_added_clone = example_added.clone();
-        ui.on_add_example(move || {
+        ui.on_add_example(move |_, _| {
             *example_added_clone.borrow_mut() = true;
         });
-        ui.invoke_add_example();
+        ui.invoke_add_example("Q".into(), "A".into());
         assert!(*example_added.borrow(), "on_add_example should be called");
 
         ui.invoke_next_step();

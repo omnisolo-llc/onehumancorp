@@ -40,11 +40,11 @@ fn create() -> app::PromptTuning { crate::ui_tests::init(); app::PromptTuning::n
     let c2 = std::rc::Rc::new(std::cell::RefCell::new(false));
     let c3 = std::rc::Rc::new(std::cell::RefCell::new(false));
     
-    let w1 = c1.clone(); ui.on_add_example(move || { *w1.borrow_mut() = true; });
+    let w1 = c1.clone(); ui.on_add_example(move |_, _| { *w1.borrow_mut() = true; });
     let w2 = c2.clone(); ui.on_save_prompt(move || { *w2.borrow_mut() = true; });
     let w3 = c3.clone(); ui.on_save_state(move || { *w3.borrow_mut() = true; });
     
-    ui.invoke_add_example(); assert!(*c1.borrow());
+    ui.invoke_add_example("Q".into(), "A".into()); assert!(*c1.borrow());
     ui.invoke_save_prompt(); assert!(*c2.borrow());
     ui.invoke_save_state(); assert!(*c3.borrow());
 }

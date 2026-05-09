@@ -7,6 +7,11 @@ export struct UiPromptExample {
     a: string,
 }
 
+export struct UiTestMessage {
+    is_user: bool,
+    text: string,
+}
+
 export component PromptTuning inherits Window {
     width: 700px;
     height: 500px;
@@ -22,11 +27,16 @@ export component PromptTuning inherits Window {
     in-out property <bool> focus_reply_spanish: false;
     
     in-out property <[UiPromptExample]> examples;
+    in-out property <string> new_example_q: "";
+    in-out property <string> new_example_a: "";
+    in-out property <[UiTestMessage]> test_messages;
+    in-out property <string> test_input: "";
     
-    callback add_example();
+    callback add_example(string, string);
     callback save_prompt();
     callback next_step();
     callback save_state();
+    callback send_test_message(string);
 
     next_step => { step = step + 1; }
 
@@ -118,9 +128,12 @@ export component PromptTuning inherits Window {
             if (step == 2) : VerticalBox {
                 spacing: 16px;
                 Text { text: "Example interactions"; color: white; font-family: "Inter"; }
+                LineEdit { placeholder-text: "User says..."; text <=> new_example_q; }
+                LineEdit { placeholder-text: "Helper replies..."; text <=> new_example_a; }
                 Button {
                     text: "✨ Add Example Interaction";
-                    clicked => { add_example(); }
+                    enabled: examples.length < 3 && new_example_q != "" && new_example_a != "";
+                    clicked => { add_example(new_example_q, new_example_a); }
                 }
                 ScrollView {
                     height: 200px;
@@ -200,27 +213,24 @@ export component PromptTuning inherits Window {
                     }
                     if (!is_advanced) : VerticalBox {
                         spacing: 12px;
-                        Rectangle {
-                            background: rgba(255, 255, 255, 0.1);
-                            border-radius: 8px;
-                            HorizontalBox {
-                                padding: 8px;
-                                Text { text: "User: Hello!"; color: white; font-family: "Inter"; }
+                        ScrollView {
+                            height: 150px;
+                            VerticalBox {
+                                spacing: 8px;
+                                for msg in test_messages : Rectangle {
+                                    background: msg.is_user ? rgba(255, 255, 255, 0.1) : rgba(168, 85, 247, 0.8);
+                                    border-radius: 8px;
+                                    HorizontalBox {
+                                        padding: 8px;
+                                        Text { text: (msg.is_user ? "User: " : "Helper: ") + msg.text; color: white; font-family: "Inter"; wrap: word-wrap; }
+                                    }
+                                }
                             }
                         }
-                        Rectangle {
-                            background: rgba(168, 85, 247, 0.8);
-                            border-radius: 8px;
-                            HorizontalBox {
-                                padding: 8px;
-                                Text { text: "Helper: " + (tone == "Friendly & Warm" ? "Hi there! 😊 How can I help you today?" : (tone == "Professional" ? "Greetings. How may I assist you today?" : (tone == "Energetic" ? "Hey! Let's get things moving! 🚀" : (tone == "Concise" ? "Hello. How can I assist?" : "Hi.")))); color: white; font-family: "Inter"; wrap: word-wrap; }
-                            }
-                        }
-                        Rectangle { height: 100px; } // Spacer
                         HorizontalBox {
                             spacing: 8px;
-                            LineEdit { placeholder-text: "Test your helper..."; font-family: "Inter"; }
-                            Button { text: "Send"; }
+                            LineEdit { placeholder-text: "Test your helper..."; text <=> test_input; font-family: "Inter"; }
+                            Button { text: "Send"; clicked => { send_test_message(test_input); } }
                         }
                     }
                 }
