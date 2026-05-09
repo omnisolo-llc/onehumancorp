@@ -1562,35 +1562,139 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let business_manager_ui = app::BusinessManager::new().unwrap();
 
-    let dummy_products = vec![
-        app::UiProduct {
-            id: "prod_1".into(),
-            name: "Custom Vegan Cake".into(),
-            type_label: "Physical".into(),
-            price: "$40.00".into(),
-            inventory_count: 5,
-            is_out_of_stock: false,
-        },
-        app::UiProduct {
-            id: "prod_2".into(),
-            name: "Website Template".into(),
-            type_label: "Digital".into(),
-            price: "$19.00".into(),
-            inventory_count: 0,
-            is_out_of_stock: false,
-        },
-        app::UiProduct {
-            id: "prod_3".into(),
-            name: "Plumbing Repair".into(),
-            type_label: "Service".into(),
-            price: "$150.00".into(),
-            inventory_count: 0,
-            is_out_of_stock: true,
-        },
-    ];
-    let product_model = slint::VecModel::from(dummy_products);
-    let product_model_rc = std::rc::Rc::new(product_model);
+    let product_model_rc = std::rc::Rc::new(slint::VecModel::from(vec![]));
     business_manager_ui.set_products(product_model_rc.clone().into());
+
+    GLOBAL_DASHBOARD.with(|dash_ref| {
+        if let Some(dash) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
+            dash.on_action_add_product({
+                let business_manager_handle = business_manager_ui.as_weak();
+                move || {
+                    if let Some(ui) = business_manager_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                }
+            });
+        }
+    });
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let business_manager_handle = business_manager_ui.as_weak();
+        tokio::spawn(async move {
+            use ohc::api::v1::dashboard_service_client::DashboardServiceClient;
+            use ohc::api::v1::GetDashboardRequest;
+            let channel = tonic::transport::Channel::from_static("http://127.0.0.1:18789").connect().await;
+            if let Ok(channel) = channel {
+                let mut client = DashboardServiceClient::new(channel);
+                let mut req = tonic::Request::new(GetDashboardRequest {
+                    organization_id: "system".into(),
+                    mobile_optimized: false,
+                });
+                if let Ok(token) = std::env::var("OHC_TOKEN") {
+                    req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+                }
+                if let Ok(response) = client.get_dashboard(req).await {
+                    let resp = response.into_inner();
+                    let mut models: Vec<app::UiProduct> = Vec::new();
+                    for p in resp.products {
+                        let price_str = format!("${:.2}", p.price_cents as f64 / 100.0);
+                        models.push(app::UiProduct {
+                            id: p.id.into(),
+                            name: p.name.into(),
+                            type_label: p.fulfillment_strategy.into(),
+                            price: price_str.into(),
+                            inventory_count: 0,
+                            is_out_of_stock: false,
+                        });
+                    }
+                    let _ = slint::invoke_from_event_loop(move || {
+                        let model_rc = std::rc::Rc::new(slint::VecModel::from(models));
+                        if let Some(ui) = business_manager_handle.upgrade() {
+                            ui.set_products(model_rc.into());
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let business_manager_handle = business_manager_ui.as_weak();
+        business_manager_ui.on_submit(move |type_, name, _desc, price, _dur, _sched| {
+            let business_manager_handle_clone = business_manager_handle.clone();
+            let name_clone = name.to_string();
+            let price_clone = price.to_string();
+            let type_clone = type_.to_string();
+            tokio::spawn(async move {
+                if let Ok(mut client) = ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+
+                    let payload = serde_json::json!({
+                        "name": name_clone,
+                        "price": price_clone,
+                        "type": type_clone,
+                        "organization_id": "system",
+                    });
+
+                    let event = ohc::orchestration::TeammateMeshEvent {
+                        agent_id: "system".to_string(),
+                        action: "ProductCreated".to_string(),
+                        status: "success".to_string(),
+                        payload: serde_json::to_vec(&payload).unwrap_or_default(),
+                        msg_id: uuid::Uuid::new_v4().to_string(),
+                    };
+
+                    let mut req = tonic::Request::new(ohc::orchestration::PublishTeammateMeshEventRequest {
+                        channel: "products_inbox".to_string(),
+                        event: Some(event),
+                    });
+                    if let Ok(token) = std::env::var("OHC_TOKEN") {
+                        req.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+                    }
+                    let _ = client.publish_teammate_mesh_event(req).await;
+
+                    // Refresh products
+                    use ohc::api::v1::dashboard_service_client::DashboardServiceClient;
+                    use ohc::api::v1::GetDashboardRequest;
+                    let channel2 = tonic::transport::Channel::from_static("http://127.0.0.1:18789").connect().await;
+                    if let Ok(channel2) = channel2 {
+                        let mut client2 = DashboardServiceClient::new(channel2);
+                        let mut req2 = tonic::Request::new(GetDashboardRequest {
+                            organization_id: "system".into(),
+                            mobile_optimized: false,
+                        });
+                        if let Ok(token) = std::env::var("OHC_TOKEN") {
+                            req2.metadata_mut().insert("authorization", format!("Bearer {}", token).parse().unwrap());
+                        }
+                        // wait briefly for the product to be processed in the background
+                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                        if let Ok(response) = client2.get_dashboard(req2).await {
+                            let resp = response.into_inner();
+                            let mut models: Vec<app::UiProduct> = Vec::new();
+                            for p in resp.products {
+                                let price_str = format!("${:.2}", p.price_cents as f64 / 100.0);
+                                models.push(app::UiProduct {
+                                    id: p.id.into(),
+                                    name: p.name.into(),
+                                    type_label: p.fulfillment_strategy.into(),
+                                    price: price_str.into(),
+                                    inventory_count: 0,
+                                    is_out_of_stock: false,
+                                });
+                            }
+                            let _ = slint::invoke_from_event_loop(move || {
+                                let model_rc = std::rc::Rc::new(slint::VecModel::from(models));
+                                if let Some(ui) = business_manager_handle_clone.upgrade() {
+                                    ui.set_products(model_rc.into());
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+        });
+    }
 
     business_manager_ui.on_action_edit({
         move |_id| {
