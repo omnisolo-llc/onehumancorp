@@ -34,10 +34,6 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-    - to:
-        - namespaceSelector:
-            matchLabels:
               kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
@@ -48,19 +44,18 @@ spec:
         - protocol: TCP
           port: 53
     - to:
-        - ipBlock:
-            cidr: 0.0.0.0/0
-            except:
-              - 10.0.0.0/8
-              - 172.16.0.0/12
-              - 192.168.0.0/16
-              - 169.254.169.254/32
+        - podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-core
+        - podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-chatwoot
+        - podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-powersync
     {{- if .Values.cnpg.enabled }}
     - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
+        - podSelector:
             matchLabels:
               app: {{ .Values.cnpg.clusterName }}-rw
       ports:
@@ -69,10 +64,7 @@ spec:
     {{- end }}
     {{- if .Values.redis.enabled }}
     - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
+        - podSelector:
             matchLabels:
               app: {{ .Release.Name }}-redis-master
       ports:
@@ -115,10 +107,6 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-    - to:
-        - namespaceSelector:
-            matchLabels:
               kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
@@ -128,6 +116,28 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-backend
+    {{- if .Values.cnpg.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Values.cnpg.clusterName }}-rw
+      ports:
+        - protocol: TCP
+          port: 5432
+    {{- end }}
+    {{- if .Values.redis.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-redis-master
+      ports:
+        - protocol: TCP
+          port: 6379
+    {{- end }}
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
@@ -164,10 +174,6 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-    - to:
-        - namespaceSelector:
-            matchLabels:
               kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
@@ -177,6 +183,28 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-backend
+    {{- if .Values.cnpg.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Values.cnpg.clusterName }}-rw
+      ports:
+        - protocol: TCP
+          port: 5432
+    {{- end }}
+    {{- if .Values.redis.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-redis-master
+      ports:
+        - protocol: TCP
+          port: 6379
+    {{- end }}
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
@@ -213,10 +241,6 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-    - to:
-        - namespaceSelector:
-            matchLabels:
               kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
@@ -226,6 +250,28 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-backend
+    {{- if .Values.cnpg.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Values.cnpg.clusterName }}-rw
+      ports:
+        - protocol: TCP
+          port: 5432
+    {{- end }}
+    {{- if .Values.redis.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-redis-master
+      ports:
+        - protocol: TCP
+          port: 6379
+    {{- end }}
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0

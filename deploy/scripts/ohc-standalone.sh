@@ -53,11 +53,11 @@ echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 
 # Prune stale memory files (older than 60 mins) periodically to prevent unbounded growth
 (while true; do
-  find "${OHC_MEMORY_DIR}" -type f -mmin +60 -delete > /dev/null 2>&1
+  [ -d "${OHC_MEMORY_DIR}" ] && find "${OHC_MEMORY_DIR}" -type f -mmin +60 -delete > /dev/null 2>&1
   # Resource Cleanup: Also clean unbounded tmp, cache, and download directories
-  find "tmp/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
-  find ".cache/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
-  find "downloads/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  [ -d "tmp/" ] && find "tmp/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  [ -d ".cache/" ] && find ".cache/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  [ -d "downloads/" ] && find "downloads/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
   sleep 3600
 done) &
 PRUNE_PID=$!
@@ -96,9 +96,10 @@ function cleanup {
 
   # Resource Cleanup: Clean additional temporary artifact directories
   echo -e "${DIM}  Cleaning temporary artifacts...${RESET}"
-  rm -rf "${OHC_STATUS_DIR}"/* 2>/dev/null || true
-  find "tmp/" -type f -delete > /dev/null 2>&1 || true
-  find ".cache/" -type f -delete > /dev/null 2>&1 || true
+  [ -d "${OHC_STATUS_DIR}" ] && rm -rf "${OHC_STATUS_DIR}"/* 2>/dev/null || true
+  [ -d "tmp/" ] && find "tmp/" -type f -delete > /dev/null 2>&1 || true
+  [ -d ".cache/" ] && find ".cache/" -type f -delete > /dev/null 2>&1 || true
+  [ -d "downloads/" ] && find "downloads/" -type f -delete > /dev/null 2>&1 || true
 
   docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
   docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
