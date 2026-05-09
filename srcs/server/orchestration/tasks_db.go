@@ -299,9 +299,8 @@ func (s *PostgresTaskStore) ReportMissionHandover(ctx context.Context, missionID
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE agent_missions
 		SET status = 'blocked',
-		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '
-' END || $1
-		WHERE id = $2`, blockers, missionID)
+		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE $1 END || $2
+		WHERE id = $3`, "\n", blockers, missionID)
 	return err
 }
 
@@ -642,9 +641,8 @@ func (s *SqliteTaskStore) ReportMissionHandover(ctx context.Context, missionID s
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE agent_missions
 		SET status = 'blocked',
-		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '
-' END || ?
-		WHERE id = ?`, blockers, missionID)
+		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE ? END || ?
+		WHERE id = ?`, "\n", blockers, missionID)
 	return err
 }
 

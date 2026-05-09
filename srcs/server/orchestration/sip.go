@@ -68,8 +68,7 @@ func (s *SIPDB) ReportMissionHandover(ctx context.Context, missionID string, blo
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE agent_missions
 		SET status = 'blocked',
-		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '
-' END || $1
-		WHERE id = $2`, blockers, missionID)
+		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE ? END || ?
+		WHERE id = ?`, "\n", blockers, missionID)
 	return err
 }
