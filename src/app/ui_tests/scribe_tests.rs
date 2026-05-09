@@ -147,10 +147,14 @@ fn test_new_integrations_present() {
     let invoked_clone = invoked.clone();
 
     ui.on_configure_integration(move |name| {
-        if name == "Ayrshare" || name == "Listmonk" || name == "EasyPost" || name == "Jitsi" || name == "Cal.com" || name == "Mercado Pago" || name == "Twilio" {
+        if name == "Ayrshare" || name == "Listmonk" || name == "EasyPost" || name == "Jitsi" || name == "Cal.com" || name == "Mercado Pago" || name == "Twilio" || name == "Karrio" {
             *invoked_clone.borrow_mut() = true;
         }
     });
+
+    ui.invoke_configure_integration("Karrio".into());
+    assert!(*invoked.borrow(), "Karrio configuration should be callable");
+    *invoked.borrow_mut() = false;
 
     ui.invoke_configure_integration("Ayrshare".into());
     assert!(*invoked.borrow(), "Ayrshare configuration should be callable");

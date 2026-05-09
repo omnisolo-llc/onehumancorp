@@ -1162,45 +1162,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let integrations_ui = app::Integrations::new()?;
     GLOBAL_INTEGRATIONS.with(|g| *g.borrow_mut() = Some(integrations_ui.as_weak()));
-    integrations_ui.on_configure_integration(|id| {
-        let id_str = id.to_string();
-        if id_str == "Facebook" || id_str == "Instagram" || id_str == "WhatsApp" {
-            GLOBAL_UNIFIED_INBOX.with(|inbox_ref| {
-                if let Some(inbox) = inbox_ref.borrow().as_ref().and_then(|i| i.upgrade()) {
-                    let mut current_convs = Vec::new();
-                    let current = inbox.get_conversations();
-                    for i in 0..current.row_count() {
-                        if let Some(item) = current.row_data(i) {
-                            current_convs.push(item);
+    let integrations_ui_strong = integrations_ui.clone_strong();
+    integrations_ui.on_configure_integration({
+        let _keep_alive = integrations_ui_strong.clone_strong();
+        move |id| {
+            let id_str = id.to_string();
+            if id_str == "Facebook" || id_str == "Instagram" || id_str == "WhatsApp" {
+                GLOBAL_UNIFIED_INBOX.with(|inbox_ref| {
+                    if let Some(inbox) = inbox_ref.borrow().as_ref().and_then(|i| i.upgrade()) {
+                        let mut current_convs = Vec::new();
+                        let current = inbox.get_conversations();
+                        for i in 0..current.row_count() {
+                            if let Some(item) = current.row_data(i) {
+                                current_convs.push(item);
+                            }
                         }
+
+                        let channel_icon = match id_str.as_str() {
+                            "Facebook" => "📘",
+                            "Instagram" => "📷",
+                            "WhatsApp" => "💬",
+                            _ => "✉️",
+                        };
+
+                        current_convs.push(app::UiConversation {
+                            id: format!("conv-{}", current_convs.len() + 1).into(),
+                            customer_name: format!("{} User", id_str).into(),
+                            channel_icon: channel_icon.into(),
+                            last_message: format!("Hello from {}!", id_str).into(),
+                            unread: true,
+                            time: "Just now".into(),
+                        });
+                        inbox.set_conversations(slint::ModelRc::new(slint::VecModel::from(current_convs)));
+                        let _ = inbox.show();
                     }
-
-                    let channel_icon = match id_str.as_str() {
-                        "Facebook" => "📘",
-                        "Instagram" => "📷",
-                        "WhatsApp" => "💬",
-                        _ => "✉️",
-                    };
-
-                    current_convs.push(app::UiConversation {
-                        id: format!("conv-{}", current_convs.len() + 1).into(),
-                        customer_name: format!("{} User", id_str).into(),
-                        channel_icon: channel_icon.into(),
-                        last_message: format!("Hello from {}!", id_str).into(),
-                        unread: true,
-                        time: "Just now".into(),
-                    });
-                    inbox.set_conversations(slint::ModelRc::new(slint::VecModel::from(current_convs)));
-                    let _ = inbox.show();
-                }
-            });
+                });
+            }
+            tokio::spawn(async move { });
         }
-        tokio::spawn(async move { });
     });
-    integrations_ui.on_invoke_tool(|id| {
-        let _id_clone = id.to_string(); tokio::spawn(async move { });
+    integrations_ui.on_invoke_tool({
+        let _keep_alive = integrations_ui_strong;
+        move |id| {
+            let _id_clone = id.to_string(); tokio::spawn(async move { });
+        }
     });
-    Box::leak(Box::new(integrations_ui));
 
     let website_builder_ui = app::WebsiteBuilder::new()?;
     GLOBAL_WEBSITE_BUILDER.with(|g| *g.borrow_mut() = Some(website_builder_ui.as_weak()));
@@ -3774,6 +3780,54 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
             wasm_bindgen_futures::spawn_local(async move {
                 // HTTP call in WASM stubbed
             });
+        }
+    });
+
+    let integrations_ui = app::Integrations::new()?;
+    GLOBAL_INTEGRATIONS.with(|g| *g.borrow_mut() = Some(integrations_ui.as_weak()));
+    let integrations_ui_strong = integrations_ui.clone_strong();
+    integrations_ui.on_configure_integration({
+        let _keep_alive = integrations_ui_strong.clone_strong();
+        move |id| {
+            let id_str = id.to_string();
+            if id_str == "Facebook" || id_str == "Instagram" || id_str == "WhatsApp" {
+                GLOBAL_UNIFIED_INBOX.with(|inbox_ref| {
+                    if let Some(inbox) = inbox_ref.borrow().as_ref().and_then(|i| i.upgrade()) {
+                        let mut current_convs = Vec::new();
+                        let current = inbox.get_conversations();
+                        for i in 0..current.row_count() {
+                            if let Some(item) = current.row_data(i) {
+                                current_convs.push(item);
+                            }
+                        }
+
+                        let channel_icon = match id_str.as_str() {
+                            "Facebook" => "📘",
+                            "Instagram" => "📷",
+                            "WhatsApp" => "💬",
+                            _ => "✉️",
+                        };
+
+                        current_convs.push(app::UiConversation {
+                            id: format!("conv-{}", current_convs.len() + 1).into(),
+                            customer_name: format!("{} User", id_str).into(),
+                            channel_icon: channel_icon.into(),
+                            last_message: format!("Hello from {}!", id_str).into(),
+                            unread: true,
+                            time: "Just now".into(),
+                        });
+                        inbox.set_conversations(slint::ModelRc::new(slint::VecModel::from(current_convs)));
+                        let _ = inbox.show();
+                    }
+                });
+            }
+            wasm_bindgen_futures::spawn_local(async move { });
+        }
+    });
+    integrations_ui.on_invoke_tool({
+        let _keep_alive = integrations_ui_strong;
+        move |id| {
+            let _id_clone = id.to_string(); wasm_bindgen_futures::spawn_local(async move { });
         }
     });
 
