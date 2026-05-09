@@ -5,8 +5,6 @@ import 'screens/unified_inbox_screen.dart';
 import 'screens/business_setup_wizard_screen.dart';
 import 'screens/help/help_center_screen.dart';
 import 'screens/help/ai_help_chat_screen.dart';
-import 'screens/help/video_tutorials_screen.dart';
-import 'screens/help/walkthrough_screen.dart';
 import 'screens/referral_program_screen.dart';
 import 'widgets/milestone_notification.dart';
 
@@ -74,22 +72,6 @@ class DashboardScreen extends StatelessWidget {
             const DrawerHeader(
               decoration: BoxDecoration(color: Color(0xFF6B4EFF)),
               child: Text('Menu', style: TextStyle(color: Colors.white, fontSize: 24)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.tour, color: Colors.white),
-              title: const Text('App Tour', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context); // Close drawer
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const WalkthroughScreen()));
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.video_library, color: Colors.white),
-              title: const Text('Video Tutorials', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context); // Close drawer
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const VideoTutorialsScreen()));
-              },
             ),
           ],
         ),
