@@ -66,6 +66,8 @@ func (d *AutoDreamDaemon) Run(ctx context.Context) {
 		case <-ticker.C:
 			d.processDirectories(ctx)
 			d.SweepCompletedTasks(ctx)
+			d.PruneStaleMemories(ctx)
+			d.ResolveConflicts(ctx)
 		}
 	}
 }
@@ -155,7 +157,9 @@ func (d *AutoDreamDaemon) processFile(ctx context.Context, path string) {
 	}
 
 	// Increment metric
-	d.memoriesCounter.Add(ctx, 1)
+	if d.memoriesCounter != nil {
+	    d.memoriesCounter.Add(ctx, 1)
+	}
 
 	// Optionally mark as processed to avoid reprocessing, here we can rename or delete.
 	// For now, we rename it by adding .processed
