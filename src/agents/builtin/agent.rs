@@ -1349,7 +1349,7 @@ impl Agent {
                     }
                 }
 
-                // Visual Verification (screenshots via Playwright or Slint)
+                // Verification Loops: Visual (Playwright/Slint)
                 if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
                     let wd = final_cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
                     let mut cmd = std::process::Command::new("bash");
@@ -4807,3 +4807,75 @@ mod stream_tests {
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
     }
+
+#[cfg(test)]
+mod verification_loops_visual_tests {
+    use super::*;
+    use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+    use crate::llm::LlmClient;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    struct VisualVerificationMockClient {
+        calls: AtomicUsize,
+    }
+    #[async_trait::async_trait]
+    impl LlmClient for VisualVerificationMockClient {
+        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let c = self.calls.fetch_add(1, Ordering::SeqCst);
+            if c == 0 {
+                Ok(ChatResponse {
+                    message: Message::assistant("I have built the UI component"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id1".to_string()),
+                })
+            } else {
+                let last_msg = req.messages.last().unwrap();
+                assert!(last_msg.content.contains("Visual verification rejected the output. Reason: REJECT: Button misaligned"), "Expected visual feedback");
+
+                Ok(ChatResponse {
+                    message: Message::assistant("I have fixed the UI component"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id2".to_string()),
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_verification_loops_visual_playwright_slint() {
+        use tempfile::tempdir;
+        let client = Arc::new(VisualVerificationMockClient { calls: AtomicUsize::new(0) });
+        let agent = Agent::new(client, vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_visual_verification = true;
+
+        let dir = tempdir().unwrap();
+        let passed_file = dir.path().join("visual_test_passed");
+        let passed_path_str = passed_file.to_str().unwrap();
+
+        let script = format!(r#"
+        if [ ! -f "{}" ]; then
+            echo 'REJECT: Button misaligned'
+            touch "{}"
+        else
+            echo 'PASS: Looks good'
+        fi
+        "#, passed_path_str, passed_path_str);
+
+        let script_file = dir.path().join("visual_script.sh");
+        let script_path = script_file.to_str().unwrap();
+        std::fs::write(script_path, script).unwrap();
+
+        cfg.visual_verification_command = format!("bash {}", script_path);
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Build UI", &mut |e| events.push(e)).await;
+
+        assert!(res.is_ok());
+        let final_answer = res.unwrap();
+        assert_eq!(final_answer, "I have fixed the UI component");
+    }
+}
