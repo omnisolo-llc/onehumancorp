@@ -1,1 +1,1 @@
-General Mission Worker & Taskmaster (L5): Zero WIP exit
+Maintainer: Zero WIP exit.
