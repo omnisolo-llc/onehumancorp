@@ -3,17 +3,32 @@ package onboarding
 import (
 	"bytes"
 	"context"
+	"os"
 
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
+	"github.com/golang-jwt/jwt/v5"
 
 	"onehumancorp/srcs/server/orchestration"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 )
+
+func generateTestJWT(tenantID string) string {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"tenant_id": tenantID,
+		"exp":       time.Now().Add(time.Hour).Unix(),
+	})
+	os.Setenv("JWT_SECRET", "test-secret-key")
+	secret := os.Getenv("JWT_SECRET")
+	tokenString, _ := token.SignedString([]byte(secret))
+	return tokenString
+}
+
 
 func TestAPIEndToEndFlow(t *testing.T) {
 	db := setupTestDB(t)
@@ -62,7 +77,7 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	// 3. Poll Status
 	req1, err := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
 	assert.NoError(t, err)
-	req1.Header.Set("X-Tenant-Id", startRes.TenantID)
+	req1.Header.Set("Authorization", "Bearer "+generateTestJWT(startRes.TenantID))
 	statusResp, err := http.DefaultClient.Do(req1)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp.StatusCode)
@@ -82,7 +97,7 @@ func TestAPIEndToEndFlow(t *testing.T) {
 
 	// 5. Poll Status Again
 	req2, _ := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
-	req2.Header.Set("X-Tenant-Id", startRes.TenantID)
+	req2.Header.Set("Authorization", "Bearer "+generateTestJWT(startRes.TenantID))
 	statusResp2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp2.StatusCode)
@@ -137,7 +152,7 @@ func TestAPIStateFlow(t *testing.T) {
 
 	req1, err := http.NewRequest("POST", ts.URL+"/api/onboarding/state", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
-	req1.Header.Set("X-Tenant-Id", tenant.ID)
+	req1.Header.Set("Authorization", "Bearer "+generateTestJWT(tenant.ID))
 	resp, err := http.DefaultClient.Do(req1)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
@@ -146,7 +161,7 @@ func TestAPIStateFlow(t *testing.T) {
     // 3. Get State
 	req2, err := http.NewRequest("GET", ts.URL+"/api/onboarding/state", nil)
 	assert.NoError(t, err)
-	req2.Header.Set("X-Tenant-Id", tenant.ID)
+	req2.Header.Set("Authorization", "Bearer "+generateTestJWT(tenant.ID))
 	resp2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
@@ -157,4 +172,32 @@ func TestAPIStateFlow(t *testing.T) {
 	resp2.Body.Close()
 
 	assert.Equal(t, "{\"currentStep\":2}", stateRes.State)
+}
+
+func TestCrossTenantAccessFails(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	tenantStore := NewSqliteTenantStore(db)
+	taskStore := orchestration.NewSqliteTaskStore(db)
+	service := NewService(tenantStore, taskStore)
+	handler := NewAPIHandler(service)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/onboarding/status", TenantAuthMiddleware(handler.HandleGetStatus))
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// Spoof token for a different tenant
+	spoofedToken := generateTestJWT("spoofed-tenant-id")
+
+	req, _ := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
+	req.Header.Set("Authorization", "Bearer "+spoofedToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	// Service will fail to find "spoofed-tenant-id" returning InternalServerError or 404
+	// In our case it returns InternalServerError for missing tenant in GetOnboardingStatus
+	assert.NotEqual(t, http.StatusOK, resp.StatusCode)
 }

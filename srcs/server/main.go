@@ -52,12 +52,6 @@ func main() {
 	}
 	defer db.Close()
 
-	if dbPath != ":memory:" {
-		// Enforce secure file permissions for local standalone mode
-		if err := os.Chmod(dbPath, 0600); err != nil {
-			log.Printf("Warning: Failed to set secure permissions on %s: %v", dbPath, err)
-		}
-	}
 
 	// Create memory_embeddings table
 	_, err = db.Exec(`
@@ -69,6 +63,13 @@ func main() {
 	`)
 	if err != nil {
 		log.Fatalf("Failed to create memory_embeddings table: %v", err)
+	}
+
+	if dbPath != ":memory:" {
+		// Enforce secure file permissions for local standalone mode AFTER file creation
+		if err := os.Chmod(dbPath, 0600); err != nil {
+			log.Printf("Warning: Failed to set secure permissions on %s: %v", dbPath, err)
+		}
 	}
 
 	// Initialize the mock LLM client

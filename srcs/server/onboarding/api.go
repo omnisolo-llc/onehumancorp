@@ -4,7 +4,11 @@ import (
 	"encoding/json"
 	"context"
 	"net/http"
+	"os"
+	"strings"
+	"github.com/golang-jwt/jwt/v5"
 )
+
 
 
 type contextKey string
@@ -112,15 +116,45 @@ func (h *APIHandler) HandleGetState(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
-// TenantAuthMiddleware extracts the X-Tenant-Id header and injects it into the request context.
-// In a real application, this would validate a session token, but this provides a secure extraction path.
+// TenantAuthMiddleware extracts the tenant ID from a valid JWT in the Authorization header.
 func TenantAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := r.Header.Get("X-Tenant-Id")
-		if tenantID == "" {
-			http.Error(w, "Missing X-Tenant-Id header", http.StatusUnauthorized)
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			http.Error(w, "Missing or invalid Authorization header", http.StatusUnauthorized)
 			return
 		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+		// Parse and validate the JWT token
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			// In a real app, this should be an env variable. Using a fixed secret for testing/demo.
+			secret := os.Getenv("JWT_SECRET")
+			if secret == "" {
+				// Fail securely if JWT_SECRET is not set in environment
+				return nil, jwt.ErrInvalidKey
+			}
+			return []byte(secret), nil
+		})
+
+		if err != nil || !token.Valid {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+			return
+		}
+
+		tenantID, ok := claims["tenant_id"].(string)
+		if !ok || tenantID == "" {
+			http.Error(w, "Missing tenant_id in token", http.StatusUnauthorized)
+			return
+		}
+
 		// Inject into context
 		ctx := context.WithValue(r.Context(), tenantContextKey, tenantID)
 		next.ServeHTTP(w, r.WithContext(ctx))
