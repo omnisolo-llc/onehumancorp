@@ -25,6 +25,7 @@ export RAYON_NUM_THREADS=2
 export OHC_STANDALONE=true
 export LOG_FORMAT="json"
 export LOG_LEVEL="info"
+export RUST_LOG="info"
 export OHC_RUNTIME_DIR=".ohc/runtime"
 export OHC_MEMORY_DIR="${OHC_RUNTIME_DIR}/memory"
 export OHC_STATUS_DIR="${OHC_RUNTIME_DIR}/status"
