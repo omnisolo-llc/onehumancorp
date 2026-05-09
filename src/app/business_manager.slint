@@ -1,5 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 
 export struct UiProduct {
     id: string,
@@ -19,6 +20,10 @@ export component BusinessManager inherits Window {
     in-out property <string> current_view: "list";
 
     in property <[UiProduct]> products;
+
+    in-out property <bool> is_advanced: false;
+    callback toggle_advanced();
+    toggle_advanced => { }
 
     in-out property <int> step: 0;
     in-out property <string> selected_type: "";
@@ -57,6 +62,10 @@ export component BusinessManager inherits Window {
         HorizontalBox {
             Text { text: current_view == "list" ? "My Offerings" : "Add Offering"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { toggle_advanced(); }
+            }
             if (current_view == "add") : Button { text: "Back to List"; clicked => { current_view = "list"; } }
             if (current_view == "list") : Button { text: "Close"; clicked => { close(); } }
         }
@@ -215,7 +224,7 @@ export component BusinessManager inherits Window {
                     Text { text: "Duration (minutes)"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                     LineEdit { text <=> service_duration; input-type: number; placeholder-text: "60"; height: 44px; }
                 }
-                VerticalBox {
+                if (is_advanced) : VerticalBox {
                     spacing: 8px;
                     Text { text: "Available Hours"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                     LineEdit { text <=> service_schedule; placeholder-text: "e.g. Mon-Fri 9am-5pm"; height: 44px; }
