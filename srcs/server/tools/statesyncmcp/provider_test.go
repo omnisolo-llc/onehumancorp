@@ -31,6 +31,10 @@ func (m *mockLocalDB) ReportMissionHandover(ctx context.Context, missionID strin
 	return nil
 }
 
+func (m *mockLocalDB) SanitizeBacklog(ctx context.Context) error {
+	return nil
+}
+
 func (m *mockLocalDB) CreateTask(ctx context.Context, task *orchestration.SharedTask) error {
 	return m.createErr
 }

@@ -1154,3 +1154,25 @@ func TestSqliteTaskStore_PollDelegatedTasks_ScanError(t *testing.T) {
 	_, err = store.PollDelegatedTasks(ctx, 10)
 	assert.Error(t, err)
 }
+
+func TestSanitizeBacklog(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+	ctx := context.Background()
+
+	// Insert STUCK mission
+	_, err := db.Exec("CREATE TABLE IF NOT EXISTS agent_missions (id TEXT PRIMARY KEY, status TEXT NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, organization_id TEXT, mission_log TEXT)")
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m_stuck', 'STUCK', '{}')")
+	require.NoError(t, err)
+
+	err = store.SanitizeBacklog(ctx)
+	require.NoError(t, err)
+
+	var status string
+	err = db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'm_stuck'").Scan(&status)
+	require.NoError(t, err)
+	assert.Equal(t, "FAILED", status)
+}

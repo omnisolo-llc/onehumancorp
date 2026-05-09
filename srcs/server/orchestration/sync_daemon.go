@@ -208,6 +208,8 @@ func StartSyncDaemon(ctx context.Context, localDB SQLiteProvider, cloudDB Postgr
 			return
 		case <-ticker.C:
 			syncPendingEscalations(ctx, localDB, cloudDB)
+			localDB.SanitizeBacklog(ctx)
+			cloudDB.SanitizeBacklog(ctx)
 			syncCompletedEscalations(ctx, localDB, cloudDB)
 		}
 	}

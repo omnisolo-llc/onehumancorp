@@ -25,9 +25,25 @@ pub async fn run_health_monitor(
 
         // Hybrid mode health check
         if let Ok(health) = monitor_hub.check_health().await {
+            // Hybrid mode switching probe
+            if let Some(mode) = health.get("mode").and_then(|v| v.as_str()) {
+                if mode == "switching" || mode == "transitioning" {
+                    tracing::warn!("HEALTH MONITOR: Hybrid mode switching is taking longer than expected.");
+                }
+            }
+
             if let Some(ready) = health.get("hybrid_mode_ready").and_then(|v| v.as_bool()) {
                 if !ready {
                     tracing::trace!("HEALTH MONITOR: Hybrid mode is degraded.");
+                }
+            }
+        }
+
+        // Health-check probe for stuck agent missions backlog
+        if let Ok(health) = monitor_hub.check_health().await {
+            if let Some(stuck_missions) = health.get("stuck_missions").and_then(|v| v.as_i64()) {
+                if stuck_missions > 0 {
+                    tracing::warn!("HEALTH MONITOR: Stuck missions detected in backlog: {}", stuck_missions);
                 }
             }
         }
@@ -76,7 +92,7 @@ pub async fn run_health_monitor(
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);
                 for agent_id in to_fire_now {
-                    tracing::info!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
+                    tracing::trace!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
                     monitor_hub.fire_agent(&agent_id);
                     pending_fires.remove(&agent_id);
                 }
@@ -198,6 +214,33 @@ mod tests {
 
         tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
         assert!(hub.get_agent("agent_cloud").is_none(), "Agent should be fired after retries in cloud mode");
+        handle.abort();
+    }
+
+    #[tokio::test]
+    async fn test_health_monitor_hybrid_switching() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://dummy")
+            .unwrap();
+
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pg_pool));
+
+        let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
+        let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();
+        let monitor_hub = hub.clone();
+
+        let handle = tokio::spawn(async move {
+            run_health_monitor(monitor_mesh, monitor_hub, true, std::time::Duration::from_millis(10)).await;
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         handle.abort();
     }
 
