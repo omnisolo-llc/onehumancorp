@@ -12,3 +12,4 @@ pub mod stripe;
 pub mod twilio;
 pub mod mcp_gateway;
 pub mod mercadopago;
+pub mod calcom;

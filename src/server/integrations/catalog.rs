@@ -40,5 +40,25 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     };
     catalog.push(twilio_provider);
 
+    let calcom_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "calcom".to_string(),
+            name: "Cal.com Scheduling".to_string(),
+            category: "scheduling".to_string(),
+            base_url: "https://api.cal.com".to_string(),
+        }
+    };
+    catalog.push(calcom_provider);
+
+    let calcom_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "calcom".to_string(),
+            name: "Cal.com Scheduling".to_string(),
+            category: "scheduling".to_string(),
+            base_url: "https://api.cal.com".to_string(),
+        }
+    };
+    catalog.push(calcom_provider);
+
     catalog
 }

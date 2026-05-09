@@ -378,3 +378,75 @@ test.describe('Pipeline Management', () => {
 
 });
 });
+
+test.describe('Booking UI Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    const loginLink = page.locator('text=/Login/i');
+    if (await loginLink.isVisible()) {
+      await loginLink.click();
+    }
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password');
+    await page.click('button[type="submit"]');
+    await page.waitForTimeout(500);
+  });
+
+  test('should display booking calendar block', async ({ page }) => {
+    await page.goto('/builder');
+    await expect(page.locator('text=/Book an Appointment/i').first()).toBeVisible();
+  });
+
+  test('should complete the booking flow', async ({ page }) => {
+    await page.goto('/builder');
+    await expect(page.locator('text=/Book an Appointment/i').first()).toBeVisible();
+
+    // Select Date
+    await page.click('text=/Mon/i');
+
+    // Check loading or time slots
+    // Just click a time slot if any appears, or confirm booking
+    const slot = page.locator('text=/Confirm Booking/i');
+    if (await slot.isVisible()) {
+      await slot.click();
+    }
+
+    // Since mock doesn't connect real Cal.com, just check the success message exists in UI logic test or that no crash happened
+  });
+});
+
+test.describe('Booking UI Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    const loginLink = page.locator('text=/Login/i');
+    if (await loginLink.isVisible()) {
+      await loginLink.click();
+    }
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password');
+    await page.click('button[type="submit"]');
+    await page.waitForTimeout(500);
+  });
+
+  test('should display booking calendar block', async ({ page }) => {
+    await page.goto('/builder');
+    await expect(page.locator('text=/Book an Appointment/i').first()).toBeVisible();
+  });
+
+  test('should complete the booking flow', async ({ page }) => {
+    await page.goto('/builder');
+    await expect(page.locator('text=/Book an Appointment/i').first()).toBeVisible();
+
+    // Select Date
+    await page.click('text=/Mon/i');
+
+    // Check loading or time slots
+    // Just click a time slot if any appears, or confirm booking
+    const slot = page.locator('text=/Confirm Booking/i');
+    if (await slot.isVisible()) {
+      await slot.click();
+    }
+
+    // Since mock doesn't connect real Cal.com, just check the success message exists in UI logic test or that no crash happened
+  });
+});

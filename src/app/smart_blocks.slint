@@ -1,21 +1,20 @@
-import { VerticalBox, HorizontalBox } from "std-widgets.slint";
-import { GlassCard } from "glass_card.slint";
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
-export component HeroBlock inherits GlassCard {
-    in-out property <string> headline: "Welcome to My Business";
-    in-out property <string> subtitle: "The best services in town.";
-    in-out property <string> cta_text: "Book Now";
+export component HeroBlock inherits Rectangle {
+    in property <string> headline: "Your Headline Here";
+    in property <string> subtitle: "Add a short description about your business.";
+    in property <string> cta_text: "Get Started";
     callback cta_clicked();
 
     min-width: 327px;
 
     VerticalBox {
-        alignment: center;
-        spacing: 16px;
         padding: 24px;
+        spacing: 16px;
+        alignment: center;
 
         Text {
-            text: root.headline;
+            text: headline;
             font-family: "Outfit";
             font-size: 32px;
             font-weight: 700;
@@ -25,39 +24,35 @@ export component HeroBlock inherits GlassCard {
         }
 
         Text {
-            text: root.subtitle;
+            text: subtitle;
             font-family: "Inter";
             font-size: 16px;
-            color: #94a3b8;
+            color: #e2e8f0;
             horizontal-alignment: center;
             wrap: word-wrap;
         }
 
-        GlassCard {
-            height: 44px;
-            background: rgba(168, 85, 247, 0.8);
-            VerticalBox {
-                alignment: center;
-                Text {
-                    text: root.cta_text;
-                    font-family: "Inter";
-                    font-weight: 700;
-                    color: white;
-                    horizontal-alignment: center;
+        HorizontalBox {
+            alignment: center;
+            Rectangle {
+                width: 140px;
+                height: 44px;
+                background: rgba(168, 85, 247, 0.8);
+                VerticalBox {
+                    alignment: center;
+                    Text { text: cta_text; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; }
                 }
-            }
-            TouchArea {
-                clicked => { root.cta_clicked(); }
+                TouchArea { clicked => { cta_clicked(); } }
             }
         }
     }
 }
 
-export component ProductGridBlock inherits GlassCard {
-    in-out property <string> product_name_1: "Product 1";
-    in-out property <string> product_price_1: "$10.00";
-    in-out property <string> product_name_2: "Product 2";
-    in-out property <string> product_price_2: "$20.00";
+export component ProductGridBlock inherits Rectangle {
+    in property <string> product_name_1: "Product 1";
+    in property <string> product_price_1: "$19.99";
+    in property <string> product_name_2: "Product 2";
+    in property <string> product_price_2: "$29.99";
 
     min-width: 327px;
 
@@ -66,7 +61,7 @@ export component ProductGridBlock inherits GlassCard {
         spacing: 16px;
 
         Text {
-            text: "Featured Products";
+            text: "Our Products";
             font-family: "Outfit";
             font-size: 24px;
             font-weight: 700;
@@ -74,38 +69,37 @@ export component ProductGridBlock inherits GlassCard {
             horizontal-alignment: left;
         }
 
-        VerticalBox {
+        HorizontalBox {
             spacing: 12px;
-            GlassCard {
+
+            Rectangle {
+                height: 150px;
                 background: rgba(255, 255, 255, 0.05);
                 VerticalBox {
+                    alignment: end;
                     padding: 12px;
-                    HorizontalBox {
-                        alignment: space-between;
-                        Text { text: root.product_name_1; font-family: "Inter"; color: white; font-weight: 700; }
-                        Text { text: root.product_price_1; font-family: "Inter"; color: #a855f7; }
-                    }
+                    spacing: 4px;
+                    Text { text: product_name_1; font-family: "Inter"; font-weight: 700; color: white; }
+                    Text { text: product_price_1; font-family: "Inter"; color: #10b981; }
                 }
             }
-            GlassCard {
+
+            Rectangle {
+                height: 150px;
                 background: rgba(255, 255, 255, 0.05);
                 VerticalBox {
+                    alignment: end;
                     padding: 12px;
-                    HorizontalBox {
-                        alignment: space-between;
-                        Text { text: root.product_name_2; font-family: "Inter"; color: white; font-weight: 700; }
-                        Text { text: root.product_price_2; font-family: "Inter"; color: #a855f7; }
-                    }
+                    spacing: 4px;
+                    Text { text: product_name_2; font-family: "Inter"; font-weight: 700; color: white; }
+                    Text { text: product_price_2; font-family: "Inter"; color: #10b981; }
                 }
             }
         }
     }
 }
 
-export component TestimonialsBlock inherits GlassCard {
-    in-out property <string> quote: "\"The best service I've ever used!\"";
-    in-out property <string> author: "- Happy Customer";
-
+export component TestimonialsBlock inherits Rectangle {
     min-width: 327px;
 
     VerticalBox {
@@ -113,7 +107,7 @@ export component TestimonialsBlock inherits GlassCard {
         spacing: 16px;
 
         Text {
-            text: "Testimonials";
+            text: "What Customers Say";
             font-family: "Outfit";
             font-size: 24px;
             font-weight: 700;
@@ -121,33 +115,20 @@ export component TestimonialsBlock inherits GlassCard {
             horizontal-alignment: left;
         }
 
-        GlassCard {
+        Rectangle {
             background: rgba(255, 255, 255, 0.05);
             VerticalBox {
                 padding: 16px;
-                spacing: 8px;
-                Text {
-                    text: root.quote;
-                    font-family: "Inter";
-                    font-size: 16px;
-                    color: white;
-                    font-italic: true;
-                    wrap: word-wrap;
-                }
-                Text {
-                    text: root.author;
-                    font-family: "Inter";
-                    font-size: 14px;
-                    color: #a855f7;
-                    font-weight: 700;
-                    horizontal-alignment: right;
-                }
+                spacing: 12px;
+                Text { text: "⭐⭐⭐⭐⭐"; font-size: 16px; }
+                Text { text: "\"Absolutely amazing service! Highly recommend.\""; font-family: "Inter"; color: white; wrap: word-wrap; }
+                Text { text: "— Sarah J."; font-family: "Inter"; color: #94a3b8; font-size: 14px; }
             }
         }
     }
 }
 
-export component ContactFormBlock inherits GlassCard {
+export component ContactFormBlock inherits Rectangle {
     min-width: 327px;
 
     VerticalBox {
@@ -166,7 +147,7 @@ export component ContactFormBlock inherits GlassCard {
         VerticalBox {
             spacing: 12px;
 
-            GlassCard {
+            Rectangle {
                 height: 44px;
                 background: rgba(255, 255, 255, 0.05);
                 VerticalBox {
@@ -176,7 +157,7 @@ export component ContactFormBlock inherits GlassCard {
                 }
             }
 
-            GlassCard {
+            Rectangle {
                 height: 44px;
                 background: rgba(255, 255, 255, 0.05);
                 VerticalBox {
@@ -186,7 +167,7 @@ export component ContactFormBlock inherits GlassCard {
                 }
             }
 
-            GlassCard {
+            Rectangle {
                 height: 80px;
                 background: rgba(255, 255, 255, 0.05);
                 VerticalBox {
@@ -195,7 +176,7 @@ export component ContactFormBlock inherits GlassCard {
                 }
             }
 
-            GlassCard {
+            Rectangle {
                 height: 44px;
                 background: rgba(168, 85, 247, 0.8);
                 VerticalBox {
@@ -207,48 +188,107 @@ export component ContactFormBlock inherits GlassCard {
     }
 }
 
-export component CalendarBlock inherits GlassCard {
+export component CalendarBlock inherits Rectangle {
     min-width: 327px;
+
+    in-out property <string> selected_date: "";
+    in-out property <string> selected_time: "";
+    in-out property <[string]> available_slots: [];
+    in-out property <bool> is_booked: false;
+
+    callback fetch_availability();
+    callback select_date(string);
+    callback select_time(string);
+    callback book_slot();
+
+    select_date(d) => {
+        selected_date = d;
+        selected_time = "";
+        fetch_availability();
+    }
+
+    select_time(t) => {
+        selected_time = t;
+    }
+
+    book_slot() => {
+        is_booked = true;
+    }
 
     VerticalBox {
         padding: 16px;
         spacing: 16px;
 
-        Text {
-            text: "Book an Appointment";
-            font-family: "Outfit";
-            font-size: 24px;
-            font-weight: 700;
-            color: white;
-            horizontal-alignment: left;
-        }
+        if (!is_booked) : VerticalBox {
+            spacing: 16px;
+            Text {
+                text: "Book an Appointment";
+                font-family: "Outfit";
+                font-size: 24px;
+                font-weight: 700;
+                color: white;
+                horizontal-alignment: left;
+            }
 
-        VerticalBox {
-            spacing: 8px;
-            HorizontalBox {
-                alignment: space-between;
-                Text { text: "Mon"; font-family: "Inter"; color: #94a3b8; font-size: 14px; }
-                Text { text: "Tue"; font-family: "Inter"; color: #94a3b8; font-size: 14px; }
-                Text { text: "Wed"; font-family: "Inter"; color: #94a3b8; font-size: 14px; }
-                Text { text: "Thu"; font-family: "Inter"; color: #94a3b8; font-size: 14px; }
-                Text { text: "Fri"; font-family: "Inter"; color: #94a3b8; font-size: 14px; }
-            }
-            GlassCard {
-                height: 44px;
-                background: rgba(255, 255, 255, 0.1);
-                VerticalBox {
-                    alignment: center;
-                    Text { text: "Select a date"; font-family: "Inter"; color: white; horizontal-alignment: center; }
+            VerticalBox {
+                spacing: 8px;
+                HorizontalBox {
+                    alignment: space-between;
+                    TouchArea { clicked => { select_date("Mon"); } Text { text: "Mon"; font-family: "Inter"; color: selected_date == "Mon" ? white : #94a3b8; font-size: 14px; font-weight: selected_date == "Mon" ? 700 : 400; } }
+                    TouchArea { clicked => { select_date("Tue"); } Text { text: "Tue"; font-family: "Inter"; color: selected_date == "Tue" ? white : #94a3b8; font-size: 14px; font-weight: selected_date == "Tue" ? 700 : 400; } }
+                    TouchArea { clicked => { select_date("Wed"); } Text { text: "Wed"; font-family: "Inter"; color: selected_date == "Wed" ? white : #94a3b8; font-size: 14px; font-weight: selected_date == "Wed" ? 700 : 400; } }
+                    TouchArea { clicked => { select_date("Thu"); } Text { text: "Thu"; font-family: "Inter"; color: selected_date == "Thu" ? white : #94a3b8; font-size: 14px; font-weight: selected_date == "Thu" ? 700 : 400; } }
+                    TouchArea { clicked => { select_date("Fri"); } Text { text: "Fri"; font-family: "Inter"; color: selected_date == "Fri" ? white : #94a3b8; font-size: 14px; font-weight: selected_date == "Fri" ? 700 : 400; } }
+                }
+
+                if (selected_date == "") : Rectangle {
+                    height: 44px;
+                    background: rgba(255, 255, 255, 0.1);
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "Select a date"; font-family: "Inter"; color: white; horizontal-alignment: center; }
+                    }
+                }
+
+                if (selected_date != "") : VerticalBox {
+                    spacing: 8px;
+                    for slot in available_slots : Rectangle {
+                        height: 44px;
+                        background: selected_time == slot ? rgba(168, 85, 247, 0.4) : rgba(255, 255, 255, 0.1);
+                        border-width: selected_time == slot ? 2px : 0px;
+                        border-color: rgba(168, 85, 247, 1.0);
+                        VerticalBox {
+                            alignment: center;
+                            Text { text: slot; font-family: "Inter"; color: white; horizontal-alignment: center; font-weight: selected_time == slot ? 700 : 400; }
+                        }
+                        TouchArea { clicked => { select_time(slot); } }
+                    }
+
+                    if (available_slots.length == 0) : Text {
+                        text: "Loading availability...";
+                        font-family: "Inter";
+                        color: #94a3b8;
+                        font-size: 14px;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                if (selected_time != "") : Rectangle {
+                    height: 44px;
+                    background: rgba(168, 85, 247, 0.8);
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "Confirm Booking"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; }
+                    }
+                    TouchArea { clicked => { book_slot(); } }
                 }
             }
-            GlassCard {
-                height: 44px;
-                background: rgba(168, 85, 247, 0.8);
-                VerticalBox {
-                    alignment: center;
-                    Text { text: "Confirm Booking"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; }
-                }
-            }
+        }
+        if (is_booked) : VerticalBox {
+            spacing: 16px;
+            alignment: center;
+            Text { text: "✅ Booking Confirmed!"; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; horizontal-alignment: center; }
+            Text { text: "You're all set for " + selected_date + " at " + selected_time + "."; font-family: "Inter"; font-size: 16px; color: #cbd5e1; horizontal-alignment: center; wrap: word-wrap; }
         }
     }
 }

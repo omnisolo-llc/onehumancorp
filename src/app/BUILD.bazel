@@ -93,6 +93,9 @@ rust_binary(
         "welcome_checklist.slint",
         "unified_inbox.slint",
         "swarm_observability_panel.slint",
+        "test_booking.slint",
+
+
         "tooltips.json",
     ],
     edition = "2024",
@@ -196,6 +199,9 @@ rust_test(
         "welcome_checklist.slint",
         "unified_inbox.slint",
         "swarm_observability_panel.slint",
+        "test_booking.slint",
+
+
         "tooltips.json",
     ],
     edition = "2024",

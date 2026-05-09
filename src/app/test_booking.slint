@@ -1,0 +1,18 @@
+import { CalendarBlock } from "smart_blocks.slint";
+
+export component TestBooking inherits Window {
+    width: 400px;
+    height: 800px;
+
+    in-out property <string> selected_date <=> cal.selected_date;
+    in-out property <string> selected_time <=> cal.selected_time;
+    in-out property <[string]> available_slots <=> cal.available_slots;
+    in-out property <bool> is_booked <=> cal.is_booked;
+
+    callback fetch_availability <=> cal.fetch_availability;
+    callback select_date <=> cal.select_date;
+    callback select_time <=> cal.select_time;
+    callback book_slot <=> cal.book_slot;
+
+    cal := CalendarBlock {}
+}
