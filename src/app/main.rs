@@ -1683,7 +1683,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(dash) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
             let ac_handle = ac_handle_for_dash.clone();
             dash.on_action_see_analytics(move || {
-                if let Some(ui) = ac_handle.upgrade() {
+                let ui_handle = ac_handle.clone();
+                #[cfg(not(target_arch = "wasm32"))]
+                tokio::spawn(async move {
+                    if let Ok(mut client) = OrgServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let resp: Result<tonic::Response<_>, tonic::Status> = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        if let Ok(resp) = resp {
+                            let analytics = resp.into_inner();
+                            let mut raw_charts = Vec::new();
+                            for c in analytics.charts {
+                                let mut raw_points = Vec::new();
+                                for p in c.points {
+                                    raw_points.push((p.label, p.value, p.display_value));
+                                }
+                                raw_charts.push((c.title, raw_points));
+                            }
+
+                            let _ = slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_handle.upgrade() {
+                                    let charts: Vec<app::UiChartData> = raw_charts.into_iter().map(|c| {
+                                        app::UiChartData {
+                                            title: c.0.into(),
+                                            points: slint::ModelRc::new(slint::VecModel::from(c.1.into_iter().map(|p| {
+                                                app::UiDataPoint {
+                                                    label: p.0.into(),
+                                                    value: p.1 as f32,
+                                                    display_value: p.2.into(),
+                                                }
+                                            }).collect::<Vec<_>>())),
+                                        }
+                                    }).collect();
+                                    ui.set_charts(slint::ModelRc::new(slint::VecModel::from(charts)));
+                                    let _ = ui.show();
+                                }
+                            });
+                            return;
+                        }
+                    }
+                    // Fallback
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_handle.upgrade() {
+                            let _ = ui.show();
+                        }
+                    });
+                });
+
+                #[cfg(target_arch = "wasm32")]
+                if let Some(ui) = ui_handle.upgrade() {
                     let _ = ui.show();
                 }
             });

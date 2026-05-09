@@ -113,6 +113,17 @@ impl OrgService for MyOrgService {
         
 
         
+        let generated_charts = vec![
+            crate::ohc::orchestration::UiChartDataProto {
+                title: "System Activity".into(),
+                points: vec![
+                    crate::ohc::orchestration::UiDataPointProto { label: "Total Msgs".into(), value: total_msgs as f64, display_value: format!("{}", total_msgs) },
+                    crate::ohc::orchestration::UiDataPointProto { label: "Audited".into(), value: audited_msgs as f64, display_value: format!("{}", audited_msgs) },
+                    crate::ohc::orchestration::UiDataPointProto { label: "Agents".into(), value: total_agents as f64, display_value: format!("{}", total_agents) },
+                ],
+            },
+        ];
+
         Ok(Response::new(AnalyticsSummaryResponse {
             human_agent_ratio,
             total_agents,
@@ -122,6 +133,7 @@ impl OrgService for MyOrgService {
             pending_approvals: 2,
             active_handoffs: 1,
             token_velocity: summary.total_tokens,
+            charts: generated_charts,
         }))
     }
 }

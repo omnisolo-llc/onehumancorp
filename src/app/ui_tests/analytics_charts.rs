@@ -22,16 +22,20 @@ fn test_analytics_charts_e2e_flow() {
         }
     });
 
-    // 2. Mock Data Injection
-    let mock_charts = vec![
+    // In actual app flow, data is fetched via gRPC in an async task.
+    // For this UI test, we manually inject the expected "System Activity" chart
+    // that the backend would dynamically generate, ensuring the UI can render it.
+    let generated_chart = vec![
         app::UiChartData {
-            title: "Revenue Over Time".into(),
+            title: "System Activity".into(),
             points: slint::ModelRc::new(slint::VecModel::from(vec![
-                app::UiDataPoint { label: "Mon".into(), value: 40.0, display_value: "$400".into() },
+                app::UiDataPoint { label: "Total Msgs".into(), value: 15.0, display_value: "15".into() },
+                app::UiDataPoint { label: "Audited".into(), value: 10.0, display_value: "10".into() },
+                app::UiDataPoint { label: "Agents".into(), value: 3.0, display_value: "3".into() },
             ])),
         },
     ];
-    analytics_ui.set_charts(slint::ModelRc::new(slint::VecModel::from(mock_charts)));
+    analytics_ui.set_charts(slint::ModelRc::new(slint::VecModel::from(generated_chart)));
 
     // 3. User navigates from dashboard
     dashboard_ui.invoke_action_see_analytics();
@@ -39,18 +43,18 @@ fn test_analytics_charts_e2e_flow() {
     // Verify dashboard action
     assert!(*see_analytics_called.borrow(), "Analytics action should be invoked from Dashboard");
 
-    // Verify chart data populated correctly
+    // Verify the UI correctly received and holds the structured chart data
     let charts = analytics_ui.get_charts();
     assert_eq!(charts.row_count(), 1, "Should have 1 chart");
     let first_chart = charts.row_data(0).unwrap();
-    assert_eq!(first_chart.title, "Revenue Over Time");
+    assert_eq!(first_chart.title, "System Activity");
 
     let points = first_chart.points;
-    assert_eq!(points.row_count(), 1, "Should have 1 point");
+    assert_eq!(points.row_count(), 3, "Should have 3 points");
     let first_point = points.row_data(0).unwrap();
-    assert_eq!(first_point.display_value, "$400");
-    assert_eq!(first_point.value, 40.0);
-    assert_eq!(first_point.label, "Mon");
+    assert_eq!(first_point.display_value, "15");
+    assert_eq!(first_point.value, 15.0);
+    assert_eq!(first_point.label, "Total Msgs");
 
     // 4. Test close functionality
     let close_called = std::rc::Rc::new(std::cell::RefCell::new(false));
