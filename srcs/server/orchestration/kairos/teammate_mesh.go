@@ -2,10 +2,15 @@ package kairos
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"google.golang.org/protobuf/proto"
 )
 
 type Subscription interface {
@@ -25,6 +30,11 @@ type TeammateMesh interface {
 	RegisterPresence(ctx context.Context, agentID string, status string) error
 	GetActiveAgents(ctx context.Context) ([]AgentPresence, error)
 	Acknowledge(ctx context.Context, messageID string) error
+	PublishWithAck(ctx context.Context, topic string, payload []byte) error
+	PublishStateHandoff(ctx context.Context, payload []byte) error
+	SubscribeStateHandoff(ctx context.Context, handler func(msg []byte)) (Subscription, error)
+	Ping(ctx context.Context) error
+	StartHealthResponder(ctx context.Context) (func(), error)
 }
 
 type redisSubscription struct {
@@ -98,6 +108,80 @@ func (m *RedisTeammateMesh) GetActiveAgents(ctx context.Context) ([]AgentPresenc
 
 func (m *RedisTeammateMesh) Acknowledge(ctx context.Context, messageID string) error {
 	return m.client.Publish(ctx, "mesh:ack:"+messageID, []byte("ack")).Err()
+}
+
+func (m *RedisTeammateMesh) PublishWithAck(ctx context.Context, topic string, payload []byte) error {
+	msgID := uuid.New().String()
+	ackTopic := "mesh:ack:" + msgID
+
+	ackCh := make(chan struct{})
+	sub, err := m.Subscribe(ctx, ackTopic, func(msg []byte) {
+		close(ackCh)
+	})
+	if err != nil {
+		return err
+	}
+	defer sub.Unsubscribe()
+
+	retries := 0
+	backoff := 200 * time.Millisecond
+
+	for {
+		if retries > 10 {
+			return fmt.Errorf("timeout waiting for ack on topic %s", topic)
+		}
+
+		event := &TeammateMeshEvent{
+			AgentId: "sys",
+			Action:  topic,
+			Status:  "ok",
+			Payload: payload,
+			MsgId:   msgID,
+		}
+		eventBytes, err := proto.Marshal(event)
+		if err != nil {
+			return err
+		}
+		err = m.Publish(ctx, topic, eventBytes)
+		if err != nil {
+			return err
+		}
+
+		select {
+		case <-ackCh:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(backoff):
+			retries++
+			backoff *= 2
+		}
+	}
+}
+
+func (m *RedisTeammateMesh) PublishStateHandoff(ctx context.Context, payload []byte) error {
+	return m.PublishWithAck(ctx, "mesh:state:handoff", payload)
+}
+
+func (m *RedisTeammateMesh) SubscribeStateHandoff(ctx context.Context, handler func(msg []byte)) (Subscription, error) {
+	return m.Subscribe(ctx, "mesh:state:handoff", handler)
+}
+
+func (m *RedisTeammateMesh) Ping(ctx context.Context) error {
+	return m.PublishWithAck(ctx, "mesh:health:ping", []byte("ping"))
+}
+
+func (m *RedisTeammateMesh) StartHealthResponder(ctx context.Context) (func(), error) {
+	sub, err := m.Subscribe(ctx, "mesh:health:ping", func(msg []byte) {
+		var event TeammateMeshEvent
+		if err := proto.Unmarshal(msg, &event); err == nil {
+			m.Acknowledge(context.Background(), event.MsgId)
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	return func() { sub.Unsubscribe() }, nil
 }
 
 type localSubInfo struct {
@@ -182,22 +266,29 @@ func (m *LocalTeammateMesh) Subscribe(ctx context.Context, topic string, handler
 }
 
 func (m *LocalTeammateMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	expire, exists := m.locks[key]
-	if exists && time.Now().Before(expire) {
+	lockFile := filepath.Join(os.TempDir(), "ohc_mesh_lock_"+key)
+	f, err := os.OpenFile(lockFile, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+	if err != nil {
+		info, err := os.Stat(lockFile)
+		if err == nil {
+			if time.Since(info.ModTime()) > ttl {
+				os.Remove(lockFile)
+				f, err = os.OpenFile(lockFile, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+				if err == nil {
+					f.Close()
+					return true, nil
+				}
+			}
+		}
 		return false, nil
 	}
-
-	m.locks[key] = time.Now().Add(ttl)
+	f.Close()
 	return true, nil
 }
 
 func (m *LocalTeammateMesh) ReleaseLock(ctx context.Context, key string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.locks, key)
+	lockFile := filepath.Join(os.TempDir(), "ohc_mesh_lock_"+key)
+	os.Remove(lockFile)
 	return nil
 }
 
@@ -224,4 +315,78 @@ func (m *LocalTeammateMesh) GetActiveAgents(ctx context.Context) ([]AgentPresenc
 
 func (m *LocalTeammateMesh) Acknowledge(ctx context.Context, messageID string) error {
 	return m.Publish(ctx, "mesh:ack:"+messageID, []byte("ack"))
+}
+
+func (m *LocalTeammateMesh) PublishWithAck(ctx context.Context, topic string, payload []byte) error {
+	msgID := uuid.New().String()
+	ackTopic := "mesh:ack:" + msgID
+
+	ackCh := make(chan struct{})
+	sub, err := m.Subscribe(ctx, ackTopic, func(msg []byte) {
+		close(ackCh)
+	})
+	if err != nil {
+		return err
+	}
+	defer sub.Unsubscribe()
+
+	retries := 0
+	backoff := 20 * time.Millisecond
+
+	for {
+		if retries > 10 {
+			return fmt.Errorf("timeout waiting for ack on topic %s", topic)
+		}
+
+		event := &TeammateMeshEvent{
+			AgentId: "sys",
+			Action:  topic,
+			Status:  "ok",
+			Payload: payload,
+			MsgId:   msgID,
+		}
+		eventBytes, err := proto.Marshal(event)
+		if err != nil {
+			return err
+		}
+		err = m.Publish(ctx, topic, eventBytes)
+		if err != nil {
+			return err
+		}
+
+		select {
+		case <-ackCh:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(backoff):
+			retries++
+			backoff *= 2
+		}
+	}
+}
+
+func (m *LocalTeammateMesh) PublishStateHandoff(ctx context.Context, payload []byte) error {
+	return m.PublishWithAck(ctx, "mesh:state:handoff", payload)
+}
+
+func (m *LocalTeammateMesh) SubscribeStateHandoff(ctx context.Context, handler func(msg []byte)) (Subscription, error) {
+	return m.Subscribe(ctx, "mesh:state:handoff", handler)
+}
+
+func (m *LocalTeammateMesh) Ping(ctx context.Context) error {
+	return m.PublishWithAck(ctx, "mesh:health:ping", []byte("ping"))
+}
+
+func (m *LocalTeammateMesh) StartHealthResponder(ctx context.Context) (func(), error) {
+	sub, err := m.Subscribe(ctx, "mesh:health:ping", func(msg []byte) {
+		var event TeammateMeshEvent
+		if err := proto.Unmarshal(msg, &event); err == nil {
+			m.Acknowledge(context.Background(), event.MsgId)
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	return func() { sub.Unsubscribe() }, nil
 }
