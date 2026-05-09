@@ -9,7 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/redis/rueidis"
 	"onehumancorp/srcs/server/pb"
+	"onehumancorp/srcs/server/telemetry"
 )
 
 // MeshMessage represents an OHC-SIP compliant message over the mesh.
@@ -72,6 +74,10 @@ func NewLocalTeammateMesh() *LocalTeammateMesh {
 
 // Publish sends data to all subscribers of the given channel concurrently.
 func (m *LocalTeammateMesh) Publish(ctx context.Context, channel string, data []byte) error {
+	if telemetry.MeshBroadcastTotal != nil {
+		telemetry.MeshBroadcastTotal.WithLabelValues("standalone").Inc()
+	}
+
 	shard := m.shards[getShard(channel)]
 	shard.mu.RLock()
 	subs, ok := shard.subscribers[channel]
@@ -163,18 +169,44 @@ func (m *LocalTeammateMesh) StartHeartbeat(ctx context.Context, agent pb.Agent) 
 type CentrifugeMesh struct {
 	BaseURL    string
 	HTTPClient *http.Client
+	pubClient  rueidis.Client
+	subClient  rueidis.Client
 }
 
 // NewCentrifugeMesh creates a new CentrifugeMesh.
 func NewCentrifugeMesh(baseURL string) *CentrifugeMesh {
+	// Simple default redis address. In production this should be configured via environment or options.
+	pub, err := rueidis.NewClient(rueidis.ClientOption{InitAddress: []string{"127.0.0.1:6379"}})
+	if err != nil {
+		fmt.Printf("Failed to connect pub client to redis: %v\n", err)
+	}
+	sub, err := rueidis.NewClient(rueidis.ClientOption{InitAddress: []string{"127.0.0.1:6379"}})
+	if err != nil {
+		fmt.Printf("Failed to connect sub client to redis: %v\n", err)
+	}
+
 	return &CentrifugeMesh{
 		BaseURL:    baseURL,
 		HTTPClient: &http.Client{Timeout: 5 * time.Second},
+		pubClient:  pub,
+		subClient:  sub,
 	}
 }
 
 // Publish is a stub for CentrifugeMesh.
 func (m *CentrifugeMesh) Publish(ctx context.Context, channel string, data []byte) error {
+	if telemetry.MeshBroadcastTotal != nil {
+		telemetry.MeshBroadcastTotal.WithLabelValues("cloud").Inc()
+	}
+
+	if m.pubClient != nil {
+		cmd := m.pubClient.B().Publish().Channel(channel).Message(string(data)).Build()
+		err := m.pubClient.Do(context.Background(), cmd).Error()
+		if err != nil {
+			return err
+		}
+	}
+
 	req, err := http.NewRequestWithContext(ctx, "POST", m.BaseURL, bytes.NewBuffer(data))
 	if err != nil {
 		return err
@@ -196,6 +228,15 @@ func (m *CentrifugeMesh) Publish(ctx context.Context, channel string, data []byt
 
 // Subscribe is a stub for CentrifugeMesh.
 func (m *CentrifugeMesh) Subscribe(ctx context.Context, channel string, handler func(data []byte)) error {
+	if m.subClient == nil {
+		return fmt.Errorf("redis sub client not initialized")
+	}
+
+	go func() {
+		_ = m.subClient.Receive(ctx, m.subClient.B().Subscribe().Channel(channel).Build(), func(msg rueidis.PubSubMessage) {
+			handler([]byte(msg.Message))
+		})
+	}()
 	return nil
 }
 

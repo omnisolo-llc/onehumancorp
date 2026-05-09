@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/rueidis"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -96,14 +98,52 @@ func TestCentrifugeMesh_PublishSubscribe(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	mesh := NewCentrifugeMesh(ts.URL)
+	// Use miniredis for tests
+	mr, err := miniredis.Run()
+	require.NoError(t, err)
+	defer mr.Close()
+
+	pub, err := rueidis.NewClient(rueidis.ClientOption{
+		InitAddress:  []string{mr.Addr()},
+		DisableCache: true,
+	})
+	require.NoError(t, err)
+
+	sub, err := rueidis.NewClient(rueidis.ClientOption{
+		InitAddress:  []string{mr.Addr()},
+		DisableCache: true,
+	})
+	require.NoError(t, err)
+
+	mesh := &CentrifugeMesh{
+		BaseURL:    ts.URL,
+		HTTPClient: &http.Client{Timeout: 5 * time.Second},
+		pubClient:  pub,
+		subClient:  sub,
+	}
+	defer pub.Close()
+	defer sub.Close()
 
 	ctx := context.Background()
 	channel := "test_channel"
 
-	err := mesh.Subscribe(ctx, channel, func(data []byte) {})
+	received := make(chan []byte, 1)
+
+	err = mesh.Subscribe(ctx, channel, func(data []byte) {
+		received <- data
+	})
 	require.NoError(t, err)
+
+	// small delay to let subscription settle
+	time.Sleep(100 * time.Millisecond)
 
 	err = mesh.Publish(ctx, channel, []byte("hello"))
 	require.NoError(t, err)
+
+	select {
+	case msg := <-received:
+		assert.Equal(t, []byte("hello"), msg)
+	case <-time.After(time.Second):
+		t.Fatal("did not receive message")
+	}
 }
