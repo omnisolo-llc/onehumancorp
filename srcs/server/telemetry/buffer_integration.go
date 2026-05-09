@@ -54,8 +54,8 @@ func isEmail(s string) bool {
 	return strings.Contains(s, "@") && strings.Contains(s, ".")
 }
 
-// redactInterfacePII is a helper function to redact sensitive information recursively.
-func redactInterfacePII(val interface{}) interface{} {
+// RedactInterfacePIIRecursive is a helper function to redact sensitive information recursively.
+func RedactInterfacePIIRecursive(val interface{}) interface{} {
 	switch v := val.(type) {
 	case map[string]interface{}:
 		newMap := make(map[string]interface{})
@@ -63,14 +63,14 @@ func redactInterfacePII(val interface{}) interface{} {
 			if isSensitiveKey(k) {
 				newMap[k] = "[REDACTED]"
 			} else {
-				newMap[k] = redactInterfacePII(innerV)
+				newMap[k] = RedactInterfacePIIRecursive(innerV)
 			}
 		}
 		return newMap
 	case []interface{}:
 		newArr := make([]interface{}, len(v))
 		for i, innerV := range v {
-			newArr[i] = redactInterfacePII(innerV)
+			newArr[i] = RedactInterfacePIIRecursive(innerV)
 		}
 		return newArr
 	case string:
@@ -89,7 +89,7 @@ func bufferMetricHelper(ctx context.Context, name string, value float64, attrs m
 		// Only buffer if it's explicitly enabled for standalone mode
 		isStandalone := os.Getenv("OHC_STANDALONE") == "true" || os.Getenv("STANDALONE_MODE") == "true"
 		if isStandalone {
-			redactedAttrs, _ := redactInterfacePII(attrs).(map[string]interface{})
+			redactedAttrs, _ := RedactInterfacePIIRecursive(attrs).(map[string]interface{})
 			_ = globalSyncEngine.BufferMetric(ctx, name, value, redactedAttrs)
 		}
 	}
