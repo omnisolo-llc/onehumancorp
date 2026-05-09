@@ -1,0 +1,22 @@
+--- src/app/dashboard.slint
++++ src/app/dashboard.slint
+@@ -52,3 +52,3 @@
+     in property <string> telemetry_rag_latency: "120ms";
+-    in property <string> telemetry_chart_placeholder: "[ Dynamic Hybrid Correlation Chart ]";
++    in property <string> telemetry_chart_placeholder: "Performance Graph";
+     in-out property <bool> show_telemetry_visualization: true;
+@@ -226,3 +226,3 @@
+                 Text {
+-                    text: "AutoDream Memory Pipeline";
++                    text: "Assistant Performance";
+                     font-size: 20px;
+@@ -239,3 +239,3 @@
+                             spacing: 8px;
+-                            Text { text: "LLM Cache Hits"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
++                            Text { text: "Quick Answers"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
+                             Text { text: root.telemetry_cache_hits; font-size: 32px; font-weight: 700; font-family: "Inter"; color: white; }
+@@ -250,3 +250,3 @@
+                             spacing: 8px;
+-                            Text { text: "RAG Latency"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
++                            Text { text: "Thinking Speed"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
+                             Text { text: root.telemetry_rag_latency; font-size: 32px; font-weight: 700; font-family: "Inter"; color: white; }

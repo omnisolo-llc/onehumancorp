@@ -6964,7 +6964,7 @@ mod e2e_hybrid_blob_tests {
         let ui = app::Dashboard::new().unwrap();
         // Since we changed text in UI, properties are untouched.
         // We ensure telemetry_chart_placeholder can still be fetched.
-        assert_eq!(ui.get_telemetry_chart_placeholder(), "[ Dynamic Hybrid Correlation Chart ]");
+        assert_eq!(ui.get_telemetry_chart_placeholder(), "Performance Graph");
     }
 
     #[test]
@@ -7020,7 +7020,7 @@ mod e2e_hybrid_blob_tests {
         // Validate initial values match the wireframe requirements
         assert_eq!(dashboard_ui.get_telemetry_cache_hits(), "84%");
         assert_eq!(dashboard_ui.get_telemetry_rag_latency(), "120ms");
-        assert_eq!(dashboard_ui.get_telemetry_chart_placeholder(), "[ Dynamic Hybrid Correlation Chart ]");
+        assert_eq!(dashboard_ui.get_telemetry_chart_placeholder(), "Performance Graph");
         assert!(dashboard_ui.get_show_telemetry_visualization());
     }
 

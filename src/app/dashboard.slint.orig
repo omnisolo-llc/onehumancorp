@@ -38,7 +38,7 @@ export component Dashboard inherits Window { // milestones
     // AutoDream Memory Pipeline Telemetry
     in property <string> telemetry_cache_hits: "84%";
     in property <string> telemetry_rag_latency: "120ms";
-    in property <string> telemetry_chart_placeholder: "Performance Graph";
+    in property <string> telemetry_chart_placeholder: "[ Dynamic Hybrid Correlation Chart ]";
     in-out property <bool> show_telemetry_visualization: true;
 
     in property <[UiPendingApproval]> pending_approvals;
@@ -221,7 +221,7 @@ export component Dashboard inherits Window { // milestones
                 spacing: 24px;
 
                 Text {
-                    text: "Assistant Performance";
+                    text: "AutoDream Memory Pipeline";
                     font-size: 20px;
                     font-family: "Outfit";
                     font-weight: 700;
@@ -237,7 +237,7 @@ export component Dashboard inherits Window { // milestones
                         VerticalBox {
                             padding: 16px;
                             spacing: 8px;
-                            Text { text: "Quick Answers"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
+                            Text { text: "LLM Cache Hits"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
                             Text { text: root.telemetry_cache_hits; font-size: 32px; font-weight: 700; font-family: "Inter"; color: white; }
                         }
                     }
@@ -248,7 +248,7 @@ export component Dashboard inherits Window { // milestones
                         VerticalBox {
                             padding: 16px;
                             spacing: 8px;
-                            Text { text: "Thinking Speed"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
+                            Text { text: "RAG Latency"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
                             Text { text: root.telemetry_rag_latency; font-size: 32px; font-weight: 700; font-family: "Inter"; color: white; }
                         }
                     }
@@ -378,15 +378,15 @@ export component Dashboard inherits Window { // milestones
 
         // My Team
         Text { text: "My Team"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
-        
+
         VerticalBox {
             spacing: 10px;
-            
+
             for role_count in role_counts : GlassCard {
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
-                
+
                 HorizontalBox {
                     padding: 16px;
                     Text { text: role_count.role; font-weight: 700; color: white; horizontal-alignment: center; }
