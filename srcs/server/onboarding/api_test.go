@@ -62,7 +62,7 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	// 3. Poll Status
 	req1, err := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
 	assert.NoError(t, err)
-	req1.Header.Set("X-Tenant-Id", startRes.TenantID)
+	req1.Header.Set("Authorization", "Bearer "+startRes.TenantID)
 	statusResp, err := http.DefaultClient.Do(req1)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp.StatusCode)
@@ -82,7 +82,7 @@ func TestAPIEndToEndFlow(t *testing.T) {
 
 	// 5. Poll Status Again
 	req2, _ := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
-	req2.Header.Set("X-Tenant-Id", startRes.TenantID)
+	req2.Header.Set("Authorization", "Bearer "+startRes.TenantID)
 	statusResp2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp2.StatusCode)
@@ -137,7 +137,7 @@ func TestAPIStateFlow(t *testing.T) {
 
 	req1, err := http.NewRequest("POST", ts.URL+"/api/onboarding/state", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
-	req1.Header.Set("X-Tenant-Id", tenant.ID)
+	req1.Header.Set("Authorization", "Bearer "+tenant.ID)
 	resp, err := http.DefaultClient.Do(req1)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
@@ -146,7 +146,7 @@ func TestAPIStateFlow(t *testing.T) {
     // 3. Get State
 	req2, err := http.NewRequest("GET", ts.URL+"/api/onboarding/state", nil)
 	assert.NoError(t, err)
-	req2.Header.Set("X-Tenant-Id", tenant.ID)
+	req2.Header.Set("Authorization", "Bearer "+tenant.ID)
 	resp2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)

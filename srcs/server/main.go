@@ -46,18 +46,26 @@ func main() {
         dsn = dbPath + "?_pragma_key=" + dbKey
     }
 
+	if dbPath != ":memory:" {
+		// Securely pre-create the DB file with 0600 permissions to avoid TOCTOU
+		if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+			f, err := os.OpenFile(dbPath, os.O_CREATE|os.O_RDWR, 0600)
+			if err != nil {
+				log.Fatalf("Failed to securely pre-create database file: %v", err)
+			}
+			f.Close()
+		} else {
+			if err := os.Chmod(dbPath, 0600); err != nil {
+				log.Printf("Warning: Failed to set secure permissions on %s: %v", dbPath, err)
+			}
+		}
+	}
+
 	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 	defer db.Close()
-
-	if dbPath != ":memory:" {
-		// Enforce secure file permissions for local standalone mode
-		if err := os.Chmod(dbPath, 0600); err != nil {
-			log.Printf("Warning: Failed to set secure permissions on %s: %v", dbPath, err)
-		}
-	}
 
 	// Create memory_embeddings table
 	_, err = db.Exec(`
