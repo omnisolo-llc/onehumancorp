@@ -55,9 +55,9 @@ echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 (while true; do
   find "${OHC_MEMORY_DIR}" -type f -mmin +60 -delete > /dev/null 2>&1
   # Resource Cleanup: Also clean unbounded tmp, cache, and download directories
-  find "tmp/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
-  find ".cache/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
-  find "downloads/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/tmp/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/.cache/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/downloads/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
   sleep 3600
 done) &
 PRUNE_PID=$!
@@ -97,8 +97,8 @@ function cleanup {
   # Resource Cleanup: Clean additional temporary artifact directories
   echo -e "${DIM}  Cleaning temporary artifacts...${RESET}"
   rm -rf "${OHC_STATUS_DIR}"/* 2>/dev/null || true
-  find "tmp/" -type f -delete > /dev/null 2>&1 || true
-  find ".cache/" -type f -delete > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/tmp/" -type f -delete > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/.cache/" -type f -delete > /dev/null 2>&1 || true
 
   docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
   docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
