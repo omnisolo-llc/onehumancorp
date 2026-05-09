@@ -1,10 +1,13 @@
+{{- if index .Values "kube-prometheus-stack" "grafana" "enabled" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "ohc.fullname" . }}-grafana-dashboard
+  name: {{ .Release.Name }}-dashboards
   labels:
-    {{- include "ohc.labels" . | nindent 4 }}
     grafana_dashboard: "1"
 data:
-  ohc-infra-dash.json: |-
-{{ .Files.Get "dashboards/grafana-dashboard.json" | indent 4 }}
+{{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
+  {{ base $path }}: |-
+{{ $bytes | toString | indent 4 }}
+{{- end }}
+{{- end }}
