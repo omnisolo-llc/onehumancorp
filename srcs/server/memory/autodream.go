@@ -66,6 +66,16 @@ func (d *AutoDreamDaemon) Run(ctx context.Context) {
 		case <-ticker.C:
 			d.processDirectories(ctx)
 			d.SweepCompletedTasks(ctx)
+
+			// Prune memories not accessed in 30 days
+			if err := d.PruneStaleMemories(ctx, 30*24*time.Hour); err != nil {
+				log.Printf("Failed to prune stale memories: %v", err)
+			}
+
+			// Resolve conflicts
+			if err := d.ResolveConflicts(ctx); err != nil {
+				log.Printf("Failed to resolve conflicts: %v", err)
+			}
 		}
 	}
 }

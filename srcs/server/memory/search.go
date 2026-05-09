@@ -72,8 +72,32 @@ func (d *AutoDreamDaemon) SearchSimilarMemories(ctx context.Context, query strin
 		memories = append(memories, mem)
 	}
 
+
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating memory rows: %w", err)
+	}
+
+	// Update last_accessed_at for retrieved memories
+	if len(memories) > 0 {
+		var ids []interface{}
+		var placeholders string
+		for i, mem := range memories {
+			ids = append(ids, mem.ID)
+			if db.GlobalProvider != nil && db.GlobalProvider.IsSQLite() {
+				if i > 0 { placeholders += "," }
+				placeholders += "?"
+			} else {
+				if i > 0 { placeholders += "," }
+				placeholders += fmt.Sprintf("$%d", i+1)
+			}
+		}
+
+		updateQuery := fmt.Sprintf("UPDATE consolidated_memory SET last_accessed_at = CURRENT_TIMESTAMP WHERE id IN (%s)", placeholders)
+		_, err = d.db.ExecContext(ctx, updateQuery, ids...)
+		if err != nil {
+			// Log but don't fail the search
+			fmt.Printf("failed to update last_accessed_at for memories: %v\n", err)
+		}
 	}
 
 	return memories, nil
