@@ -89,32 +89,30 @@ class HelpCenterScreen extends StatelessWidget {
   }
 
   Widget _buildTopicCard(BuildContext context, String title, String subtitle, IconData icon) {
-    return Card(
-      color: Colors.white.withAlpha(15),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: Icon(icon, color: const Color(0xFF6B4EFF)),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        subtitle: Text(subtitle, style: const TextStyle(color: Colors.white70)),
-        trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-        onTap: () {
-          // Stub for topic details
-        },
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GlassContainer(
+        child: ListTile(
+          leading: Icon(icon, color: const Color(0xFF6B4EFF)),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          subtitle: Text(subtitle, style: const TextStyle(color: Colors.white70)),
+          trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+          onTap: () {},
+        ),
       ),
     );
   }
 
   Widget _buildVideoCard(String title, String duration) {
-    return Card(
-      color: Colors.white.withAlpha(15),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: const Icon(Icons.play_circle_fill, color: const Color(0xFF6B4EFF), size: 40),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        subtitle: Text(duration, style: const TextStyle(color: Colors.white70)),
-        onTap: () {
-          // Stub for video player
-        },
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GlassContainer(
+        child: ListTile(
+          leading: const Icon(Icons.play_circle_fill, color: const Color(0xFF6B4EFF), size: 40),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          subtitle: Text(duration, style: const TextStyle(color: Colors.white70)),
+          onTap: () {},
+        ),
       ),
     );
   }

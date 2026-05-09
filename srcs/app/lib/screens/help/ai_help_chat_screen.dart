@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../main.dart'; // For GlassContainer
 
 class AiHelpChatScreen extends StatefulWidget {
   const AiHelpChatScreen({super.key});
@@ -8,19 +9,13 @@ class AiHelpChatScreen extends StatefulWidget {
 }
 
 class _AiHelpChatScreenState extends State<AiHelpChatScreen> {
-  final List<Map<String, String>> _messages = [
-    {
-      'role': 'assistant',
-      'text': 'Hi! I am your Support Agent. How can I help you with OneHumanCorp today?'
-    }
-  ];
+  final List<Map<String, String>> _messages = [];
   final TextEditingController _controller = TextEditingController();
 
   void _sendMessage() {
     if (_controller.text.trim().isEmpty) return;
     setState(() {
       _messages.add({'role': 'user', 'text': _controller.text});
-      _messages.add({'role': 'assistant', 'text': 'This is a simulated AI response. Please visit the Help Center to read the full article.'});
     });
     _controller.clear();
   }
@@ -49,16 +44,13 @@ class _AiHelpChatScreenState extends State<AiHelpChatScreen> {
                     final isUser = msg['role'] == 'user';
                     return Align(
                       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 15),
-                        padding: const EdgeInsets.all(15),
-                        decoration: BoxDecoration(
-                          color: isUser ? const Color(0xFF6B4EFF) : Colors.white.withAlpha(20),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Text(
-                          msg['text'] ?? '',
-                          style: const TextStyle(color: Colors.white),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 15),
+                        child: GlassContainer(
+                          child: Text(
+                            msg['text'] ?? '',
+                            style: const TextStyle(color: Colors.white),
+                          ),
                         ),
                       ),
                     );
@@ -70,20 +62,22 @@ class _AiHelpChatScreenState extends State<AiHelpChatScreen> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: 'Type your question...',
-                          hintStyle: const TextStyle(color: Colors.white70),
-                          filled: true,
-                          fillColor: Colors.white.withAlpha(20),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            borderSide: BorderSide.none,
+                      child: GlassContainer(
+                        child: TextField(
+                          controller: _controller,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Type your question...',
+                            hintStyle: const TextStyle(color: Colors.white70),
+                            filled: true,
+                            fillColor: Colors.transparent,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              borderSide: BorderSide.none,
+                            ),
                           ),
+                          onSubmitted: (_) => _sendMessage(),
                         ),
-                        onSubmitted: (_) => _sendMessage(),
                       ),
                     ),
                     const SizedBox(width: 10),

@@ -70,9 +70,7 @@ class ApiReferenceScreen extends StatelessWidget {
   Widget _buildEndpointCard(String method, String path, String title, String description) {
     Color methodColor = method == 'GET' ? Colors.green : (method == 'POST' ? Colors.blue : Colors.orange);
 
-    return Card(
-      color: Colors.white.withAlpha(15),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return GlassContainer(
       child: Padding(
         padding: const EdgeInsets.all(15.0),
         child: Column(

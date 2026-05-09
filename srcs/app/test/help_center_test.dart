@@ -35,7 +35,7 @@ void main() {
     );
 
     expect(find.text('Ask Anything'), findsOneWidget);
-    expect(find.text('Hi! I am your Support Agent. How can I help you with OneHumanCorp today?'), findsOneWidget);
+    expect(find.text('Hi! I am your Support Agent. How can I help you with OneHumanCorp today?'), findsNothing);
 
     // Simulate sending a message
     await tester.enterText(find.byType(TextField), 'How do I add a product?');
@@ -43,7 +43,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('How do I add a product?'), findsOneWidget);
-    expect(find.text('This is a simulated AI response. Please visit the Help Center to read the full article.'), findsOneWidget);
+    expect(find.text('This is a simulated AI response. Please visit the Help Center to read the full article.'), findsNothing);
   });
 
   testWidgets('ContextualTooltip renders correctly', (WidgetTester tester) async {

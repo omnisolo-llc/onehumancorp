@@ -34,10 +34,7 @@ class ReferralNotifier extends StateNotifier<ReferralState> {
   ReferralNotifier() : super(ReferralState(
     userId: 'user123',
     inviteLink: 'ohc://join?ref=user123',
-    invites: [
-      ReferralInvite(email: 'friend@example.com', status: 'ACCEPTED'),
-      ReferralInvite(email: 'another@example.com', status: 'PENDING'),
-    ],
+    invites: [],
   ));
 
   // In a real implementation, this would interact with ApiService

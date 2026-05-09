@@ -46,32 +46,14 @@ class InboxNotifier extends StateNotifier<InboxState> {
   void connectInstagram() {
     state = state.copyWith(
       instagramConnected: true,
-      messages: [
-        ...state.messages,
-        InboxMessage(
-          platform: "Instagram",
-          sender: "maya_bakes",
-          message: "Do you do vegan cakes?",
-          time: "2m ago",
-          isMe: false,
-        )
-      ],
+      messages: [...state.messages],
     );
   }
 
   void connectWhatsApp() {
     state = state.copyWith(
       whatsappConnected: true,
-      messages: [
-        ...state.messages,
-        InboxMessage(
-          platform: "WhatsApp",
-          sender: "+1 (555) 123-4567",
-          message: "Can I order 5 cupcakes for tomorrow?",
-          time: "1m ago",
-          isMe: false,
-        )
-      ],
+      messages: [...state.messages],
     );
   }
 

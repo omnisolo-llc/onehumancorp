@@ -51,9 +51,9 @@ void main() {
 
     // Verify invites list
     expect(find.text('Your Invites'), findsOneWidget);
-    expect(find.text('friend@example.com'), findsOneWidget);
-    expect(find.text('ACCEPTED'), findsOneWidget);
-    expect(find.text('another@example.com'), findsOneWidget);
-    expect(find.text('PENDING'), findsOneWidget);
+    expect(find.text('friend@example.com'), findsNothing);
+    expect(find.text('ACCEPTED'), findsNothing);
+    expect(find.text('another@example.com'), findsNothing);
+    expect(find.text('PENDING'), findsNothing);
   });
 }

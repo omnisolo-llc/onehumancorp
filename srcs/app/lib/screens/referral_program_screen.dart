@@ -125,22 +125,23 @@ class ReferralProgramScreen extends ConsumerWidget {
   }
 
   Widget _buildInviteCard(String email, String status, Color statusColor) {
-    return Card(
-      color: Colors.white.withAlpha(15),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: const Icon(Icons.person, color: Colors.white70),
-        title: Text(email, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: statusColor.withAlpha(30),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: statusColor.withAlpha(100)),
-          ),
-          child: Text(
-            status,
-            style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GlassContainer(
+        child: ListTile(
+          leading: const Icon(Icons.person, color: Colors.white70),
+          title: Text(email, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: statusColor.withAlpha(30),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: statusColor.withAlpha(100)),
+            ),
+            child: Text(
+              status,
+              style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ),

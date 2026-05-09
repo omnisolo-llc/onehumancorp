@@ -27,11 +27,8 @@ func setupTestDB(t *testing.T) *sql.DB {
 			description TEXT,
 			state TEXT,
 			status TEXT,
-			state TEXT,
 			created_at DATETIME,
-			updated_at DATETIME,
-			state TEXT
-
+			updated_at DATETIME
 		);
 		CREATE TABLE shared_tasks (
 			id TEXT PRIMARY KEY,
@@ -40,16 +37,13 @@ func setupTestDB(t *testing.T) *sql.DB {
 			description TEXT,
 			state TEXT,
 			status TEXT,
-			state TEXT,
 			agent_id TEXT,
 			priority TEXT,
 			payload BLOB,
 			parent_plan_id TEXT,
 			dependencies BLOB,
 			created_at DATETIME,
-			updated_at DATETIME,
-			state TEXT
-
+			updated_at DATETIME
 		);
 	`)
 	if err != nil {

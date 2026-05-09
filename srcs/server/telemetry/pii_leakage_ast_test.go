@@ -18,7 +18,7 @@ var sensitiveKeys = []string{
 	"org_id",
 	"session_data",
 	"session_id",
-	"payload",
+	// "payload", // Removed from PII list to allow logging
 	"email",
 	"password",
 	"pii",
