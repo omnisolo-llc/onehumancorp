@@ -37,6 +37,11 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Load saved state if any, in real app this would use the real logged in tenant ID
+      ref.read(wizardProvider.notifier).setTenantId('tenant-mock-local');
+      ref.read(wizardProvider.notifier).loadState('tenant-mock-local');
+    });
     _heroAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
