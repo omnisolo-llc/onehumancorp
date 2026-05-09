@@ -22,7 +22,7 @@ class ReleaseNotesScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildReleaseCard('v0.4.38', 'May 2026', [
+                _buildReleaseCard('v0.4.39', 'May 2026', [
                   'Enhance multi-tenant onboarding flow tests for the Welcome Checklist to ensure reliable scaling.',
                   'Bolster Standalone Wizard state test coverage for improved offline reliability and progressive disclosure validation.',
                 ]),
