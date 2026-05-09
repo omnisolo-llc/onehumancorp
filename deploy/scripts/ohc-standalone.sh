@@ -57,7 +57,7 @@ echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
   # Resource Cleanup: Also clean unbounded tmp, cache, and download directories
   find "tmp/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
   find ".cache/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
-  find "downloads/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  find "downloads/" -type f ! -name ".gitignore" -mmin +60 -delete > /dev/null 2>&1 || true
   sleep 3600
 done) &
 PRUNE_PID=$!
@@ -99,6 +99,7 @@ function cleanup {
   rm -rf "${OHC_STATUS_DIR}"/* 2>/dev/null || true
   find "tmp/" -type f -delete > /dev/null 2>&1 || true
   find ".cache/" -type f -delete > /dev/null 2>&1 || true
+  find "downloads/" -type f ! -name ".gitignore" -delete > /dev/null 2>&1 || true
 
   docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
   docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
