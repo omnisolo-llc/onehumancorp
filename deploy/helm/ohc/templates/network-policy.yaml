@@ -34,10 +34,6 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-    - to:
-        - namespaceSelector:
-            matchLabels:
               kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:

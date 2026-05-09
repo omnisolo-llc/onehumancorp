@@ -56,7 +56,14 @@ impl AuthConfig {
 
         let token = &auth_str["Bearer ".len()..];
         
-        let app_key = b"ohc-builtin-agent-2025";
+        let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| {
+            if std::env::var("STANDALONE_MODE").unwrap_or_default() == "true" {
+                std::fs::read_to_string(".ohc_jwt_secret").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string())
+            } else {
+                panic!("JWT_SECRET must be set for secure token validation");
+            }
+        });
+        let app_key = secret.as_bytes();
         let mut mac = Hmac::<Sha256>::new_from_slice(app_key).expect("HMAC can take key of any size");
         mac.update(token.as_bytes());
         
@@ -91,7 +98,14 @@ impl AuthConfig {
 
 #[allow(dead_code)]
 fn hmac_token(tok: &str) -> Vec<u8> {
-    let app_key = b"ohc-builtin-agent-2025";
+    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| {
+        if std::env::var("STANDALONE_MODE").unwrap_or_default() == "true" {
+            std::fs::read_to_string(".ohc_jwt_secret").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string())
+        } else {
+            panic!("JWT_SECRET must be set for secure token validation");
+        }
+    });
+    let app_key = secret.as_bytes();
     let mut mac = Hmac::<Sha256>::new_from_slice(app_key).expect("HMAC can take key of any size");
     mac.update(tok.as_bytes());
     mac.finalize().into_bytes().to_vec()
@@ -153,17 +167,19 @@ mod tests {
 
     #[test]
     fn test_check_token() {
-        let token = "secret_token";
-        let hash = hmac_token(token);
-        let cfg = AuthConfig { mode: AuthMode::Token(hash) };
+        temp_env::with_vars(vec![("JWT_SECRET", Some("dummy_secret_for_test")), ("STANDALONE_MODE", Some("false"))], || {
+            let token = "secret_token";
+            let hash = hmac_token(token);
+            let cfg = AuthConfig { mode: AuthMode::Token(hash) };
 
-        let mut req = Request::new(());
-        req.metadata_mut().insert("authorization", MetadataValue::from_str(&format!("Bearer {}", token)).unwrap());
+            let mut req = Request::new(());
+            req.metadata_mut().insert("authorization", MetadataValue::from_str(&format!("Bearer {}", token)).unwrap());
 
-        assert!(cfg.authenticate(&req).is_ok());
+            assert!(cfg.authenticate(&req).is_ok());
 
-        let mut req2 = Request::new(());
-        req2.metadata_mut().insert("authorization", MetadataValue::from_str("Bearer wrong_token").unwrap());
-        assert!(cfg.authenticate(&req2).is_err());
+            let mut req2 = Request::new(());
+            req2.metadata_mut().insert("authorization", MetadataValue::from_str("Bearer wrong_token").unwrap());
+            assert!(cfg.authenticate(&req2).is_err());
+        });
     }
 }

@@ -123,8 +123,12 @@ impl DB {
             if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
                 let key = if let Some(k) = database_url.split("key=").nth(1) {
                     k.split('&').next().unwrap_or("").to_string()
+                } else if let Ok(k) = std::env::var("OHC_SQLITE_KEY") {
+                    k
+                } else if let Ok(k) = std::fs::read_to_string(".ohc/runtime/.sqlite_key") {
+                    k.trim().to_string()
                 } else {
-                    std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+                    panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
                 };
 
                 if key.is_empty() {
@@ -648,7 +652,8 @@ impl DB {
             },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
-                set_org_context(&mut *tx, "system").await?;
+                // Set to empty tenant for global shared pool fetching securely across allowed namespaces
+                set_org_context(&mut *tx, "").await?;
                 let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");

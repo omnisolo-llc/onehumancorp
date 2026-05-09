@@ -45,7 +45,6 @@ if [ -z "$OHC_SQLITE_KEY" ]; then
     openssl rand -hex 32 > "$KEY_FILE"
     chmod 600 "$KEY_FILE"
   fi
-  export OHC_SQLITE_KEY="$(cat "$KEY_FILE")"
 fi
 
 echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"

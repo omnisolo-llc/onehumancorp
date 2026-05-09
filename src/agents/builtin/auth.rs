@@ -56,7 +56,14 @@ pub fn check_token(provided: &str, expected_hash: &[u8]) -> bool {
 /// Compute HMAC-SHA256 of the token using the application key.
 /// Mirrors Go hmacToken.
 pub fn hmac_token(tok: &str) -> Vec<u8> {
-    let app_key = b"ohc-builtin-agent-2025";
+    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| {
+        if std::env::var("STANDALONE_MODE").unwrap_or_default() == "true" {
+            std::fs::read_to_string(".ohc_jwt_secret").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string())
+        } else {
+            panic!("JWT_SECRET must be set for secure token validation");
+        }
+    });
+    let app_key = secret.as_bytes();
     let mut mac = HmacSha256::new_from_slice(app_key).expect("HMAC init failed");
     mac.update(tok.as_bytes());
     mac.finalize().into_bytes().to_vec()
