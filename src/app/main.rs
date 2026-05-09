@@ -8771,6 +8771,8 @@ mod e2e_login_to_dashboard_tests {
     fn test_ux_dashboard_bottom_nav_add_product() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         crate::ui_tests::init();
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
         let clicked_clone = add_product_clicked.clone();
@@ -8785,6 +8787,8 @@ mod e2e_login_to_dashboard_tests {
     fn test_ux_dashboard_bottom_nav_share_store() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         crate::ui_tests::init();
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
         let dashboard_ui = app::Dashboard::new().unwrap();
         let share_store_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
         let clicked_clone = share_store_clicked.clone();
@@ -8794,6 +8798,60 @@ mod e2e_login_to_dashboard_tests {
         dashboard_ui.invoke_action_share_store();
         assert!(*share_store_clicked.borrow());
     }
+    #[test]
+    fn test_ux_dashboard_bottom_nav_view_orders() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let action_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let clicked_clone = action_clicked.clone();
+        dashboard_ui.on_action_view_orders(move || {
+            *clicked_clone.borrow_mut() = true;
+        });
+        dashboard_ui.invoke_action_view_orders();
+        assert!(*action_clicked.borrow());
+    }
+
+    #[test]
+    fn test_ux_dashboard_bottom_nav_check_messages() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let action_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let clicked_clone = action_clicked.clone();
+        dashboard_ui.on_action_check_messages(move || {
+            *clicked_clone.borrow_mut() = true;
+        });
+        dashboard_ui.invoke_action_check_messages();
+        assert!(*action_clicked.borrow());
+    }
+
+    #[test]
+    fn test_ux_dashboard_bottom_nav_see_analytics() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let action_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let clicked_clone = action_clicked.clone();
+        dashboard_ui.on_action_see_analytics(move || {
+            *clicked_clone.borrow_mut() = true;
+        });
+        dashboard_ui.invoke_action_see_analytics();
+        assert!(*action_clicked.borrow());
+    }
+
 
     #[test]
     fn test_grandmother_business_manager_flow() {

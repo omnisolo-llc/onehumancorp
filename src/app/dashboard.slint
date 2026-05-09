@@ -448,56 +448,46 @@ export component Dashboard inherits Window { // milestones
     }
 }
 
-    // Floating Action Button (Bottom)
-    Rectangle {
-        y: parent.height - 80px;
-        x: parent.width - 80px;
-        width: 60px;
-        height: 60px;
-        background: #8b5cf6;
-        border-radius: 30px;
-        drop-shadow-blur: 10px;
-        drop-shadow-color: rgba(0, 0, 0, 0.5);
 
-        Text {
-            text: "+";
-            color: white;
-            font-size: 32px;
-            font-weight: 700;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-        }
 
-        TouchArea {
-            clicked => {
-                // We'll map this floating action button to add product for now
-                action_add_product();
+    // Bottom Navigation Bar
+    GlassCard {
+        y: parent.height - 70px;
+        width: parent.width;
+        height: 70px;
+        border-radius: 0px;
+        border-width: 1px;
+        border-color: rgba(255, 255, 255, 0.1);
+        background: rgba(26, 26, 51, 0.85);
+
+        HorizontalBox {
+            alignment: space-around;
+            padding: 8px;
+
+            VerticalBox {
+                alignment: center; spacing: 4px;
+                Button { text: "Add"; width: 44px; height: 44px; clicked => { action_add_product(); } }
+                Text { text: "Product"; font-size: 10px; color: white; horizontal-alignment: center; }
             }
-        }
-    }
-
-    // Floating Create Post (Bottom Left for another quick action)
-    Rectangle {
-        y: parent.height - 80px;
-        x: 20px;
-        width: 60px;
-        height: 60px;
-        background: #3b82f6;
-        border-radius: 30px;
-        drop-shadow-blur: 10px;
-        drop-shadow-color: rgba(0, 0, 0, 0.5);
-
-        Text {
-            text: "✍️";
-            color: white;
-            font-size: 24px;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-        }
-
-        TouchArea {
-            clicked => {
-                action_open_social_posting();
+            VerticalBox {
+                alignment: center; spacing: 4px;
+                Button { text: "Orders"; width: 44px; height: 44px; clicked => { action_view_orders(); } }
+                Text { text: "View"; font-size: 10px; color: white; horizontal-alignment: center; }
+            }
+            VerticalBox {
+                alignment: center; spacing: 4px;
+                Button { text: "Msg"; width: 44px; height: 44px; clicked => { action_check_messages(); } }
+                Text { text: "Check"; font-size: 10px; color: white; horizontal-alignment: center; }
+            }
+            VerticalBox {
+                alignment: center; spacing: 4px;
+                Button { text: "Data"; width: 44px; height: 44px; clicked => { action_see_analytics(); } }
+                Text { text: "Analytics"; font-size: 10px; color: white; horizontal-alignment: center; }
+            }
+            VerticalBox {
+                alignment: center; spacing: 4px;
+                Button { text: "Share"; width: 44px; height: 44px; clicked => { action_share_store(); } }
+                Text { text: "Store"; font-size: 10px; color: white; horizontal-alignment: center; }
             }
         }
     }
