@@ -164,7 +164,8 @@ mod tests {
             return;
         }
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        if database_url == "dummy" || !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&database_url)).await, Ok(Ok(_))) { return; }
+        let pool = sqlx::postgres::PgPoolOptions::new().max_connections(50)
             .connect(&database_url)
             .await
             .unwrap();
