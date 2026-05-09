@@ -1,3 +1,8 @@
+## v0.4.35 (Cloud) / v0.4.35+1 (Standalone)
+
+- Scaling (Cloud): 🔨 Forge: Sub-Agent Orchestration Queue Test Fixes (#12202).
+- Privacy/Offline (Standalone): (No specific privacy/offline improvements in this patch).
+
 ## v0.4.34 (Cloud) / v0.4.34+2 (Standalone)
 
 - Scaling (Cloud): Fix compiler warnings in UI tests and app main to improve reliability and multi-tenant scaling (#11933).
