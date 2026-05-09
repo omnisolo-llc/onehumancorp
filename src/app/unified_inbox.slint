@@ -39,6 +39,11 @@ export component UnifiedInbox inherits Window {
     in property <string> active_conversation_id: "";
 
     in-out property <string> new_message: "";
+    in property <bool> is_meta_connected: false;
+    in-out property <bool> show_meta_banner: true;
+
+    callback action_connect_meta();
+    callback dismiss_meta_banner();
     in-out property <bool> show_mobile_list: true;
 
     callback select_conversation(string);
@@ -105,7 +110,37 @@ export component UnifiedInbox inherits Window {
         if (root.width > 768px || !show_mobile_list) : Rectangle {
             background: #f8fafc;
 
-            VerticalBox {
+
+            if (!is_meta_connected && show_meta_banner) : GlassCard {
+                height: 90px;
+                background: rgba(168, 85, 247, 0.15);
+                border-color: #8b5cf6;
+                border-width: 1px;
+                VerticalBox {
+                    padding: 12px;
+                    spacing: 8px;
+                    HorizontalBox {
+                        alignment: space-between;
+                        Text { text: "Connect Meta Accounts"; font-weight: 700; color: #1e293b; font-size: 14px; font-family: "Inter"; }
+                        TouchArea {
+                            width: 20px;
+                            height: 20px;
+                            Text { text: "X"; color: #64748b; horizontal-alignment: center; vertical-alignment: center; }
+                            clicked => { show_meta_banner = false; dismiss_meta_banner(); }
+                        }
+                    }
+                    HorizontalBox {
+                        alignment: space-between;
+                        Text { text: "Link Instagram, FB & WhatsApp."; color: #64748b; font-size: 12px; font-family: "Inter"; vertical-alignment: center; }
+                        Button {
+                            text: "Connect";
+                            primary: true;
+                            clicked => { action_connect_meta(); }
+                        }
+                    }
+                }
+            }
+        VerticalBox {
                 // Header
                 Rectangle {
                     height: 64px;

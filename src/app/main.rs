@@ -2723,6 +2723,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
 
+
+                let unified_inbox_handle_meta = unified_inbox_ui.as_weak();
+                unified_inbox_ui.on_action_connect_meta(move || {
+                    if let Some(ui) = unified_inbox_handle_meta.upgrade() {
+                        ui.set_is_meta_connected(true);
+                        ui.set_show_meta_banner(false);
+                        // Simulate adding a Meta conversation
+                        let mut convs: Vec<app::UiConversation> = ui.get_conversations().iter().collect();
+                        convs.insert(0, app::UiConversation {
+                            id: "meta-1".into(),
+                            customer_name: "Maya (Instagram)".into(),
+                            channel_icon: "📸".into(),
+                            last_message: "Do you make vegan cakes?".into(),
+                            unread: true,
+                            time: "Just now".into(),
+                        });
+                        ui.set_conversations(slint::ModelRc::new(slint::VecModel::from(convs)));
+                    }
+                });
+
+                let unified_inbox_handle_dismiss = unified_inbox_ui.as_weak();
+                unified_inbox_ui.on_dismiss_meta_banner(move || {
+                    if let Some(ui) = unified_inbox_handle_dismiss.upgrade() {
+                        ui.set_show_meta_banner(false);
+                    }
+                });
                 let unified_inbox_handle_approve = unified_inbox_ui.as_weak();
                 unified_inbox_ui.on_approve_quote(move |msg_id, amount| {
                     if let Some(ui) = unified_inbox_handle_approve.upgrade() {
@@ -7967,6 +7993,21 @@ mod e2e_hybrid_blob_tests {
             }
         });
 
+
+        let unified_inbox_handle_meta = unified_inbox_ui.as_weak();
+        unified_inbox_ui.on_action_connect_meta(move || {
+            if let Some(ui) = unified_inbox_handle_meta.upgrade() {
+                ui.set_is_meta_connected(true);
+                ui.set_show_meta_banner(false);
+            }
+        });
+
+        let unified_inbox_handle_dismiss = unified_inbox_ui.as_weak();
+        unified_inbox_ui.on_dismiss_meta_banner(move || {
+            if let Some(ui) = unified_inbox_handle_dismiss.upgrade() {
+                ui.set_show_meta_banner(false);
+            }
+        });
         let unified_inbox_handle_draft = unified_inbox_ui.as_weak();
         unified_inbox_ui.on_request_ai_draft(move || {
             if let Some(ui) = unified_inbox_handle_draft.upgrade() {
