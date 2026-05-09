@@ -507,7 +507,7 @@ export component SetupWizard inherits Window {
                         height: 44px;
                         background: price_type == "fixed" ? rgba(168, 85, 247, 0.4) : transparent;
                         border-width: 1px; border-color: #334155;
-                        VerticalBox { alignment: center; Text { text: "Fixed"; color: white; horizontal-alignment: center; } }
+                        VerticalBox { alignment: center; Text { text: "Fixed Price"; color: white; horizontal-alignment: center; } }
                         TouchArea { clicked => { price_type = "fixed"; save_state(); } }
                     }
                     GlassCard {
@@ -521,7 +521,7 @@ export component SetupWizard inherits Window {
                         height: 44px;
                         background: price_type == "request_quote" ? rgba(168, 85, 247, 0.4) : transparent;
                         border-width: 1px; border-color: #334155;
-                        VerticalBox { alignment: center; Text { text: "Quote"; color: white; horizontal-alignment: center; } }
+                        VerticalBox { alignment: center; Text { text: "Get a Quote"; color: white; horizontal-alignment: center; } }
                         TouchArea { clicked => { price_type = "request_quote"; save_state(); } }
                     }
                 }
