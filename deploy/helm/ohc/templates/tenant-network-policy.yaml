@@ -18,7 +18,7 @@ spec:
           kubernetes.io/metadata.name: {{ .Release.Namespace }}
       podSelector:
         matchLabels:
-          app: {{ .Release.Name }}-frontend
+          app: {{ .Release.Name }}-ohc-core
     - namespaceSelector:
         matchLabels:
           kubernetes.io/metadata.name: {{ .Release.Namespace }}
@@ -39,16 +39,22 @@ spec:
       - protocol: TCP
         port: 53
   - to:
-    - podSelector:
-        matchLabels:
-          app: {{ .Values.cnpg.clusterName }}-rw
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: {{ .Release.Namespace }}
+        podSelector:
+          matchLabels:
+            app: {{ .Values.cnpg.clusterName }}-rw
     ports:
     - protocol: TCP
       port: 5432
   - to:
-    - podSelector:
-        matchLabels:
-          app: {{ .Release.Name }}-redis-master
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: {{ .Release.Namespace }}
+        podSelector:
+          matchLabels:
+            app: {{ .Release.Name }}-redis-master
     ports:
     - protocol: TCP
       port: 6379
