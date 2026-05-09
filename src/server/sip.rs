@@ -393,7 +393,7 @@ mod tests {
             Err(_) => return,
         };
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .max_connections(1)
             .connect(&database_url)
             .await;

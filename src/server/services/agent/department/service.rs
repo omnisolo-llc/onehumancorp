@@ -5,14 +5,12 @@ use std::collections::HashMap;
 
 pub struct DepartmentService {
     bus: Arc<dyn Bus>,
-    departments: Mutex<HashMap<String, String>>,
 }
 
 impl DepartmentService {
     pub fn new(bus: Arc<dyn Bus>) -> Self {
         DepartmentService {
             bus,
-            departments: Mutex::new(HashMap::new()),
         }
     }
 
