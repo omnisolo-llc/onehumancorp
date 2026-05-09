@@ -86,3 +86,32 @@ fn e2e_flow_ux_fixes() {
 
     assert!(*submit_clicked.borrow(), "Submit should be called from the completed UX flow");
 }
+
+#[test]
+fn test_echo_jargon_fixes() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    // Verify AiConfig
+    let ai_config = app::AiConfig::new().unwrap();
+    ai_config.set_is_advanced(true);
+    let add_provider_clicked = Rc::new(RefCell::new(false));
+    let add_provider_clicked_clone = add_provider_clicked.clone();
+    ai_config.on_add_provider(move || {
+        *add_provider_clicked_clone.borrow_mut() = true;
+    });
+    ai_config.invoke_add_provider();
+    assert!(*add_provider_clicked.borrow(), "Add Custom Connection button should be clickable");
+
+    // Verify AgentConfig
+    let agent_config = app::AgentConfig::new().unwrap();
+    agent_config.set_step(1);
+    agent_config.set_is_advanced(true);
+    agent_config.set_api_scope_override("[\"read:messages\"]".into());
+    assert_eq!(agent_config.get_api_scope_override(), "[\"read:messages\"]");
+
+    // Verify Login advanced toggle
+    let login = app::Login::new().unwrap();
+    login.set_is_advanced(true);
+    assert_eq!(login.get_is_advanced(), true);
+}
