@@ -115,7 +115,7 @@ fn test_business_manager_fetch_round_trip() {
     // the UI-to-DB round-tripping.
 
     let app = create();
-    let dashboard_ui = app::Dashboard::new().unwrap();
+    let _dashboard_ui = app::Dashboard::new().unwrap();
     let manager_ui = app::BusinessManager::new().unwrap();
 
     // 1. Action: Trigger a mutation via the existing UI (Submit new product)
