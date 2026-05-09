@@ -1595,12 +1595,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(ui) = ui_handle.upgrade() {
                             ui.set_invite_copy_status("Invite message copied!".into());
 
-                            let weak_ui = ui.as_weak();
-                            slint::Timer::single_shot(std::time::Duration::from_secs(3), move || {
-                                if let Some(ui) = weak_ui.upgrade() {
-                                    ui.set_invite_copy_status("".into());
-                                }
-                            });
+
+                            // Removed slint::Timer for deterministic tests
                         }
                     }
                 } else {
@@ -1685,12 +1681,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         } else {
 
                             ui.set_link_copy_status("Copied!".into());
-                            let weak_ui = ui.as_weak();
-                            slint::Timer::single_shot(std::time::Duration::from_secs(3), move || {
-                                if let Some(ui) = weak_ui.upgrade() {
-                                    ui.set_link_copy_status("".into());
-                                }
-                            });
+
+                            // Removed slint::Timer for deterministic tests
                         }
                     } else {
 
@@ -2638,18 +2630,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 let dashboard_handle_for_visitors = dashboard.as_weak();
-                slint::Timer::single_shot(std::time::Duration::from_secs(5), move || {
-                    if let Some(ui) = dashboard_handle_for_visitors.upgrade() {
-                        GLOBAL_VISITORS_COUNT.with(|g| {
-                            let mut count = g.borrow_mut();
-                            *count = 100; // Simulated milestone reach
+                if let Some(ui) = dashboard_handle_for_visitors.upgrade() {
+                    GLOBAL_VISITORS_COUNT.with(|g| {
+                        let mut count = g.borrow_mut();
+                        *count = 100; // Simulated milestone reach
 
-                            ui.set_milestone_title("🚀 Your store has 100 visitors today!".into());
-                            ui.set_milestone_message("Your store is trending! Keep up the great work.".into());
-                            ui.set_show_milestone(true);
-                        });
-                    }
-                });
+                        ui.set_milestone_title("🚀 Your store has 100 visitors today!".into());
+                        ui.set_milestone_message("Your store is trending! Keep up the great work.".into());
+                        ui.set_show_milestone(true);
+                    });
+                }
 
                 let gb_handle_for_dashboard = grow_business_handle.clone();
                 dashboard.on_action_grow_business(move || {

@@ -100,13 +100,7 @@ export component SetupWizard inherits Window {
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    Timer {
-        interval: 1000ms;
-        running: (step == 9 && !launching) || step == 0;
-        triggered => {
-            pulse_scale = (pulse_scale == 1.0) ? 0.8 : 1.0;
-        }
-    }
+
 
     VerticalBox {
         spacing: 20px;

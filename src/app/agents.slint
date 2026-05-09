@@ -56,11 +56,7 @@ export component Agents inherits Window {
                     property <bool> is_bright: true;
                     opacity: is_bright ? 1.0 : 0.2;
                     animate opacity { duration: 1000ms; easing: ease-in-out; }
-                    Timer {
-                        interval: 1000ms;
-                        running: true;
-                        triggered => { is_bright = !is_bright; }
-                    }
+
                 }
                 HorizontalBox {
                     padding: 16px;
