@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
     "fmt"
+    "encoding/json"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -147,4 +148,32 @@ func TestChaosStressVerification(t *testing.T) {
             assert.Equal(t, "PENDING", cloudTask.Status)
         }
     }
+}
+
+func TestChaos_SubAgentSpawner_Timeout_And_Retry(t *testing.T) {
+	mesh := &mockMeshHub{}
+	spawner := NewDefaultSubAgentSpawner(mesh, false, 0)
+
+	task := &SharedTask{
+		ID:             "chaos-task-timeout",
+		OrganizationID: "org-1",
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	defer cancel()
+
+	spawner.runSubAgent(ctx, task)
+
+	foundPaused := false
+	for _, msg := range mesh.published {
+		var payload map[string]interface{}
+		err := json.Unmarshal([]byte(msg), &payload)
+        if err != nil {
+            continue
+        }
+		if payload["event"] == "SUB_AGENT_PAUSED" && payload["task_id"] == "chaos-task-timeout" {
+			foundPaused = true
+		}
+	}
+	assert.True(t, foundPaused, "Expected SUB_AGENT_PAUSED event to be broadcast")
 }

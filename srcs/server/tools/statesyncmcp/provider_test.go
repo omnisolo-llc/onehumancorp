@@ -35,12 +35,6 @@ func (m *mockLocalDB) GetTask(ctx context.Context, id string) (*orchestration.Sh
 	return m.getByIDRes, m.getByIDErr
 }
 
-func (m *mockLocalDB) PollDelegatedTasks(ctx context.Context, limit int) ([]*orchestration.SharedTask, error) {
-	return nil, nil
-}
-func (m *mockLocalDB) UpdateTaskStatus(ctx context.Context, id string, status string) error {
-	return m.updateErr
-}
 
 
 func (m *mockLocalDB) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*orchestration.SharedTask, error) {
@@ -147,4 +141,8 @@ func TestNoOpProvider(t *testing.T) {
 	if err != nil || status.Status != "cloud_native" {
 		t.Errorf("expected cloud_native, nil; got %v, %v", status, err)
 	}
+}
+
+func (m *mockLocalDB) UpdateTaskStatus(ctx context.Context, id string, status string) error {
+	return m.updateErr
 }

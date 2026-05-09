@@ -299,3 +299,46 @@ func TestTaskOrchestrator_PollTasks_Error(t *testing.T) {
 	err := orchestrator.PollTasks(context.Background())
 	assert.Error(t, err)
 }
+
+func TestSubAgentSpawner_TokenBudgetExceeded(t *testing.T) {
+	mesh := &mockMeshHub{}
+	spawner := NewDefaultSubAgentSpawner(mesh, false, 0)
+
+	// "org-budget-fail" has 0 tokens defined in tokenBudgets
+	task := &SharedTask{
+		ID:             "task-budget-fail",
+		OrganizationID: "org-budget-fail",
+	}
+
+	err := spawner.Spawn(context.Background(), task)
+	assert.NoError(t, err)
+
+	time.Sleep(2 * time.Second)
+
+	foundPaused := false
+	for _, msg := range mesh.published {
+		var payload map[string]interface{}
+		_ = json.Unmarshal([]byte(msg), &payload)
+		if payload["event"] == "SUB_AGENT_PAUSED" && payload["task_id"] == "task-budget-fail" {
+			foundPaused = true
+		}
+	}
+	assert.True(t, foundPaused, "Task should enter PAUSED event due to token budget exceeded")
+}
+
+func TestSubAgentSpawner_IdempotentHeartbeatWrites(t *testing.T) {
+	mesh := &mockMeshHub{}
+	spawner := NewDefaultSubAgentSpawner(mesh, false, 0)
+
+	task := &SharedTask{
+		ID:             "task-idempotent-2",
+		OrganizationID: "org-1",
+	}
+
+	err := spawner.executeTask(context.Background(), task)
+	assert.NoError(t, err)
+
+	statusFile := filepath.Join(".agent-task", "status", task.ID+".json")
+	_, err = os.Stat(statusFile)
+	assert.NoError(t, err, "Expected idempotent JSON status file to exist")
+}
