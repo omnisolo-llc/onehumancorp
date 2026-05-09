@@ -26,17 +26,6 @@ backend:
   # each user can only see their own company's data after login.
   multiTenant: true
 
-  resourceQuota:
-    enabled: true
-    requests:
-      cpu: "10"
-      memory: "10Gi"
-      ephemeralStorage: "50Gi"
-    limits:
-      cpu: "40"
-      memory: "80Gi"
-      ephemeralStorage: "100Gi"
-      pods: "50"
   networkPolicy:
     enabled: true
 
@@ -164,3 +153,15 @@ kube-prometheus-stack:
         label: grafana_dashboard
         labelValue: "1"
 
+
+resourceQuota:
+  enabled: true
+  requests:
+    cpu: "10"
+    memory: "10Gi"
+    ephemeralStorage: "50Gi"
+  limits:
+    cpu: "40"
+    memory: "80Gi"
+    ephemeralStorage: "100Gi"
+    pods: "50"

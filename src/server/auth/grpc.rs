@@ -55,9 +55,16 @@ impl AuthConfig {
         }
 
         let token = &auth_str["Bearer ".len()..];
+        if token.is_empty() {
+            return Err(Status::unauthenticated("empty token"));
+        }
         
-        let app_key = b"ohc-builtin-agent-2025";
-        let mut mac = Hmac::<Sha256>::new_from_slice(app_key).expect("HMAC can take key of any size");
+        let app_key = if crate::config::get().multitenant {
+            std::env::var("JWT_SECRET").expect("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.").into_bytes()
+        } else {
+            std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string()).into_bytes()
+        };
+        let mut mac = Hmac::<Sha256>::new_from_slice(&app_key).expect("HMAC can take key of any size");
         mac.update(token.as_bytes());
         
         if mac.verify(expected_hash.into()).is_ok() {
@@ -91,8 +98,12 @@ impl AuthConfig {
 
 #[allow(dead_code)]
 fn hmac_token(tok: &str) -> Vec<u8> {
-    let app_key = b"ohc-builtin-agent-2025";
-    let mut mac = Hmac::<Sha256>::new_from_slice(app_key).expect("HMAC can take key of any size");
+    let app_key = if crate::config::get().multitenant {
+        std::env::var("JWT_SECRET").expect("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.").into_bytes()
+    } else {
+        std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string()).into_bytes()
+    };
+    let mut mac = Hmac::<Sha256>::new_from_slice(&app_key).expect("HMAC can take key of any size");
     mac.update(tok.as_bytes());
     mac.finalize().into_bytes().to_vec()
 }
@@ -153,6 +164,7 @@ mod tests {
 
     #[test]
     fn test_check_token() {
+        unsafe { std::env::set_var("JWT_SECRET", "test_secret_for_tests_only"); }
         let token = "secret_token";
         let hash = hmac_token(token);
         let cfg = AuthConfig { mode: AuthMode::Token(hash) };
@@ -165,5 +177,10 @@ mod tests {
         let mut req2 = Request::new(());
         req2.metadata_mut().insert("authorization", MetadataValue::from_str("Bearer wrong_token").unwrap());
         assert!(cfg.authenticate(&req2).is_err());
+
+        // Regression test for empty token
+        let mut req3 = Request::new(());
+        req3.metadata_mut().insert("authorization", MetadataValue::from_str("Bearer ").unwrap());
+        assert!(cfg.authenticate(&req3).is_err());
     }
 }

@@ -859,10 +859,11 @@ mod tests {
     #[tokio::test]
     async fn test_auth_service_login_valid() {
         let s = Arc::new(Store::new());
+        s.create_user("testuser".to_string(), "test@test.com".to_string(), "password123".to_string(), vec![], "test-org".to_string()).unwrap();
         let req = Request::new(LoginRequest {
-            username: "admin".to_string(),
-            password: "admin".to_string(),
-            organization_id: "".to_string(),
+            username: "testuser".to_string(),
+            password: "password123".to_string(),
+            organization_id: "test-org".to_string(),
         });
         
         let resp = AuthServiceServerImpl::new(s).login(req).await.unwrap();
@@ -878,7 +879,7 @@ mod tests {
             email: "new@test.com".to_string(),
             password: "password123".to_string(),
             roles: vec![],
-            organization_id: "".to_string(),
+            organization_id: "test-org".to_string(),
         });
         
         let resp = AuthServiceServerImpl::new(s).register(req).await.unwrap();
