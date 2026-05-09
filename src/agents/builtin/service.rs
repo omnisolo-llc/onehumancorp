@@ -375,6 +375,7 @@ impl AgentServiceImpl {
             resume_from_checkpoint_id: None,
             injected_context: None,
             enable_langgraph_mechanic: false,
+            enable_multi_agent_split_mechanic: false,
             // Long-term memory store for cross-department context sharing
             long_term_memory,
         }
@@ -641,6 +642,7 @@ impl AgentService for AgentServiceImpl {
                 resume_from_checkpoint_id: None,
                 injected_context,
                 enable_langgraph_mechanic: false,
+            enable_multi_agent_split_mechanic: false,
                 long_term_memory: None,
             };
 

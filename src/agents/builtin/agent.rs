@@ -66,6 +66,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
+    pub enable_multi_agent_split_mechanic: bool,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
 }
 
@@ -111,6 +112,7 @@ enable_llmcompiler_plan_and_execute: false,
             resume_from_checkpoint_id: None,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
+            enable_multi_agent_split_mechanic: false,
             long_term_memory: None,
         }
     }
@@ -250,6 +252,12 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        // Architectural Decision 1: Single-agent vs Multi-agent Mechanic
+        if cfg.enable_multi_agent_split_mechanic && session_tools.len() > 10 {
+            _on_event(AgentEvent::Handoff { target_agent: "Supervisor".to_string() });
+            return Ok("Handoff requested to Supervisor".to_string());
+        }
+
         // Add initial message if needed
         if !initial_message.is_empty() {
             initial_messages.push(Message::user(initial_message));
@@ -875,6 +883,12 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        // Architectural Decision 1: Single-agent vs Multi-agent Mechanic
+        if cfg.enable_multi_agent_split_mechanic && self.tools.len() > 10 {
+            on_event(AgentEvent::Handoff { target_agent: "Supervisor".to_string() });
+            return Ok("Handoff requested to Supervisor".to_string());
+        }
+
         let mut self_with_memory = self;
         let owned_agent;
         if let Some(ltm) = &cfg.long_term_memory {
@@ -4255,6 +4269,40 @@ mod tests {
         assert!(res.is_ok());
 
         std::fs::remove_dir_all(&temp_dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_multi_agent_split_mechanic() {
+        struct DummyToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for DummyToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("dummy".to_string())
+            }
+        }
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![]),
+        });
+
+        let mut tools = vec![];
+        for i in 0..11 {
+            tools.push(Tool {
+                name: format!("tool_{}", i),
+                description: "dummy".to_string(),
+                is_read_only: true,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(DummyToolExecutor),
+            });
+        }
+
+        let agent = Agent::new(client, tools);
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_multi_agent_split_mechanic = true;
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Start", &mut |e| events.push(e)).await;
+        assert_eq!(res.unwrap(), "Handoff requested to Supervisor");
     }
 }
 
