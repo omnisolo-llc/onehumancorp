@@ -8,14 +8,29 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
+	"os"
 
 	"onehumancorp/srcs/server/orchestration"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
+	"github.com/golang-jwt/jwt/v5"
 )
 
+func generateTestToken(tenantID string) string {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"tenant_id": tenantID,
+		"exp":       time.Now().Add(time.Hour * 24).Unix(),
+	})
+	tokenString, _ := token.SignedString([]byte("ohc-onboarding-secret-key-1234567890"))
+	return tokenString
+}
+
 func TestAPIEndToEndFlow(t *testing.T) {
+	os.Setenv("OHC_JWT_SECRET", "ohc-onboarding-secret-key-1234567890")
+	defer os.Unsetenv("OHC_JWT_SECRET")
+
 	db := setupTestDB(t)
 	defer db.Close()
 
@@ -53,6 +68,9 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	assert.NotEmpty(t, startRes.TenantID)
 	assert.Equal(t, "PROVISIONING", startRes.Status)
 
+	// Generate JWT test token
+	testToken := generateTestToken(startRes.TenantID)
+
 	// 2. Check Tasks Dispatched in DB
 	ctx := context.Background()
 	tasks, err := taskStore.GetTasksByOrganization(ctx, startRes.TenantID)
@@ -62,7 +80,7 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	// 3. Poll Status
 	req1, err := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
 	assert.NoError(t, err)
-	req1.Header.Set("X-Tenant-Id", startRes.TenantID)
+	req1.Header.Set("Authorization", "Bearer "+testToken)
 	statusResp, err := http.DefaultClient.Do(req1)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp.StatusCode)
@@ -82,7 +100,7 @@ func TestAPIEndToEndFlow(t *testing.T) {
 
 	// 5. Poll Status Again
 	req2, _ := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
-	req2.Header.Set("X-Tenant-Id", startRes.TenantID)
+	req2.Header.Set("Authorization", "Bearer "+testToken)
 	statusResp2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp2.StatusCode)

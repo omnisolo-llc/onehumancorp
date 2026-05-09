@@ -4,8 +4,12 @@ import (
 	"encoding/json"
 	"context"
 	"net/http"
-)
+	"strings"
+	"fmt"
+	"os"
 
+	"github.com/golang-jwt/jwt/v5"
+)
 
 type contextKey string
 const tenantContextKey contextKey = "tenant_id"
@@ -64,17 +68,56 @@ func (h *APIHandler) HandleGetStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
-// TenantAuthMiddleware extracts the X-Tenant-Id header and injects it into the request context.
-// In a real application, this would validate a session token, but this provides a secure extraction path.
+// TenantAuthMiddleware validates a JWT/Bearer token to securely extract tenant_id to prevent multi-tenant spoofing vulnerabilities (IDOR).
 func TenantAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := r.Header.Get("X-Tenant-Id")
-		if tenantID == "" {
-			http.Error(w, "Missing X-Tenant-Id header", http.StatusUnauthorized)
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			http.Error(w, "Missing or invalid Authorization header", http.StatusUnauthorized)
 			return
 		}
-		// Inject into context
+
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		tenantID, err := validateTokenAndGetTenant(tokenStr)
+		if err != nil || tenantID == "" {
+			http.Error(w, "Invalid token or missing tenant claim", http.StatusUnauthorized)
+			return
+		}
+
 		ctx := context.WithValue(r.Context(), tenantContextKey, tenantID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
+}
+
+func getJWTSecret() ([]byte, error) {
+	secret := os.Getenv("OHC_JWT_SECRET")
+	if secret == "" {
+		return nil, fmt.Errorf("OHC_JWT_SECRET environment variable is not set")
+	}
+	return []byte(secret), nil
+}
+
+func validateTokenAndGetTenant(tokenStr string) (string, error) {
+	secret, err := getJWTSecret()
+	if err != nil {
+		return "", err
+	}
+
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return secret, nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		if tenantID, ok := claims["tenant_id"].(string); ok {
+			return tenantID, nil
+		}
+	}
+	return "", fmt.Errorf("tenant claim missing or token invalid")
 }
