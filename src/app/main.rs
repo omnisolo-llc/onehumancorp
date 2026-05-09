@@ -520,6 +520,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         });
                         Box::leak(Box::new(billing_ui));
+                        Box::leak(Box::new(my_plan_ui.clone_strong()));
+                        Box::leak(Box::new(cost_dashboard_ui.clone_strong()));
                                         let my_plan_handle_clone2 = my_plan_ui.as_weak();
                                         dashboard.on_action_failed(move |msg| {
                                             if msg.contains("Tier limit reached") {
@@ -784,6 +786,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         });
                         Box::leak(Box::new(billing_ui));
+                        Box::leak(Box::new(my_plan_ui.clone_strong()));
+                        Box::leak(Box::new(cost_dashboard_ui.clone_strong()));
                         let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
                         my_plan_ui.on_view_details(move || {
                             if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
