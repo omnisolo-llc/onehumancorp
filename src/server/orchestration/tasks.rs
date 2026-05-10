@@ -752,9 +752,10 @@ mod tests {
         let result = tokio::time::timeout(std::time::Duration::from_millis(60), async {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             Ok::<(), String>(())
-        }).await;
+        }).await.map_err(|_| "Timeout");
 
         assert!(result.is_err(), "Tasks orchestration must enforce ML-Resilience timeout");
+        assert_eq!(result.unwrap_err(), "Timeout");
         assert!(start.elapsed() >= std::time::Duration::from_millis(60), "Timeout should wait the configured time");
     }
 

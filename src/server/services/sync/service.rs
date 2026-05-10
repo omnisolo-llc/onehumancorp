@@ -373,6 +373,7 @@ mod tests {
     #[tokio::test]
     async fn test_power_sync_push() {
         let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(100))
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPushRequest { payload: "[]".to_string() });
@@ -387,6 +388,7 @@ mod tests {
         // This is safe since we only check that it doesn't panic.
         #[allow(unused_variables)]
         let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(100))
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPullRequest {});
