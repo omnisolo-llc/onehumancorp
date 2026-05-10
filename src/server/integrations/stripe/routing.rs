@@ -7,17 +7,20 @@ pub enum PaymentMethod {
 pub struct PaymentRouter;
 
 impl PaymentRouter {
+    pub const CARD_FEE_PERCENTAGE: f64 = 0.029;
+    pub const CARD_FEE_FIXED: f64 = 0.30;
+    pub const ACH_FEE_PERCENTAGE: f64 = 0.008;
+    pub const ACH_FEE_CAP: f64 = 5.0;
+    pub const ACH_MIN_AMOUNT: f64 = 50.0;
+
     /// Returns the optimal payment method based on the transaction amount.
     /// Stripe Credit Card fee: 2.9% + $0.30
     /// Stripe ACH fee: 0.8%, capped at $5.00
     pub fn optimize_payment_method(amount_usd: f64) -> PaymentMethod {
-        let card_fee = (amount_usd * 0.029) + 0.30;
-        let mut ach_fee = amount_usd * 0.008;
-        if ach_fee > 5.0 {
-            ach_fee = 5.0;
-        }
+        let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
+        let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
-        if ach_fee < card_fee && amount_usd >= 50.0 {
+        if ach_fee < card_fee && amount_usd >= Self::ACH_MIN_AMOUNT {
             PaymentMethod::Ach
         } else {
             PaymentMethod::CreditCard
@@ -27,13 +30,10 @@ impl PaymentRouter {
     /// Calculates the potential savings in USD if the optimal payment method is used
     /// instead of defaulting to Credit Card.
     pub fn calculate_fee_savings(amount_usd: f64) -> f64 {
-        let card_fee = (amount_usd * 0.029) + 0.30;
-        let mut ach_fee = amount_usd * 0.008;
-        if ach_fee > 5.0 {
-            ach_fee = 5.0;
-        }
+        let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
+        let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
-        if ach_fee < card_fee && amount_usd >= 50.0 {
+        if ach_fee < card_fee && amount_usd >= Self::ACH_MIN_AMOUNT {
             let savings = card_fee - ach_fee;
             (savings * 100.0).round() / 100.0
         } else {
