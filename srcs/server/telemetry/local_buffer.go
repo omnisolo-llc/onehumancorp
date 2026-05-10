@@ -107,6 +107,7 @@ func (e *TelemetrySyncEngine) syncToCloud(ctx context.Context, pt MetricPoint) e
 	if err != nil {
 		return err
 	}
+    req.Close = true
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := e.httpClient.Do(req)

@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 filegroup(
     name = "migrations",
@@ -13,5 +13,21 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "db_test",
+    srcs = [
+        "rls_integration_test.go",
+        "rls_parity_test.go",
+        "unified_data_model_test.go",
+    ],
+    embed = [":db"],
+    deps = [
+        "@com_github_lib_pq//:pq",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
     ],
 )

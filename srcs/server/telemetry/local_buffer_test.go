@@ -149,6 +149,15 @@ func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
 
 	// Mock the cloud endpoint
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var pt MetricPoint
+		if err := json.NewDecoder(r.Body).Decode(&pt); err != nil {
+			t.Errorf("Failed to decode request body: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if pt.MetricName != "test_metric_daemon" {
+			t.Errorf("Expected metric name 'test_metric_daemon', got '%s'", pt.MetricName)
+		}
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
