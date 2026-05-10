@@ -1,3 +1,5 @@
+export struct ChatMessage { sender: string, text: string, article_link: string }
+
 import { PasswordInput } from "password_input.slint";
 import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
@@ -33,6 +35,13 @@ export component SetupWizard inherits Window {
     in-out property <string> admin_password: "";
 
     in-out property <bool> is_advanced: false;
+    in-out property <int> conversational_step: 0;
+    in-out property <[ChatMessage]> conversational_messages: [
+        { sender: "AI", text: "Hi! I'm The Promoter. I can build your entire business in minutes. First, what do you want to call your business?", article_link: "" }
+    ];
+    in-out property <string> conversational_input: "";
+    callback send_conversational_message();
+
 
     // New Steps State
     in-out property <string> website_template: "";
@@ -176,7 +185,7 @@ export component SetupWizard inherits Window {
                     height: 54px;
                     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; Text { text: "⚡ Instant Build (AI) →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea { clicked => { is_instant_build = true; step = 11; save_state(); } }
+                    TouchArea { clicked => { is_instant_build = true; step = 12; save_state(); } }
                 }
             }
 
@@ -688,6 +697,66 @@ export component SetupWizard inherits Window {
                 }
             }
 
+
+            // Step 12: Conversational Onboarding
+            if (step == 12) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Chat with The Promoter"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+
+                GlassCard {
+                    height: 300px;
+                    background: rgba(0, 0, 0, 0.2);
+                    ScrollView {
+                        VerticalBox {
+                            spacing: 12px;
+                            padding: 12px;
+                            for msg in conversational_messages: GlassCard {
+                                background: msg.sender == "User" ? #1e293b : #334155;
+                                border-radius: 8px;
+                                VerticalBox {
+                                    padding: 12px;
+                                    spacing: 4px;
+                                    Text {
+                                        text: msg.sender == "User" ? "You" : msg.sender;
+                                        color: #94a3b8;
+                                        font-size: 12px;
+                                    }
+                                    Text {
+                                        text: msg.text;
+                                        color: white;
+                                        font-size: 14px;
+                                        wrap: word-wrap;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                HorizontalBox {
+                    spacing: 8px;
+                    LineEdit {
+                        placeholder-text: "Type your answer...";
+                        text <=> conversational_input;
+                        height: 44px;
+                        enabled: !is_generating_instant_preview;
+                        accepted => { send_conversational_message(); }
+                    }
+                    Button {
+                        text: "Send";
+                        height: 44px;
+                        enabled: conversational_input != "" && !is_generating_instant_preview;
+                        clicked => { send_conversational_message(); }
+                    }
+                }
+
+                if (is_generating_instant_preview) : GlassCard {
+                    height: 54px;
+                    background: rgba(168, 85, 247, 0.5);
+                    VerticalBox { alignment: center; Text { text: "Designing your storefront..."; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                }
+            }
+
             // Step 10: Checklist
             if (step == 10) : VerticalBox {
                 spacing: 16px;
@@ -783,9 +852,9 @@ export component SetupWizard inherits Window {
             if (step > 0 && !launching && step < 10 && step != 100) : GlassCard {
                 height: 44px;
                 VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = step == 9 && is_instant_build ? 11 : step - 1; save_state(); } }
+                TouchArea { clicked => { step = step == 9 && is_instant_build ? 12 : step - 1; save_state(); } }
             }
-            if (step == 11 && !launching) : GlassCard {
+            if ((step == 11 || step == 12) && !launching) : GlassCard {
                 height: 44px;
                 VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => { is_instant_build = false; step = 0; save_state(); } }

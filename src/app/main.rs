@@ -299,6 +299,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let login_ui_handle = login_ui.as_weak();
 
     let setup_wizard_ui = app::SetupWizard::new()?;
+
+    let setup_wizard_ui_weak = setup_wizard_ui.as_weak();
+    setup_wizard_ui.on_send_conversational_message(move || {
+        if let Some(ui) = setup_wizard_ui_weak.upgrade() {
+            let input = ui.get_conversational_input().to_string();
+            if input.trim().is_empty() { return; }
+
+            // 1. Add user message
+            let mut messages: Vec<app::ChatMessage> = ui.get_conversational_messages().iter().collect();
+            messages.push(app::ChatMessage {
+                sender: "User".into(),
+                text: input.clone().into(),
+                article_link: "".into(),
+            });
+
+            // 2. State machine based on conversational_step
+            let step = ui.get_conversational_step();
+            if step == 0 {
+                ui.set_company_name(input.into());
+                messages.push(app::ChatMessage {
+                    sender: "The Promoter".into(),
+                    text: "Great name! Next, what type of business is it? (e.g. bakery, fitness, consulting)".into(),
+                    article_link: "".into(),
+                });
+                ui.set_conversational_step(1);
+            } else if step == 1 {
+                ui.set_business_type(input.into());
+                messages.push(app::ChatMessage {
+                    sender: "The Promoter".into(),
+                    text: "Got it. Finally, who is your target audience? (e.g. locals, online shoppers, professionals)".into(),
+                    article_link: "".into(),
+                });
+                ui.set_conversational_step(2);
+            } else if step == 2 {
+                ui.set_company_description(input.into());
+                messages.push(app::ChatMessage {
+                    sender: "The Promoter".into(),
+                    text: "Perfect! I have everything I need. I am generating your storefront now...".into(),
+                    article_link: "".into(),
+                });
+                ui.set_conversational_step(3);
+
+                // Trigger the actual build
+                ui.set_is_generating_instant_preview(true);
+                ui.invoke_generate_instant_preview();
+            }
+
+            ui.set_conversational_messages(slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(messages))));
+            ui.set_conversational_input("".into());
+        }
+    });
+
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
     // Locale-based currency detection
@@ -3714,6 +3766,58 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
     let login_ui_handle = login_ui.as_weak();
 
     let setup_wizard_ui = app::SetupWizard::new()?;
+
+    let setup_wizard_ui_weak = setup_wizard_ui.as_weak();
+    setup_wizard_ui.on_send_conversational_message(move || {
+        if let Some(ui) = setup_wizard_ui_weak.upgrade() {
+            let input = ui.get_conversational_input().to_string();
+            if input.trim().is_empty() { return; }
+
+            // 1. Add user message
+            let mut messages: Vec<app::ChatMessage> = ui.get_conversational_messages().iter().collect();
+            messages.push(app::ChatMessage {
+                sender: "User".into(),
+                text: input.clone().into(),
+                article_link: "".into(),
+            });
+
+            // 2. State machine based on conversational_step
+            let step = ui.get_conversational_step();
+            if step == 0 {
+                ui.set_company_name(input.into());
+                messages.push(app::ChatMessage {
+                    sender: "The Promoter".into(),
+                    text: "Great name! Next, what type of business is it? (e.g. bakery, fitness, consulting)".into(),
+                    article_link: "".into(),
+                });
+                ui.set_conversational_step(1);
+            } else if step == 1 {
+                ui.set_business_type(input.into());
+                messages.push(app::ChatMessage {
+                    sender: "The Promoter".into(),
+                    text: "Got it. Finally, who is your target audience? (e.g. locals, online shoppers, professionals)".into(),
+                    article_link: "".into(),
+                });
+                ui.set_conversational_step(2);
+            } else if step == 2 {
+                ui.set_company_description(input.into());
+                messages.push(app::ChatMessage {
+                    sender: "The Promoter".into(),
+                    text: "Perfect! I have everything I need. I am generating your storefront now...".into(),
+                    article_link: "".into(),
+                });
+                ui.set_conversational_step(3);
+
+                // Trigger the actual build
+                ui.set_is_generating_instant_preview(true);
+                ui.invoke_generate_instant_preview();
+            }
+
+            ui.set_conversational_messages(slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(messages))));
+            ui.set_conversational_input("".into());
+        }
+    });
+
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
     // Locale-based currency detection
