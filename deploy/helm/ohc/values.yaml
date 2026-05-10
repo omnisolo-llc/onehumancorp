@@ -159,6 +159,8 @@ kube-prometheus-stack:
   enabled: true
   grafana:
     enabled: true
+    env:
+      GF_LOG_CONSOLE_FORMAT: "json"
     sidecar:
       dashboards:
         enabled: true
