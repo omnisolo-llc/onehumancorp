@@ -5,16 +5,11 @@ go_library(
     srcs = [
         "metrics.go",
         "teammate_mesh.go",
-        "mesh_event.go",
     ],
     importpath = "github.com/onehumancorp/ohc-mono/srcs/server/orchestration/kairos",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_redis_go_redis_v9//:go-redis",
-        "@org_golang_google_protobuf//reflect/protoreflect",
-        "@org_golang_google_protobuf//runtime/protoimpl",
-        "@org_golang_google_protobuf//proto",
-        "@com_github_google_uuid//:uuid",
     ],
 )
 
@@ -30,7 +25,5 @@ go_test(
         "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
-        "@org_golang_google_protobuf//proto",
-        "@com_github_google_uuid//:uuid",
     ],
 )

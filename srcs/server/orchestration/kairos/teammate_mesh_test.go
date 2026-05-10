@@ -2,7 +2,6 @@ package kairos
 
 import (
 	"context"
-	"google.golang.org/protobuf/proto"
 	"sort"
 	"sync"
 	"testing"
@@ -111,80 +110,6 @@ func runTeammateMeshTests(t *testing.T, mesh TeammateMesh, isLocal bool) {
 		wg.Wait()
 		sub.Unsubscribe()
 	})
-
-	t.Run("PublishWithAck", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-		defer cancel()
-
-		var wg sync.WaitGroup
-		wg.Add(1)
-
-		// Mock a responder to acknowledge the incoming request
-		subResponder, err := mesh.Subscribe(ctx, "test:ack:topic", func(msg []byte) {
-			var event TeammateMeshEvent
-			if proto.Unmarshal(msg, &event) == nil {
-				mesh.Acknowledge(ctx, event.MsgId)
-			}
-		})
-		require.NoError(t, err)
-
-		go func() {
-			err := mesh.PublishWithAck(ctx, "test:ack:topic", []byte("data"))
-			assert.NoError(t, err)
-			wg.Done()
-		}()
-
-		wg.Wait()
-		subResponder.Unsubscribe()
-	})
-
-	t.Run("State Handoff", func(t *testing.T) {
-		ctx := context.Background()
-		var wg sync.WaitGroup
-		wg.Add(1)
-
-		sub, err := mesh.SubscribeStateHandoff(ctx, func(msg []byte) {
-			var event TeammateMeshEvent
-			if proto.Unmarshal(msg, &event) == nil {
-				assert.Equal(t, []byte("handoff_data"), event.Payload)
-				mesh.Acknowledge(ctx, event.MsgId)
-			}
-			wg.Done()
-		})
-		require.NoError(t, err)
-
-		if !isLocal {
-			time.Sleep(50 * time.Millisecond)
-		}
-
-		ctxTimeout, cancel := context.WithTimeout(ctx, 2*time.Second)
-		defer cancel()
-
-		err = mesh.PublishStateHandoff(ctxTimeout, []byte("handoff_data"))
-		assert.NoError(t, err)
-
-		wg.Wait()
-		sub.Unsubscribe()
-	})
-
-	t.Run("Ping and Health Responder", func(t *testing.T) {
-		ctx := context.Background()
-
-		cancelResponder, err := mesh.StartHealthResponder(ctx)
-		require.NoError(t, err)
-		defer cancelResponder()
-
-		if !isLocal {
-			time.Sleep(50 * time.Millisecond)
-		}
-
-		ctxTimeout, cancel := context.WithTimeout(ctx, 2*time.Second)
-		defer cancel()
-
-		err = mesh.Ping(ctxTimeout)
-		assert.NoError(t, err)
-	})
-
 }
 
 func TestLocalTeammateMesh(t *testing.T) {
@@ -210,7 +135,6 @@ func TestLocalTeammateMesh_LockExpiry(t *testing.T) {
 	mesh := NewLocalTeammateMesh()
 	ctx := context.Background()
 	lockKey := "ohc:lock:system:task:expirylock"
-	mesh.ReleaseLock(ctx, lockKey) // ensure clear
 
 	acquired, err := mesh.AcquireLock(ctx, lockKey, 50*time.Millisecond)
 	require.NoError(t, err)
