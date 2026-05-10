@@ -12,13 +12,14 @@ import (
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
+	// Use cache=shared memory mode so that tables persist across test connections.
+	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("Failed to open database: %v", err)
 	}
 
 	_, err = db.Exec(`
-		CREATE TABLE tenants (
+		CREATE TABLE IF NOT EXISTS tenants (
 			id TEXT PRIMARY KEY,
 			owner_email TEXT,
 			tier TEXT,
@@ -28,10 +29,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 			status TEXT,
 			state TEXT,
 			created_at DATETIME,
-			updated_at DATETIME,
-			state TEXT
+			updated_at DATETIME
 		);
-		CREATE TABLE shared_tasks (
+		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT,
 			title TEXT,
@@ -44,8 +44,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			parent_plan_id TEXT,
 			dependencies BLOB,
 			created_at DATETIME,
-			updated_at DATETIME,
-			state TEXT
+			updated_at DATETIME
 		);
 	`)
 	if err != nil {
