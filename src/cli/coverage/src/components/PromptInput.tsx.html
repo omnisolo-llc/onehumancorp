@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for src/hooks/useOrchestrator.ts</title>
+    <title>Code coverage report for src/components/PromptInput.tsx</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../prettify.css" />
     <link rel="stylesheet" href="../../base.css" />
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/hooks</a> useOrchestrator.ts</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/components</a> PromptInput.tsx</h1>
         <div class='clearfix'>
 
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>11/11</span>
+                <span class='fraction'>5/5</span>
             </div>
 
 
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>1/1</span>
             </div>
 
 
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>4/4</span>
+                <span class='fraction'>2/2</span>
             </div>
 
 
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>10/10</span>
+                <span class='fraction'>5/5</span>
             </div>
 
 
@@ -91,11 +91,7 @@
 <a name='L26'></a><a href='#L26'>26</a>
 <a name='L27'></a><a href='#L27'>27</a>
 <a name='L28'></a><a href='#L28'>28</a>
-<a name='L29'></a><a href='#L29'>29</a>
-<a name='L30'></a><a href='#L30'>30</a>
-<a name='L31'></a><a href='#L31'>31</a>
-<a name='L32'></a><a href='#L32'>32</a>
-<a name='L33'></a><a href='#L33'>33</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L29'></a><a href='#L29'>29</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -105,59 +101,51 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { useState, useEffect } from 'react';
-import { ToolItem } from '../components/ToolProgress';
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import React, { useState } from 'react';
+import { Box, Text } from 'ink';
+import TextInput from 'ink-text-input';
 &nbsp;
-export interface OrchestratorState {
-  status: string;
-  tools: ToolItem[];
-  error: string | null;
+export interface PromptInputProps {
+  onSubmit: (value: string) =&gt; void;
+  promptText?: string;
 }
 &nbsp;
-export const useOrchestrator = (): OrchestratorState =&gt; {
-  const [status, setStatus] = useState('Initializing Agent...');
-  const [error] = useState&lt;string | null&gt;(null);
-  const [tools, setTools] = useState&lt;ToolItem[]&gt;([
-    { name: 'ls -la', status: 'success' },
-    { name: 'read_file', status: 'pending' }
-  ]);
+export const PromptInput: React.FC&lt;PromptInputProps&gt; = ({ onSubmit, promptText = '&gt;' }) =&gt; {
+  const [value, setValue] = useState('');
 &nbsp;
-  useEffect(() =&gt; {
-    // In the future, this will connect to the OHC local orchestrator via IPC or WebSocket.
-    const timer = setTimeout(() =&gt; {
-      setStatus('Analyzing Codebase...');
-      setTools([
-        { name: 'ls -la', status: 'success' },
-        { name: 'read_file', status: 'success' },
-        { name: 'set_plan', status: 'pending' }
-      ]);
-    }, 2000);
-    return () =&gt; clearTimeout(timer);
-  }, []);
-&nbsp;
-  return { status, tools, error };
+  return (
+    &lt;Box&gt;
+      &lt;Box marginRight={1}&gt;
+        &lt;Text color="cyan"&gt;{promptText}&lt;/Text&gt;
+      &lt;/Box&gt;
+      &lt;TextInput
+        value={value}
+        onChange={setValue}
+        onSubmit={(val) =&gt; {
+          onSubmit(val);
+          setValue('');
+        }}
+      /&gt;
+    &lt;/Box&gt;
+  );
 };
 &nbsp;</pre></td></tr></table></pre>
 
