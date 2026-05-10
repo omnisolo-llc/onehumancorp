@@ -1,17 +1,27 @@
-# Scout: Tool Integration Research Q2
+# Title: Automated Booking & Calendar Sync
 
-## 2. Calendar & Scheduling
-**Title**: Integrate Cal.com for Zero-Config Booking & Calendar Sync
-**Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
-**Research Report**:
-- Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box.
-- It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
-- Free tier available for individuals; great for our free tier users.
-- Alternative is building from scratch, which is error-prone.
-**Design Doc**:
-- "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
-- Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.
-- When a customer books a slot on the OHC public page, Cal.com manages the calendar event and conflict resolution transparently.
-**Implementation Prompt**: Embed Cal.com's infrastructure so users can sync their personal calendars and provide a public booking widget on their storefront that prevents double-booking.
-**Priority**: P0
-**Estimated Scope**: Medium
+## Problem Statement
+Service-based small business owners spend too much time going back and forth with clients to find a meeting time. Double bookings happen frequently because personal and business calendars aren't synced. They need a way to let clients book available slots automatically.
+
+## Research Report
+- **Tool Evaluated**: Cal.com
+- **Persona Value**: High. Eliminates scheduling friction for service providers like Leo (Music Tutor).
+- **Advantages**: Open-source, highly customizable, white-label API. Embeds seamlessly.
+- **Risks**: Reliance on external scheduling logic.
+- **Pricing**: Team plans available; open-source core.
+- **Cloud vs Standalone**: Cloud works easily. Standalone requires managing OAuth tokens locally.
+
+## Design Doc
+- **Integration Trigger**: User sets working hours and connects Google/Outlook calendar.
+- **Action**: OHC generates a public booking link via Cal.com. Bookings create events on the owner's calendar and block time in OHC.
+- **User Interface**: "Availability" settings page and a public booking page for clients.
+
+## Implementation Prompt
+Build a scheduling feature using Cal.com that allows users to set weekly availability and connect a third-party calendar. Generate a shareable booking link. When a client books, the event must appear on the connected calendar and block out time.
+- **Acceptance Criteria**: User sets hours and connects calendar. Test booking successfully blocks out that time on the connected calendar.
+
+## Priority
+P0
+
+## Estimated Scope
+Medium

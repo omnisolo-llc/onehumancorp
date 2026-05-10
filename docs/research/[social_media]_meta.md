@@ -1,21 +1,27 @@
-## [Social Media] Issue Brief: Automated Direct Message Integration
+# Title: Unified Social Media Inbox via Meta API
 
-**Title**: Scout 🔍: Integrate Meta API for Automated Instagram & Messenger DMs
-**Problem Statement**:
-Small business owners like Maya (Home Baker) and Priya (Boutique) are overwhelmed by repetitive direct messages on Instagram and Facebook (e.g., "Do you do vegan?", "Is this in stock?"). Replying manually takes away from their actual work, and missing DMs means losing sales. They need an automated way to handle these inquiries without touching any code or configuring complex webhook flows.
-**Research Report**:
-- **Tool**: Meta Graph API (Instagram Direct & Messenger) or a managed wrapper like ManyChat.
-- **Evaluation**: The Meta API allows full programmatic access to read and reply to DMs. By integrating this, OHC's "Customer Success" AI agent can draft and send replies based on the business's existing catalog, FAQs, and business hours.
-- **Ease of Use**: Very easy for the user. They simply click "Log in with Facebook/Instagram" to grant permissions. No API keys to manage.
-- **Pricing**: Free to use the Meta API, though WhatsApp integration has per-conversation pricing.
-- **Cloud vs. Standalone**: Works perfectly in Cloud mode (OHC manages the Meta App and Webhooks). In Standalone mode, it would be complex as the user would need to create their own Meta App.
-**Design Doc**:
-- The user navigates to a "Social Inbox" tab and clicks "Connect Instagram".
-- Uses OAuth to grant OHC permission to read/write messages.
-- OHC registers a centralized webhook for the tenant.
-- Incoming messages are routed to the AI Agent (Customer Success).
-- The agent formulates a response based on the tenant's context (products, availability) and sends it back via the Meta API.
-**Implementation Prompt**:
-Implement the Instagram/Messenger integration. Provide a UI for the user to connect their Meta account. Set up a secure webhook endpoint to receive incoming DMs, route them to the LLM with the user's business context, and send the generated reply back to the customer. Ensure the user can toggle the AI on/off or set it to "draft only" mode.
-**Priority**: P1
-**Estimated Scope**: Medium
+## Problem Statement
+Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
+
+## Research Report
+- **Tool Evaluated**: Meta Graph API / Business Suite
+- **Persona Value**: Extremely high. Instagram and WhatsApp are primary sales channels.
+- **Advantages**: Direct, deep integration. No third-party SaaS fees, maintaining Radical Simplicity.
+- **Risks**: Requires building and maintaining OAuth flows and webhooks directly. Stringent API reviews.
+- **Pricing**: Free API usage.
+- **Cloud vs Standalone**: Cloud works well via webhooks. Standalone is challenging and may require a cloud proxy.
+
+## Design Doc
+- **Integration Trigger**: User authenticates their Meta/Facebook account in Settings.
+- **Action**: OHC routes incoming webhooks to a unified Customer Inbox. The Ambassador agent analyzes messages and drafts replies.
+- **User Interface**: A single unified inbox view. Option to auto-reply or manually approve AI drafts.
+
+## Implementation Prompt
+Implement the integration with Meta Business Suite to aggregate Instagram DMs, Facebook messages, and WhatsApp chats into a single OHC inbox. Allow users to authenticate their social accounts with one click. The AI Ambassador must be able to read incoming messages, draft context-aware responses, and send replies back to the original platform.
+- **Acceptance Criteria**: User connects Meta account. Incoming IG/FB/WhatsApp messages appear in one inbox. AI drafts a reply. User can send reply back to the platform.
+
+## Priority
+P0
+
+## Estimated Scope
+Large

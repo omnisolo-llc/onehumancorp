@@ -1,17 +1,27 @@
-## [Video] Zoom Integration
-**Title**: Integrate Zoom for Auto-Generated Meeting Links
-**Problem Statement**: Leo (Music Tutor) manually creates a Zoom link for every new lesson and emails it to the student. This is prone to error and looks unprofessional. He needs links to be generated automatically when a lesson is booked.
-**Research Report**:
-- **Tool**: Zoom
-- **Target Persona**: Leo (Music Tutor)
-- **Advantages**: Ubiquitous for online lessons. Strong API for meeting creation.
+# Title: Native Zoom Link Generation for Appointments
+
+## Problem Statement
+Tutors like Leo manually create a Zoom link for every new lesson and email it to the student. This is prone to error and looks unprofessional. He needs links to be generated automatically when a lesson is booked.
+
+## Research Report
+- **Tool Evaluated**: Zoom
+- **Persona Value**: High. Reduces manual work and looks professional.
+- **Advantages**: Ubiquitous, standard OAuth connection process.
 - **Risks**: Zoom OAuth requires annual app review and compliance checks.
-- **Pricing**: Free tier (40-min limit). Pro starts at $15/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
-**Design Doc**:
-- User connects their Zoom account via the Sales dashboard.
-- When a customer books an online service (e.g., via Calendly or native booking), OHC calls the Zoom API to create a meeting.
-- The Zoom link is embedded in the automated calendar invite and confirmation email sent to the customer.
-**Implementation Prompt**: Create an OAuth integration with Zoom. Automatically generate a unique Zoom meeting link when a customer books a virtual service, and include this link in the customer's confirmation email.
-**Priority**: P1
-**Estimated Scope**: Medium
+- **Pricing**: API is free for Zoom users, but requires the merchant to have an account.
+- **Cloud vs Standalone**: Cloud (OAuth). Standalone (Server-to-Server OAuth).
+
+## Design Doc
+- **Integration Trigger**: Service creation flow: user selects "Online Meeting" and connects Zoom. Customer books service.
+- **Action**: OHC calls Zoom API to create a meeting, retrieves URL, and embeds it in calendar invites and emails.
+- **User Interface**: "Connect Zoom" button during service setup.
+
+## Implementation Prompt
+Build a Zoom integration that automatically creates meeting links for online service bookings. Users should be able to connect their Zoom account via OAuth. When a customer books, dynamically generate a Zoom link and share it.
+- **Acceptance Criteria**: Merchant connects Zoom. Customer books online service. Unique Zoom link is generated and sent to both parties.
+
+## Priority
+P2
+
+## Estimated Scope
+Medium
