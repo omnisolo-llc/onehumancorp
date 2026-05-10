@@ -281,8 +281,8 @@ fn test_maya_baker_onboarding_flow() {
     wizard_ui.invoke_next_step();
     assert_eq!(wizard_ui.get_step(), 3);
 
-    // Physical goods
-    wizard_ui.invoke_toggle_sell_physical();
+    // Food
+    wizard_ui.invoke_toggle_sell_food();
     wizard_ui.invoke_next_step();
     assert_eq!(wizard_ui.get_step(), 4);
 
