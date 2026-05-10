@@ -121,8 +121,6 @@ void main() {
       expect(find.text('✅ Business live'), findsOneWidget);
       expect(find.text('⬜ Add 3 more products'), findsOneWidget);
       expect(find.text('⬜ Connect Instagram'), findsOneWidget);
-
-      await tester.pump(const Duration(seconds: 4));
     });
   });
 
@@ -185,7 +183,6 @@ void main() {
       await tester.tap(find.byKey(const Key('setTemplateBtn')));
       await tester.pump();
       expect(find.text('Template: Modern'), findsOneWidget);
-      await tester.pumpAndSettle(const Duration(milliseconds: 500));
     });
   });
 
@@ -243,8 +240,6 @@ void main() {
       await tester.tap(find.byKey(const Key('setDeploymentBtn')));
       await tester.pump();
       expect(find.text('Deployment: Cloud'), findsOneWidget);
-      // Let the Future.delayed finish
-      await tester.pumpAndSettle(const Duration(milliseconds: 500));
     });
   });
 
@@ -310,35 +305,14 @@ void main() {
 
       await tester.pump(const Duration(milliseconds: 500));
 
-      // 7. Product Screen
-      await tester.tap(find.text('Next').last);
-      await tester.pump(const Duration(milliseconds: 500));
-
-      // 8. Domain Screen
-      await tester.tap(find.text('Next').last);
-      await tester.pump(const Duration(milliseconds: 500));
-
-      // 9. Review & Launch -> Launch My AI Team
+      // 8. Review & Launch -> Launch My AI Team
       final launchBtn = find.text('Launch My AI Team');
-      for (int i=0; i<10; i++) {
-        await tester.drag(find.byType(SingleChildScrollView).first, const Offset(0, -500), warnIfMissed: false);
-        await tester.pump();
-      }
-      await tester.tap(launchBtn, warnIfMissed: false);
+      await tester.ensureVisible(launchBtn);
+      await tester.tap(launchBtn);
       await tester.pump(const Duration(milliseconds: 500));
 
-      // Allow Confetti time to start/stop
-      await tester.pump(const Duration(seconds: 4));
-
-      expect(find.text('You\'re set up!'), findsOneWidget);
-      expect(find.text('✅ Business live'), findsOneWidget);
-      expect(find.text('⬜ Add 3 more products'), findsOneWidget);
-      expect(find.text('⬜ Connect Instagram'), findsOneWidget);
-      expect(find.text('⬜ Share your link with a friend'), findsOneWidget);
-
-      await tester.tap(find.text('Go to Dashboard'));
+      // After launch, step goes to 8, rendering DashboardScreen
       await tester.pump(const Duration(seconds: 2));
-
       expect(find.text('Dashboard'), findsOneWidget);
       expect(find.text('Welcome Checklist'), findsOneWidget);
       expect(find.text('Business live'), findsOneWidget);

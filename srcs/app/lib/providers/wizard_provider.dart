@@ -74,61 +74,18 @@ class WizardNotifier extends Notifier<WizardState> {
 
   @override
   WizardState build() {
-    _loadState();
     return WizardState();
-  }
-
-  Future<void> _loadState() async {
-    final data = await _apiService.getState();
-    if (data.isNotEmpty) {
-      state = WizardState(
-        currentStep: data['currentStep'] ?? 0,
-        companyName: data['companyName'],
-        industry: data['industry'],
-        size: data['size'],
-        goals: List<String>.from(data['goals'] ?? []),
-        templateSelection: data['templateSelection'],
-        deploymentPreference: data['deploymentPreference'],
-        adminName: data['adminName'],
-        adminEmail: data['adminEmail'],
-        adminPassword: data['adminPassword'],
-        productName: data['productName'],
-        productDescription: data['productDescription'],
-        productPrice: data['productPrice'],
-        domainChoice: data['domainChoice'],
-      );
-    }
-  }
-
-  void _saveCurrentState() {
-    _apiService.saveState({
-      'currentStep': state.currentStep,
-      'companyName': state.companyName,
-      'industry': state.industry,
-      'size': state.size,
-      'goals': state.goals,
-      'templateSelection': state.templateSelection,
-      'deploymentPreference': state.deploymentPreference,
-      'adminName': state.adminName,
-      'adminEmail': state.adminEmail,
-      'productName': state.productName,
-      'productDescription': state.productDescription,
-      'productPrice': state.productPrice,
-      'domainChoice': state.domainChoice,
-    });
   }
 
   void nextStep() {
     if (state.currentStep < 11) {
       state = state.copyWith(currentStep: state.currentStep + 1);
-      _saveCurrentState();
     }
   }
 
   void prevStep() {
     if (state.currentStep > 0) {
       state = state.copyWith(currentStep: state.currentStep - 1);
-      _saveCurrentState();
     }
   }
 
@@ -138,7 +95,6 @@ class WizardNotifier extends Notifier<WizardState> {
       industry: industry ?? state.industry,
       size: size ?? state.size,
     );
-    _saveCurrentState();
   }
 
   void toggleGoal(String goal) {
@@ -149,17 +105,14 @@ class WizardNotifier extends Notifier<WizardState> {
       currentGoals.add(goal);
     }
     state = state.copyWith(goals: currentGoals);
-    _saveCurrentState();
   }
 
   void setTemplateSelection(String template) {
     state = state.copyWith(templateSelection: template);
-    _saveCurrentState();
   }
 
   void setDeploymentPreference(String preference) {
     state = state.copyWith(deploymentPreference: preference);
-    _saveCurrentState();
   }
 
   void updateAdminAccount({String? name, String? email, String? password}) {
@@ -168,7 +121,6 @@ class WizardNotifier extends Notifier<WizardState> {
       adminEmail: email ?? state.adminEmail,
       adminPassword: password ?? state.adminPassword,
     );
-    _saveCurrentState();
   }
 
   void updateProductDetails({String? name, String? description, String? price}) {
@@ -177,12 +129,10 @@ class WizardNotifier extends Notifier<WizardState> {
       productDescription: description ?? state.productDescription,
       productPrice: price ?? state.productPrice,
     );
-    _saveCurrentState();
   }
 
   void setDomainChoice(String? domain) {
     state = state.copyWith(domainChoice: domain);
-    _saveCurrentState();
   }
 
   Future<void> submitWizard() async {

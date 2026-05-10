@@ -5,8 +5,6 @@ import '../main.dart'; // For GlassContainer
 import '../widgets/contextual_tooltip.dart';
 import '../widgets/walkthrough_overlay.dart';
 import 'help/help_center_screen.dart';
-import 'package:flutter/services.dart';
-import 'package:confetti/confetti.dart';
 
 enum EnvironmentMode { cloud, standaloneDesktop }
 
@@ -33,14 +31,12 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
 
   late AnimationController _pulseAnimationController;
   late Animation<double> _pulseAnimation;
-  late ConfettiController _confettiController;
 
   bool _showWalkthrough = true;
 
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _heroAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -62,7 +58,6 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
 
   @override
   void dispose() {
-    _confettiController.dispose();
     _heroAnimationController.dispose();
     _pulseAnimationController.dispose();
     _companyNameController.dispose();
@@ -92,15 +87,6 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       backgroundColor: const Color(0xFF0F172A),
       body: Stack(
         children: [
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              shouldLoop: false,
-              colors: const [Colors.green, Colors.blue, Colors.pink, Colors.orange, Colors.purple],
-            ),
-          ),
           Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
@@ -802,10 +788,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 ),
                 const SizedBox(height: 10),
                 ElevatedButton(
-                  onPressed: () {
-                    final newDesc = "Premium AI-generated description for ${state.productName ?? 'your product'}";
-                    ref.read(wizardProvider.notifier).updateProductDetails(description: newDesc);
-                  },
+                  onPressed: () {},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white.withOpacity(0.1),
                     padding: const EdgeInsets.symmetric(vertical: 15),
@@ -985,14 +968,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 },
                 child: ElevatedButton(
                   onPressed: () async {
-                    _confettiController.play();
                     await ref.read(wizardProvider.notifier).submitWizard();
-                    Clipboard.setData(ClipboardData(text: "https://${state.domainChoice}"));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('🎉 Published! Link copied to clipboard. 🎉')),
-                      );
-                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF22C55E),
