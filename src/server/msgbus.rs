@@ -122,7 +122,7 @@ pub struct RedisBus {
 impl RedisBus {
     pub async fn new(redis_url: &str) -> Result<Self, String> {
         let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
-        let publish_conn = client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let publish_conn = client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
 
         Ok(RedisBus {
             client,
@@ -161,7 +161,7 @@ impl Bus for RedisBus {
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         use futures_util::StreamExt;
 
-        let mut pubsub = self.client.get_async_pubsub().await.map_err(|e| e.to_string())?;
+        let mut pubsub = self.client.get_async_connection().await.map_err(|e| e.to_string())?.into_pubsub();
         pubsub.subscribe(&topic).await.map_err(|e| e.to_string())?;
         let mut stream = pubsub.into_on_message();
 
@@ -939,5 +939,22 @@ mod memory_bus_tests {
 
         let acquired_after_release = bus.acquire_lock("resource1", "owner2", 10).await.unwrap();
         assert!(acquired_after_release);
+    }
+}
+
+
+#[cfg(test)]
+mod tests_redis_bus_conn {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_redis_bus_get_connection() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(bus) = RedisBus::new(&redis_url).await {
+                // Connection is established during initialization but we can verify it's there
+                let mut conn = bus.publish_conn.lock().await;
+                assert!(redis::cmd("PING").query_async::<String>(&mut *conn).await.is_ok());
+            }
+        }
     }
 }

@@ -1,8 +1,10 @@
 use super::queue::{Job, TaskQueue};
 use async_trait::async_trait;
+use tokio::sync::OnceCell;
 
 pub struct RedisTaskQueue {
     client: redis::Client,
+    redis_conn: OnceCell<redis::aio::MultiplexedConnection>,
     queue_name: String,
 }
 
@@ -11,8 +13,16 @@ impl RedisTaskQueue {
         let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
         Ok(Self {
             client,
+            redis_conn: OnceCell::new(),
             queue_name: queue_name.to_string(),
         })
+    }
+
+    async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
+        let conn = self.redis_conn.get_or_try_init(|| async {
+            self.client.get_multiplexed_tokio_connection().await
+        }).await.map_err(|e| e.to_string())?;
+        Ok(conn.clone())
     }
 }
 
@@ -20,7 +30,7 @@ impl RedisTaskQueue {
 impl TaskQueue for RedisTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
-        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let mut pipe = redis::pipe();
         for job in jobs {
             let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
@@ -31,7 +41,7 @@ impl TaskQueue for RedisTaskQueue {
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
-        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
 
         let _: () = redis::cmd("RPUSH")
@@ -45,7 +55,7 @@ impl TaskQueue for RedisTaskQueue {
     }
 
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
-        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
 
         let result: Option<(String, String)> = redis::cmd("BLPOP")
             .arg(&self.queue_name)
