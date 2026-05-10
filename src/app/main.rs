@@ -3136,6 +3136,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         }
                 let release_notes_handle = release_notes_ui.as_weak();
 
+                let scribe_feature_dashboard_ui = app::ScribeFeatureDashboard::new().unwrap();
+                let scribe_dashboard_ui = scribe_feature_dashboard_ui.as_weak();
+
                 ai_chat_ui.on_send_message({
                     let chat_handle = ai_chat_handle.clone();
                     move || {
@@ -3205,6 +3208,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 dashboard.on_open_release_notes(move || {
                     if let Some(ui) = release_notes_handle.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
+                dashboard.on_open_scribe_feature_dashboard(move || {
+                    if let Some(ui) = scribe_dashboard_ui.upgrade() {
                         let _ = ui.show();
                     }
                 });
