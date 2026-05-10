@@ -47,15 +47,15 @@ export component ScribeFeatureDashboard inherits Window {
                     GlassCard {
                         VerticalBox {
                             padding: 16px; spacing: 12px;
-                            Text { text: "2. Contextual Tooltips"; font-size: 18px; font-weight: 700; color: white; }
-                            Text { text: "Managed globally. Hover over buttons in the main app to see them."; color: #cbd5e1; wrap: word-wrap; }
+                            Text { text: "2. Helpful Hints"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "Hover over buttons to see small helpful hints."; color: #cbd5e1; wrap: word-wrap; }
                         }
                     }
 
                     GlassCard {
                         VerticalBox {
                             padding: 16px; spacing: 12px;
-                            Text { text: "3. Interactive Walkthroughs"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "3. Step-by-Step Guides"; font-size: 18px; font-weight: 700; color: white; }
                             Text { text: "Step-by-step tours for store setup and payments."; color: #cbd5e1; wrap: word-wrap; }
                             Button { text: "Start Walkthrough"; clicked => { root.open_walkthrough(); } }
                         }
@@ -73,7 +73,7 @@ export component ScribeFeatureDashboard inherits Window {
                     GlassCard {
                         VerticalBox {
                             padding: 16px; spacing: 12px;
-                            Text { text: "5. Video Tutorials"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "5. Short Videos"; font-size: 18px; font-weight: 700; color: white; }
                             Text { text: "Short videos (<90 seconds) for common tasks."; color: #cbd5e1; wrap: word-wrap; }
                             Button { text: "Watch Videos"; clicked => { root.open_video_tutorials(); } }
                         }
@@ -82,8 +82,8 @@ export component ScribeFeatureDashboard inherits Window {
                     GlassCard {
                         VerticalBox {
                             padding: 16px; spacing: 12px;
-                            Text { text: "6. Connect other tools"; font-size: 18px; font-weight: 700; color: white; }
-                            Text { text: "For advanced users to connect custom software."; color: #cbd5e1; wrap: word-wrap; }
+                            Text { text: "6. Connect Other Tools"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "For advanced users to connect external software."; color: #cbd5e1; wrap: word-wrap; }
                             Button { text: "Connect tools"; clicked => { root.open_api_docs(); } }
                         }
                     }
@@ -91,9 +91,9 @@ export component ScribeFeatureDashboard inherits Window {
                     GlassCard {
                         VerticalBox {
                             padding: 16px; spacing: 12px;
-                            Text { text: "7. Release Notes"; font-size: 18px; font-weight: 700; color: white; }
+                            Text { text: "7. What's New (App Updates)"; font-size: 18px; font-weight: 700; color: white; }
                             Text { text: "What's new in OHC."; color: #cbd5e1; wrap: word-wrap; }
-                            Button { text: "View Release Notes"; clicked => { root.open_release_notes(); } }
+                            Button { text: "View What's New (App Updates)"; clicked => { root.open_release_notes(); } }
                         }
                     }
                 }
