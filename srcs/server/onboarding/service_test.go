@@ -44,7 +44,6 @@ func setupTestDB(t *testing.T) *sql.DB {
 			dependencies BLOB,
 			created_at DATETIME,
 			updated_at DATETIME
-			state TEXT
 		);
 	`)
 	if err != nil {
