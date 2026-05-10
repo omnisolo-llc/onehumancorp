@@ -609,6 +609,11 @@ fn test_all_advanced_toggles_and_progressive_disclosure() {
     // Test AgentConfig
     let agent_ui = crate::app::AgentConfig::new().unwrap();
     assert!(!agent_ui.get_is_advanced(), "AgentConfig should not be advanced by default");
+
+    // Test the new toggle bindings
+    assert_eq!(agent_ui.get_can_reply(), false);
+    agent_ui.set_can_reply(true);
+    assert_eq!(agent_ui.get_can_reply(), true);
     agent_ui.invoke_toggle_advanced(); // Does nothing but we check if it can be called safely
     // Since there's no native toggle_advanced callback setting state automatically in slint file for AgentConfig,
     // wait, looking at agent_config.slint, we passed it up to root.

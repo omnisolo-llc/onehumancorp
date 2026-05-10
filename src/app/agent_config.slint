@@ -1,6 +1,7 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit, Slider, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { AdvancedToggle } from "advanced_toggle.slint";
+import { ToggleSwitch } from "toggle_switch.slint";
 
 export component AgentConfig inherits Window {
     min-width: 375px;
@@ -144,21 +145,21 @@ export component AgentConfig inherits Window {
             spacing: 16px;
             Text { text: "What specific tasks should this helper do?"; color: white; font-family: "Inter"; }
             
-            HorizontalBox {
-                Text { text: "Can Reply to Messages"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
+            ToggleSwitch {
+                text: "Reply to customer messages";
+                checked <=> can_reply;
             }
-            HorizontalBox {
-                Text { text: "Post to Instagram & Facebook"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
+            ToggleSwitch {
+                text: "Post to Instagram & Facebook";
+                checked <=> can_social;
             }
-            HorizontalBox {
-                Text { text: "Write product descriptions"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_write_descriptions; toggled => { can_write_descriptions = !can_write_descriptions; } }
+            ToggleSwitch {
+                text: "Write product descriptions";
+                checked <=> can_write_descriptions;
             }
-            HorizontalBox {
-                Text { text: "Send order updates"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_send_updates; toggled => { can_send_updates = !can_send_updates; } }
+            ToggleSwitch {
+                text: "Send order updates";
+                checked <=> can_send_updates;
             }
         }
 
