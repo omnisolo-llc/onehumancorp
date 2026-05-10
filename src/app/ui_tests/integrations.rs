@@ -147,8 +147,8 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
     let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
     ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
-    ui.invoke_configure_integration("Manychat".into());
-    assert_eq!(*called.borrow(), "Manychat");
+    ui.invoke_configure_integration("Meta".into());
+    assert_eq!(*called.borrow(), "Meta");
 }
 
 #[test] fn integr_flow_configure_calendly() {

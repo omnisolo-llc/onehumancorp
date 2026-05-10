@@ -96,8 +96,8 @@ test.describe('Integrations Page', () => {
   test('should search integrations', async ({ page }) => {
 
     const searchInput = page.locator('input[type="search"], input[placeholder*="search"]').first();
-    await searchInput.fill('Manychat');
-    await expect(page.locator('text=/Manychat/i')).toBeVisible();
+    await searchInput.fill('Meta');
+    await expect(page.locator('text=/Meta/i')).toBeVisible();
     await expect(page.locator('text=/slack/i')).toBeVisible();
   });
 
@@ -107,13 +107,13 @@ test.describe('Integrations Page', () => {
     await filterSelect.selectOption({ index: 1 });
   });
 
-  test('should show manychat integration', async ({ page }) => {
-    await expect(page.locator('text=/Manychat/i')).toBeVisible();
+  test('should show meta integration', async ({ page }) => {
+    await expect(page.locator('text=/Meta/i')).toBeVisible();
   });
 
-  test('should connect manychat integration', async ({ page }) => {
-    const manychatBtn = page.locator('button:has-text("Connect"), button:has-text("Manychat")').first();
-    await manychatBtn.click();
+  test('should connect meta integration', async ({ page }) => {
+    const metaBtn = page.locator('button:has-text("Connect"), button:has-text("Meta")').first();
+    await metaBtn.click();
     await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
   });
 
