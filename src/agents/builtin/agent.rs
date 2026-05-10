@@ -1345,6 +1345,9 @@ impl Agent {
                 temperature: final_cfg.temperature,
             };
 
+            // Intelligent Context Truncation to save tokens
+            let req = ohc_builtin_agent_llm::truncate_chat_request(req, 10000); // Limit history to ~10k words
+
             let resp = match self.llm.chat(req).await {
                 Ok(r) => r,
                 Err(e) => {
