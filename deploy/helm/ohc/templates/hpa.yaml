@@ -13,17 +13,15 @@ spec:
   minReplicas: {{ .Values.backend.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.backend.autoscaling.maxReplicas }}
   metrics:
-    - type: ContainerResource
-      containerResource:
+    - type: Resource
+      resource:
         name: cpu
-        container: backend
         target:
           type: Utilization
           averageUtilization: {{ .Values.backend.autoscaling.targetCPUUtilizationPercentage }}
-    - type: ContainerResource
-      containerResource:
+    - type: Resource
+      resource:
         name: memory
-        container: backend
         target:
           type: Utilization
           averageUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}
@@ -44,17 +42,15 @@ spec:
   minReplicas: {{ .Values.ohcCore.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.ohcCore.autoscaling.maxReplicas }}
   metrics:
-    - type: ContainerResource
-      containerResource:
+    - type: Resource
+      resource:
         name: cpu
-        container: ohc-core
         target:
           type: Utilization
           averageUtilization: {{ .Values.ohcCore.autoscaling.targetCPUUtilizationPercentage }}
-    - type: ContainerResource
-      containerResource:
+    - type: Resource
+      resource:
         name: memory
-        container: ohc-core
         target:
           type: Utilization
           averageUtilization: {{ .Values.ohcCore.autoscaling.targetMemoryUtilizationPercentage }}
@@ -75,18 +71,16 @@ spec:
   minReplicas: {{ .Values.chatwoot.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.chatwoot.autoscaling.maxReplicas }}
   metrics:
-    - type: ContainerResource
-      containerResource:
+    - type: Resource
+      resource:
         name: cpu
-        container: chatwoot
         target:
           type: Utilization
           averageUtilization: {{ .Values.chatwoot.autoscaling.targetCPUUtilizationPercentage }}
 {{- if .Values.chatwoot.autoscaling.targetMemoryUtilizationPercentage }}
-    - type: ContainerResource
-      containerResource:
+    - type: Resource
+      resource:
         name: memory
-        container: chatwoot
         target:
           type: Utilization
           averageUtilization: {{ .Values.chatwoot.autoscaling.targetMemoryUtilizationPercentage }}
@@ -108,18 +102,16 @@ spec:
   minReplicas: {{ .Values.powersync.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.powersync.autoscaling.maxReplicas }}
   metrics:
-    - type: ContainerResource
-      containerResource:
+    - type: Resource
+      resource:
         name: cpu
-        container: powersync
         target:
           type: Utilization
           averageUtilization: {{ .Values.powersync.autoscaling.targetCPUUtilizationPercentage }}
 {{- if .Values.powersync.autoscaling.targetMemoryUtilizationPercentage }}
-    - type: ContainerResource
-      containerResource:
+    - type: Resource
+      resource:
         name: memory
-        container: powersync
         target:
           type: Utilization
           averageUtilization: {{ .Values.powersync.autoscaling.targetMemoryUtilizationPercentage }}

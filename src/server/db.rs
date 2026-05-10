@@ -137,6 +137,13 @@ impl DB {
             }
 
             let sqlite_pool = SqlitePoolOptions::new()
+                .after_connect(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        conn.execute("PRAGMA secure_delete = ON").await?;
+                        Ok(())
+                    })
+                })
                 .connect_with(conn_opts)
                 .await?;
 
@@ -393,6 +400,8 @@ impl DB {
                         title TEXT,
                         price REAL,
                         inventory_count INTEGER,
+                        supplier_name TEXT,
+                        supplier_contact TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -968,6 +977,7 @@ mod autodream_db_tests {
         // we use a SQLite in-memory test to verify connection pools don't reuse tenant state
         // and verify our query bindings safely isolate the tenant parameter natively.
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .max_connections(1)
             .connect("sqlite::memory:")
             .await
@@ -1018,6 +1028,7 @@ mod autodream_db_tests {
             .pragma("key", "secure_test_key_123");
 
         let pool_result = sqlx::sqlite::SqlitePoolOptions::new()
+            .after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .connect_with(opts)
             .await;
 

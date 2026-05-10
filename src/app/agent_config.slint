@@ -3,7 +3,7 @@ import { GlassCard } from "glass_card.slint";
 import { AdvancedToggle } from "advanced_toggle.slint";
 
 export component AgentConfig inherits Window {
-    width: 600px;
+    min-width: 375px;
     height: 500px;
     title: "Configure Helper";
 
@@ -21,6 +21,7 @@ export component AgentConfig inherits Window {
     in-out property <float> frequency_value: 2.0;
     in-out property <string> frequency: round(frequency_value) == 0 ? "Real-time" : (round(frequency_value) == 1 ? "Hourly" : (round(frequency_value) == 2 ? "Daily" : "Weekly"));
     in-out property <bool> is_advanced: false;
+    callback toggle_advanced();
     in-out property <bool> show_toast: false;
     in-out property <string> api_scope_override: "";
     in-out property <string> cron_override: "";
@@ -39,7 +40,7 @@ export component AgentConfig inherits Window {
             Rectangle {}
             AdvancedToggle {
                 is_advanced <=> root.is_advanced;
-                toggled => { save_state(); }
+                toggled => { is_advanced = !is_advanced; save_state(); }
             }
         }
 
