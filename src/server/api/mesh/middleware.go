@@ -32,11 +32,11 @@ func ValidationMiddleware(next http.Handler) http.Handler {
 
 			// Reject deprecated keys
 			if _, hasAction := payload["action"]; hasAction {
-				http.Error(w, "Deprecated key 'action' found in payload", http.StatusBadRequest)
+				http.Error(w, "OHC-SIP Violation: Deprecated key 'action' found in payload", http.StatusBadRequest)
 				return
 			}
 			if _, hasStatus := payload["status"]; hasStatus {
-				http.Error(w, "Deprecated key 'status' found in payload", http.StatusBadRequest)
+				http.Error(w, "OHC-SIP Violation: Deprecated key 'status' found in payload", http.StatusBadRequest)
 				return
 			}
 
@@ -44,7 +44,7 @@ func ValidationMiddleware(next http.Handler) http.Handler {
 			requiredKeys := []string{"agent_id", "channel", "event_type", "data"}
 			for _, key := range requiredKeys {
 				if _, ok := payload[key]; !ok {
-					http.Error(w, "Missing required OHC-SIP field: "+key, http.StatusBadRequest)
+					http.Error(w, "OHC-SIP Violation: Missing required field: "+key, http.StatusBadRequest)
 					return
 				}
 			}

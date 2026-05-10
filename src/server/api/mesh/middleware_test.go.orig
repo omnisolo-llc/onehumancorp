@@ -72,10 +72,6 @@ func TestValidationMiddleware(t *testing.T) {
 			if w.Code != tt.expectedStatus {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, w.Code)
 			}
-
-			if tt.expectedStatus == http.StatusBadRequest && w.Body.Len() > 0 && tt.name != "Missing agent_id" && tt.name != "Empty agent_id string" && tt.name != "Valid Payload" {
-				// Basic check that it doesn't fail on old tests
-			}
 		})
 	}
 }
