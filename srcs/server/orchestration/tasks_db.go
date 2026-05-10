@@ -48,6 +48,7 @@ func NewPostgresTaskStore(db *sql.DB) *PostgresTaskStore {
 // It ensures concurrency safety, utilizing database locks for Postgres or a mutex for SQLite.
 // Tasks with unresolved dependencies (not COMPLETED) are excluded from claiming.
 func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string, agentID string) (*SharedTask, error) {
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
