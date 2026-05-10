@@ -388,7 +388,7 @@ impl AgentServiceImpl {
             max_tokens,
             temperature: if req.temperature == 0.0 { self.cfg.temperature } else { req.temperature },
             max_iterations: if max_iterations == 0 { 100 } else { max_iterations },
-            max_task_tokens: 0,
+            max_task_tokens: 100_000,
             confidence_threshold,
             enable_acon_context_strategy: false,
             enable_harness_thickness_optimization: false,
@@ -610,9 +610,46 @@ impl AgentService for AgentServiceImpl {
                 let _ = tx_clone.try_send(Ok(pb));
             };
 
-            let result = agent_clone
-                .run(&run_cfg, &task, &mut on_event)
-                .await;
+            let mut attempt = 0;
+            let max_attempts = 3;
+            let mut last_result = Err("Initial".into());
+
+            while attempt < max_attempts {
+                attempt += 1;
+                let res = tokio::time::timeout(
+                    std::time::Duration::from_secs(60),
+                    agent_clone.run(&run_cfg, &task, &mut on_event)
+                ).await;
+
+                match res {
+                    Ok(Ok(content)) => {
+                        last_result = Ok(content);
+                        break;
+                    }
+                    Ok(Err(e)) => {
+                        let err_str = e.to_string().to_lowercase();
+                        if err_str.contains("timeout") || err_str.contains("rate limit") || err_str.contains("unavailable") {
+                            if attempt < max_attempts {
+                                last_result = Err(e);
+                                tokio::time::sleep(std::time::Duration::from_secs(1 << attempt)).await;
+                                continue;
+                            }
+                        }
+                        last_result = Err(e);
+                        break;
+                    }
+                    Err(_) => {
+                        let err_msg = format!("AI agent job timed out on attempt {} (ML-Resilience 60s rule exceeded).", attempt);
+                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                        last_result = Err(err_msg.into());
+                        if attempt < max_attempts {
+                             continue;
+                        }
+                    }
+                }
+            }
+
+            let result = last_result;
 
             // Record memory entry.
             if let (Ok(content), Some(store)) = (&result, &memory) {
@@ -671,7 +708,7 @@ impl AgentService for AgentServiceImpl {
                 max_tokens: if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens },
                 temperature: self.cfg.temperature,
                 max_iterations: 100,
-                max_task_tokens: 0,
+                max_task_tokens: 100_000,
                 confidence_threshold: 0.0,
                 enable_acon_context_strategy: false,
             enable_harness_thickness_optimization: false,
