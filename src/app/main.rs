@@ -1658,29 +1658,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(target_arch = "wasm32")]
     wasm_bindgen_futures::spawn_local(async move {
-        // HTTP call in WASM stubbed conceptually for Web via tonic-web or REST equivalent
-        // In this implementation context we populate with placeholder real fetch until tonic-web setup
         slint::invoke_from_event_loop(move || {
             if let Some(ui) = analytics_charts_handle_clone.upgrade() {
-                let charts = vec![
-                    app::UiChartData {
-                        title: "Analytics Overview".into(),
-                        points: slint::ModelRc::new(slint::VecModel::from(vec![
-                            app::UiDataPoint { label: "Total Agents".into(), value: 5.0, display_value: "5".into() },
-                            app::UiDataPoint { label: "Total Humans".into(), value: 10.0, display_value: "10".into() },
-                            app::UiDataPoint { label: "Fidelity %".into(), value: 95.5, display_value: "95.5%".into() },
-                        ])),
-                    },
-                    app::UiChartData {
-                        title: "Operational Stats".into(),
-                        points: slint::ModelRc::new(slint::VecModel::from(vec![
-                            app::UiDataPoint { label: "Latency (ms)".into(), value: 120.0, display_value: "120".into() },
-                            app::UiDataPoint { label: "Pending Approvals".into(), value: 3.0, display_value: "3".into() },
-                            app::UiDataPoint { label: "Active Handoffs".into(), value: 2.0, display_value: "2".into() },
-                            app::UiDataPoint { label: "Token Velocity".into(), value: 1500.0, display_value: "1500".into() },
-                        ])),
-                    },
-                ];
+                let charts: Vec<app::UiChartData> = vec![];
                 ui.set_charts(slint::ModelRc::new(slint::VecModel::from(charts)));
             }
         }).unwrap();
