@@ -1,3 +1,4 @@
+
 #[test]
 fn test_e2e_help_center_navigation_flow() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -40,16 +41,16 @@ fn test_e2e_api_docs_navigation_flow() {
 
     // Verify the destination component renders correctly
     let ui = crate::app::ApiDocs::new().unwrap();
-    assert_eq!(ui.get_test_title(), slint::SharedString::from("Connect Your Store"));
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Custom Integration"));
 
     let endpoint_tested = std::rc::Rc::new(std::cell::RefCell::new(false));
     let endpoint_tested_clone = endpoint_tested.clone();
     ui.on_test_endpoint(move |path| {
-        assert_eq!(path, "/v1/products");
+        assert_eq!(path, "Read Product List");
         *endpoint_tested_clone.borrow_mut() = true;
     });
 
-    ui.invoke_test_endpoint("/v1/products".into());
+    ui.invoke_test_endpoint("Read Product List".into());
     assert!(*endpoint_tested.borrow(), "Endpoint execution callback must be triggered");
 }
 
@@ -72,7 +73,7 @@ fn test_e2e_release_notes_navigation_flow() {
 
     // Verify the destination component renders correctly
     let ui = crate::app::ReleaseNotes::new().unwrap();
-    assert_eq!(ui.get_current_version(), slint::SharedString::from("v0.4.32"));
+    assert_eq!(ui.get_current_version(), slint::SharedString::from("v0.4.33"));
 }
 
 #[test]
@@ -141,4 +142,16 @@ fn test_e2e_ai_help_chat_navigation_flow() {
     // Verify the destination component renders correctly
     let ui = crate::app::AiHelpChat::new().unwrap();
     assert_eq!(ui.get_test_title(), slint::SharedString::from("AI Help Assistant"));
+}
+
+#[test]
+fn test_e2e_tooltips_registry_flow() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let text = crate::get_tooltip_text("help_floating_button");
+    assert_eq!(text, slint::SharedString::from("Open the Help Center."));
+
+    let unknown_text = crate::get_tooltip_text("unknown_id");
+    assert_eq!(unknown_text, slint::SharedString::from(""));
 }

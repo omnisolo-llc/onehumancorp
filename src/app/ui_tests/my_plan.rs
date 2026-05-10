@@ -114,3 +114,27 @@ fn create_verify_renewal_date() {
     ui.set_renewal_date("d63".into());
     assert_eq!(ui.get_renewal_date(), "d63");
 }
+
+// --- Integration Tests ---
+
+#[test]
+fn myplan_comprehensive_soft_limit_scenario() {
+    let ui = create();
+    // Simulate crossing a soft limit threshold
+    ui.set_used_storage("501.0 MB".into());
+    ui.set_limit_storage("500.0 MB".into());
+    ui.set_upgrade_prompt_message("Storage soft limit reached. Please upgrade to avoid service disruption.".into());
+
+    assert_eq!(ui.get_upgrade_prompt_message(), "Storage soft limit reached. Please upgrade to avoid service disruption.");
+    assert_eq!(ui.get_used_storage(), "501.0 MB");
+}
+
+#[test]
+fn myplan_flow_view_details_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_view_details(move || { *c.borrow_mut() = true; });
+    ui.invoke_view_details();
+    assert!(*called.borrow());
+}

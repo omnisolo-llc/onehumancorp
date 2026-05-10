@@ -22,6 +22,7 @@ export component SetupWizard inherits Window {
     in-out property <bool> sell_services: false;
     in-out property <bool> sell_food: false;
     in-out property <bool> sell_subscriptions: false;
+    in-out property <bool> sell_portfolios: false;
 
     // Payments
     in-out property <string> payment_pref: "";
@@ -71,6 +72,7 @@ export component SetupWizard inherits Window {
     callback go_to_add_products();
     callback go_to_connect_instagram();
     callback go_to_share_link();
+    callback go_to_dashboard();
 
     callback next_step();
     callback select_business_type(string);
@@ -79,6 +81,7 @@ export component SetupWizard inherits Window {
     callback toggle_sell_services();
     callback toggle_sell_food();
     callback toggle_sell_subscriptions();
+    callback toggle_sell_portfolios();
     callback select_payment_pref(string);
     callback select_template(string);
     callback show_welcome_checklist();
@@ -93,6 +96,7 @@ export component SetupWizard inherits Window {
     toggle_sell_services => { sell_services = !sell_services; save_state(); }
     toggle_sell_food => { sell_food = !sell_food; save_state(); }
     toggle_sell_subscriptions => { sell_subscriptions = !sell_subscriptions; save_state(); }
+    toggle_sell_portfolios => { sell_portfolios = !sell_portfolios; save_state(); }
     select_payment_pref(p) => { payment_pref = p; save_state(); }
     select_template(t) => { website_template = t; save_state(); }
     select_domain(d) => { domain_choice = d; save_state(); }
@@ -165,7 +169,7 @@ export component SetupWizard inherits Window {
                 GlassCard {
                     height: 54px;
                     background: rgba(168, 85, 247, 0.8);
-                    VerticalBox { alignment: center; Text { text: "Guided Setup →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                    VerticalBox { alignment: center; Text { text: "🚀 Start My Business"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
                     TouchArea { clicked => { next_step(); save_state(); } }
                 }
                 GlassCard {
@@ -318,6 +322,12 @@ export component SetupWizard inherits Window {
                     background: sell_subscriptions ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "🔁 Subscriptions"; font-family: "Inter"; font-size: 16px; color: white; } }
                     TouchArea { clicked => { toggle_sell_subscriptions(); } }
+                }
+                if (business_type == "Creative / Portfolio" || business_type == "Other") : GlassCard {
+                    height: 50px;
+                    background: sell_portfolios ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "🖼️ Portfolios / Galleries"; font-family: "Inter"; font-size: 16px; color: white; } }
+                    TouchArea { clicked => { toggle_sell_portfolios(); } }
                 }
             }
 
@@ -497,7 +507,7 @@ export component SetupWizard inherits Window {
                         height: 44px;
                         background: price_type == "fixed" ? rgba(168, 85, 247, 0.4) : transparent;
                         border-width: 1px; border-color: #334155;
-                        VerticalBox { alignment: center; Text { text: "Fixed"; color: white; horizontal-alignment: center; } }
+                        VerticalBox { alignment: center; Text { text: "Fixed Price"; color: white; horizontal-alignment: center; } }
                         TouchArea { clicked => { price_type = "fixed"; save_state(); } }
                     }
                     GlassCard {
@@ -511,7 +521,7 @@ export component SetupWizard inherits Window {
                         height: 44px;
                         background: price_type == "request_quote" ? rgba(168, 85, 247, 0.4) : transparent;
                         border-width: 1px; border-color: #334155;
-                        VerticalBox { alignment: center; Text { text: "Quote"; color: white; horizontal-alignment: center; } }
+                        VerticalBox { alignment: center; Text { text: "Get a Quote"; color: white; horizontal-alignment: center; } }
                         TouchArea { clicked => { price_type = "request_quote"; save_state(); } }
                     }
                 }
@@ -527,7 +537,7 @@ export component SetupWizard inherits Window {
                             background: rgba(255, 255, 255, 0.05);
                             VerticalBox { alignment: center; Text { text: product_currency; color: white; horizontal-alignment: center; } }
                         }
-                        LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: decimal; edited => { save_state(); } }
+                        LineEdit { placeholder-text: "e.g. 50.00"; text <=> product_price; height: 44px; input-type: number; edited => { save_state(); } }
                     }
                 }
 
@@ -634,6 +644,11 @@ export component SetupWizard inherits Window {
                             text: "Copy Store Link";
                             height: 44px;
                             clicked => { copy_link(shareable_link); }
+                        }
+                        Button {
+                            text: "Continue to Dashboard →";
+                            height: 44px;
+                            clicked => { root.go_to_dashboard(); }
                         }
                     }
                 }
@@ -791,7 +806,7 @@ export component SetupWizard inherits Window {
                 opacity: pulse_scale;
                 animate opacity { duration: 500ms; easing: ease-in-out; }
 
-                VerticalBox { alignment: center; Text { text: "Publish my business"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: "Launch My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
                     launching = true; copy_link(shareable_link);
                     launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password, price_type);
@@ -801,30 +816,15 @@ export component SetupWizard inherits Window {
             if (step == 9 && launch_success) : GlassCard {
                 height: 54px;
                 background: rgba(168, 85, 247, 1.0);
-                VerticalBox { alignment: center; Text { text: "View Live Storefront →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = 100; } }
-            }
-
-            if (step == 9 && launch_success) : GlassCard {
-                height: 54px;
-                background: rgba(16, 185, 129, 1.0);
-                VerticalBox { alignment: center; Text { text: "View Welcome Checklist →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { step = 10; } }
-            }
-
-            if (step == 10) : GlassCard {
-                height: 54px;
-                background: rgba(168, 85, 247, 1.0);
                 VerticalBox { alignment: center; Text { text: "Go to Dashboard →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                // In a real app, this goes to the dashboard
-                TouchArea { clicked => { root.show_welcome_checklist(); } }
+                TouchArea { clicked => { root.go_to_dashboard(); } }
             }
 
             if (step == 100) : GlassCard {
                 height: 54px;
                 background: rgba(168, 85, 247, 1.0);
-                VerticalBox { alignment: center; Text { text: "Continue to Setup Checklist →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { root.show_welcome_checklist(); } }
+                VerticalBox { alignment: center; Text { text: "Continue to Dashboard →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { root.go_to_dashboard(); } }
             }
         }
     }

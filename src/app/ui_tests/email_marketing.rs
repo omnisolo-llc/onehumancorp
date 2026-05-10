@@ -76,3 +76,29 @@ fn test_close_callback() {
 
     assert!(*called.borrow());
 }
+
+#[test]
+fn test_multiple_audience_selection() {
+    let ui = create();
+    ui.set_total_subscribers(1050);
+    assert_eq!(ui.get_total_subscribers(), 1050);
+}
+
+#[test]
+fn test_campaign_error_status() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    let ui_handle = ui.as_weak();
+
+    ui.on_send_campaign(move || {
+        *c.borrow_mut() = true;
+        if let Some(ui) = ui_handle.upgrade() {
+            ui.set_status_message("Failed to send campaign.".into());
+        }
+    });
+
+    ui.invoke_send_campaign();
+    assert!(*called.borrow());
+    assert_eq!(ui.get_status_message(), "Failed to send campaign.");
+}

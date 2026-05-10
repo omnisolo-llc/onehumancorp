@@ -1,5 +1,6 @@
 pub mod social_posting;
 pub mod onboarding_e2e_tests;
+pub mod full_journey_e2e;
 pub mod login;
 pub mod wizard;
 pub mod dashboard;
@@ -46,6 +47,7 @@ pub mod secure_agent_config;
 pub mod agent_config;
 pub mod daily_briefing;
 pub mod business_manager_ux;
+pub mod analytics_charts;
 
 pub fn init() {
     #[cfg(not(target_arch = "wasm32"))]
@@ -93,4 +95,14 @@ pub mod docs_ux_test;
 pub mod scribe_tests;
 pub mod scribe_feature_dashboard_test;
 pub mod scribe_extra_tests;
+pub mod scribe_new_tests;
 pub mod ai_team_e2e;
+pub mod lens_audit_tests;
+pub mod booking_quote_e2e;
+pub mod echo_dashboard;
+pub mod echo_ux_friction_fixes;
+pub mod miser_e2e;
+pub mod guide_onboarding_e2e;
+pub mod guide_onboarding_e2e_extended;
+pub mod website_builder_e2e_tests;
+pub mod echo_agents_ux_test;

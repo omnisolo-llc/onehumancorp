@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
 
@@ -16,6 +18,9 @@ var throttleSemaphore = make(chan struct{}, 10) // Allow up to 10 concurrent syn
 
 var meter = otel.Meter("onehumancorp/sync")
 var escalationsCounter metric.Int64Counter
+var syncDaemonErrorTotal metric.Int64Counter
+var syncLatencyMs metric.Float64Histogram
+var syncDaemonBatchSize metric.Int64Counter
 
 func init() {
 	var err error
@@ -26,6 +31,37 @@ func init() {
 	if err != nil {
 		log.Printf("Failed to initialize escalationsCounter: %v", err)
 	}
+
+	syncDaemonErrorTotal, err = meter.Int64Counter(
+		"sync_daemon_error_total",
+		metric.WithDescription("Total number of sync errors"),
+	)
+	if err != nil {
+		log.Printf("Failed to initialize syncDaemonErrorTotal: %v", err)
+	}
+
+	syncLatencyMs, err = meter.Float64Histogram(
+		"sync_latency_ms",
+		metric.WithDescription("Latency of sync operations in ms"),
+	)
+	if err != nil {
+		log.Printf("Failed to initialize syncLatencyMs: %v", err)
+	}
+
+	syncDaemonBatchSize, err = meter.Int64Counter(
+		"sync_daemon_batch_size",
+		metric.WithDescription("Batch size of sync operations"),
+	)
+	if err != nil {
+		log.Printf("Failed to initialize syncDaemonBatchSize: %v", err)
+	}
+}
+
+func getSyncMode() string {
+	if os.Getenv("OHC_MULTITENANT") == "true" {
+		return "Cloud"
+	}
+	return "Standalone"
 }
 
 type SQLiteProvider interface {
@@ -70,8 +106,14 @@ func NewHybridMCPRAGDaemon(db *sql.DB, remoteURL string) *HybridMCPRAGDaemon {
 // SyncPendingMissions queries the database for agent_missions with status 'CLOUD_ESCALATION'
 // and synced_to_cloud = false, then attempts to sync them to the remote API.
 func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
+	mode := getSyncMode()
+	start := time.Now()
+
 	rows, err := d.db.QueryContext(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
 	if err != nil {
+		if syncDaemonErrorTotal != nil {
+			syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "DB_ERROR")))
+		}
 		return fmt.Errorf("sync_daemon: failed to query agent_missions: %w", err)
 	}
 
@@ -85,7 +127,6 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 	for rows.Next() {
 		var m mission
 		if err := rows.Scan(&m.id, &m.status, &m.payload); err != nil {
-			log.Printf("sync_daemon: [DEBUG] failed to scan row: %v", err)
 			continue
 		}
 		missions = append(missions, m)
@@ -93,9 +134,16 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 
 	if err := rows.Err(); err != nil {
 		rows.Close()
+		if syncDaemonErrorTotal != nil {
+			syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "DB_ITERATION_ERROR")))
+		}
 		return fmt.Errorf("sync_daemon: rows iteration error: %w", err)
 	}
 	rows.Close()
+
+	if syncDaemonBatchSize != nil {
+		syncDaemonBatchSize.Add(ctx, int64(len(missions)), metric.WithAttributes(attribute.String("mode", mode)))
+	}
 
 	var syncedCount int
 
@@ -113,7 +161,9 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		if err != nil {
 			// Release semaphore on error
 			<-throttleSemaphore
-			log.Printf("sync_daemon: [DEBUG] failed to sync mission %s: %v", m.id, err)
+			if syncDaemonErrorTotal != nil {
+				syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "HTTP_ERROR")))
+			}
 			continue
 		}
 
@@ -123,14 +173,19 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		// Release semaphore after db transaction
 		<-throttleSemaphore
 		if err != nil {
-			log.Printf("sync_daemon: [DEBUG] failed to update synced_to_cloud flag for mission %s: %v", m.id, err)
+			if syncDaemonErrorTotal != nil {
+				syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "DB_ERROR")))
+			}
 			continue
 		}
 
 		syncedCount++
 	}
 
-	// log.Printf("sync_daemon: successfully synced %d agent_missions", syncedCount)
+	if syncLatencyMs != nil {
+		syncLatencyMs.Record(ctx, float64(time.Since(start).Milliseconds()), metric.WithAttributes(attribute.String("mode", mode)))
+	}
+
 	return nil
 }
 
@@ -159,6 +214,9 @@ func StartSyncDaemon(ctx context.Context, localDB SQLiteProvider, cloudDB Postgr
 }
 
 func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB PostgresProvider) error {
+	mode := getSyncMode()
+	start := time.Now()
+
 	localDB.Lock()
 	defer localDB.Unlock()
 
@@ -169,6 +227,9 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 	`
 	rows, err := localDB.GetDB().QueryContext(ctx, query)
 	if err != nil {
+		if syncDaemonErrorTotal != nil {
+			syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "DB_ERROR")))
+		}
 		return err
 	}
 	defer rows.Close()
@@ -182,6 +243,9 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status,
 			&task.AgentID, &task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
 		); err != nil {
+			if syncDaemonErrorTotal != nil {
+				syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "DB_ITERATION_ERROR")))
+			}
 			log.Printf("Error scanning local task: %v", err)
 			continue
 		}
@@ -189,6 +253,9 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 		if len(payloadBytes) > 0 {
 			sanitized, err := SanitizePayload(string(payloadBytes))
 			if err != nil {
+				if syncDaemonErrorTotal != nil {
+					syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "SANITIZE_ERROR")))
+				}
 				log.Printf("Error sanitizing task %s", task.ID)
 				continue
 			}
@@ -205,6 +272,9 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 		// Insert into cloud DB
 		err = cloudDB.CreateTask(ctx, &task)
 		if err != nil {
+			if syncDaemonErrorTotal != nil {
+				syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "CLOUD_SYNC_ERROR")))
+			}
 			log.Printf("Error creating task in cloud DB: %v", err)
 			continue
 		}
@@ -218,10 +288,18 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 
 	rows.Close()
 
+	if syncDaemonBatchSize != nil {
+		syncDaemonBatchSize.Add(ctx, int64(len(tasksToUpdate)), metric.WithAttributes(attribute.String("mode", mode)))
+	}
+
 	for _, task := range tasksToUpdate {
 		// Update local status to avoid re-syncing
 		updateQuery := `UPDATE shared_tasks SET status = 'CLOUD_PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = ?`
 		localDB.GetDB().ExecContext(ctx, updateQuery, task.ID)
+	}
+
+	if syncLatencyMs != nil {
+		syncLatencyMs.Record(ctx, float64(time.Since(start).Milliseconds()), metric.WithAttributes(attribute.String("mode", mode)))
 	}
 
 	return nil

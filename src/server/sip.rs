@@ -267,7 +267,7 @@ mod tests {
     // Helper to get a dummy pgpool for testing
     async fn setup_dummy_pool() -> PgPool {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-        sqlx::postgres::PgPoolOptions::new()
+        sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -373,7 +373,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handoff_mission_marks_blocked() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .max_connections(1)
             .acquire_timeout(std::time::Duration::from_millis(10))
             .connect_lazy("postgres://localhost/dummy")
@@ -387,9 +387,83 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_handoff_mission_logic_success() {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(val) => val,
+            Err(_) => return,
+        };
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .max_connections(1)
+            .connect(&database_url)
+            .await;
+
+        if let Ok(pool) = pool {
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_missions (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    tenant_id TEXT,
+                    mission_log TEXT
+                )"
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            // Insert initial record
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                .bind("test_mission_id")
+                .bind("PENDING")
+                .bind("{}")
+                .bind("test_org")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            // Call handoff_mission
+            let res = sip_db.handoff_mission("test_mission_id", "Missing dependencies").await;
+            assert!(res.is_ok());
+
+            // Verify
+            let row = sqlx::query("SELECT status, mission_log FROM agent_missions WHERE id = 'test_mission_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+            let status: String = row.get("status");
+            let log: String = row.get("mission_log");
+
+            assert_eq!(status, "blocked");
+            assert!(log.contains("Missing dependencies"));
+
+            // Call again to test append
+            let res2 = sip_db.handoff_mission("test_mission_id", "Another blocker").await;
+            assert!(res2.is_ok());
+
+            let row2 = sqlx::query("SELECT mission_log FROM agent_missions WHERE id = 'test_mission_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+            let log2: String = row2.get("mission_log");
+            assert!(log2.contains("Missing dependencies\nAnother blocker"));
+
+            // Clean up
+            sqlx::query("DELETE FROM agent_missions WHERE id = 'test_mission_id'").execute(&pool).await.unwrap();
+        }
+    }
+
+    #[tokio::test]
     async fn test_prune_stale_missions_marks_stuck_as_failed() {
         // Just verify it doesn't crash on execution with a valid pool.
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .max_connections(1)
             .acquire_timeout(std::time::Duration::from_millis(10))
             .connect_lazy("postgres://localhost/dummy")

@@ -40,6 +40,7 @@ rust_library(
 rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
+        "codex_runner.rs",
         "agent.rs",
         "checkpointer.rs",
         "departments.rs",
@@ -59,6 +60,7 @@ rust_library(
         "ralph_loop.rs",
         "registry.rs",
         "service.rs",
+        "consolidation_worker.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",
@@ -73,6 +75,7 @@ rust_library(
         "//src/proto:agent_service_tonic",
         "//src/proto:common_prost",
         "//src/proto:hub_prost",
+        "//src/proto:interop_prost",
         "//src/agents/builtin/llm",
         "//src/agents/builtin/tools",
     ] + [

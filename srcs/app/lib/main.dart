@@ -5,6 +5,10 @@ import 'screens/unified_inbox_screen.dart';
 import 'screens/business_setup_wizard_screen.dart';
 import 'screens/help/help_center_screen.dart';
 import 'screens/help/ai_help_chat_screen.dart';
+import 'screens/help/video_tutorials_screen.dart';
+import 'screens/help/walkthrough_screen.dart';
+import 'screens/referral_program_screen.dart';
+import 'widgets/milestone_notification.dart';
 
 
 void main() {
@@ -62,11 +66,39 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
+      drawer: Drawer(
+        backgroundColor: const Color(0xFF1E293B),
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Color(0xFF6B4EFF)),
+              child: Text('Menu', style: TextStyle(color: Colors.white, fontSize: 24)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.tour, color: Colors.white),
+              title: const Text('App Tour', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const WalkthroughScreen()));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.video_library, color: Colors.white),
+              title: const Text('Video Tutorials', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const VideoTutorialsScreen()));
+              },
+            ),
+          ],
+        ),
+      ),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
+IconButton(
             icon: const Icon(Icons.help_outline, color: Colors.white),
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpCenterScreen()));
@@ -101,6 +133,11 @@ class DashboardScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
+                const MilestoneNotification(
+                  title: '🎉 You just got your 10th order!',
+                  message: 'Keep up the great work!',
+                ),
+                const SizedBox(height: 20),
                 GlassContainer(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,19 +158,57 @@ class DashboardScreen extends StatelessWidget {
                 GlassContainer(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         "Welcome Checklist",
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
-                      SizedBox(height: 10),
-                      Text("✅ Business live", style: TextStyle(color: Colors.white)),
-                      SizedBox(height: 5),
-                      Text("⬜ Add 3 more products", style: TextStyle(color: Colors.white)),
-                      SizedBox(height: 5),
-                      Text("⬜ Connect Instagram", style: TextStyle(color: Colors.white)),
-                      SizedBox(height: 5),
-                      Text("⬜ Share your link with a friend", style: TextStyle(color: Colors.white)),
+                      const SizedBox(height: 10),
+                      const Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 18),
+                          SizedBox(width: 8),
+                          Text("Business live", style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      InkWell(
+                        onTap: () { /* Add product flow */ },
+                        child: const Row(
+                          children: [
+                            Icon(Icons.radio_button_unchecked, color: Colors.white70, size: 18),
+                            SizedBox(width: 8),
+                            Text("Add 3 more products", style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      InkWell(
+                        onTap: () { /* Connect Instagram flow */ },
+                        child: const Row(
+                          children: [
+                            Icon(Icons.radio_button_unchecked, color: Colors.white70, size: 18),
+                            SizedBox(width: 8),
+                            Text("Connect Instagram", style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const ReferralProgramScreen()),
+                          );
+                        },
+                        child: const Row(
+                          children: [
+                            Icon(Icons.radio_button_unchecked, color: Colors.white70, size: 18),
+                            SizedBox(width: 8),
+                            Text("Share your link with a friend", style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),

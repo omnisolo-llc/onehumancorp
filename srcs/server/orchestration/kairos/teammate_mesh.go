@@ -69,11 +69,11 @@ func (m *RedisTeammateMesh) Subscribe(ctx context.Context, topic string, handler
 }
 
 func (m *RedisTeammateMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
-	return m.client.SetNX(ctx, "lock:"+key, "1", ttl).Result()
+	return m.client.SetNX(ctx, key, "1", ttl).Result()
 }
 
 func (m *RedisTeammateMesh) ReleaseLock(ctx context.Context, key string) error {
-	return m.client.Del(ctx, "lock:"+key).Err()
+	return m.client.Del(ctx, key).Err()
 }
 
 func (m *RedisTeammateMesh) RegisterPresence(ctx context.Context, agentID string, status string) error {

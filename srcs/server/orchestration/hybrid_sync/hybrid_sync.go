@@ -34,7 +34,7 @@ func (s *DefaultMissionSynchronizer) SyncLocalToCloud(ctx context.Context, missi
 		payloadStr := string(*cloudMission.Payload)
 		sanitized, err := orchestration.SanitizePayload(payloadStr)
 		if err != nil {
-			return fmt.Errorf("failed to sanitize payload: %w", err)
+			return fmt.Errorf("failed to sanitize data: %w", err)
 		}
 
 		rawSanitized := json.RawMessage(sanitized)

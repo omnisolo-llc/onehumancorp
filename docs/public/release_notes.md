@@ -1,5 +1,22 @@
 # release_notes.md
 
+## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhance multi-tenant onboarding flow tests for the Welcome Checklist to ensure reliable scaling.
+
+### Privacy/Offline Improvements
+- Bolster Standalone Wizard state test coverage for improved offline reliability and progressive disclosure validation.
+
+## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🔗 Link: Interop Mesh Comprehensive Test Coverage to improve distributed lock resilience (#12496)
+
+### Privacy/Offline Improvements
+- 🔗 Link: Ensured graceful interop mesh protocol handling for malformed offline mesh payloads (#12496)
+
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 ### Cloud Scaling Improvements

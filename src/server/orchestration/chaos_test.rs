@@ -240,7 +240,7 @@ mod chaos_tests {
     #[tokio::test]
     async fn test_cloud_degradation_fallback() {
         // We use an empty db pool but with CloudStateManager to see fail-safes on lock acquisition timeout
-        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).max_connections(1)
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).max_connections(1)
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 
@@ -258,7 +258,7 @@ mod chaos_tests {
 
         // The pull_available_tasks for cloud has a 2-second timeout on the lock or DB
         // The mocked sleeping mesh sleeps for 2.5s, forcing the 2s timeout to trigger.
-        // assert!(elapsed < std::time::Duration::from_millis(2200));
+        assert!(elapsed < std::time::Duration::from_millis(2200));
         assert!(elapsed > std::time::Duration::from_millis(1900));
 
         // It must fallback safely returning an empty vector

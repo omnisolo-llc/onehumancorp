@@ -4,12 +4,11 @@ import (
 	"context"
 	"os"
 	"testing"
+	"sync"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDeploymentMode(t *testing.T) {
-	// Instead of testing initOnce multiple times, just test the getDeploymentMode fallback/default.
-	// Since tests might run in arbitrary orders, we can only safely test the record functions themselves
-	// avoiding re-registering callbacks via sync.Once resets
 	os.Setenv("OHC_MULTITENANT", "true")
 	initMetrics()
 	if deploymentMode != "Cloud" && deploymentMode != "Standalone" {
@@ -50,4 +49,28 @@ func TestRecordTaskThroughput(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
+}
+
+func TestGetDeploymentMode_Coverage(t *testing.T) {
+	mode := getDeploymentMode()
+	assert.NotEmpty(t, mode)
+}
+
+// Add coverage for initMetrics mode branch
+func TestInitMetrics_StandaloneBranch(t *testing.T) {
+    // Save current values
+    oldMode := deploymentMode
+    oldMultitenant := os.Getenv("OHC_MULTITENANT")
+
+    // Reset global initOnce to force initMetrics to run again
+    initOnce = sync.Once{}
+    os.Setenv("OHC_MULTITENANT", "false")
+
+    initMetrics()
+    assert.Equal(t, "Standalone", deploymentMode)
+
+    // Restore
+    initOnce = sync.Once{}
+    os.Setenv("OHC_MULTITENANT", oldMultitenant)
+    deploymentMode = oldMode
 }

@@ -1,6 +1,4 @@
 use tokio::sync::broadcast;
-#[allow(unused_imports)]
-use std::sync::Arc;
 use tokio::sync::Mutex;
 use async_trait::async_trait;
 
@@ -608,6 +606,7 @@ impl HealthMonitor {
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
     
 
     #[tokio::test]
@@ -892,5 +891,53 @@ mod tests_ipc {
 
         let acquired3 = bus.acquire_lock("test_res", "owner2", 10).await.unwrap();
         assert!(acquired3);
+    }
+}
+
+#[cfg(test)]
+mod memory_bus_tests {
+    use super::*;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_memory_bus_publish_subscribe() {
+        let bus = MemoryBus::new();
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "test_topic" && msg.payload == b"hello" {
+                rx.store(true, Ordering::SeqCst);
+            }
+        });
+
+        let _cancel = bus.subscribe("test_topic".to_string(), handler).await.unwrap();
+
+        let msg = Message {
+            topic: "test_topic".to_string(),
+            payload: b"hello".to_vec(),
+        };
+
+        bus.publish(msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_memory_bus_lock_acquire_release() {
+        let bus = MemoryBus::new();
+
+        let acquired = bus.acquire_lock("resource1", "owner1", 10).await.unwrap();
+        assert!(acquired);
+
+        let acquired_again = bus.acquire_lock("resource1", "owner2", 10).await.unwrap();
+        assert!(!acquired_again);
+
+        bus.release_lock("resource1", "owner1").await.unwrap();
+
+        let acquired_after_release = bus.acquire_lock("resource1", "owner2", 10).await.unwrap();
+        assert!(acquired_after_release);
     }
 }
