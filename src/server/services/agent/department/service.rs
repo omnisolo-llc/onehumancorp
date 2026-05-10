@@ -1,18 +1,14 @@
 use std::sync::Arc;
 use crate::msgbus::{Bus, Message};
-use tokio::sync::Mutex;
-use std::collections::HashMap;
 
 pub struct DepartmentService {
     bus: Arc<dyn Bus>,
-    departments: Mutex<HashMap<String, String>>,
 }
 
 impl DepartmentService {
     pub fn new(bus: Arc<dyn Bus>) -> Self {
         DepartmentService {
             bus,
-            departments: Mutex::new(HashMap::new()),
         }
     }
 
@@ -38,7 +34,7 @@ impl DepartmentService {
             }
         });
 
-        self.bus.subscribe("system:order_received".to_string(), handler).await?;
+        let _ = self.bus.subscribe("system:order_received".to_string(), handler).await?;
 
         Ok(())
     }

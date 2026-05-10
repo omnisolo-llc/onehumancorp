@@ -34,7 +34,6 @@ pub mod interop;
 pub mod benchmarks;
 
 pub mod config;
-pub mod http;
 pub mod builder;
 use crate::orchestration::mesh::TeammateMesh;
 
