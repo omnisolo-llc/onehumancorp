@@ -7,7 +7,7 @@ export component ReleaseNotes inherits Window {
     min-width: 375px;
     title: "What's New";
     background: #0f172a;
-    in-out property <string> current_version: "v0.4.39";
+    in-out property <string> current_version: "v0.4.40";
     in-out property <bool> show_latest_only: false;
 
     HorizontalBox {
@@ -29,6 +29,20 @@ export component ReleaseNotes inherits Window {
                 VerticalBox {
                     spacing: 24px;
                     VerticalBox {
+                        spacing: 8px;
+                        Text { text: "Version 0.4.40 (Cloud) / v0.4.40+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
+                        GlassCard {
+                            VerticalBox {
+                                padding: 16px; spacing: 12px;
+                                Text { text: "Faster Cloud Performance"; color: #38bdf8; font-weight: 600; }
+                                Text { text: "- We optimized our systems so your agent queues run even smoother, allowing for faster response times for your business."; color: #94a3b8; wrap: word-wrap; }
+                                Text { text: "Better Offline Privacy"; color: #34d399; font-weight: 600; }
+                                Text { text: "- The app now caches vector embeddings locally to guarantee offline functionality and keep your data securely on your device."; color: #94a3b8; wrap: word-wrap; }
+                            }
+                        }
+                    }
+
+                                        VerticalBox {
                         spacing: 8px;
                         Text { text: "Version 0.4.39 (Cloud) / v0.4.39+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
                         GlassCard {
