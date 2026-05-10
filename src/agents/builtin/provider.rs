@@ -334,7 +334,6 @@ impl Provider for BuiltinProvider {
     fn get_credentials(&self) -> Credentials { Credentials::default() }
     fn is_authenticated(&self) -> bool { true }
     async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        // TODO: Support OHC_AGENT_ADDRESS gRPC dispatch if needed
         // Advanced GRPC Dispatch Support
         let address = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_default();
         if !address.is_empty() {
