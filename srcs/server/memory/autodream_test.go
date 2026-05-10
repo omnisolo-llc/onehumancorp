@@ -174,6 +174,7 @@ func TestAutoDreamDaemon_Run(t *testing.T) {
 	<-done
 }
 
+
 func TestAutoDreamDaemon_SQLiteFallback(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
