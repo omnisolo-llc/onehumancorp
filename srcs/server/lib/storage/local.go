@@ -51,6 +51,13 @@ func (l *LocalBlobProvider) WriteBlob(ctx context.Context, p string, data []byte
 		return fmt.Errorf("failed to create directory for %s: %w", absPath, err)
 	}
 
+	// Convert image to WebP if applicable
+	if strings.HasSuffix(strings.ToLower(p), ".jpg") || strings.HasSuffix(strings.ToLower(p), ".png") || strings.HasSuffix(strings.ToLower(p), ".jpeg") {
+		data = ConvertToWebP(data)
+		p = strings.TrimSuffix(p, filepath.Ext(p)) + ".webp"
+		absPath, _ = l.resolvePath(p)
+	}
+
 	if err := os.WriteFile(absPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write blob to %s: %w", absPath, err)
 	}

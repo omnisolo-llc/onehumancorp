@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"path/filepath"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -28,6 +30,12 @@ func NewS3BlobProvider(client S3Client, bucket string) *S3BlobProvider {
 }
 
 func (s *S3BlobProvider) WriteBlob(ctx context.Context, path string, data []byte) error {
+	// Auto-convert images to WebP to reduce storage and CDN egress costs
+	if strings.HasSuffix(strings.ToLower(path), ".jpg") || strings.HasSuffix(strings.ToLower(path), ".png") || strings.HasSuffix(strings.ToLower(path), ".jpeg") {
+		data = ConvertToWebP(data)
+		path = strings.TrimSuffix(path, filepath.Ext(path)) + ".webp"
+	}
+
 	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),

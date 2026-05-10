@@ -433,6 +433,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         let my_plan_ui = app::MyPlan::new().unwrap();
                                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
                                         let billing_ui = app::Billing::new().unwrap();
+                                        let my_plan_handle_clone_dashboard = my_plan_ui.as_weak();
+                                        dashboard.on_open_my_plan(move || {
+                                            if let Some(ui) = my_plan_handle_clone_dashboard.upgrade() {
+                                                let _ = ui.show();
+                                            }
+                                        });
                                         let billing_handle_clone = billing_ui.as_weak();
                                         dashboard.on_open_billing(move || {
                                             if let Some(ui) = billing_handle_clone.upgrade() {

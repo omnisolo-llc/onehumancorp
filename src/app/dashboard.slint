@@ -57,6 +57,7 @@ export component Dashboard inherits Window {
     callback open_release_notes();
     callback open_api_docs();
     callback approve_task(string);
+    callback open_my_plan();
     callback open_billing();
     callback action_failed(string);
 
@@ -121,6 +122,7 @@ export component Dashboard inherits Window {
                 spacing: 8px;
 
                 Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
+                Button { text: "My Plan"; height: 44px; clicked => { open_my_plan(); show_menu = false; } }
                 Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
                 TooltipElement { tooltip_id: "api_docs"; Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } } }
                 Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
