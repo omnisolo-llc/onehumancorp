@@ -68,7 +68,7 @@ impl ShellSession {
         let memory_dir_export = format!("export OHC_MEMORY_DIR='{}';", self.memory_dir.display());
 
         let wrapper_cmd = format!(
-            "{} source '{}' 2>/dev/null || true; {{ {}; }}; declare -p > '{}'; pwd -P > '{}'",
+            "{} source '{}' 2>/dev/null || true; {{ {}; }}; declare -p | grep -v '^declare -[a-zA-Z-]*r' > '{}'; pwd -P > '{}'",
             memory_dir_export, env_snapshot_path.display(), command, env_snapshot_path.display(), cwd_snapshot_path.display()
         );
 
