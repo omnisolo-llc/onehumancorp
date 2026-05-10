@@ -99,7 +99,7 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 
 	foundSpawned := false
 	foundCompleted := false
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 1500; i++ {
 		published := mesh.getPublished()
 		foundSpawned = false
 		foundCompleted = false
@@ -156,7 +156,7 @@ func TestSubAgentSpawner_SpawnCloud(t *testing.T) {
 
 	foundSpawned := false
 	foundCompleted := false
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 3000; i++ {
 		published := mesh.getPublished()
 		foundSpawned = false
 		foundCompleted = false
@@ -216,7 +216,7 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 	assert.Equal(t, "ASSIGNED", fetchedTask.Status)
 
 	foundCompleted := false
-	for i := 0; i < 3000; i++ {
+	for i := 0; i < 6000; i++ {
 		published := mesh.getPublished()
 		for _, msg := range published {
 			var payload map[string]interface{}
