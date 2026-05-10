@@ -51,6 +51,11 @@ fi
 
 echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 
+# Build optimized binaries instead of running through Bazelisk repeatedly
+echo -e "${DIM}  Compiling optimized binaries...${RESET}"
+npx @bazel/bazelisk build -c opt //src/server:server //src/app:app > /dev/null 2>&1
+echo -e "  ${GREEN}✓ Binaries compiled${RESET}"
+
 # Prune stale memory files (older than 60 mins) periodically to prevent unbounded growth
 (while true; do
   find "${OHC_MEMORY_DIR}" -type f -mmin +60 -delete > /dev/null 2>&1
@@ -61,8 +66,9 @@ echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
   sleep 3600
 done) &
 PRUNE_PID=$!
+
 # Launch the API Server (local persistence)
-npx @bazel/bazelisk run //src/server:server &
+./bazel-bin/src/server/server &
 SERVER_PID=$!
 echo -e "  ${GREEN}✓ Server started with PID $SERVER_PID${RESET}"
 
@@ -72,7 +78,7 @@ until curl -s http://localhost:8080/health > /dev/null 2>&1; do
   sleep 1
 done
 
-npx @bazel/bazelisk run //src/app:app > /dev/null 2>&1 &
+./bazel-bin/src/app/app > /dev/null 2>&1 &
 APP_PID=$!
 echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 
