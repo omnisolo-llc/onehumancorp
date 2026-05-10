@@ -3,36 +3,40 @@ use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, 
 use uuid::Uuid;
 use std::collections::HashMap;
 
-pub struct CustomerSuccessAgent {
+pub struct MarketingAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
     configs: HashMap<String, DepartmentConfig>,
 }
 
-impl CustomerSuccessAgent {
+impl MarketingAgent {
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
         Self { orchestrator, configs: HashMap::new() }
     }
 }
 
 #[async_trait::async_trait]
-impl Department for CustomerSuccessAgent {
+impl Department for MarketingAgent {
     fn department_type(&self) -> DepartmentType {
-        DepartmentType::CustomerSuccess
+        DepartmentType::Marketing
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["message.received".to_string(), "review.posted".to_string()]
+        vec!["campaign.needed".to_string(), "social_media.mention".to_string(), "website.published".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        let risk = ActionRisk::DraftForReview;
+        let risk = if event.event_type == "website.published" {
+            ActionRisk::AutoExecute
+        } else {
+            ActionRisk::DraftForReview
+        };
 
-        let _ = self.request_approval(format!("Handled customer success event: {}", event.event_type), event.tenant_id.clone(), risk).await;
+        let _ = self.request_approval(format!("Handled marketing event: {}", event.event_type), event.tenant_id.clone(), risk).await;
         Ok(())
     }
 
     async fn query_memory(&self, query: &str) -> Result<Vec<String>, String> {
-        Ok(vec![format!("Memory result for customer success: {}", query)])
+        Ok(vec![format!("Memory result for marketing: {}", query)])
     }
 
     async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {

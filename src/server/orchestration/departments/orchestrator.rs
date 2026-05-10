@@ -149,15 +149,11 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn register_department(&self, department: Arc<tokio::sync::RwLock<dyn Department>>) {
-        let dep = department.read().await;
-        let dep_type = dep.department_type();
-        let subs = dep.subscribed_events();
-
+        let dep_type = department.read().await.department_type();
+        let events = department.read().await.subscribed_events();
         self.departments.write().await.insert(dep_type, department.clone());
-
-        let mut subscriptions = self.event_subscriptions.write().await;
-        for sub in subs {
-            subscriptions.entry(sub).or_insert_with(Vec::new).push(dep_type);
+        for event in events {
+            self.event_subscriptions.write().await.entry(event).or_insert_with(Vec::new).push(dep_type);
         }
     }
 
@@ -392,5 +388,48 @@ mod tests {
         )));
         let _ = dummy;
         assert!(true);
+    }
+
+    #[tokio::test]
+    async fn test_all_departments_initialization() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(MemoryTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db, mesh));
+
+        let ops = Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(orchestrator.clone())));
+        orchestrator.register_department(ops.clone()).await;
+
+        let mkt = Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(orchestrator.clone())));
+        orchestrator.register_department(mkt.clone()).await;
+
+        let sales = Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::sales_agent::SalesAgent::new(orchestrator.clone())));
+        orchestrator.register_department(sales.clone()).await;
+
+        let cs = Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(orchestrator.clone())));
+        orchestrator.register_department(cs.clone()).await;
+
+        let fin = Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::finance_agent::FinanceAgent::new(orchestrator.clone())));
+        orchestrator.register_department(fin.clone()).await;
+
+        let leg = Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(orchestrator.clone())));
+        orchestrator.register_department(leg.clone()).await;
+
+        let adv = Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::advisory_agent::BusinessAdvisoryAgent::new(orchestrator.clone())));
+        orchestrator.register_department(adv.clone()).await;
+
+        let deps = orchestrator.departments.read().await;
+        assert_eq!(deps.len(), 7);
+        assert!(deps.contains_key(&DepartmentType::Operations));
+        assert!(deps.contains_key(&DepartmentType::Marketing));
+        assert!(deps.contains_key(&DepartmentType::Sales));
+        assert!(deps.contains_key(&DepartmentType::CustomerSuccess));
+        assert!(deps.contains_key(&DepartmentType::Finance));
+        assert!(deps.contains_key(&DepartmentType::Legal));
+        assert!(deps.contains_key(&DepartmentType::BusinessAdvisory));
     }
 }
