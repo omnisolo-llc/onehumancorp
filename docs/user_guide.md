@@ -9,7 +9,7 @@ The app provides a unified, mobile-first onboarding experience for small busines
 
 ## 2. Onboarding Flow
 
-The OHC Slint app features a comprehensive 11-step onboarding wizard:
+The OHC Slint app features a comprehensive 12-step onboarding wizard:
 1.  **Welcome**: Introduction to OneHumanCorp.
 2.  **Business Type**: Selection of business category (Online Store, Service, etc.).
 3.  **Name & Description**: Naming the business and AI-assisted description.
