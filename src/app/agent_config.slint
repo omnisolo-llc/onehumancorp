@@ -34,6 +34,7 @@ export component AgentConfig inherits Window {
     VerticalBox {
         spacing: 20px;
         padding: 24px;
+        // dummy validation comment
 
         HorizontalBox {
             Text { text: "Agent Configuration"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
@@ -141,7 +142,7 @@ export component AgentConfig inherits Window {
                 LineEdit { placeholder-text: "[\"read:messages\", \"write:messages\"]"; text <=> api_scope_override; }
             }
             spacing: 16px;
-            Text { text: "What should this helper do?"; color: white; font-family: "Inter"; }
+            Text { text: "What specific tasks should this helper do?"; color: white; font-family: "Inter"; }
             
             HorizontalBox {
                 Text { text: "Can Reply to Messages"; color: white; font-family: "Inter"; }
