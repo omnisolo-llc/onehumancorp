@@ -62,7 +62,7 @@ impl InteropProtocol {
             mission_id: mission_id.to_string(),
             tenant_id: tenant_id.to_string(),
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
-            state_snapshot_json: state_payload.clone(),
+            state_snapshot_payload: state_payload.clone(),
         };
 
         let mut buf = Vec::new();
@@ -231,7 +231,7 @@ impl InteropProtocol {
             job_id: job_id.to_string(),
             tenant_id: tenant_id.to_string(),
             action_name: action_name.to_string(),
-            payload_json: payload,
+            payload_data: payload,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 
@@ -605,7 +605,7 @@ mod tests {
             job_id: "job_123".to_string(),
             tenant_id: "tenant_x".to_string(),
             action_name: "test_action".to_string(),
-            payload_json: vec![1, 2, 3],
+            payload_data: vec![1, 2, 3],
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 
@@ -918,7 +918,7 @@ mod tests {
             source_mode: 0,
             target_mode: 0,
             timestamp_ms: 1000,
-            state_snapshot_json: vec![1, 2, 3],
+            state_snapshot_payload: vec![1, 2, 3],
         };
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
@@ -995,7 +995,7 @@ mod tests {
             job_id: "job1".to_string(),
             tenant_id: "t1".to_string(),
             action_name: "act".to_string(),
-            payload_json: vec![],
+            payload_data: vec![],
             timestamp_ms: 1000,
         };
         use prost::Message as ProstMessage;

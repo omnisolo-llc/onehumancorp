@@ -180,7 +180,7 @@ impl TeammateMesh for TeammateMeshClient {
             job_id: job_id.clone(),
             tenant_id: "default".to_string(),
             action_name: topic.to_string(),
-            payload_json: payload,
+            payload_data: payload,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 
