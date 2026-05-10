@@ -14,7 +14,6 @@ go_library(
     deps = [
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//:metric",
-        "@io_opentelemetry_go_otel_trace//:trace",
         "@com_github_google_uuid//:uuid",
     ],
 )

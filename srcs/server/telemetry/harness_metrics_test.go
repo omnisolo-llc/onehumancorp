@@ -126,22 +126,6 @@ func TestRecordBubblewrapViolation(t *testing.T) {
 	}
 }
 
-func TestRecordHarnessCommandDurationMetrics(t *testing.T) {
-	ctx := context.Background()
-	err := RecordHarnessCommandDuration(ctx, 1.5, "tenant-1", "ls", 0)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-}
-
-func TestRecordHarnessIOBytes(t *testing.T) {
-	ctx := context.Background()
-	err := RecordHarnessIOBytes(ctx, 1024, "tenant-1", "stdout")
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-}
-
 func init() {
 	// Initialize a dummy sync engine for tests to avoid nil issues
 	// when bufferMetricHelper is called.

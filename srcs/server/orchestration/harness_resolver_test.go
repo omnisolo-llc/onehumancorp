@@ -1,7 +1,6 @@
 package orchestration
 
 import (
-	"context"
     "testing"
 )
 
@@ -12,7 +11,7 @@ func TestHarnessResolver(t *testing.T) {
         t.Fatalf("expected no error, got %v", err)
     }
 
-    res, err := harness.RunAttempt(context.Background(), "ls")
+    res, err := harness.RunAttempt("ls")
     if err != nil {
         t.Fatalf("expected no error, got %v", err)
     }
