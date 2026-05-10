@@ -1823,7 +1823,7 @@ impl Agent {
                             return Err(fatal_msg.into());
                         }
 
-                        // Return the raw error as a ToolMessage directly to the model so it can self-correct.
+                        // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -1997,7 +1997,7 @@ impl Agent {
                                 return Err(fatal_msg.into());
                             }
 
-                            // Return the raw error as a ToolMessage directly to the model so it can self-correct.
+                            // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
