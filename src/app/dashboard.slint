@@ -50,6 +50,7 @@ export component Dashboard inherits Window { // milestones
     callback open_video_tutorials();
     callback open_release_notes();
     callback open_api_docs();
+    callback open_scribe_feature_dashboard();
     callback approve_task(string);
     callback open_billing();
     callback open_my_plan();
@@ -130,6 +131,7 @@ export component Dashboard inherits Window { // milestones
                 Button { text: "How to use this app"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
                 Button { text: "How to automate work"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
                 Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
+                Button { text: "Scribe Dashboard"; height: 44px; clicked => { open_scribe_feature_dashboard(); show_menu = false; } }
             }
         }
 
