@@ -102,3 +102,52 @@ fn test_mission_dashboard_today_sales_check() {
     ui.set_todays_sales("$500".into());
     assert_eq!(ui.get_todays_sales(), "$500");
 }
+
+#[test]
+fn test_bottom_navigation_bar_ux() {
+    let ui = app::Dashboard::new().unwrap();
+    let add_product_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let add_product_clicked_clone = add_product_clicked.clone();
+    ui.on_action_add_product(move || {
+        *add_product_clicked_clone.borrow_mut() = true;
+    });
+
+    let view_orders_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let view_orders_clicked_clone = view_orders_clicked.clone();
+    ui.on_action_view_orders(move || {
+        *view_orders_clicked_clone.borrow_mut() = true;
+    });
+
+    let check_messages_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let check_messages_clicked_clone = check_messages_clicked.clone();
+    ui.on_action_check_messages(move || {
+        *check_messages_clicked_clone.borrow_mut() = true;
+    });
+
+    let see_analytics_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let see_analytics_clicked_clone = see_analytics_clicked.clone();
+    ui.on_action_see_analytics(move || {
+        *see_analytics_clicked_clone.borrow_mut() = true;
+    });
+
+    let share_store_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let share_store_clicked_clone = share_store_clicked.clone();
+    ui.on_action_share_store(move || {
+        *share_store_clicked_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_action_add_product();
+    assert!(*add_product_clicked.borrow());
+
+    ui.invoke_action_view_orders();
+    assert!(*view_orders_clicked.borrow());
+
+    ui.invoke_action_check_messages();
+    assert!(*check_messages_clicked.borrow());
+
+    ui.invoke_action_see_analytics();
+    assert!(*see_analytics_clicked.borrow());
+
+    ui.invoke_action_share_store();
+    assert!(*share_store_clicked.borrow());
+}

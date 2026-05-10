@@ -449,87 +449,119 @@ export component Dashboard inherits Window { // milestones
     }
 }
 
-    // Floating Action Button (Bottom)
+
+    // Bottom Navigation Bar
     Rectangle {
         y: parent.height - 80px;
-        x: parent.width - 80px;
-        width: 60px;
-        height: 60px;
-        background: #8b5cf6;
-        border-radius: 30px;
-        drop-shadow-blur: 10px;
+        width: parent.width;
+        height: 80px;
+        background: rgba(13, 13, 26, 0.85); // Matches background gradient mostly
+        drop-shadow-blur: 20px;
+        drop-shadow-offset-y: -5px;
         drop-shadow-color: rgba(0, 0, 0, 0.5);
 
-        Text {
-            text: "+";
-            color: white;
-            font-size: 32px;
-            font-weight: 700;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-        }
-
-        TouchArea {
-            clicked => {
-                // We'll map this floating action button to add product for now
-                action_add_product();
-            }
-        }
-    }
-
-    // Floating Create Post & Share Store (Bottom Left quick actions)
-    HorizontalBox {
-        y: parent.height - 80px;
-        x: 20px;
-        spacing: 16px;
-
+        // Glassmorphism effect via Rectangle with low opacity
         Rectangle {
-            width: 60px;
-            height: 60px;
-            background: #3b82f6;
-            border-radius: 30px;
-            drop-shadow-blur: 10px;
-            drop-shadow-color: rgba(0, 0, 0, 0.5);
+            width: parent.width;
+            height: parent.height;
+            background: rgba(255, 255, 255, 0.05);
+            border-width: 1px;
+            border-color: rgba(255, 255, 255, 0.1);
+        }
 
-            Text {
-                text: "✍️";
-                color: white;
-                font-size: 24px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+        HorizontalBox {
+            padding-left: 10px;
+            padding-right: 10px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            alignment: space-around;
+
+            // Add Product
+            Rectangle {
+                min-height: 44px;
+                min-width: 44px;
+                TouchArea {
+                    width: 100%;
+                    height: 100%;
+                    clicked => { action_add_product(); }
+                }
+                VerticalBox {
+                    alignment: center;
+                    spacing: 4px;
+                    Text { text: "+"; color: #8b5cf6; font-size: 24px; horizontal-alignment: center; }
+                    Text { text: "Add Product"; color: white; font-size: 10px; font-family: "Inter"; horizontal-alignment: center; }
+                }
             }
 
-            TouchArea {
-                clicked => {
-                    action_open_social_posting();
+            // View Orders
+            Rectangle {
+                min-height: 44px;
+                min-width: 44px;
+                TouchArea {
+                    width: 100%;
+                    height: 100%;
+                    clicked => { action_view_orders(); }
+                }
+                VerticalBox {
+                    alignment: center;
+                    spacing: 4px;
+                    Text { text: "📦"; font-size: 20px; horizontal-alignment: center; }
+                    Text { text: "Orders"; color: white; font-size: 10px; font-family: "Inter"; horizontal-alignment: center; }
+                }
+            }
+
+            // Check Messages
+            Rectangle {
+                min-height: 44px;
+                min-width: 44px;
+                TouchArea {
+                    width: 100%;
+                    height: 100%;
+                    clicked => { action_check_messages(); }
+                }
+                VerticalBox {
+                    alignment: center;
+                    spacing: 4px;
+                    Text { text: "💬"; font-size: 20px; horizontal-alignment: center; }
+                    Text { text: "Messages"; color: white; font-size: 10px; font-family: "Inter"; horizontal-alignment: center; }
+                }
+            }
+
+            // See Analytics
+            Rectangle {
+                min-height: 44px;
+                min-width: 44px;
+                TouchArea {
+                    width: 100%;
+                    height: 100%;
+                    clicked => { action_see_analytics(); }
+                }
+                VerticalBox {
+                    alignment: center;
+                    spacing: 4px;
+                    Text { text: "📈"; font-size: 20px; horizontal-alignment: center; }
+                    Text { text: "Analytics"; color: white; font-size: 10px; font-family: "Inter"; horizontal-alignment: center; }
+                }
+            }
+
+            // Share Store
+            Rectangle {
+                min-height: 44px;
+                min-width: 44px;
+                TouchArea {
+                    width: 100%;
+                    height: 100%;
+                    clicked => { action_share_store(); }
+                }
+                VerticalBox {
+                    alignment: center;
+                    spacing: 4px;
+                    Text { text: "🔗"; font-size: 20px; horizontal-alignment: center; }
+                    Text { text: "Share Store"; color: white; font-size: 10px; font-family: "Inter"; horizontal-alignment: center; }
                 }
             }
         }
-
-        Rectangle {
-            width: 60px;
-            height: 60px;
-            background: #10b981; // Emerald
-            border-radius: 30px;
-            drop-shadow-blur: 10px;
-            drop-shadow-color: rgba(0, 0, 0, 0.5);
-
-            Text {
-                text: "🔗";
-                color: white;
-                font-size: 24px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
-
-            TouchArea {
-                clicked => {
-                    action_share_store();
-                }
-            }
-        }
     }
-
     if (show_swarm_observability) : Rectangle {
         width: parent.width;
         height: parent.height;

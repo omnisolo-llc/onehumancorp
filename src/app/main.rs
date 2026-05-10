@@ -2467,7 +2467,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         if used >= 10 { // Free tier limit
                                             ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.".into());
                                             ui.set_show_upgrade_prompt(true);
-                                            ui.invoke_action_failed("Tier limit reached: 10 products".into());
+                                            ui.invoke_action_failed("You have reached your limit of 10 products. Please upgrade your plan to add more.".into());
                                         } else {
                                             // Handle success case
                                             // We could log or do something else here, but to avoid regressions, we don't block
