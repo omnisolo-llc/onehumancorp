@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 )
 
 var throttleSemaphore = make(chan struct{}, 10) // Allow up to 10 concurrent syncs
