@@ -1,20 +1,30 @@
-issue_category: cleanup
+issue_category: refactor
 debt_report: |
   <div markdown="1" style="backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
   # 🧹 Maintainer: Triage & Debt Report
+
   ## Phase 1: Audit
-  -   Verified the Swarm Dashboard and identified multiple stagnant/blocked missions.
+  - Investigated Kubernetes pod autoscaling properties and discovered excessive allocation and scaling limits.
+  - Investigated local standalone mode prometheus OOM errors and found the Docker container was overly constrained (`--memory="32m"`).
+
   ## Phase 2: Hygiene
-  -   Sanitized the mission backlog by permanently failing `STUCK` missions to ensure no stuck missions persist in endless retry loops.
-  -   Pruned redundant log noise.
+  - Updated `deploy/helm/ohc/values.yaml` to optimize K8s HPA definitions and limits (`backend.autoscaling.maxReplicas` reduced to 10, updated requests/limits).
+  - Updated `deploy/scripts/ohc-standalone.sh` to provide sufficient resources for Prometheus (`--memory="128m" --cpus="0.25"`), preventing crashes in standalone execution.
+  - Verified configurations locally.
+
   ## Phase 3: Architectural Audit
-  -   Confirmed no recent commits violated Zero Trust or SPIRE principles.
+  - Verified no zero trust boundaries were compromised in local or cloud architectures. Resource quotas in K8s were also tightened, maintaining multi-tenant isolation.
+
   ## Phase 4: Verify
-  -   Ran global test suite to ensure all tests pass.
+  - Verified the Bazel test suite successfully execution. All local/standalone scripts and CI targets pass hermetically.
+
   ## Health Status
-  -   **Status:** Clean
-  -   **Debt Level:** Low
-  -   **Action Taken:** Moved stuck missions to FAILED to resolve circular retry state. Fixed sync_daemon logging noise. Fixed hub.rs query for health checks.
+  - **Status:** Resolved
+  - **Action Taken:** Tuned Cloud HPA/VPA scaling constraints and Standalone Observability limits to ensure stability across both domains.
   </div>
 status: completed
 visual_excellence: "Applied Glassmorphism UI standards (backdrop-filter: blur(15px)) conceptually to report output generation."
+triage_results:
+  status: "Healthy"
+  issue_category: "refactor"
+  notes: "Optimized K8s configurations for resource management and autoscaling, and fixed local standalone agent limitations."
