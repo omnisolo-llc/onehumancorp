@@ -220,7 +220,7 @@ export component Dashboard inherits Window { // milestones
             VerticalBox {
                 alignment: center;
                 padding: 16px;
-                Text { text: "View Swarm Observability"; color: #00d3ff; font-family: "Inter"; font-weight: 700; horizontal-alignment: center; }
+                Text { text: "View AI Team Activity"; color: #00d3ff; font-family: "Inter"; font-weight: 700; horizontal-alignment: center; }
             }
             TouchArea { clicked => { action_view_observability(); } }
         }
@@ -311,7 +311,7 @@ export component Dashboard inherits Window { // milestones
                     HorizontalBox {
                         alignment: end;
                         Button { text: "Run Promo"; height: 44px; clicked => { action_grow_business(); } }
-                        Button { text: "Agent Activity"; height: 44px; clicked => { action_open_swarm_observability(); } }
+                        Button { text: "AI Activity"; height: 44px; clicked => { action_open_swarm_observability(); } }
                     }
                 }
             }
