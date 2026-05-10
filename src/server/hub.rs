@@ -83,9 +83,7 @@ impl Hub {
 
                 // Blueprint: track cost in cents
                 let cost_cents = (cost * 100.0) as f32;
-                let mut labels_cents = labels.clone();
-                labels_cents["cost_cents"] = serde_json::json!(cost_cents);
-                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
+                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels).await;
             }
         });
 

@@ -1,4 +1,3 @@
-import { AdvancedToggle } from "advanced_toggle.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 import { UpgradePrompt } from "./upgrade_prompt.slint";
@@ -25,10 +24,6 @@ export component Agents inherits Window {
     in-out property <bool> show_upgrade_prompt: false;
     in-out property <string> upgrade_prompt_message: "";
 
-    in-out property <bool> is_advanced: false;
-    callback toggle_advanced();
-    toggle_advanced => { is_advanced = !is_advanced; }
-
     callback hire_agent();
     callback fix_agent(string);
     callback tune_agent(string);
@@ -45,10 +40,6 @@ export component Agents inherits Window {
         HorizontalBox {
             Text { text: "Helpers"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
-            AdvancedToggle {
-                is_advanced <=> root.is_advanced;
-                toggled => { toggle_advanced(); }
-            }
             Button { text: "Hire Agent"; clicked => { hire_agent(); } }
         }
 
@@ -56,11 +47,7 @@ export component Agents inherits Window {
             spacing: 10px;
             
             for agent in agents : GlassCard {
-                if (is_advanced) : VerticalBox {
-                    padding: 8px;
-                    Text { text: "Raw Configuration JSON"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                    Text { text: "{ \"id\": \"" + agent.id + "\", \"role\": \"" + agent.role + "\" }"; font-family: "Inter"; font-size: 12px; color: #10b981; }
-                }
+
                 if (agent.is_new) : Rectangle {
                     background: transparent;
                     border-radius: 12px;

@@ -30,20 +30,13 @@ func TestParityNullHandling(t *testing.T) {
 	assert.Nil(t, fetched.AgentID)
 	assert.Nil(t, fetched.ParentPlanID)
 	assert.Nil(t, fetched.Payload)
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS task_dependencies (
-			task_id UUID NOT NULL,
-			depends_on_task_id UUID NOT NULL,
-			PRIMARY KEY (task_id, depends_on_task_id)
-		);
-	`)
-	require.NoError(t, err)
 }
 
 func TestParityGetTask(t *testing.T) {
 	sqliteDB := setupTestDB(t)
 	defer sqliteDB.Close()
 	sqliteStore := NewSqliteTaskStore(sqliteDB)
+
 	task := &SharedTask{
 		OrganizationID: "org-parity",
 		Title:          "Parity Task",

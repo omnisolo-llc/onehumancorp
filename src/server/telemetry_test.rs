@@ -130,7 +130,7 @@ mod tests {
         let res = crate::telemetry::record_token_usage_forecast(&pool, "org_test", 15000.0).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_forecast' ORDER BY timestamp DESC LIMIT 1")
+        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_usage_forecast' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -288,10 +288,6 @@ mod tests {
                     .filter_map(Result::ok)
                     .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs" || ext == "go" || ext == "ts"))
                 {
-                    let path_str = entry.path().to_string_lossy();
-                    if path_str.contains("telemetry_test.rs") {
-                        continue;
-                    }
                     checked_files += 1;
                     let content = fs::read_to_string(entry.path()).unwrap_or_default();
                     for (i, line) in content.lines().enumerate() {

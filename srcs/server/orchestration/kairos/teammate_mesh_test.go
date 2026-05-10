@@ -44,7 +44,7 @@ func runTeammateMeshTests(t *testing.T, mesh TeammateMesh, isLocal bool) {
 
 	t.Run("Acquire and Release Lock", func(t *testing.T) {
 		ctx := context.Background()
-		lockKey := "ohc:lock:system:task:testlock"
+		lockKey := "testlock"
 
 		acquired, err := mesh.AcquireLock(ctx, lockKey, 1*time.Second)
 		require.NoError(t, err)
@@ -134,7 +134,7 @@ func TestRedisTeammateMesh(t *testing.T) {
 func TestLocalTeammateMesh_LockExpiry(t *testing.T) {
 	mesh := NewLocalTeammateMesh()
 	ctx := context.Background()
-	lockKey := "ohc:lock:system:task:expirylock"
+	lockKey := "expirylock"
 
 	acquired, err := mesh.AcquireLock(ctx, lockKey, 50*time.Millisecond)
 	require.NoError(t, err)

@@ -43,10 +43,7 @@ func isSensitiveKey(key string) bool {
 		strings.Contains(k, "bank") ||
 		strings.Contains(k, "account") ||
 		strings.Contains(k, "stripe") ||
-		strings.Contains(k, "billing") ||
-		strings.Contains(k, "ip_address") ||
-		strings.Contains(k, "mac_address") ||
-		strings.Contains(k, "geolocation")
+		strings.Contains(k, "billing")
 }
 
 // isEmail checks for the basic structure of an email in a string value.

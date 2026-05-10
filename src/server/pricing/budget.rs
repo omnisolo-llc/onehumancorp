@@ -3,8 +3,6 @@ use std::sync::Mutex;
 pub struct BudgetManager {
     pub total_limit: f64,
     current: Mutex<f64>,
-    pub telemetry_store: Option<std::sync::Arc<crate::harness::telemetry::ViolationStore>>,
-    tenant_id: Option<String>,
 }
 
 impl BudgetManager {
@@ -12,15 +10,7 @@ impl BudgetManager {
         BudgetManager {
             total_limit: limit,
             current: Mutex::new(0.0),
-            telemetry_store: None,
-            tenant_id: None,
         }
-    }
-
-    pub fn with_telemetry(mut self, tenant_id: String, store: std::sync::Arc<crate::harness::telemetry::ViolationStore>) -> Self {
-        self.tenant_id = Some(tenant_id);
-        self.telemetry_store = Some(store);
-        self
     }
 
     pub fn record_spend(&self, amount: f64) -> Result<bool, String> {
@@ -39,17 +29,6 @@ impl BudgetManager {
         }
 
         *current += amount;
-
-        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            let cents = (amount * 100.0).round() as u64;
-            if cents > 0 {
-                store.llm_cost_counter.add(
-                    cents,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
-                );
-            }
-        }
-
         Ok(true)
     }
 

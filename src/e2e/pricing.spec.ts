@@ -1,43 +1,6 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Pricing Page', () => {
-
-  test('should display "What does this cost?" wizard flow correctly', async ({ page }) => {
-    await page.goto('/');
-
-    // Login flow
-    await page.fill('input[type="email"], input[placeholder*="email" i]', 'test@example.com');
-    await page.fill('input[type="password"], input[placeholder*="password" i]', 'password123');
-    await page.click('button:has-text("Login"), button:has-text("Sign In")');
-
-    // Wait for Dashboard
-    await expect(page.locator('text=Dashboard').first()).toBeVisible();
-
-    // Navigate to Billing / Pricing Wizard
-    await page.click('button:has-text("Billing")');
-
-    // Check initial step (Usage)
-    await expect(page.locator('text=/Your Current Usage/i').first()).toBeVisible();
-    await expect(page.locator('text=/Projected Cost this Month/i').first()).toBeVisible();
-
-    // Check Add Credits CTA
-    const addCreditsBtn = page.locator('text=/Add Credits/i');
-    await expect(addCreditsBtn).toBeVisible();
-    await addCreditsBtn.click();
-
-    // Clicking add credits opens the upgrade flow (sets step=1, which shows 'Start Free')
-    await expect(page.locator('text="Start Free"').first()).toBeVisible();
-
-    // Go back to billing
-    await page.goto('/');
-    await expect(page.locator('text=Dashboard').first()).toBeVisible();
-    await page.click('button:has-text("Billing")');
-
-    // Check transition to plans
-    await page.click('text=/View Upgrade Plans/i');
-    await expect(page.locator('text="Start Free"').first()).toBeVisible();
-  });
-
   test('should display pricing page', async ({ page }) => {
     await page.goto('/pricing');
     await expect(page.locator('text=/pricing|plan/i')).toBeVisible();

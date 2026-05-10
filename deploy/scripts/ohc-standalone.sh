@@ -20,7 +20,7 @@ export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
 export TOKIO_WORKER_THREADS=1
-export MALLOC_ARENA_MAX=1
+export MALLOC_ARENA_MAX=2
 export RAYON_NUM_THREADS=2
 export OHC_STANDALONE=true
 export LOG_FORMAT="json"
@@ -42,7 +42,7 @@ find "${OHC_RUNTIME_DIR}" -type d -exec chmod 700 {} \+
 if [ -z "$OHC_SQLITE_KEY" ]; then
   KEY_FILE="${OHC_RUNTIME_DIR}/.sqlite_key"
   if [ ! -f "$KEY_FILE" ]; then
-    (umask 077 && openssl rand -hex 32 > "$KEY_FILE")
+    openssl rand -hex 32 > "$KEY_FILE"
     chmod 600 "$KEY_FILE"
   fi
   export OHC_SQLITE_KEY="$(cat "$KEY_FILE")"
@@ -79,7 +79,7 @@ echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 if [ "$OHC_TELEMETRY_ENABLED" = "true" ]; then
   docker rm -f ohc-prometheus-agent >/dev/null 2>&1 || true
   docker run -d --name ohc-prometheus-agent \
-    --memory="32m" --cpus="0.05" \
+    --memory="64m" --cpus="0.05" \
     --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
     --network host \
     -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml \

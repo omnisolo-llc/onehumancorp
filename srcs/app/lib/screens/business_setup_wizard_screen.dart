@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wizard_provider.dart';
 import '../main.dart'; // For GlassContainer
@@ -25,6 +26,9 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   final _adminNameController = TextEditingController();
   final _adminEmailController = TextEditingController();
   final _adminPasswordController = TextEditingController();
+  final _productNameController = TextEditingController();
+  final _productDescriptionController = TextEditingController();
+  final _productPriceController = TextEditingController();
 
   late AnimationController _heroAnimationController;
   late Animation<double> _heroAnimation;
@@ -32,7 +36,11 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   late AnimationController _pulseAnimationController;
   late Animation<double> _pulseAnimation;
 
+  late AnimationController _confettiAnimationController;
+  late Animation<double> _confettiAnimation;
+
   bool _showWalkthrough = true;
+  bool _showConfetti = false;
 
   @override
   void initState() {
@@ -54,16 +62,29 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
       CurvedAnimation(parent: _pulseAnimationController, curve: Curves.easeInOut),
     );
+
+    _confettiAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+
+    _confettiAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _confettiAnimationController, curve: Curves.easeOut),
+    );
   }
 
   @override
   void dispose() {
     _heroAnimationController.dispose();
     _pulseAnimationController.dispose();
+    _confettiAnimationController.dispose();
     _companyNameController.dispose();
     _adminNameController.dispose();
     _adminEmailController.dispose();
     _adminPasswordController.dispose();
+    _productNameController.dispose();
+    _productDescriptionController.dispose();
+    _productPriceController.dispose();
     super.dispose();
   }
 
@@ -79,7 +100,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(wizardProvider);
 
-    if (state.currentStep == 11) {
+    if (state.currentStep == 10) {
       return const DashboardScreen();
     }
 
@@ -128,13 +149,11 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       case 6:
         return _buildTemplateSelectionScreen(state);
       case 7:
-        return _buildProductScreen(state);
+        return _buildFirstProductScreen(state);
       case 8:
-        return _buildDomainScreen(state);
-      case 9:
         return _buildReviewAndLaunchScreen(state);
-      case 10:
-        return _buildWelcomeChecklistScreen(state);
+      case 9:
+        return _buildDomainGoLiveScreen(state);
       default:
         return const SizedBox.shrink();
     }
@@ -724,12 +743,12 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
-  Widget _buildProductScreen(WizardState state) {
+  Widget _buildFirstProductScreen(WizardState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'Add your first product or service',
+          'First Product or Service',
           style: TextStyle(
             fontFamily: 'Outfit',
             fontSize: 28,
@@ -739,154 +758,98 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         ),
         const SizedBox(height: 10),
         const Text(
-          'You can add more later.',
+          'Add your first item. We will write the description for you!',
           style: TextStyle(color: Colors.white70, fontSize: 16),
         ),
         const SizedBox(height: 20),
         Expanded(
           child: SingleChildScrollView(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Name', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                const SizedBox(height: 5),
+                GestureDetector(
+                  onTap: () {
+                    // Mock photo upload
+                  },
+                  child: GlassContainer(
+                    child: Container(
+                      height: 120,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_a_photo, color: Colors.white70, size: 40),
+                          SizedBox(height: 10),
+                          Text('Upload Photo', style: TextStyle(color: Colors.white70)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 15),
                 GlassContainer(
-                  child: TextFormField(
+                  child: TextField(
                     key: const Key('productNameField'),
-                    initialValue: state.productName,
+                    controller: _productNameController,
                     style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
-                      hintText: 'e.g. Custom Birthday Cake',
-                      hintStyle: TextStyle(color: Colors.white24),
+                      labelText: 'Product Name',
+                      labelStyle: TextStyle(color: Colors.white70),
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(15),
                     ),
                     onChanged: (value) {
-                      ref.read(wizardProvider.notifier).updateProductDetails(name: value);
+                      if (value.isNotEmpty) {
+                        _productDescriptionController.text = "A premium $value perfect for your needs.";
+                      } else {
+                        _productDescriptionController.clear();
+                      }
+                      ref.read(wizardProvider.notifier).updateFirstProduct(
+                        name: value,
+                        description: _productDescriptionController.text,
+                      );
                     },
                   ),
                 ),
                 const SizedBox(height: 15),
-                const Text('Description (AI will help!)', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                const SizedBox(height: 5),
                 GlassContainer(
-                  child: TextFormField(
-                    key: const Key('productDescField'),
-                    initialValue: state.productDescription,
-                    style: const TextStyle(color: Colors.white),
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      hintText: 'Describe what you are selling...',
-                      hintStyle: TextStyle(color: Colors.white24),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(15),
-                    ),
-                    onChanged: (value) {
-                      ref.read(wizardProvider.notifier).updateProductDetails(description: value);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.1),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Center(child: Text('✨ Auto-generate description', style: TextStyle(color: Colors.white))),
-                ),
-                const SizedBox(height: 15),
-                const Text('Price', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                const SizedBox(height: 5),
-                GlassContainer(
-                  child: TextFormField(
+                  child: TextField(
                     key: const Key('productPriceField'),
-                    initialValue: state.productPrice,
-                    style: const TextStyle(color: Colors.white),
+                    controller: _productPriceController,
                     keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
-                      hintText: '0.00',
-                      prefixText: '\$ ',
-                      prefixStyle: TextStyle(color: Colors.white),
-                      hintStyle: TextStyle(color: Colors.white24),
+                      labelText: 'Price (\$)',
+                      labelStyle: TextStyle(color: Colors.white70),
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(15),
                     ),
                     onChanged: (value) {
-                      ref.read(wizardProvider.notifier).updateProductDetails(price: value);
+                      ref.read(wizardProvider.notifier).updateFirstProduct(price: value);
                     },
                   ),
                 ),
-                const SizedBox(height: 20),
-                Container(
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.camera_alt, color: Colors.white54, size: 40),
-                        SizedBox(height: 10),
-                        Text('Tap to select an image', style: TextStyle(color: Colors.white54)),
-                      ],
+                const SizedBox(height: 15),
+                GlassContainer(
+                  child: TextField(
+                    key: const Key('productDescriptionField'),
+                    controller: _productDescriptionController,
+                    maxLines: 3,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'AI Generated Description',
+                      labelStyle: TextStyle(color: Colors.white70),
+                      border: InputBorder.none,
                     ),
+                    onChanged: (value) {
+                      ref.read(wizardProvider.notifier).updateFirstProduct(description: value);
+                    },
                   ),
                 ),
               ],
             ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        _buildNavigationButtons(),
-      ],
-    );
-  }
-
-  Widget _buildDomainScreen(WizardState state) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Choose a Domain',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          'This is how customers will find you online.',
-          style: TextStyle(color: Colors.white70, fontSize: 16),
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Your free OHC domain', style: TextStyle(color: Colors.white70, fontSize: 14)),
-              const SizedBox(height: 5),
-              GlassContainer(
-                child: TextFormField(
-                  key: const Key('domainField'),
-                  initialValue: state.domainChoice ?? '\${(state.companyName ?? "mybusiness").replaceAll(" ", "").toLowerCase()}.ohc.app',
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(15),
-                  ),
-                  onChanged: (value) {
-                    ref.read(wizardProvider.notifier).setDomainChoice(value);
-                  },
-                ),
-              ),
-            ],
           ),
         ),
         const SizedBox(height: 20),
@@ -928,139 +891,183 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   _buildSummaryItem('Admin', state.adminName ?? 'Not set'),
                   const SizedBox(height: 10),
                   _buildSummaryItem('Template', state.templateSelection ?? 'Not set'),
-                  const SizedBox(height: 10),
-                  _buildSummaryItem('Product', state.productName ?? 'Not set'),
-                  const SizedBox(height: 10),
-                  _buildSummaryItem('Domain', state.domainChoice ?? 'Not set'),
+                  if (state.productName != null && state.productName!.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    _buildSummaryItem('First Product', '${state.productName} (\$${state.productPrice ?? '0'})'),
+                  ]
                 ],
               ),
             ),
           ),
         ),
         const SizedBox(height: 20),
-        Row(
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
+  Widget _buildDomainGoLiveScreen(WizardState state) {
+    final companyDomain = (state.companyName ?? 'mybusiness').toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final domain = '$companyDomain.ohc.app';
+
+    // Auto-set the domain in state if not set
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (state.domainName != domain) {
+        ref.read(wizardProvider.notifier).setDomainName(domain);
+      }
+    });
+
+    return Stack(
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              flex: 1,
-              child: ElevatedButton(
-                onPressed: _prevStep,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  side: const BorderSide(color: Colors.white54),
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-                child: const Text('Back', style: TextStyle(fontSize: 18, color: Colors.white)),
+            const Text(
+              'Domain & Go-Live',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
-            const SizedBox(width: 15),
+            const SizedBox(height: 10),
+            const Text(
+              'Your free subdomain is ready. Claim it now!',
+              style: TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            const SizedBox(height: 30),
             Expanded(
-              flex: 2,
-              child: AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: _pulseAnimation.value,
-                    child: child,
-                  );
-                },
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await ref.read(wizardProvider.notifier).submitWizard();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF22C55E),
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
+              child: SingleChildScrollView(
+                child: GlassContainer(
+                  child: Column(
+                    children: [
+                      const Icon(Icons.language, size: 60, color: Color(0xFF6B4EFF)),
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                domain,
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.copy, color: Colors.white70),
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: domain));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Copied to clipboard!')),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      const Text(
+                        'Ready to publish your store?',
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'This will make your storefront visible to the world.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
+                    ],
                   ),
-                  child: const Text('Launch My AI Team', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: ElevatedButton(
+                    onPressed: _prevStep,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      side: const BorderSide(color: Colors.white54),
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                    child: const Text('Back', style: TextStyle(fontSize: 18, color: Colors.white)),
+                  ),
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  flex: 2,
+                  child: AnimatedBuilder(
+                    animation: _pulseAnimation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: _pulseAnimation.value,
+                        child: child,
+                      );
+                    },
+                    child: ElevatedButton(
+                      key: const Key('publishBtn'),
+                      onPressed: () async {
+                        Clipboard.setData(ClipboardData(text: domain));
+                        setState(() {
+                          _showConfetti = true;
+                        });
+                        _confettiAnimationController.forward(from: 0.0);
+
+                        await Future.delayed(const Duration(milliseconds: 1500));
+                        await ref.read(wizardProvider.notifier).submitWizard();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF22C55E),
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                      child: const Text('Publish My AI Team', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildWelcomeChecklistScreen(WizardState state) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'You\'re set up!',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          'Here\'s what to do next:',
-          style: TextStyle(color: Colors.white70, fontSize: 16),
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildChecklistItem('✅ Business live', true),
-                const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Add 3 more products', false),
-                const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Connect Instagram', false),
-                const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Share your link with a friend', false),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () {
-            ref.read(wizardProvider.notifier).nextStep();
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6B4EFF),
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
-          ),
-          child: const Text('Go to Dashboard', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildChecklistItem(String text, bool isCompleted) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: isCompleted ? Colors.green.withOpacity(0.1) : Colors.white.withOpacity(0.05),
-        border: Border.all(color: isCompleted ? Colors.green : Colors.white24),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: isCompleted ? Colors.greenAccent : Colors.white,
-                fontSize: 16,
+        if (_showConfetti)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _confettiAnimation,
+                builder: (context, child) {
+                  return Opacity(
+                    opacity: 1.0 - _confettiAnimation.value,
+                    child: child,
+                  );
+                },
+                child: const Center(
+                  child: Icon(Icons.celebration, color: Colors.amber, size: 200),
+                ),
               ),
             ),
           ),
-          const Icon(Icons.chevron_right, color: Colors.white54),
-        ],
-      ),
+      ],
     );
   }
 

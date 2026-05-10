@@ -38,67 +38,6 @@ export component Integrations inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
-                    Text { text: "📘 Facebook"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Unified Social Media DMs"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Facebook"); }
-                    }
-                }
-            }
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "📷 Instagram"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Unified Social Media DMs"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Instagram"); }
-                    }
-                }
-            }
-        }
-
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "💬 WhatsApp"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Unified Social Media DMs"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("WhatsApp"); }
-                    }
-                }
-            }
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
                     Text { text: "✈️ Telegram"; font-weight: 700; color: #1e293b; }
                     Text { text: "Connect your bot for mobile alerts"; color: #64748b; wrap: word-wrap; }
                     Button {
@@ -107,10 +46,6 @@ export component Integrations inherits Window {
                     }
                 }
             }
-        }
-
-        HorizontalBox {
-            spacing: 16px;
 
             Rectangle {
                 background: white;
@@ -127,25 +62,6 @@ export component Integrations inherits Window {
                     Button {
                         text: "Configure";
                         clicked => { configure_integration("Discord"); }
-                    }
-                }
-            }
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "💬 Twilio"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Send SMS alerts to customers"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Twilio"); }
                     }
                 }
             }
@@ -385,7 +301,7 @@ export component Integrations inherits Window {
             }
         }
 
-        Text { text: "Connect Custom Software"; font-size: 20px; font-weight: 700; color: #1e293b; }
+        Text { text: "Advanced Tool Connections"; font-size: 20px; font-weight: 700; color: #1e293b; }
         Text { text: "Manually trigger advanced connected tools for your business."; color: #64748b; }
 
         Rectangle {

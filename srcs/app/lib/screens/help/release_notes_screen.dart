@@ -22,11 +22,6 @@ class ReleaseNotesScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildReleaseCard('v0.4.37', 'May 2026', [
-                  'Interop Mesh Comprehensive Test Coverage to improve distributed lock resilience.',
-                  'Ensured graceful interop mesh protocol handling for malformed offline mesh payloads.',
-                ]),
-                const SizedBox(height: 20),
                 _buildReleaseCard('v0.4.33', 'May 2024', [
                   'Added in-app help center and searchable knowledge base.',
                   'Introduced contextual tooltips to clarify confusing options.',

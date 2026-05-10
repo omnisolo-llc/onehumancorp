@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"log"
-	"net/http"
-	"os"
 	"time"
+
+	"net/http"
 
 	"onehumancorp/srcs/server/memory"
 	"onehumancorp/srcs/server/onboarding"
@@ -14,7 +14,6 @@ import (
 	"onehumancorp/srcs/server/telemetry"
 	"onehumancorp/srcs/server/growth"
 	"onehumancorp/srcs/server/dashboard"
-	"onehumancorp/srcs/server/tiers"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -30,24 +29,12 @@ func (m *MockLLMClient) GenerateEmbedding(ctx context.Context, text string) ([]f
 func main() {
 	log.Println("Starting OHC Server...")
 
-	// Initialize SQLite database
-	dbPath := ":memory:"
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		dbPath = "ohc_standalone.db"
-	}
-
-	db, err := sql.Open("sqlite3", dbPath)
+	// Initialize SQLite database (or Postgres in a real environment)
+	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 	defer db.Close()
-
-	if dbPath != ":memory:" {
-		// Enforce secure file permissions for local standalone mode
-		if err := os.Chmod(dbPath, 0600); err != nil {
-			log.Printf("Warning: Failed to set secure permissions on %s: %v", dbPath, err)
-		}
-	}
 
 	// Create memory_embeddings table
 	_, err = db.Exec(`
@@ -102,24 +89,11 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/onboarding/start", onboardingAPI.HandleStartOnboarding)
 	mux.HandleFunc("/api/onboarding/status", onboarding.TenantAuthMiddleware(onboardingAPI.HandleGetStatus))
-	mux.HandleFunc("/api/onboarding/state", onboarding.TenantAuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			onboardingAPI.HandleSaveState(w, r)
-		} else if r.Method == http.MethodGet {
-			onboardingAPI.HandleGetState(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	}))
 
 	growthSvc := growth.NewGrowthService(db)
 	mux.HandleFunc("/api/growth/referrals/click", growthSvc.HandleReferralClick)
 	mux.HandleFunc("/api/growth/referrals/convert", growthSvc.HandleReferralConvert)
 	mux.HandleFunc("/api/growth/team-invites/accept", growthSvc.HandleTeamInviteAccept)
-
-	tierSvc := tiers.NewTierService(db)
-	tierAPI := tiers.NewAPIHandler(tierSvc)
-	mux.HandleFunc("/api/tiers/check", tierAPI.HandleCheckLimit)
 
 	mux.HandleFunc("/api/dashboard/onboarding/metrics", dashboard.HandleOnboardingMetrics)
 

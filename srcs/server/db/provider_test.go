@@ -35,15 +35,6 @@ func TestProvider_CreateTask_Postgres(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"created_at", "updated_at"}).
 			AddRow(time.Now(), time.Now()))
 
-
-	db.Exec(`
-		CREATE TABLE IF NOT EXISTS task_dependencies (
-			task_id UUID NOT NULL,
-			depends_on_task_id UUID NOT NULL,
-			PRIMARY KEY (task_id, depends_on_task_id)
-		);
-	`)
-
 	err = provider.CreateTask(context.Background(), task)
 	assert.NoError(t, err)
 	assert.NoError(t, mock.ExpectationsWereMet())

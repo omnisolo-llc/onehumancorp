@@ -1,6 +1,5 @@
 pub mod social_posting;
 pub mod onboarding_e2e_tests;
-pub mod full_journey_e2e;
 pub mod login;
 pub mod wizard;
 pub mod dashboard;
@@ -99,6 +98,3 @@ pub mod ai_team_e2e;
 pub mod lens_audit_tests;
 pub mod booking_quote_e2e;
 pub mod echo_dashboard;
-pub mod miser_e2e;
-pub mod guide_onboarding_e2e;
-pub mod guide_onboarding_e2e_extended;

@@ -52,41 +52,42 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.enterText(find.byKey(const Key('adminNameField')), 'John Doe');
   await tester.enterText(find.byKey(const Key('adminEmailField')), 'john@acme.com');
   await tester.enterText(find.byKey(const Key('adminPasswordField')), 'securePassword123');
-  await tester.tap(find.text('Next').last);
+  await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
   // 7. Template Selection Screen
   await tester.tap(find.text('Modern'));
   await tester.pump(const Duration(milliseconds: 100));
-  await tester.tap(find.text('Next').last);
+  await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 8. Product Screen
-  await tester.tap(find.text('Next').last);
+  // 8. First Product Screen
+  await tester.enterText(find.byKey(const Key('productNameField')), 'Super Widget');
+  await tester.pump(const Duration(milliseconds: 100));
+  await tester.enterText(find.byKey(const Key('productPriceField')), '99.99');
+  await tester.pump(const Duration(milliseconds: 100));
+  await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 9. Domain Screen
-  await tester.tap(find.text('Next').last);
+  // 9. Review & Launch Screen
+  await tester.tap(find.text('Next'));
   await tester.pump(const Duration(milliseconds: 500));
 
-  // 10. Review & Launch Screen
-  final launchBtn = find.text('Launch My AI Team');
-  await tester.ensureVisible(launchBtn);
+  // 10. Domain & Go-Live Screen
+  final publishBtn = find.byKey(const Key('publishBtn'));
+  await tester.ensureVisible(publishBtn);
   await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(launchBtn);
+  await tester.tap(publishBtn);
 
-  // Wait for pulse animation and API call
+  // Wait for pulse animation, confetti and API call
+  await tester.pump(const Duration(seconds: 2));
   await tester.pump(const Duration(seconds: 2));
 
-  // 11. Checklist Screen
-  await tester.tap(find.text('Go to Dashboard'));
-  await tester.pump(const Duration(milliseconds: 500));
-
-  // Dashboard is visible now. Avoid pumpAndSettle due to pulse animation running.
+  // Dashboard is visible now. Avoid pumpAndSettle due to animations running.
   // Wait explicitly instead
   await tester.pump(const Duration(seconds: 1));
 
-  // 7. Dashboard Screen
+  // 11. Dashboard Screen
   final inboxBtn = find.byKey(const Key('inboxBtn'));
   await tester.dragUntilVisible(
     inboxBtn,

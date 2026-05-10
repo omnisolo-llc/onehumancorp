@@ -26,20 +26,19 @@ backend:
   # each user can only see their own company's data after login.
   multiTenant: true
 
+  resourceQuota:
+    enabled: true
+    requests:
+      cpu: "10"
+      memory: "10Gi"
+      ephemeralStorage: "50Gi"
+    limits:
+      cpu: "40"
+      memory: "80Gi"
+      ephemeralStorage: "100Gi"
+      pods: "50"
   networkPolicy:
     enabled: true
-
-resourceQuota:
-  enabled: true
-  requests:
-    cpu: "10"
-    memory: "10Gi"
-    ephemeralStorage: "50Gi"
-  limits:
-    cpu: "40"
-    memory: "80Gi"
-    ephemeralStorage: "100Gi"
-    pods: "50"
 
 # OHC Core — Rust library (settings · agent scheduler · meeting rooms · chat)
 # In cloud-native mode the core runs as a dedicated micro-service.

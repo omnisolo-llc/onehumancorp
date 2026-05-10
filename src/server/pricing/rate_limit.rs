@@ -62,17 +62,11 @@ pub struct RateLimitStatus {
 pub struct RedisRateLimiter {
     client: Client,
     connection: OnceCell<redis::aio::MultiplexedConnection>,
-    pub telemetry_store: Option<std::sync::Arc<crate::harness::telemetry::ViolationStore>>,
 }
 
 impl RedisRateLimiter {
     pub fn new(client: Client) -> Self {
-        Self { client, connection: OnceCell::new(), telemetry_store: None }
-    }
-
-    pub fn with_telemetry(mut self, store: std::sync::Arc<crate::harness::telemetry::ViolationStore>) -> Self {
-        self.telemetry_store = Some(store);
-        self
+        Self { client, connection: OnceCell::new() }
     }
 
     async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
@@ -269,16 +263,6 @@ impl RedisRateLimiter {
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
 
         let total_storage: i64 = conn.incr(&storage_key, delta_bytes).await.map_err(|e| e.to_string())?;
-
-        if let Some(store) = &self.telemetry_store {
-            store.storage_bytes_counter.add(
-                delta_bytes as u64,
-                &[
-                    opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
-                    opentelemetry::KeyValue::new("tier", format!("{:?}", tier)),
-                ],
-            );
-        }
 
         if let Some(limit_mb) = tier.storage_limit_mb() {
             let limit_bytes = (limit_mb as i64) * 1024 * 1024;

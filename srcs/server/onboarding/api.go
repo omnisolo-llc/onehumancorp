@@ -64,54 +64,6 @@ func (h *APIHandler) HandleGetStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
-func (h *APIHandler) HandleSaveState(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	tenantID, ok := r.Context().Value(tenantContextKey).(string)
-	if !ok || tenantID == "" {
-		http.Error(w, "Unauthorized: missing or invalid tenant session", http.StatusUnauthorized)
-		return
-	}
-
-	var req TenantStateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.service.SaveTenantState(r.Context(), tenantID, req.State); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (h *APIHandler) HandleGetState(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	tenantID, ok := r.Context().Value(tenantContextKey).(string)
-	if !ok || tenantID == "" {
-		http.Error(w, "Unauthorized: missing or invalid tenant session", http.StatusUnauthorized)
-		return
-	}
-
-	res, err := h.service.GetTenantState(r.Context(), tenantID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
-}
-
 // TenantAuthMiddleware extracts the X-Tenant-Id header and injects it into the request context.
 // In a real application, this would validate a session token, but this provides a secure extraction path.
 func TenantAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {

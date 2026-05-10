@@ -15,7 +15,7 @@ class WizardState {
   final String? productName;
   final String? productDescription;
   final String? productPrice;
-  final String? domainChoice;
+  final String? domainName;
 
   WizardState({
     this.currentStep = 0,
@@ -31,7 +31,7 @@ class WizardState {
     this.productName,
     this.productDescription,
     this.productPrice,
-    this.domainChoice,
+    this.domainName,
   });
 
   WizardState copyWith({
@@ -48,7 +48,7 @@ class WizardState {
     String? productName,
     String? productDescription,
     String? productPrice,
-    String? domainChoice,
+    String? domainName,
   }) {
     return WizardState(
       currentStep: currentStep ?? this.currentStep,
@@ -64,7 +64,7 @@ class WizardState {
       productName: productName ?? this.productName,
       productDescription: productDescription ?? this.productDescription,
       productPrice: productPrice ?? this.productPrice,
-      domainChoice: domainChoice ?? this.domainChoice,
+      domainName: domainName ?? this.domainName,
     );
   }
 }
@@ -78,7 +78,7 @@ class WizardNotifier extends Notifier<WizardState> {
   }
 
   void nextStep() {
-    if (state.currentStep < 11) {
+    if (state.currentStep < 10) {
       state = state.copyWith(currentStep: state.currentStep + 1);
     }
   }
@@ -123,7 +123,7 @@ class WizardNotifier extends Notifier<WizardState> {
     );
   }
 
-  void updateProductDetails({String? name, String? description, String? price}) {
+  void updateFirstProduct({String? name, String? description, String? price}) {
     state = state.copyWith(
       productName: name ?? state.productName,
       productDescription: description ?? state.productDescription,
@@ -131,8 +131,8 @@ class WizardNotifier extends Notifier<WizardState> {
     );
   }
 
-  void setDomainChoice(String? domain) {
-    state = state.copyWith(domainChoice: domain);
+  void setDomainName(String domain) {
+    state = state.copyWith(domainName: domain);
   }
 
   Future<void> submitWizard() async {
@@ -149,7 +149,7 @@ class WizardNotifier extends Notifier<WizardState> {
       'productName': state.productName,
       'productDescription': state.productDescription,
       'productPrice': state.productPrice,
-      'domainChoice': state.domainChoice,
+      'domainName': state.domainName,
     };
 
     await _apiService.submitBusinessData(data);

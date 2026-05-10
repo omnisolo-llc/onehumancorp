@@ -11,17 +11,17 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-backend
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Off"
   resourcePolicy:
     containerPolicies:
       - containerName: backend
         controlledResources: ["cpu", "memory"]
         minAllowed:
-          cpu: {{ .Values.backend.resources.requests.cpu | quote }}
-          memory: {{ .Values.backend.resources.requests.memory | quote }}
+          cpu: {{ .Values.backend.resources.requests.cpu }}
+          memory: {{ .Values.backend.resources.requests.memory }}
         maxAllowed:
-          cpu: {{ .Values.backend.resources.limits.cpu | quote }}
-          memory: {{ .Values.backend.resources.limits.memory | quote }}
+          cpu: {{ .Values.backend.resources.limits.cpu }}
+          memory: {{ .Values.backend.resources.limits.memory }}
 {{- end }}
 ---
 {{- if and .Values.ohcCore.enabled .Values.ohcCore.vpa.enabled }}
@@ -37,17 +37,17 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-core
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Off"
   resourcePolicy:
     containerPolicies:
       - containerName: ohc-core
         controlledResources: ["cpu", "memory"]
         minAllowed:
-          cpu: {{ .Values.ohcCore.resources.requests.cpu | quote }}
-          memory: {{ .Values.ohcCore.resources.requests.memory | quote }}
+          cpu: {{ .Values.ohcCore.resources.requests.cpu }}
+          memory: {{ .Values.ohcCore.resources.requests.memory }}
         maxAllowed:
-          cpu: {{ .Values.ohcCore.resources.limits.cpu | quote }}
-          memory: {{ .Values.ohcCore.resources.limits.memory | quote }}
+          cpu: {{ .Values.ohcCore.resources.limits.cpu }}
+          memory: {{ .Values.ohcCore.resources.limits.memory }}
 {{- end }}
 ---
 {{- if and .Values.chatwoot.enabled .Values.chatwoot.vpa.enabled }}
@@ -63,17 +63,17 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-chatwoot
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Off"
   resourcePolicy:
     containerPolicies:
       - containerName: chatwoot
         controlledResources: ["cpu", "memory"]
         minAllowed:
-          cpu: {{ .Values.chatwoot.resources.requests.cpu | quote }}
-          memory: {{ .Values.chatwoot.resources.requests.memory | quote }}
+          cpu: {{ .Values.chatwoot.resources.requests.cpu }}
+          memory: {{ .Values.chatwoot.resources.requests.memory }}
         maxAllowed:
-          cpu: {{ .Values.chatwoot.resources.limits.cpu | quote }}
-          memory: {{ .Values.chatwoot.resources.limits.memory | quote }}
+          cpu: {{ .Values.chatwoot.resources.limits.cpu }}
+          memory: {{ .Values.chatwoot.resources.limits.memory }}
 {{- end }}
 ---
 {{- if and .Values.powersync.enabled .Values.powersync.vpa.enabled }}
@@ -89,15 +89,15 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-powersync
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Off"
   resourcePolicy:
     containerPolicies:
       - containerName: powersync
         controlledResources: ["cpu", "memory"]
         minAllowed:
-          cpu: {{ .Values.powersync.resources.requests.cpu | quote }}
-          memory: {{ .Values.powersync.resources.requests.memory | quote }}
+          cpu: {{ .Values.powersync.resources.requests.cpu }}
+          memory: {{ .Values.powersync.resources.requests.memory }}
         maxAllowed:
-          cpu: {{ .Values.powersync.resources.limits.cpu | quote }}
-          memory: {{ .Values.powersync.resources.limits.memory | quote }}
+          cpu: {{ .Values.powersync.resources.limits.cpu }}
+          memory: {{ .Values.powersync.resources.limits.memory }}
 {{- end }}

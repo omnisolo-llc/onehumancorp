@@ -20,14 +20,6 @@ type OnboardingResponse struct {
 	Status   string `json:"status"`
 }
 
-type TenantStateRequest struct {
-	State string `json:"state"`
-}
-
-type TenantStateResponse struct {
-	State string `json:"state"`
-}
-
 type Service struct {
 	tenantStore TenantStore
 	taskStore   orchestration.TaskStore
@@ -98,21 +90,6 @@ func (s *Service) StartOnboarding(ctx context.Context, req OnboardingRequest) (*
 	return &OnboardingResponse{
 		TenantID: tenant.ID,
 		Status:   tenant.Status,
-	}, nil
-}
-
-func (s *Service) SaveTenantState(ctx context.Context, tenantID string, state string) error {
-	return s.tenantStore.UpdateTenantState(ctx, tenantID, state)
-}
-
-func (s *Service) GetTenantState(ctx context.Context, tenantID string) (*TenantStateResponse, error) {
-	tenant, err := s.tenantStore.GetTenant(ctx, tenantID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get tenant: %w", err)
-	}
-
-	return &TenantStateResponse{
-		State: tenant.State,
 	}, nil
 }
 

@@ -1,5 +1,4 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
-import { VectorMemoryVisualizer } from "vector_memory_visualizer.slint";
 
 export component SwarmMemory inherits Window {
     width: 900px;
@@ -88,8 +87,8 @@ export component SwarmMemory inherits Window {
             spacing: 10px;
             width: 270px;
             
-            Text { text: "AutoDream Memory Pipeline"; font-size: 20px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
-            Text { text: "Long-Term Context Engine"; color: #64748b; font-family: "Inter"; }
+            Text { text: "Automated Tasks"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "System Insights"; color: #64748b; }
             
             Rectangle {
                 background: white;
@@ -99,14 +98,10 @@ export component SwarmMemory inherits Window {
                 
                 VerticalBox {
                     padding: 16px;
-                    spacing: 16px;
-
-                    VectorMemoryVisualizer {
-                        memories_saved: 142;
-                        memories_searched: 56;
-                    }
-
-                    Button { text: "What is AutoDream?"; clicked => { view_walkthrough(); } }
+                    spacing: 10px;
+                    Text { text: "[ Task Speed ]"; color: #64748b; horizontal-alignment: center; }
+                    Text { text: "[ Memory Viewer ]"; color: #64748b; horizontal-alignment: center; }
+                    Button { text: "View Walkthrough"; clicked => { view_walkthrough(); } }
                 }
             }
         }
