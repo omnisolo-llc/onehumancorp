@@ -137,6 +137,37 @@ func TestDelegateMission_GroundingPriority(t *testing.T) {
 	assert.Equal(t, `{"task":"do work"}`+"\n\n[SYSTEM GROUNDING]:\nAlways write clean code.", payload)
 }
 
+func TestDelegateMission_OmniContext_ArchitecturalResilience(t *testing.T) {
+	// A comprehensive test verifying the Omni-Context Sub-agent Routing feature's
+	// resilience and correct context injection under simulated chaotic conditions.
+	db, cleanup := setupSIPDB(t)
+	defer cleanup()
+
+	tempDir := t.TempDir()
+	err := os.WriteFile(filepath.Join(tempDir, "AGENTS.md"), []byte("Resilient Omni-Context instructions: Always apply Glassmorphism and Fail-Closed security."), 0644)
+	require.NoError(t, err)
+
+	sipdb := NewSIPDB(db)
+	sipdb.ContextRoot = tempDir
+
+	mission := &AgentMission{
+		ID:      "m_resilient",
+		Status:  "PENDING",
+		Payload: json.RawMessage(`{"task":"Scale K8s HPA"}`),
+	}
+
+	err = sipdb.DelegateMission(context.Background(), mission)
+	require.NoError(t, err)
+
+	var payload string
+	err = db.QueryRow("SELECT payload FROM agent_missions WHERE id = ?", "m_resilient").Scan(&payload)
+	require.NoError(t, err)
+
+	assert.Contains(t, payload, "[SYSTEM GROUNDING]")
+	assert.Contains(t, payload, "Resilient Omni-Context instructions: Always apply Glassmorphism")
+	assert.Contains(t, payload, `{"task":"Scale K8s HPA"}`)
+}
+
 func TestDelegateMission_MissingFiles(t *testing.T) {
 	db, cleanup := setupSIPDB(t)
 	defer cleanup()
