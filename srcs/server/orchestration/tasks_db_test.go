@@ -76,6 +76,55 @@ func TestSqliteTaskStore_CreateTask(t *testing.T) {
 	assert.Equal(t, task.Dependencies, savedTask.Dependencies)
 }
 
+func TestSqliteTaskStore_ClaimTask_WithDependencies(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+	ctx := context.Background()
+
+	parentTask := &SharedTask{
+		ID:             "parent-task",
+		OrganizationID: "org-deps",
+		Title:          "Parent Task",
+		Status:         "PENDING",
+	}
+	err := store.CreateTask(ctx, parentTask)
+	require.NoError(t, err)
+
+	deps, _ := json.Marshal([]string{"parent-task"})
+	childTask := &SharedTask{
+		ID:             "child-task",
+		OrganizationID: "org-deps",
+		Title:          "Child Task",
+		Status:         "PENDING",
+		Dependencies:   deps,
+	}
+	err = store.CreateTask(ctx, childTask)
+	require.NoError(t, err)
+
+	// Since parent is not COMPLETED, claim should grab the parent first
+	claimed1, err := store.ClaimTask(ctx, "org-deps", "agent-x")
+	require.NoError(t, err)
+	require.NotNil(t, claimed1)
+	assert.Equal(t, "parent-task", claimed1.ID)
+
+	// Another claim should return nothing because child is blocked
+	claimed2, err := store.ClaimTask(ctx, "org-deps", "agent-y")
+	require.NoError(t, err)
+	assert.Nil(t, claimed2, "Child should be blocked by pending parent")
+
+	// Complete parent
+	err = store.UpdateTaskStatus(ctx, "parent-task", "COMPLETED")
+	require.NoError(t, err)
+
+	// Now child is free
+	claimed3, err := store.ClaimTask(ctx, "org-deps", "agent-z")
+	require.NoError(t, err)
+	require.NotNil(t, claimed3)
+	assert.Equal(t, "child-task", claimed3.ID)
+}
+
 func TestSqliteTaskStore_ClaimTask(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
