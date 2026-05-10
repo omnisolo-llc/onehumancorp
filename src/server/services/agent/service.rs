@@ -43,7 +43,7 @@ impl MyAgentManagerService {
         let (total_cost, total_tokens, agent_costs_data) = cost_res;
 
         let mut agent_costs = Vec::new();
-        for (name, cost, _token_used, roi, efficiency) in agent_costs_data {
+        for (name, cost, _token_used, roi, efficiency, _storage) in agent_costs_data {
             let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
             agent_costs.push(AgentCostSummary {
                 name,

@@ -383,7 +383,7 @@ impl DashboardService for MyDashboardService {
         }
 
         let mut agent_summaries = Vec::new();
-        for (agent_id, cost_usd, tokens_used, roi, efficiency) in _agent_costs_data {
+        for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
             agent_summaries.push(crate::ohc::billing::AgentCostSummary {
                 agent_id,
                 cost_usd,
@@ -391,6 +391,7 @@ impl DashboardService for MyDashboardService {
                 roi,
                 efficiency,
                 pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
+                storage_usage_bytes: _storage,
             });
         }
 

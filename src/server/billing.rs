@@ -10,11 +10,12 @@ pub struct Tracker {
     rate_limiter: Option<Arc<RedisRateLimiter>>,
     pub stripe_client: Option<Arc<StripeClient>>,
     pub mercadopago_client: Option<Arc<MercadoPagoClient>>,
+    pub auditor: Option<Arc<crate::services::billing::auditor::CostAuditor>>,
 }
 
 impl Tracker {
     pub fn new() -> Self {
-        Tracker { rate_limiter: None, stripe_client: None, mercadopago_client: None }
+        Tracker { rate_limiter: None, stripe_client: None, mercadopago_client: None, auditor: None }
     }
 
     pub fn new_with_redis(redis_url: &str) -> Self {
@@ -27,14 +28,25 @@ impl Tracker {
                 rate_limiter: Some(Arc::new(RedisRateLimiter::new(client))),
                 stripe_client,
                 mercadopago_client: mercadopago_client.clone(),
+                auditor: None,
             }
         } else {
-            Tracker { rate_limiter: None, stripe_client, mercadopago_client }
+            Tracker { rate_limiter: None, stripe_client, mercadopago_client, auditor: None }
         }
     }
 
 
-    pub async fn track_storage_usage(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
+
+    pub fn set_auditor(&mut self, auditor: Arc<crate::services::billing::auditor::CostAuditor>) {
+        self.auditor = Some(auditor);
+    }
+
+    pub async fn track_storage_usage(&self, tenant_id: &str, delta_bytes: i64, agent_id: Option<&str>) -> Result<RateLimitStatus, String> {
+        if let Some(auditor) = &self.auditor {
+            if let Some(aid) = agent_id {
+                auditor.record_agent_storage(aid, delta_bytes);
+            }
+        }
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.check_storage_quota(tenant_id, delta_bytes).await {
                 Ok(status) => Ok(status),
