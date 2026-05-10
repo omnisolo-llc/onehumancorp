@@ -10,6 +10,15 @@ use ohc::orchestration::RegisterAgentRequest;
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::Agent;
 
+
+thread_local! {
+    static SLINT_UI_HANDLES: std::cell::RefCell<Vec<std::rc::Rc<dyn std::any::Any>>> = std::cell::RefCell::new(Vec::new());
+}
+
+pub fn keep_slint_ui_alive<T: 'static>(ui: T) {
+    SLINT_UI_HANDLES.with(|handles| handles.borrow_mut().push(std::rc::Rc::new(ui)));
+}
+
 pub fn get_tooltip_text(id: &str) -> slint::SharedString {
     static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
     let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
@@ -578,7 +587,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let _ = ui.show();
                             }
                         });
-                        Box::leak(Box::new(billing_ui));
+                        crate::keep_slint_ui_alive(billing_ui.clone_strong());
                                         let my_plan_handle_clone2 = my_plan_ui.as_weak();
                                         dashboard.on_action_failed(move |msg| {
                                             if msg.contains("Tier limit reached") {
@@ -848,7 +857,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let _ = ui.show();
                             }
                         });
-                        Box::leak(Box::new(billing_ui));
+                        crate::keep_slint_ui_alive(billing_ui.clone_strong());
                         let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
                         my_plan_ui.on_view_details(move || {
                             if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
@@ -1287,7 +1296,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     integrations_ui.on_invoke_tool(|id| {
         let _id_clone = id.to_string(); tokio::spawn(async move { });
     });
-    Box::leak(Box::new(integrations_ui));
+    crate::keep_slint_ui_alive(integrations_ui.clone_strong());
 
     let website_builder_ui = app::WebsiteBuilder::new()?;
     GLOBAL_WEBSITE_BUILDER.with(|g| *g.borrow_mut() = Some(website_builder_ui.as_weak()));
@@ -1790,6 +1799,151 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+
+    business_manager_ui.on_submit({
+        move |_, _, _, _, _, _| {
+            let mut completed = GLOBAL_ORDERS_COMPLETED.with(|g| *g.borrow());
+            completed += 1;
+            GLOBAL_ORDERS_COMPLETED.with(|g| *g.borrow_mut() = completed);
+
+            GLOBAL_DASHBOARD.with(|dash_ref| {
+                if let Some(ui) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
+                    if completed == 1 {
+                        ui.set_milestone_title("First Sale!".into());
+                        ui.set_milestone_message("You just got your first customer!".into());
+                        ui.set_show_milestone(true);
+                    } else if completed == 3 {
+                        ui.set_milestone_title("🎉 3rd Order!".into());
+                        ui.set_milestone_message("You completed 3 orders!".into());
+                        ui.set_show_milestone(true);
+                    } else if completed == 10 {
+                        ui.set_milestone_title("🎉 You just got your 10th order!".into());
+                        ui.set_milestone_message("Amazing! You've reached 10 orders.".into());
+                        ui.set_show_milestone(true);
+                    } else {
+                        ui.set_show_milestone(false);
+                    }
+                }
+            });
+        }
+    });
+
+
+    business_manager_ui.on_submit({
+        move |_, _, _, _, _, _| {
+            let mut completed = GLOBAL_ORDERS_COMPLETED.with(|g| *g.borrow());
+            completed += 1;
+            GLOBAL_ORDERS_COMPLETED.with(|g| *g.borrow_mut() = completed);
+
+            GLOBAL_DASHBOARD.with(|dash_ref| {
+                if let Some(ui) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
+                    if completed == 1 {
+                        ui.set_milestone_title("First Sale!".into());
+                        ui.set_milestone_message("You just got your first customer!".into());
+                        ui.set_show_milestone(true);
+                    } else if completed == 3 {
+                        ui.set_milestone_title("🎉 3rd Order!".into());
+                        ui.set_milestone_message("You completed 3 orders!".into());
+                        ui.set_show_milestone(true);
+                    } else if completed == 10 {
+                        ui.set_milestone_title("🎉 You just got your 10th order!".into());
+                        ui.set_milestone_message("Amazing! You've reached 10 orders.".into());
+                        ui.set_show_milestone(true);
+                    } else {
+                        ui.set_show_milestone(false);
+                    }
+                }
+            });
+        }
+    });
+
+
+    business_manager_ui.on_submit({
+        move |_, _, _, _, _, _| {
+            let mut completed = GLOBAL_ORDERS_COMPLETED.with(|g| *g.borrow());
+            completed += 1;
+            GLOBAL_ORDERS_COMPLETED.with(|g| *g.borrow_mut() = completed);
+
+            GLOBAL_DASHBOARD.with(|dash_ref| {
+                if let Some(ui) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
+                    if completed == 1 {
+                        ui.set_milestone_title("First Sale!".into());
+                        ui.set_milestone_message("You just got your first customer!".into());
+                        ui.set_show_milestone(true);
+                    } else if completed == 3 {
+                        ui.set_milestone_title("🎉 3rd Order!".into());
+                        ui.set_milestone_message("You completed 3 orders!".into());
+                        ui.set_show_milestone(true);
+                    } else if completed == 10 {
+                        ui.set_milestone_title("🎉 You just got your 10th order!".into());
+                        ui.set_milestone_message("Amazing! You've reached 10 orders.".into());
+                        ui.set_show_milestone(true);
+                    } else {
+                        ui.set_show_milestone(false);
+                    }
+                }
+            });
+        }
+    });
+
+
+    business_manager_ui.on_submit({
+        move |_, _, _, _, _, _| {
+            let mut completed = GLOBAL_ORDERS_COMPLETED.with(|g| *g.borrow());
+            completed += 1;
+            GLOBAL_ORDERS_COMPLETED.with(|g| *g.borrow_mut() = completed);
+
+            GLOBAL_DASHBOARD.with(|dash_ref| {
+                if let Some(ui) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
+                    if completed == 1 {
+                        ui.set_milestone_title("First Sale!".into());
+                        ui.set_milestone_message("You just got your first customer!".into());
+                        ui.set_show_milestone(true);
+                    } else if completed == 3 {
+                        ui.set_milestone_title("🎉 3rd Order!".into());
+                        ui.set_milestone_message("You completed 3 orders!".into());
+                        ui.set_show_milestone(true);
+                    } else if completed == 10 {
+                        ui.set_milestone_title("🎉 You just got your 10th order!".into());
+                        ui.set_milestone_message("Amazing! You've reached 10 orders.".into());
+                        ui.set_show_milestone(true);
+                    } else {
+                        ui.set_show_milestone(false);
+                    }
+                }
+            });
+        }
+    });
+
+
+    business_manager_ui.on_submit({
+        move |_, _, _, _, _, _| {
+            let mut completed = GLOBAL_ORDERS_COMPLETED.with(|g| *g.borrow());
+            completed += 1;
+            GLOBAL_ORDERS_COMPLETED.with(|g| *g.borrow_mut() = completed);
+
+            GLOBAL_DASHBOARD.with(|dash_ref| {
+                if let Some(ui) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
+                    if completed == 1 {
+                        ui.set_milestone_title("First Sale!".into());
+                        ui.set_milestone_message("You just got your first customer!".into());
+                        ui.set_show_milestone(true);
+                    } else if completed == 3 {
+                        ui.set_milestone_title("🎉 3rd Order!".into());
+                        ui.set_milestone_message("You completed 3 orders!".into());
+                        ui.set_show_milestone(true);
+                    } else if completed == 10 {
+                        ui.set_milestone_title("🎉 You just got your 10th order!".into());
+                        ui.set_milestone_message("Amazing! You've reached 10 orders.".into());
+                        ui.set_show_milestone(true);
+                    } else {
+                        ui.set_show_milestone(false);
+                    }
+                }
+            });
+        }
+    });
+
     business_manager_ui.on_action_archive({
         move |_id| {
 
@@ -1797,7 +1951,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let business_manager_handle = business_manager_ui.as_weak();
-    Box::leak(Box::new(business_manager_ui));
+    crate::keep_slint_ui_alive(business_manager_ui.clone_strong());
 
     let em_handle_for_gb = email_marketing_handle.clone();
     let business_manager_handle_for_gb = business_manager_handle.clone();
@@ -2897,7 +3051,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                Box::leak(Box::new(unified_inbox_ui));
+                crate::keep_slint_ui_alive(unified_inbox_ui.clone_strong());
 
                 let see_analytics_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let see_analytics_called_clone = see_analytics_called.clone();
@@ -3044,7 +3198,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = ui.show();
                     }
                 });
-                Box::leak(Box::new(billing_ui_inner));
+                crate::keep_slint_ui_alive(billing_ui_inner.clone_strong());
 
 
                                 dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| { crate::get_tooltip_text(id.as_str()) });
@@ -3337,12 +3491,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
         let _ = dashboard.show();
-                Box::leak(Box::new(dashboard));
+                crate::keep_slint_ui_alive(dashboard.clone_strong());
 
-                Box::leak(Box::new(my_plan_ui));
-                Box::leak(Box::new(cost_dashboard_ui));
-                Box::leak(Box::new(pricing_ui));
-                Box::leak(Box::new(welcome_checklist_ui.clone_strong()));
+                crate::keep_slint_ui_alive(my_plan_ui.clone_strong());
+                crate::keep_slint_ui_alive(cost_dashboard_ui.clone_strong());
+                crate::keep_slint_ui_alive(pricing_ui.clone_strong());
+                crate::keep_slint_ui_alive(welcome_checklist_ui.clone_strong());
             }
         }
     });
