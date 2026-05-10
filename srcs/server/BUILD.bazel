@@ -19,5 +19,6 @@ go_binary(
         "//srcs/server/telemetry:telemetry",
         "//srcs/server/api/mesh:mesh",
         "//srcs/server/dashboard:dashboard",
+        "//srcs/server/api/sync:sync",
     ],
 )
