@@ -51,11 +51,6 @@ func TestRecordTaskThroughput(t *testing.T) {
 	}
 }
 
-func TestGetDeploymentMode_Coverage(t *testing.T) {
-	mode := getDeploymentMode()
-	assert.NotEmpty(t, mode)
-}
-
 // Add coverage for initMetrics mode branch
 func TestInitMetrics_StandaloneBranch(t *testing.T) {
     // Save current values

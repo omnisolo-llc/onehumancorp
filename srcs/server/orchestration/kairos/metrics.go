@@ -96,11 +96,6 @@ func initMetrics() {
 	})
 }
 
-func getDeploymentMode() string {
-	initMetrics()
-	return deploymentMode
-}
-
 // RecordTaskQueueLength records the current length of the task queue for KAIROS
 func RecordTaskQueueLength(ctx context.Context, mode string, length int) error {
 	initMetrics()

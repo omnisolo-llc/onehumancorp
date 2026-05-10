@@ -16,6 +16,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("Failed to open database: %v", err)
 	}
+	db.SetMaxOpenConns(1)
 
 	_, err = db.Exec(`
 		CREATE TABLE tenants (
@@ -28,8 +29,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			status TEXT,
 			state TEXT,
 			created_at DATETIME,
-			updated_at DATETIME,
-			state TEXT
+			updated_at DATETIME
 		);
 		CREATE TABLE shared_tasks (
 			id TEXT PRIMARY KEY,
@@ -44,8 +44,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			parent_plan_id TEXT,
 			dependencies BLOB,
 			created_at DATETIME,
-			updated_at DATETIME,
-			state TEXT
+			updated_at DATETIME
 		);
 	`)
 	if err != nil {

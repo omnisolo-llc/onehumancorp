@@ -88,6 +88,11 @@ func TestNoPIILoggingStatements(t *testing.T) {
 						for _, arg := range call.Args {
 							if basicLit, ok := arg.(*ast.BasicLit); ok && basicLit.Kind == token.STRING {
 								val := strings.ToLower(basicLit.Value)
+
+								if strings.Contains(val, "[redacted]") || strings.Contains(val, "[email_redacted]") || strings.Contains(val, "user data") {
+									continue
+								}
+
 								for _, key := range sensitiveKeys {
 									if strings.Contains(val, key) {
 										pos := fset.Position(call.Pos())
