@@ -36,6 +36,13 @@ impl HybridFSMcpServer {
                 status: "active".to_string(),
             },
             McpToolProto {
+                id: "fs_search_files".to_string(),
+                name: "Search Files".to_string(),
+                description: "Search for files in a directory. Input schema: {\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"query\":{\"type\":\"string\"}}}".to_string(),
+                category: "filesystem".to_string(),
+                status: "active".to_string(),
+            },
+            McpToolProto {
                 id: "fs_hybrid_sync".to_string(),
                 name: "Hybrid Sync File".to_string(),
                 description: "Sync a file from local to cloud. Input schema: {\"type\":\"object\",\"properties\":{\"local_path\":{\"type\":\"string\"},\"cloud_path\":{\"type\":\"string\"}}}".to_string(),
@@ -90,6 +97,18 @@ impl HybridFSMcpServer {
                         Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
                     }
                     Err(e) => Err(tonic::Status::internal(format!("failed to list dir: {}", e))),
+                }
+            }
+            "fs_search_files" => {
+                let path = params["path"].as_str().ok_or_else(|| tonic::Status::invalid_argument("path is required"))?;
+                let query = params["query"].as_str().ok_or_else(|| tonic::Status::invalid_argument("query is required"))?;
+
+                match self.provider.search_files(path, query).await {
+                    Ok(entries) => {
+                        let resp = serde_json::json!({"entries": entries});
+                        Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
+                    }
+                    Err(e) => Err(tonic::Status::internal(format!("failed to search files: {}", e))),
                 }
             }
             "fs_hybrid_sync" => {
