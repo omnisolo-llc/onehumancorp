@@ -128,8 +128,11 @@ mod tests {
                 agent_id TEXT NOT NULL,
                 session_id TEXT NOT NULL,
                 violation_type TEXT NOT NULL,
-                details JSONB NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+                details TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                _sync_status TEXT DEFAULT 'pending',
+                version INTEGER DEFAULT 1
             );
             ALTER TABLE agent_violations ENABLE ROW LEVEL SECURITY;
             "#

@@ -56,9 +56,10 @@ impl HandoffManager {
                             "agent_memories" => {
                                 match &db_clone.store {
                                     DbStore::Postgres => {
-                                        if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES ($1, $2, $3, to_timestamp($4::double precision)) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
+                                        if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, updated_at) VALUES ($1, $2, $3, $4, to_timestamp($5::double precision)) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
                                             .bind(&handoff.state_id)
                                             .bind(&handoff.tenant_id)
+                                            .bind("")
                                             .bind(&handoff.serialized_state)
                                             .bind(handoff.timestamp)
                                             .execute(&db_clone.pool)
@@ -68,9 +69,10 @@ impl HandoffManager {
                                         }
                                     }
                                     DbStore::Sqlite(sqlite_pool) => {
-                                        if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES (?, ?, ?, datetime(?, 'unixepoch')) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
+                                        if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, updated_at) VALUES (?, ?, ?, ?, datetime(?, 'unixepoch')) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
                                             .bind(&handoff.state_id)
                                             .bind(&handoff.tenant_id)
+                                            .bind("")
                                             .bind(&handoff.serialized_state)
                                             .bind(handoff.timestamp)
                                             .execute(sqlite_pool)
@@ -181,7 +183,7 @@ mod tests {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BLOB, updated_at TIMESTAMP)")
+        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, task_id TEXT NOT NULL, raw_content BLOB NOT NULL, summary_embedding BLOB, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, _sync_status TEXT DEFAULT 'pending', version INTEGER DEFAULT 1, department TEXT, interaction_data TEXT DEFAULT '{}')")
             .execute(&pool)
             .await
             .unwrap();
@@ -280,7 +282,7 @@ mod tests {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, raw_content BLOB, updated_at TIMESTAMP)")
+        sqlx::query("CREATE TABLE agent_memories (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, task_id TEXT NOT NULL, raw_content BLOB NOT NULL, summary_embedding BLOB, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, _sync_status TEXT DEFAULT 'pending', version INTEGER DEFAULT 1, department TEXT, interaction_data TEXT DEFAULT '{}')")
             .execute(&pool)
             .await
             .unwrap();
@@ -417,13 +419,13 @@ mod tests {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, payload TEXT, updated_at TIMESTAMP)")
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, mission_id TEXT NOT NULL, parent_plan_id TEXT NOT NULL, dependencies TEXT NOT NULL DEFAULT '[]', title TEXT NOT NULL, description TEXT, assigned_agent_id TEXT, status TEXT NOT NULL DEFAULT 'PENDING', priority TEXT NOT NULL, payload TEXT NOT NULL DEFAULT '{}', locked_until TIMESTAMP, ultraplan_phase TEXT, deliberation_log TEXT NOT NULL DEFAULT '[]', depth INT, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, action_risk TEXT, approval_status TEXT, proposed_content TEXT)")
             .execute(&pool)
             .await
             .unwrap();
 
         // Insert a dummy task with an older timestamp to satisfy the UPDATE statement
-        sqlx::query("INSERT INTO shared_tasks_decomposition (id, payload, updated_at) VALUES ('task_123', 'old_payload', datetime('now', '-1 day'))")
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, organization_id, mission_id, parent_plan_id, title, priority, payload, updated_at) VALUES ('task_123', 'tenant_1', 'mission_1', 'parent_1', 'test_title', 'P1', 'old_payload', datetime('now', '-1 day'))")
             .execute(&pool)
             .await
             .unwrap();
