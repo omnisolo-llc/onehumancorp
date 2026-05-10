@@ -329,14 +329,14 @@ impl VectorRepository {
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -2610,5 +2610,57 @@ mod e2e_consolidation_tests {
         // but it must be deterministic and result in 1 remaining record.
         let results = repo.cross_department_search("org_edge", &v1, 10).await.unwrap();
         assert_eq!(results.len(), 1, "Only one record should remain after resolving identical-stat conflict");
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[tokio::test]
+    async fn test_cross_department_search_sqlite() {
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+
+        let v1 = vec![0.5; 1536];
+        let record = EmbeddingRecord {
+            id: "rec_cross_1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent_sales".to_string(),
+            content: "Sales context".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTES".to_string(),
+            created_at: Utc::now(),
+            last_referenced_at: Utc::now(),
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let results = repo.cross_department_search("org1", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].content, "Sales context");
     }
 }
