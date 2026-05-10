@@ -130,3 +130,25 @@ fn test_referrals_dashboard_lens_audit() {
     ui.invoke_generate_new_link();
     assert!(*generate_new_link_called.borrow(), "Generate new link callback must be triggered");
 }
+
+#[test]
+fn test_padding_layout_fixes_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    // 1. Business Manager
+    let business_manager_ui = app::BusinessManager::new().unwrap();
+    assert_eq!(business_manager_ui.get_test_title(), slint::SharedString::from("One Human Corp - Business Manager"));
+
+    // 2. Task List
+    let task_list_ui = app::TaskList::new().unwrap();
+    // Test instantiation without crashing
+
+    // 3. Unified Inbox
+    let unified_inbox_ui = app::UnifiedInbox::new().unwrap();
+    // Test instantiation without crashing
+
+    // 4. Website Builder
+    let website_builder_ui = app::WebsiteBuilder::new().unwrap();
+    // Test instantiation without crashing
+}

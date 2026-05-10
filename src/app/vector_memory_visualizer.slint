@@ -3,7 +3,6 @@ import { VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component VectorMemoryVisualizer inherits Window {
     background: rgba(255, 255, 255, 0.03);
-    padding: 16px;
 
     in-out property <int> memories_saved: 0;
     in-out property <int> memories_searched: 0;
@@ -26,9 +25,9 @@ export component VectorMemoryVisualizer inherits Window {
             GlassCard {
                 background: rgba(0, 0, 0, 0.2);
                 border-radius: 8px;
-                padding: 12px;
 
                 VerticalBox {
+                    padding: 12px;
                     spacing: 8px;
                     Text {
                         text: "Memories Saved";
@@ -56,9 +55,9 @@ export component VectorMemoryVisualizer inherits Window {
             GlassCard {
                 background: rgba(0, 0, 0, 0.2);
                 border-radius: 8px;
-                padding: 12px;
 
                 VerticalBox {
+                    padding: 12px;
                     spacing: 8px;
                     Text {
                         text: "Memories Searched";

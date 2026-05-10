@@ -76,17 +76,19 @@ export component TaskList inherits Window {
                                 Rectangle {}
                                 Rectangle {
                                     border-radius: 12px;
-                                    padding-left: 8px;
-                                    padding-right: 8px;
-                                    padding-top: 4px;
-                                    padding-bottom: 4px;
                                     background: t.status == "PENDING" ? #fef3c7 : (t.status == "IN_PROGRESS" ? #dbeafe : (t.status == "COMPLETED" ? #dcfce3 : #fce7f3));
-                                    Text {
-                                        text: t.status;
-                                        font-family: "Inter";
-                                        font-size: 12px;
-                                        font-weight: 600;
-                                        color: t.status == "PENDING" ? #b45309 : (t.status == "IN_PROGRESS" ? #1d4ed8 : (t.status == "COMPLETED" ? #15803d : #be123c));
+                                    HorizontalBox {
+                                        padding-left: 8px;
+                                        padding-right: 8px;
+                                        padding-top: 4px;
+                                        padding-bottom: 4px;
+                                        Text {
+                                            text: t.status;
+                                            font-family: "Inter";
+                                            font-size: 12px;
+                                            font-weight: 600;
+                                            color: t.status == "PENDING" ? #b45309 : (t.status == "IN_PROGRESS" ? #1d4ed8 : (t.status == "COMPLETED" ? #15803d : #be123c));
+                                        }
                                     }
                                 }
                             }

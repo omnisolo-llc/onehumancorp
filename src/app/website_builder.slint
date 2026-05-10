@@ -73,7 +73,7 @@ export component WebsiteBuilder inherits Window { // storefront
                         }
                         Text { text: "✨ Modern"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
                         Text { text: "Clean & Glassy"; font-family: "Inter"; font-size: 10px; color: #94a3b8; horizontal-alignment: center; }
-                        if (selected_template == "Modern") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use this template →"; color: white; font-family: "Inter"; font-size: 10px; font-weight: 700; horizontal-alignment: center; } }
+                        if (selected_template == "Modern") : Rectangle { background: #10b981; border-radius: 4px; HorizontalBox { padding: 4px; Text { text: "Use this template →"; color: white; font-family: "Inter"; font-size: 10px; font-weight: 700; horizontal-alignment: center; } } }
                     }
                     TouchArea { clicked => { selected_template = "Modern"; } }
                 }
@@ -87,7 +87,7 @@ export component WebsiteBuilder inherits Window { // storefront
                         }
                         Text { text: "🏛️ Classic"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
                         Text { text: "Elegant & Solid"; font-family: "Inter"; font-size: 10px; color: #94a3b8; horizontal-alignment: center; }
-                        if (selected_template == "Classic") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use this template →"; color: white; font-family: "Inter"; font-size: 10px; font-weight: 700; horizontal-alignment: center; } }
+                        if (selected_template == "Classic") : Rectangle { background: #10b981; border-radius: 4px; HorizontalBox { padding: 4px; Text { text: "Use this template →"; color: white; font-family: "Inter"; font-size: 10px; font-weight: 700; horizontal-alignment: center; } } }
                     }
                     TouchArea { clicked => { selected_template = "Classic"; } }
                 }
@@ -101,7 +101,7 @@ export component WebsiteBuilder inherits Window { // storefront
                         }
                         Text { text: "🔥 Bold"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
                         Text { text: "High Impact"; font-family: "Inter"; font-size: 10px; color: #94a3b8; horizontal-alignment: center; }
-                        if (selected_template == "Bold") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use this template →"; color: white; font-family: "Inter"; font-size: 10px; font-weight: 700; horizontal-alignment: center; } }
+                        if (selected_template == "Bold") : Rectangle { background: #10b981; border-radius: 4px; HorizontalBox { padding: 4px; Text { text: "Use this template →"; color: white; font-family: "Inter"; font-size: 10px; font-weight: 700; horizontal-alignment: center; } } }
                     }
                     TouchArea { clicked => {
                         if (plan_tier == "Free" || plan_tier == "Starter") {

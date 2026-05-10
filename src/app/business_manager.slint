@@ -85,20 +85,26 @@ export component BusinessManager inherits Window {
                                 Rectangle {
                                     background: rgba(255, 255, 255, 0.1);
                                     border-radius: 4px;
-                                    padding: 4px;
-                                    Text { text: prod.type_label; font-size: 12px; color: #cbd5e1; font-family: "Inter"; }
+                                    VerticalBox {
+                                        padding: 4px;
+                                        Text { text: prod.type_label; font-size: 12px; color: #cbd5e1; font-family: "Inter"; }
+                                    }
                                 }
                                 if (!prod.is_out_of_stock) : Rectangle {
                                     background: rgba(16, 185, 129, 0.1);
                                     border-radius: 4px;
-                                    padding: 4px;
-                                    Text { text: prod.inventory_count + " in stock"; font-size: 12px; color: #10b981; font-family: "Inter"; }
+                                    VerticalBox {
+                                        padding: 4px;
+                                        Text { text: prod.inventory_count + " in stock"; font-size: 12px; color: #10b981; font-family: "Inter"; }
+                                    }
                                 }
                                 if (prod.is_out_of_stock) : Rectangle {
                                     background: rgba(239, 68, 68, 0.2);
                                     border-radius: 4px;
-                                    padding: 4px;
-                                    Text { text: "⚠️ Out of Stock"; font-size: 12px; color: #ef4444; font-weight: 700; font-family: "Inter"; }
+                                    VerticalBox {
+                                        padding: 4px;
+                                        Text { text: "⚠️ Out of Stock"; font-size: 12px; color: #ef4444; font-weight: 700; font-family: "Inter"; }
+                                    }
                                 }
                             }
 
@@ -127,7 +133,7 @@ export component BusinessManager inherits Window {
             HorizontalBox {
                 alignment: start;
                 spacing: 8px;
-                Text { text: "What type of offering are you creating?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; vertical-alignment: center; } // Validation dummy comment
+                Text { text: "What type of offering are you creating?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; vertical-alignment: center; }
                 Button { text: "?"; width: 44px; height: 44px; clicked => { show_offering_hint = !show_offering_hint; } }
             }
             if (show_offering_hint) : Text {
