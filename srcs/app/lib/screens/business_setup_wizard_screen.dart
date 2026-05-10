@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:confetti/confetti.dart';
 
@@ -835,10 +838,10 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     initialValue: state.productPrice,
                     style: const TextStyle(color: Colors.white),
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: '0.00',
-                      prefixText: '\$ ',
-                      prefixStyle: TextStyle(color: Colors.white),
+                      prefixText: '${NumberFormat.simpleCurrency(locale: Localizations.localeOf(context).toString()).currencySymbol} ',
+                      prefixStyle: const TextStyle(color: Colors.white),
                       hintStyle: TextStyle(color: Colors.white24),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.all(15),
@@ -1003,6 +1006,17 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                       _showConfetti = true;
                     });
                     _confettiController.play();
+
+                    if (state.domainChoice != null) {
+                      final url = 'https://${state.domainChoice}';
+                      await Clipboard.setData(ClipboardData(text: url));
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Shareable link copied to clipboard!')),
+                        );
+                      }
+                    }
+
                     await Future.delayed(const Duration(seconds: 2));
                     await ref.read(wizardProvider.notifier).submitWizard();
                   },
