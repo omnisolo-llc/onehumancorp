@@ -1,9 +1,14 @@
 package onboarding
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"context"
 	"net/http"
+	"strings"
+	"os"
 )
 
 
@@ -112,15 +117,62 @@ func (h *APIHandler) HandleGetState(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
-// TenantAuthMiddleware extracts the X-Tenant-Id header and injects it into the request context.
-// In a real application, this would validate a session token, but this provides a secure extraction path.
+// TenantAuthMiddleware validates an OAuth/JWT access token from the Authorization header,
+// expecting a signed token to safely extract the tenant_id, replacing the insecure X-Tenant-Id header.
 func TenantAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	appKey := os.Getenv("JWT_SECRET")
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := r.Header.Get("X-Tenant-Id")
-		if tenantID == "" {
-			http.Error(w, "Missing X-Tenant-Id header", http.StatusUnauthorized)
+		if appKey == "" {
+			http.Error(w, "Server configuration error", http.StatusInternalServerError)
 			return
 		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			http.Error(w, "Missing or invalid Authorization header", http.StatusUnauthorized)
+			return
+		}
+
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		parts := strings.Split(token, ".")
+		if len(parts) != 3 {
+			http.Error(w, "Invalid JWT token format", http.StatusUnauthorized)
+			return
+		}
+
+		headerBase64 := parts[0]
+		payloadBase64 := parts[1]
+		signatureBase64 := parts[2]
+
+		mac := hmac.New(sha256.New, []byte(appKey))
+		mac.Write([]byte(headerBase64 + "." + payloadBase64))
+		expectedMac := mac.Sum(nil)
+
+		signature, err := base64.RawURLEncoding.DecodeString(signatureBase64)
+		if err != nil || !hmac.Equal(signature, expectedMac) {
+			http.Error(w, "Invalid token signature", http.StatusUnauthorized)
+			return
+		}
+
+		payloadBytes, err := base64.RawURLEncoding.DecodeString(payloadBase64)
+		if err != nil {
+			http.Error(w, "Invalid token payload", http.StatusUnauthorized)
+			return
+		}
+
+		var claims map[string]interface{}
+		if err := json.Unmarshal(payloadBytes, &claims); err != nil {
+			http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+			return
+		}
+
+		tenantID, ok := claims["tenant_id"].(string)
+		if !ok || tenantID == "" {
+			http.Error(w, "Missing tenant_id in token claims", http.StatusUnauthorized)
+			return
+		}
+
 		// Inject into context
 		ctx := context.WithValue(r.Context(), tenantContextKey, tenantID)
 		next.ServeHTTP(w, r.WithContext(ctx))
