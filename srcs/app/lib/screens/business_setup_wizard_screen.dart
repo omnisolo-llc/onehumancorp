@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:confetti/confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wizard_provider.dart';
 import '../main.dart'; // For GlassContainer
@@ -35,13 +33,10 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   late Animation<double> _pulseAnimation;
 
   bool _showWalkthrough = true;
-  late ConfettiController _confettiController;
-
 
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
     _heroAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -69,7 +64,6 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     _adminNameController.dispose();
     _adminEmailController.dispose();
     _adminPasswordController.dispose();
-    _confettiController.dispose();
     super.dispose();
   }
 
@@ -110,18 +104,6 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
               onPressed: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpCenterScreen()));
               },
-            ),
-          ),
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirection: 3.14 / 2, // PI / 2 (down)
-              maxBlastForce: 5,
-              minBlastForce: 2,
-              emissionFrequency: 0.05,
-              numberOfParticles: 50,
-              gravity: 0.1,
             ),
           ),
         ],
@@ -987,10 +969,6 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 child: ElevatedButton(
                   onPressed: () async {
                     await ref.read(wizardProvider.notifier).submitWizard();
-                    if (state.domainChoice != null) {
-                      Clipboard.setData(ClipboardData(text: 'https://${state.domainChoice}'));
-                    }
-                    _confettiController.play();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF22C55E),
@@ -1010,8 +988,6 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   }
 
   Widget _buildWelcomeChecklistScreen(WizardState state) {
-
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

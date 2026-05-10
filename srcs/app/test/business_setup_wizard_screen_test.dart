@@ -1,25 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/screens/business_setup_wizard_screen.dart';
 import 'package:app/providers/wizard_provider.dart';
 
 void main() {
   group('BusinessSetupWizardScreen Environment Tests', () {
-    setUp(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-        SystemChannels.platform,
-        (MethodCall methodCall) async {
-          if (methodCall.method == 'Clipboard.setData') {
-            return null;
-          }
-          return null;
-        },
-      );
-    });
-
     Future<void> navigateToStep4(WidgetTester tester) async {
       // 1. Welcome Screen
       final emailField = find.byKey(const Key('signupEmailField'));
@@ -259,19 +245,6 @@ void main() {
 
 
   group('BusinessSetupWizardScreen Flow Tests', () {
-    setUp(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-        SystemChannels.platform,
-        (MethodCall methodCall) async {
-          if (methodCall.method == 'Clipboard.setData') {
-            return null;
-          }
-          return null;
-        },
-      );
-    });
-
     testWidgets('Wizard progression and Welcome Checklist in Dashboard', (WidgetTester tester) async {
       await tester.pumpWidget(
         const ProviderScope(
