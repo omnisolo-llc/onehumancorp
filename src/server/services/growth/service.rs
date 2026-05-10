@@ -224,6 +224,9 @@ impl GrowthService for MyGrowthService {
     ) -> Result<Response<Referral>, Status> {
         let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
+        if req.id.is_empty() {
+            return Err(Status::invalid_argument("Missing ID"));
+        }
         
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
@@ -252,6 +255,9 @@ impl GrowthService for MyGrowthService {
     ) -> Result<Response<Referral>, Status> {
         let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
+        if req.id.is_empty() {
+            return Err(Status::invalid_argument("Missing ID"));
+        }
         
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
@@ -353,6 +359,9 @@ impl GrowthService for MyGrowthService {
         request: Request<GrowthIdRequest>,
     ) -> Result<Response<TeamInviteProto>, Status> {
         let req = request.into_inner();
+        if req.id.is_empty() {
+            return Err(Status::invalid_argument("Missing ID"));
+        }
         let mut invites = self.team_invites.write().unwrap();
         
         if let Some(inv) = invites.iter_mut().find(|i| i.id == req.id) {
@@ -580,5 +589,43 @@ mod tests {
         list_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
         let list_resp = service.get_referrals(list_req).await.unwrap().into_inner();
         assert!(list_resp.referrals.iter().any(|r| r.id == resp.id));
+    }
+}
+
+#[cfg(test)]
+mod missing_id_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_click_referral_missing_id() {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/ohc").unwrap();
+        let service = MyGrowthService::new(pool);
+        let mut req = Request::new(GrowthIdRequest { id: "".to_string() });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        let result = service.click_referral(req).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code(), tonic::Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn test_convert_referral_missing_id() {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/ohc").unwrap();
+        let service = MyGrowthService::new(pool);
+        let mut req = Request::new(GrowthIdRequest { id: "".to_string() });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        let result = service.convert_referral(req).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code(), tonic::Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn test_accept_team_invite_missing_id() {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/ohc").unwrap();
+        let service = MyGrowthService::new(pool);
+        let mut req = Request::new(GrowthIdRequest { id: "".to_string() });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        let result = service.accept_team_invite(req).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code(), tonic::Code::InvalidArgument);
     }
 }
