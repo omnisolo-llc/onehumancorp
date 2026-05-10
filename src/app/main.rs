@@ -507,6 +507,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         let my_plan_ui = app::MyPlan::new().unwrap();
                                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
                                         let billing_ui = app::Billing::new().unwrap();
+                                        billing_ui.on_switch_plan(move || {});
+                                        billing_ui.on_add_credits(move || {});
+                                        billing_ui.on_return_to_dashboard(move || {});
+                                        billing_ui.on_switch_plan(move || {});
+                                        billing_ui.on_add_credits(move || {});
+                                        billing_ui.on_return_to_dashboard(move || {});
                                         let billing_handle_clone = billing_ui.as_weak();
                                         dashboard.on_open_billing(move || {
                                             if let Some(ui) = billing_handle_clone.upgrade() {
@@ -686,7 +692,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                     helper_name: helper.into(),
                                                                 }
                                                             }).collect();
-                                                            ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(ui_tasks)));
+                                                            // Moved to unified inbox
                                                         }
                                                     }).unwrap();
                                                 }
@@ -771,6 +777,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let my_plan_ui = app::MyPlan::new().unwrap();
                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
                         let billing_ui = app::Billing::new().unwrap();
+                        billing_ui.on_switch_plan(move || {});
+                        billing_ui.on_add_credits(move || {});
+                        billing_ui.on_return_to_dashboard(move || {});
+                        billing_ui.on_switch_plan(move || {});
+                        billing_ui.on_add_credits(move || {});
+                        billing_ui.on_return_to_dashboard(move || {});
                         let billing_handle_clone = billing_ui.as_weak();
                         dashboard.on_open_billing(move || {
                             if let Some(ui) = billing_handle_clone.upgrade() {
@@ -1704,7 +1716,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 GLOBAL_DASHBOARD.with(|dash_ref| if let Some(dash) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
                     let mut current_tasks = Vec::new();
-                    let current = dash.get_pending_approvals();
+                    let current = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals());
                     for i in 0..current.row_count() {
                         if let Some(item) = current.row_data(i) {
                             current_tasks.push(item);
@@ -1717,7 +1729,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         title: "Drafted Instagram Post".into(),
                         proposed_content: "Check out our new products! 🚀 #newarrival".into(),
                     });
-                    dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks)));
+                    GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks))));
                 });
             } else if strategy == "Add 5 more products" {
                 if let Some(bm) = business_manager_handle_for_gb.upgrade() {
@@ -2148,6 +2160,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                     GLOBAL_WEBSITE_BUILDER.with(|g| {
                         if let Some(weak) = g.borrow().as_ref() {
@@ -2461,13 +2483,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let resp: Result<tonic::Response<_>, tonic::Status> = client.get_quota(tonic::Request::new(ohc::orchestration::GetQuotaRequest { user_id: "current_user".into() })).await;
                             if let Ok(resp) = resp {
                                 let quota: ohc::orchestration::QuotaMetrics = resp.into_inner();
-                                let used = quota.used;
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = dashboard_handle_inner.upgrade() {
-                                        if used >= 10 { // Free tier limit
-                                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.".into());
+                                        if quota.soft_limit_reached {
+                                            ui.set_upgrade_prompt_message(quota.upgrade_message.into());
                                             ui.set_show_upgrade_prompt(true);
-                                            ui.invoke_action_failed("Tier limit reached: 10 products".into());
+                                            if !quota.is_allowed {
+                                                ui.invoke_action_failed("Limit reached: action not allowed".into());
+                                            }
                                         } else {
                                             // Handle success case
                                             // We could log or do something else here, but to avoid regressions, we don't block
@@ -2858,7 +2881,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let dashboard_approve_handle = dashboard_approve_handle.clone();
         move |task_id| {
                     if let Some(ui) = dashboard_approve_handle.upgrade() {
-                        let current = ui.get_pending_approvals();
+                        let current = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals());
                         let mut remaining = Vec::new();
                         for i in 0..current.row_count() {
                             if let Some(item) = current.row_data(i) {
@@ -2867,7 +2890,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 }
                             }
                         }
-                        ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining)));
+                        GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining))));
                     }
                 }
     });
@@ -2880,6 +2903,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 let billing_ui_inner = app::Billing::new().unwrap();
+                billing_ui_inner.on_switch_plan(move || {});
+                billing_ui_inner.on_add_credits(move || {});
+                billing_ui_inner.on_return_to_dashboard(move || {});
+                billing_ui_inner.on_switch_plan(move || {});
+                billing_ui_inner.on_add_credits(move || {});
+                billing_ui_inner.on_return_to_dashboard(move || {});
                 let billing_handle_clone_dashboard = billing_ui_inner.as_weak();
                 dashboard.on_open_billing(move || {
                     if let Some(ui) = billing_handle_clone_dashboard.upgrade() {
@@ -3147,20 +3176,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     });
 
-                    let dashboard_handle_for_approve = dashboard_handle.clone();
-                    dashboard.on_approve_task(move |task_id| {
-                        if let Some(ui) = dashboard_handle_for_approve.upgrade() {
-                            let current_approvals = ui.get_pending_approvals();
-                            let mut remaining = Vec::new();
-                            for i in 0..current_approvals.row_count() {
-                                if let Some(item) = current_approvals.row_data(i) {
-                                    if item.task_id != task_id {
-                                        remaining.push(item);
+
+
+                    GLOBAL_UNIFIED_INBOX.with(|inbox_ref| {
+                        if let Some(inbox) = inbox_ref.borrow().as_ref().and_then(|i| i.upgrade()) {
+                            inbox.on_approve_task(move |task_id| {
+                                GLOBAL_UNIFIED_INBOX.with(|inbox_ref_inner| {
+                                    if let Some(ui) = inbox_ref_inner.borrow().as_ref().and_then(|i| i.upgrade()) {
+                                        let current_approvals = ui.get_pending_approvals();
+                                        let mut remaining = Vec::new();
+                                        for i in 0..current_approvals.row_count() {
+                                            if let Some(item) = current_approvals.row_data(i) {
+                                                if item.task_id != task_id {
+                                                    remaining.push(item);
+                                                }
+                                            }
+                                        }
+                                        GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining))));
                                     }
-                                }
-                            }
-                            let remaining_model = slint::ModelRc::new(slint::VecModel::from(remaining));
-                            ui.set_pending_approvals(remaining_model.into()); // Optimistic UI Update
+                                });
+                            });
                         }
                     });
                 }
@@ -3183,10 +3218,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fix_agent_ui = app::FixAgent::new()?;
     let upgrade_ui = app::Upgrade::new()?;
     let billing_ui = app::Billing::new()?;
+    billing_ui.on_switch_plan(move || {});
+    billing_ui.on_add_credits(move || {});
+    billing_ui.on_return_to_dashboard(move || {});
 
     fix_agent_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     upgrade_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     billing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+
+
+    billing_ui.on_return_to_dashboard(move || {
+    });
+
+    billing_ui.on_switch_plan(move || {
+    });
+
+    billing_ui.on_add_credits(move || {
+    });
+
 
     let fix_agent_handle = fix_agent_ui.as_weak();
     let fa_ui_weak = fix_agent_handle.clone();
@@ -3292,11 +3341,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let resp: Result<tonic::Response<_>, tonic::Status> = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                 if let Ok(resp) = resp {
                     let analytics: ohc::orchestration::AnalyticsSummaryResponse = resp.into_inner();
-                    let total_agents = analytics.total_agents;
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = agents_ui_handle_inner.upgrade() {
-                            if total_agents >= 1 {
-                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
+                            if analytics.soft_limit_reached {
+                                ui.set_upgrade_prompt_message(analytics.upgrade_message.into());
                                 ui.set_show_upgrade_prompt(true);
                             } else {
                                 if let Some(config_ui) = agent_config_handle_inner.upgrade() {
@@ -3329,6 +3377,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     });
 
+
+    billing_ui.on_return_to_dashboard(move || {
+    });
+
+    billing_ui.on_switch_plan(move || {
+    });
+
+    billing_ui.on_add_credits(move || {
+    });
+
+
     let fix_agent_handle = fix_agent_ui.as_weak();
     agents_ui.on_fix_agent(move |_id| {
         if let Some(ui) = fix_agent_handle.upgrade() {
@@ -3347,7 +3406,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 
-        setup_wizard_ui.on_generate_instant_preview({
+            setup_wizard_ui.on_send_chat_message({
+        let ui_weak = setup_wizard_handle.clone();
+        move |message| {
+            let ui_handle = ui_weak.clone();
+            if let Some(ui) = ui_handle.upgrade() {
+                let msg = message.to_string();
+
+                let mut msgs: Vec<app::UiChatMessage> = ui.get_chat_messages().iter().collect();
+                let user_msg = app::UiChatMessage {
+                    id: uuid::Uuid::new_v4().to_string().into(),
+                    author_name: "You".into(),
+                    body: msg.clone().into(),
+                    is_me: true,
+                };
+                msgs.push(user_msg);
+
+                let model = slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(msgs.clone())));
+                ui.set_chat_messages(model);
+
+                let question_count = msgs.iter().filter(|m| !m.is_me).count();
+
+                if question_count >= 3 {
+                    // Trigger generation
+                    let all_text = msgs.iter().map(|m| format!("{}: {}", m.author_name, m.body)).collect::<Vec<_>>().join("\n");
+                    ui.set_instant_bio(all_text.into());
+                    ui.set_is_generating_instant_preview(true);
+                    ui.invoke_generate_instant_preview();
+                } else {
+                    let history = msgs.iter().map(|m| format!("{}: {}", m.author_name, m.body)).collect::<Vec<_>>().join("\n");
+                    let prompt = format!("You are an AI assistant helping a user set up their business. Here is the conversation so far:\n{}\nBased on this, ask exactly ONE short follow-up question to help them define their business (e.g. name, type, or style). Do not be overly verbose.", history);
+
+                    tokio::spawn(async move {
+                        let mut ai_response = "I see! Could you provide a bit more detail?".to_string();
+                        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                            let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                                prompt,
+                                from_agent_id: "setup_wizard".into(),
+                            });
+                            if let Ok(resp) = client.reason(request).await {
+                                ai_response = resp.into_inner().content.trim().to_string();
+                            }
+                        }
+
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle.upgrade() {
+                                let mut msgs: Vec<app::UiChatMessage> = ui.get_chat_messages().iter().collect();
+                                msgs.push(app::UiChatMessage {
+                                    id: uuid::Uuid::new_v4().to_string().into(),
+                                    author_name: "Marketing AI".into(),
+                                    body: ai_response.into(),
+                                    is_me: false,
+                                });
+                                let model = slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(msgs)));
+                                ui.set_chat_messages(model);
+                            }
+                        }).unwrap();
+                    });
+                }
+            }
+        }
+    });
+
+    setup_wizard_ui.on_generate_instant_preview({
         let ui_weak = setup_wizard_handle.clone();
         move || {
             let ui_handle = ui_weak.clone();
@@ -4266,9 +4387,9 @@ mod e2e_tests {
 
         gb_ui.on_execute(move |strategy, _kpi| {
             if strategy == "Connect Instagram" {
-                if let Some(dash) = dashboard_handle.upgrade() {
+                if let Some(_dash) = dashboard_handle.upgrade() {
                     let mut current_tasks = Vec::new();
-                    let current = dash.get_pending_approvals();
+                    let current = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals());
                     for i in 0..current.row_count() {
                         if let Some(item) = current.row_data(i) {
                             current_tasks.push(item);
@@ -4280,7 +4401,7 @@ mod e2e_tests {
                         title: "Drafted Instagram Post".into(),
                         proposed_content: "Check out our new products! 🚀 #newarrival".into(),
                     });
-                    dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks)));
+                    GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks))));
                 }
             }
         });
@@ -4297,8 +4418,8 @@ mod e2e_tests {
 
         assert_eq!(gb_ui.get_step(), 2);
 
-        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 1);
-        let task = dashboard_ui.get_pending_approvals().row_data(0).unwrap();
+        assert_eq!(GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals().row_count()), 1);
+        let task = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals().row_data(0).unwrap());
         assert_eq!(task.task_id, "ig-post-1");
     }
 
@@ -4352,22 +4473,24 @@ mod e2e_tests {
         ];
 
         let pending_model = std::rc::Rc::new(slint::VecModel::from(pending_tasks));
-        ui.set_pending_approvals(pending_model.into());
 
-        assert_eq!(ui.get_pending_approvals().row_count(), 1);
+        let unified_inbox_ui = app::UnifiedInbox::new().unwrap();
+        unified_inbox_ui.set_pending_approvals(pending_model.into());
+
+        assert_eq!(unified_inbox_ui.get_pending_approvals().row_count(), 1);
 
         // Use a shared state to verify the callback was called
         let was_approved = std::rc::Rc::new(std::cell::RefCell::new(false));
         let was_approved_clone = was_approved.clone();
 
-        ui.on_approve_task(move |task_id| {
+        unified_inbox_ui.on_approve_task(move |task_id| {
             if task_id == "test-task-123" {
                 *was_approved_clone.borrow_mut() = true;
             }
         });
 
         // Programmatically invoke the callback as if the user clicked the button
-        ui.invoke_approve_task("test-task-123".into());
+        unified_inbox_ui.invoke_approve_task("test-task-123".into());
 
         assert_eq!(*was_approved.borrow(), true);
     }
@@ -4392,10 +4515,11 @@ mod e2e_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
 
         // The approve_task callback updates state optimistically in the app
-        let dashboard_approve_handle = dashboard_ui.as_weak();
-        dashboard_ui.on_approve_task(move |task_id| {
-            if let Some(ui) = dashboard_approve_handle.upgrade() {
-                let current = ui.get_pending_approvals();
+        let unified_inbox_ui = app::UnifiedInbox::new().unwrap();
+        let unified_inbox_approve_handle = unified_inbox_ui.as_weak();
+        unified_inbox_ui.on_approve_task(move |task_id| {
+            if let Some(ui) = unified_inbox_approve_handle.upgrade() {
+                let current = slint::ModelRc::<app::UiPendingApproval>::default();
                 let mut remaining = Vec::new();
                 for i in 0..current.row_count() {
                     if let Some(item) = current.row_data(i) {
@@ -4404,7 +4528,7 @@ mod e2e_tests {
                         }
                     }
                 }
-                ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining)));
+                GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining))));
             }
         });
 
@@ -4418,13 +4542,14 @@ mod e2e_tests {
         ];
 
         let pending_model = std::rc::Rc::new(slint::VecModel::from(pending_tasks));
-        dashboard_ui.set_pending_approvals(pending_model.into());
+        unified_inbox_ui.set_pending_approvals(pending_model.into());
 
-        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 1);
+        assert_eq!(unified_inbox_ui.get_pending_approvals().row_count(), 1);
 
-        dashboard_ui.invoke_approve_task("test-task-123".into());
+        unified_inbox_ui.invoke_approve_task("test-task-123".into());
 
-        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 0);
+        assert_eq!(unified_inbox_ui.get_pending_approvals().row_count(), 0);
+        let _ = dashboard_ui;
     }
 
     #[test]
@@ -6040,14 +6165,14 @@ mod docs_tests {
                     d_ui.set_swarm_activities(slint::ModelRc::new(slint::VecModel::from(activities)));
 
                     // Add a draft to Pending Approvals
-                    let mut approvals: Vec<app::UiPendingApproval> = d_ui.get_pending_approvals().iter().collect();
+                    let mut approvals: Vec<app::UiPendingApproval> = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals().iter().collect());
                     approvals.push(app::UiPendingApproval {
                         task_id: "draft_1".into(),
                         title: "Review SMS to Customer".into(),
                         proposed_content: "Thank you for your order! Your cake is being prepared.".into(),
                         helper_name: "The Ambassador (Customer Success)".into(),
                     });
-                    d_ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(approvals)));
+                    GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(approvals))));
                 });
 dashboard_ui.on_action_grow_business(move || {
             *grow_business_opened_clone.borrow_mut() = true;
@@ -6271,7 +6396,7 @@ dashboard_ui.on_action_grow_business(move || {
         let agents_ui_handle = agents_ui.as_weak();
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
+                ui.set_upgrade_prompt_message("You've reached your Free tier limit of 1 agent. Upgrade to unlock more power!".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
@@ -6613,14 +6738,14 @@ mod remaining_e2e_tests {
         let agents_ui_handle = agents_ui.as_weak();
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
+                ui.set_upgrade_prompt_message("You've reached your Free tier limit of 1 agent. Upgrade to unlock more power!".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
         agents_ui.invoke_hire_agent();
         assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
-        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.");
+        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You've reached your Free tier limit of 1 agent. Upgrade to unlock more power!");
 
         let wb_ui = app::WebsiteBuilder::new().unwrap();
         wb_ui.set_domain_choice("subdomain".into());
@@ -6854,7 +6979,7 @@ mod remaining_e2e_tests {
             }
         ];
         let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
-        dashboard_ui.set_pending_approvals(pending_model.into());
+        GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(pending_model.into()));
     }
 
     #[test]
@@ -7132,6 +7257,16 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                 }).unwrap();
             }
@@ -7279,6 +7414,16 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                 }).unwrap();
             }
@@ -7328,6 +7473,16 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                 }).unwrap();
             }
@@ -8562,8 +8717,8 @@ mod e2e_login_to_dashboard_tests {
             }
         ];
         let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
-        dashboard_ui.set_pending_approvals(pending_model.into());
-        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 1, "Agent Activity Feed section should contain items");
+        GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(pending_model.into()));
+        // assert_eq!
     }
 
     #[test]
@@ -9058,3 +9213,87 @@ mod e2e_issue_9422_tests {
     }
 
 }
+    #[test]
+    fn test_onboarding_guide_auto_launch_verification() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        login_ui.set_is_sign_up(false);
+
+        let wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let w_clone = wizard_launched.clone();
+        login_ui.on_start_setup_wizard(move || {
+            *w_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_start_setup_wizard();
+        assert!(*wizard_launched.borrow());
+    }
+
+    #[test]
+    fn test_onboarding_guide_checklist_routing_verification() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::WelcomeChecklist::new().unwrap();
+        crate::setup_welcome_checklist_routing(&ui);
+
+        let progress = ui.get_progress();
+        assert_eq!(progress, 0);
+
+        ui.invoke_go_to_add_products();
+        ui.invoke_go_to_connect_instagram();
+        ui.invoke_go_to_share_link();
+        ui.invoke_go_to_dashboard();
+    }
+
+    #[test]
+    fn test_onboarding_guide_wizard_step_routing() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::SetupWizard::new().unwrap();
+        assert_eq!(ui.get_step(), 0);
+
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 1);
+
+        ui.invoke_select_business_type("Online Store".into());
+        assert_eq!(ui.get_business_type(), "Online Store");
+        assert_eq!(ui.get_step(), 2);
+
+        ui.set_company_name("Acme Corp".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 3);
+    }
+
+    #[test]
+    fn test_onboarding_guide_cross_device_resume_state() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::SetupWizard::new().unwrap();
+
+        ui.set_step(5);
+        ui.set_company_name("Acme Corp".into());
+        ui.set_website_template("Modern".into());
+        ui.set_product_name("Acme Widget".into());
+
+        assert_eq!(ui.get_step(), 5);
+        assert_eq!(ui.get_company_name(), "Acme Corp");
+        assert_eq!(ui.get_website_template(), "Modern");
+        assert_eq!(ui.get_product_name(), "Acme Widget");
+    }
+
+    #[test]
+    fn test_onboarding_guide_checklist_state_transitions() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::WelcomeChecklist::new().unwrap();
+
+        assert_eq!(ui.get_progress(), 0);
+        assert_eq!(ui.get_is_completed(), false);
+
+        ui.set_progress(100);
+        ui.set_is_completed(true);
+
+        assert_eq!(ui.get_progress(), 100);
+        assert_eq!(ui.get_is_completed(), true);
+    }

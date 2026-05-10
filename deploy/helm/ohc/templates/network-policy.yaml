@@ -26,7 +26,7 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app.kubernetes.io/component: controller
+              app: {{ .Release.Name }}-backend
       ports:
         - protocol: TCP
           port: {{ .Values.backend.service.port }}
@@ -49,9 +49,12 @@ spec:
           port: 53
     - to:
         - ipBlock:
-            cidr: 0.0.0.0/0
+            cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
@@ -108,6 +111,9 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-backend
       ports:
         - protocol: TCP
           port: {{ .Values.ohcCore.service.port }}
@@ -130,9 +136,12 @@ spec:
           port: 53
     - to:
         - ipBlock:
-            cidr: 0.0.0.0/0
+            cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
@@ -157,6 +166,9 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-backend
       ports:
         - protocol: TCP
           port: {{ .Values.chatwoot.service.port }}
@@ -179,9 +191,12 @@ spec:
           port: 53
     - to:
         - ipBlock:
-            cidr: 0.0.0.0/0
+            cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
@@ -206,6 +221,9 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-backend
       ports:
         - protocol: TCP
           port: {{ .Values.powersync.service.targetPort }}
@@ -228,9 +246,12 @@ spec:
           port: 53
     - to:
         - ipBlock:
-            cidr: 0.0.0.0/0
+            cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32

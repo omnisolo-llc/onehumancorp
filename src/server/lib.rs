@@ -1186,6 +1186,18 @@ impl HubService for MyHubService {
 }
 
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize logging
+    let use_json = std::env::var("LOG_FORMAT").unwrap_or_default() == "json";
+
+    let subscriber = tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()));
+
+    if use_json {
+        subscriber.json().init();
+    } else {
+        subscriber.init();
+    }
+
     // Initialize database
     let db = Arc::new(db::DB::new().await?);
     db.run_migrations().await?;
@@ -1443,7 +1455,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
-    let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
+    let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
