@@ -87,10 +87,20 @@ export component Login inherits Window {
                     spacing: 8px;
                     alignment: center;
                     Text { width: 100%; wrap: word-wrap; text: verification_message; color: #10b981; horizontal-alignment: center; font-family: "Inter"; }
-                    Button {
+                    Rectangle {
+                        background: #38bdf8;
+                        border-radius: 4px;
                         height: 44px;
-                        text: "Resend Verification Email";
-                        clicked => { resend_verification(username); }
+                        width: 100%;
+                        TouchArea { clicked => { resend_verification(username); } }
+                        Text {
+                            text: "Resend Verification Email";
+                            color: white;
+                            horizontal-alignment: center;
+                            font-family: "Inter";
+                            font-weight: 700;
+                            font-size: 16px;
+                        }
                     }
                 }
 

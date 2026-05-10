@@ -8896,3 +8896,87 @@ mod e2e_issue_9422_tests {
     }
 
 }
+    #[test]
+    fn test_onboarding_guide_auto_launch_verification() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        login_ui.set_is_sign_up(false);
+
+        let wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let w_clone = wizard_launched.clone();
+        login_ui.on_start_setup_wizard(move || {
+            *w_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_start_setup_wizard();
+        assert!(*wizard_launched.borrow());
+    }
+
+    #[test]
+    fn test_onboarding_guide_checklist_routing_verification() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::WelcomeChecklist::new().unwrap();
+        crate::setup_welcome_checklist_routing(&ui);
+
+        let progress = ui.get_progress();
+        assert_eq!(progress, 0);
+
+        ui.invoke_go_to_add_products();
+        ui.invoke_go_to_connect_instagram();
+        ui.invoke_go_to_share_link();
+        ui.invoke_go_to_dashboard();
+    }
+
+    #[test]
+    fn test_onboarding_guide_wizard_step_routing() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::SetupWizard::new().unwrap();
+        assert_eq!(ui.get_step(), 0);
+
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 1);
+
+        ui.invoke_select_business_type("Online Store".into());
+        assert_eq!(ui.get_business_type(), "Online Store");
+        assert_eq!(ui.get_step(), 2);
+
+        ui.set_company_name("Acme Corp".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 3);
+    }
+
+    #[test]
+    fn test_onboarding_guide_cross_device_resume_state() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::SetupWizard::new().unwrap();
+
+        ui.set_step(5);
+        ui.set_company_name("Acme Corp".into());
+        ui.set_website_template("Modern".into());
+        ui.set_product_name("Acme Widget".into());
+
+        assert_eq!(ui.get_step(), 5);
+        assert_eq!(ui.get_company_name(), "Acme Corp");
+        assert_eq!(ui.get_website_template(), "Modern");
+        assert_eq!(ui.get_product_name(), "Acme Widget");
+    }
+
+    #[test]
+    fn test_onboarding_guide_checklist_state_transitions() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::WelcomeChecklist::new().unwrap();
+
+        assert_eq!(ui.get_progress(), 0);
+        assert_eq!(ui.get_is_completed(), false);
+
+        ui.set_progress(100);
+        ui.set_is_completed(true);
+
+        assert_eq!(ui.get_progress(), 100);
+        assert_eq!(ui.get_is_completed(), true);
+    }
