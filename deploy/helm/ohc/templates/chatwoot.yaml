@@ -81,6 +81,7 @@ spec:
   template:
     metadata:
       labels:
+        tenant: {{ .Release.Namespace }}
         app: {{ .Release.Name }}-chatwoot
     spec:
       containers:
@@ -169,6 +170,7 @@ spec:
   template:
     metadata:
       labels:
+        tenant: {{ .Release.Namespace }}
         app: {{ .Release.Name }}-chatwoot-worker
     spec:
       containers:

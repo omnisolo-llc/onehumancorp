@@ -11,6 +11,7 @@ spec:
   template:
     metadata:
       labels:
+        tenant: {{ .Release.Namespace }}
         app: {{ .Release.Name }}-powersync
     spec:
       containers:

@@ -165,3 +165,12 @@ kube-prometheus-stack:
         label: grafana_dashboard
         labelValue: "1"
 
+
+# Provide tenant labels to subcharts that support commonLabels or podLabels
+redis:
+  podLabels:
+    tenant: '{{ .Release.Namespace }}'
+
+cnpg:
+  podLabels:
+    tenant: '{{ .Release.Namespace }}'

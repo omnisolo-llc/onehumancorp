@@ -15,6 +15,7 @@ spec:
   template:
     metadata:
       labels:
+        tenant: {{ .Release.Namespace }}
         app: {{ .Release.Name }}-ohc-core
     spec:
       securityContext:

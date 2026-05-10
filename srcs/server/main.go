@@ -46,18 +46,22 @@ func main() {
         dsn = dbPath + "?_pragma_key=" + dbKey
     }
 
+	if dbPath != ":memory:" {
+		// Enforce secure file permissions for local standalone mode by explicitly creating
+		// the file with 0600 permissions *before* opening the SQLite connection
+		// to avoid TOCTOU (Time-of-Check Time-of-Use) race conditions.
+		file, err := os.OpenFile(dbPath, os.O_CREATE|os.O_RDWR, 0600)
+		if err != nil {
+			log.Fatalf("Failed to explicitly create secure SQLite database file: %v", err)
+		}
+		file.Close()
+	}
+
 	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 	defer db.Close()
-
-	if dbPath != ":memory:" {
-		// Enforce secure file permissions for local standalone mode
-		if err := os.Chmod(dbPath, 0600); err != nil {
-			log.Printf("Warning: Failed to set secure permissions on %s: %v", dbPath, err)
-		}
-	}
 
 	// Create memory_embeddings table
 	_, err = db.Exec(`
