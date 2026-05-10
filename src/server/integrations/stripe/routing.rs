@@ -113,4 +113,16 @@ mod extra_tests {
         // Savings: 290.30 - 5.00 = 285.30
         assert_eq!(PaymentRouter::calculate_fee_savings(10_000.0), 285.30);
     }
+
+    #[test]
+    fn test_zero_amount() {
+        assert_eq!(PaymentRouter::optimize_payment_method(0.0), PaymentMethod::CreditCard);
+        assert_eq!(PaymentRouter::calculate_fee_savings(0.0), 0.0);
+    }
+
+    #[test]
+    fn test_negative_amount() {
+        assert_eq!(PaymentRouter::optimize_payment_method(-10.0), PaymentMethod::CreditCard);
+        assert_eq!(PaymentRouter::calculate_fee_savings(-10.0), 0.0);
+    }
 }
