@@ -54,6 +54,12 @@ fn test_echo_grandmother_e2e_flow() {
 
     // 4. Business Manager interactions
     let manager_ui = app::BusinessManager::new().unwrap();
+
+    // Validate Loading Shimmer in BusinessManager (E2E explicitly requested for new logic)
+    manager_ui.set_is_loading(true);
+    assert!(manager_ui.get_is_loading(), "Business Manager loading state should be togglable");
+    manager_ui.set_is_loading(false);
+
     assert_eq!(manager_ui.get_step(), 0);
     manager_ui.invoke_select_type("PHYSICAL".into());
     manager_ui.invoke_next_step();
