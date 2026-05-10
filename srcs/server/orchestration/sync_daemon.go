@@ -379,7 +379,7 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 
 	for _, id := range taskIDs {
 		// Check cloud DB
-		cloudTask, err := cloudDB.GetTask(ctx, id)
+		cloudTask, err := cloudDB.GetTask(ctx, id, localTask.OrganizationID)
 		if err != nil {
 			if err != sql.ErrNoRows {
 				log.Printf("Error getting task from cloud DB: %v", err)

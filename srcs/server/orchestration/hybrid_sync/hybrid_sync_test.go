@@ -71,7 +71,7 @@ func TestSyncLocalToCloud(t *testing.T) {
 	err = localStore.CreateTask(ctx, mission)
 	require.NoError(t, err)
 
-	savedLocalMission, err := localStore.GetTask(ctx, mission.ID)
+	savedLocalMission, err := localStore.GetTask(ctx, mission.ID, mission.OrganizationID)
 	require.NoError(t, err)
 	assert.NotNil(t, savedLocalMission)
 
