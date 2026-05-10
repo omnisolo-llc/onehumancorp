@@ -38,6 +38,11 @@ func (t *AuditSyncTool) SyncAuditLogsToCloud(ctx context.Context, payloadStr str
 		return fmt.Errorf("failed to unmarshal data: %w", err)
 	}
 
+	sessionTenantID, _ := ctx.Value("tenant_id").(string)
+	if sessionTenantID != "" {
+		payload.TenantID = sessionTenantID
+	}
+
 	if payload.TenantID == "" || payload.AgentID == "" || payload.Action == "" || payload.Resource == "" || payload.Status == "" {
 		return fmt.Errorf("invalid data: missing required fields")
 	}

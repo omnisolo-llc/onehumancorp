@@ -27,10 +27,6 @@ func (m *MockHarness) RunAttempt(cmd string) (*harness.AttemptResult, error) {
     }, nil
 }
 
-func (m *MockHarness) Compact() error {
-    return nil
-}
-
 func (m *MockHarness) Reset() error {
     return nil
 }

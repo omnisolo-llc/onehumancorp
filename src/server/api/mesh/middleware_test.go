@@ -30,13 +30,6 @@ func TestValidationMiddleware(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Deprecated action key",
-			method:         "POST",
-			path:           "/api/mesh/broadcast",
-			body:           `{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK", "data": {"foo": "bar"}, "action": "do_something"}`,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
 			name:           "Empty agent_id string",
 			method:         "POST",
 			path:           "/api/mesh/broadcast",

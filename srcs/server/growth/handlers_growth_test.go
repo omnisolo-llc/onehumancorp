@@ -2,6 +2,7 @@ package growth
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -29,6 +30,9 @@ func TestHandleReferralClick(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	ctx := context.WithValue(req.Context(), "tenant_id", "test-tenant-1")
+	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(svc.HandleReferralClick)
@@ -62,6 +66,9 @@ func TestHandleReferralConvert(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	ctx := context.WithValue(req.Context(), "tenant_id", "test-tenant-1")
+	req = req.WithContext(ctx)
+
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(svc.HandleReferralConvert)
 	handler.ServeHTTP(rr, req)
@@ -93,6 +100,9 @@ func TestHandleTeamInviteAccept(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	ctx := context.WithValue(req.Context(), "tenant_id", "test-tenant-2")
+	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(svc.HandleTeamInviteAccept)
