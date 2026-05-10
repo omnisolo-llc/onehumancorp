@@ -1,6 +1,6 @@
 module github.com/spencerconnaughton/rules_flutter/gazelle
 
-go 1.24.0
+go 1.22.0
 
 require (
 	github.com/bazelbuild/bazel-gazelle v0.36.0
