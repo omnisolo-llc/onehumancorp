@@ -430,8 +430,15 @@ impl Store {
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
             let header = jsonwebtoken::decode_header(_token).map_err(|e| e.to_string())?;
             if header.alg == jsonwebtoken::Algorithm::RS256 {
-                let oidc_cfg = self.oidc_cfg.read().unwrap();
-                return crate::oidc::validate_oidc_token(_token, &*oidc_cfg).await;
+                let oidc_cfg_converted = {
+                    let oidc_cfg = self.oidc_cfg.read().unwrap();
+                    crate::oidc::OIDCConfig {
+                        issuer_url: oidc_cfg.issuer_url.clone(),
+                        client_id: oidc_cfg.client_id.clone(),
+                        enabled: oidc_cfg.enabled,
+                    }
+                };
+                return crate::oidc::validate_oidc_token(_token, &oidc_cfg_converted).await;
             }
 
             let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
