@@ -408,86 +408,91 @@ export component Dashboard inherits Window { // milestones
             height: 44px;
             clicked => { action_manage_my_ai_team(); }
         }
+
+        // Spacer for Bottom Navigation
+        Rectangle { height: 100px; }
     }
 }
 
-    // Floating Action Button (Bottom)
+    // Mobile Bottom Navigation
     Rectangle {
         y: parent.height - 80px;
-        x: parent.width - 80px;
-        width: 60px;
-        height: 60px;
-        background: #8b5cf6;
-        border-radius: 30px;
-        drop-shadow-blur: 10px;
+        width: parent.width;
+        height: 80px;
+        background: rgba(13, 13, 26, 0.6);
+        border-color: rgba(255, 255, 255, 0.1);
+        border-width: 1px;
+        drop-shadow-blur: 20px;
         drop-shadow-color: rgba(0, 0, 0, 0.5);
+        z: 900;
 
-        Text {
-            text: "+";
-            color: white;
-            font-size: 32px;
-            font-weight: 700;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-        }
+        HorizontalBox {
+            alignment: space-around;
+            padding: 8px;
 
-        TouchArea {
-            clicked => {
-                // We'll map this floating action button to add product for now
-                action_add_product();
-            }
-        }
-    }
-
-    // Floating Create Post & Share Store (Bottom Left quick actions)
-    HorizontalBox {
-        y: parent.height - 80px;
-        x: 20px;
-        spacing: 16px;
-
-        Rectangle {
-            width: 60px;
-            height: 60px;
-            background: #3b82f6;
-            border-radius: 30px;
-            drop-shadow-blur: 10px;
-            drop-shadow-color: rgba(0, 0, 0, 0.5);
-
-            Text {
-                text: "✍️";
-                color: white;
-                font-size: 24px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
-
-            TouchArea {
-                clicked => {
-                    action_open_social_posting();
+            // 1. Add Product
+            Rectangle {
+                width: 60px;
+                background: transparent;
+                VerticalBox {
+                    alignment: center;
+                    spacing: 4px;
+                    Text { text: "➕"; font-size: 24px; horizontal-alignment: center; }
+                    Text { text: "Add"; font-size: 10px; font-family: "Inter"; color: white; horizontal-alignment: center; }
                 }
-            }
-        }
-
-        Rectangle {
-            width: 60px;
-            height: 60px;
-            background: #10b981; // Emerald
-            border-radius: 30px;
-            drop-shadow-blur: 10px;
-            drop-shadow-color: rgba(0, 0, 0, 0.5);
-
-            Text {
-                text: "🔗";
-                color: white;
-                font-size: 24px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+                TouchArea { clicked => { action_add_product(); } }
             }
 
-            TouchArea {
-                clicked => {
-                    action_share_store();
+            // 2. View Orders
+            Rectangle {
+                width: 60px;
+                background: transparent;
+                VerticalBox {
+                    alignment: center;
+                    spacing: 4px;
+                    Text { text: "📦"; font-size: 24px; horizontal-alignment: center; }
+                    Text { text: "Orders"; font-size: 10px; font-family: "Inter"; color: white; horizontal-alignment: center; }
                 }
+                TouchArea { clicked => { action_view_orders(); } }
+            }
+
+            // 3. Check Messages
+            Rectangle {
+                width: 60px;
+                background: transparent;
+                VerticalBox {
+                    alignment: center;
+                    spacing: 4px;
+                    Text { text: "💬"; font-size: 24px; horizontal-alignment: center; }
+                    Text { text: "Messages"; font-size: 10px; font-family: "Inter"; color: white; horizontal-alignment: center; }
+                }
+                TouchArea { clicked => { action_check_messages(); } }
+            }
+
+            // 4. See Analytics
+            Rectangle {
+                width: 60px;
+                background: transparent;
+                VerticalBox {
+                    alignment: center;
+                    spacing: 4px;
+                    Text { text: "📊"; font-size: 24px; horizontal-alignment: center; }
+                    Text { text: "Analytics"; font-size: 10px; font-family: "Inter"; color: white; horizontal-alignment: center; }
+                }
+                TouchArea { clicked => { action_see_analytics(); } }
+            }
+
+            // 5. Share Store
+            Rectangle {
+                width: 60px;
+                background: transparent;
+                VerticalBox {
+                    alignment: center;
+                    spacing: 4px;
+                    Text { text: "🔗"; font-size: 24px; horizontal-alignment: center; }
+                    Text { text: "Share"; font-size: 10px; font-family: "Inter"; color: white; horizontal-alignment: center; }
+                }
+                TouchArea { clicked => { action_share_store(); } }
             }
         }
     }
