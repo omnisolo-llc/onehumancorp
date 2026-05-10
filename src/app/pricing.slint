@@ -127,7 +127,7 @@ export component Pricing inherits Window {
         if (step == 0) : VerticalBox {
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Raw Configuration JSON"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                Text { text: "Current Setup"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                 LineEdit { placeholder-text: "{\"current_usage\": \"" + current_usage + "\"}"; }
             }
             spacing: 16px;
@@ -209,7 +209,7 @@ export component Pricing inherits Window {
         if (step == 1) : VerticalBox {
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Developer: Override Tier Rules"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                Text { text: "Custom Tier Rules"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                 LineEdit { placeholder-text: "[\"allow_custom_domains\"]"; }
             }
             spacing: 16px;
