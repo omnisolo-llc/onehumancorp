@@ -102,3 +102,65 @@ fn test_mission_dashboard_today_sales_check() {
     ui.set_todays_sales("$500".into());
     assert_eq!(ui.get_todays_sales(), "$500");
 }
+
+#[test]
+fn test_mission_env_wizard_ux() {
+    crate::ui_tests::init();
+    let login_ui = app::Login::new().unwrap();
+    login_ui.invoke_login("test@test.com".into(), "password".into());
+    let ui = app::EnvWizard::new().unwrap();
+    ui.invoke_next_step();
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 2);
+    ui.invoke_next_step();
+    assert_eq!(ui.get_step(), 3);
+}
+
+#[test]
+fn test_mission_login_error_ux() {
+    crate::ui_tests::init();
+    let ui = app::Login::new().unwrap();
+    ui.set_error_message("Invalid credentials".into());
+    let action_invoked = Rc::new(RefCell::new(false));
+    let action_invoked_clone = action_invoked.clone();
+    ui.on_open_settings(move || { *action_invoked_clone.borrow_mut() = true; });
+    ui.invoke_open_settings();
+    assert!(*action_invoked.borrow(), "Settings action failed when error is present");
+}
+
+#[test]
+fn test_mission_login_toggle_ux() {
+    crate::ui_tests::init();
+    let ui = app::Login::new().unwrap();
+    let action_invoked = Rc::new(RefCell::new(false));
+    let action_invoked_clone = action_invoked.clone();
+    ui.on_login(move |_, _| { *action_invoked_clone.borrow_mut() = true; });
+    ui.invoke_login("u1".into(), "p1".into());
+    assert!(*action_invoked.borrow(), "Login action failed");
+}
+
+#[test]
+fn test_mission_dashboard_my_store_ux() {
+    crate::ui_tests::init();
+    let login_ui = app::Login::new().unwrap();
+    login_ui.invoke_login("test@test.com".into(), "password".into());
+    let ui = app::Dashboard::new().unwrap();
+    let action_invoked = Rc::new(RefCell::new(false));
+    let action_invoked_clone = action_invoked.clone();
+    ui.on_action_add_product(move || { *action_invoked_clone.borrow_mut() = true; });
+    ui.invoke_action_add_product();
+    assert!(*action_invoked.borrow(), "Add Product action failed");
+}
+
+#[test]
+fn test_mission_business_manager_ux() {
+    crate::ui_tests::init();
+    let login_ui = app::Login::new().unwrap();
+    login_ui.invoke_login("test@test.com".into(), "password".into());
+    let ui = app::BusinessManager::new().unwrap();
+    let action_invoked = Rc::new(RefCell::new(false));
+    let action_invoked_clone = action_invoked.clone();
+    ui.on_close(move || { *action_invoked_clone.borrow_mut() = true; });
+    ui.invoke_close();
+    assert!(*action_invoked.borrow(), "Close action failed");
+}

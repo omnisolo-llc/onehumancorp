@@ -118,26 +118,26 @@ export component EnvWizard inherits Window {
                 if (step == 2) : VerticalBox {
                     spacing: 16px;
                     Text {
-                        text: "AI Provider Configuration";
+                        text: "Connect AI Services";
                         font-family: "Outfit";
                         font-size: 20px;
                         color: white;
                     }
                     Text {
-                        text: "Provide your API keys to enable AI agent features.";
+                        text: "Connect your AI accounts to enable smart features for your business.";
                         font-family: "Inter";
                         font-size: 16px;
                         color: #94A3B8;
                         wrap: word-wrap;
                     }
 
-                    Text { text: "OpenAI API Key (Optional)"; color: white; font-family: "Inter"; }
+                    Text { text: "Connect OpenAI (Optional)"; color: white; font-family: "Inter"; }
                     PasswordInput {
                         text <=> openai_key;
                         placeholder-text: "sk-...";
                     }
 
-                    Text { text: "Anthropic API Key (Optional)"; color: white; font-family: "Inter"; }
+                    Text { text: "Connect Anthropic (Optional)"; color: white; font-family: "Inter"; }
                     PasswordInput {
                         text <=> anthropic_key;
                         placeholder-text: "sk-ant-...";
