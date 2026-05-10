@@ -177,26 +177,14 @@ func (d *AutoDreamDaemon) upsertMemory(ctx context.Context, id string, orgID str
 		}
 	}
 
-	var query string
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		query = `
-			INSERT INTO consolidated_memory (id, organization_id, agent_id, task_id, content, embedding, source_type)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
-			ON CONFLICT(id) DO UPDATE SET
-				content = excluded.content,
-				embedding = excluded.embedding
-		`
-		_, err = tx.ExecContext(ctx, query, id, orgID, agentID, taskID, content, string(embedding), "autodream")
-	} else {
-		query = `
-			INSERT INTO consolidated_memory (id, organization_id, agent_id, task_id, content, embedding, source_type)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-			ON CONFLICT(id) DO UPDATE SET
-				content = excluded.content,
-				embedding = excluded.embedding
-		`
-		_, err = tx.ExecContext(ctx, query, id, orgID, agentID, taskID, content, string(embedding), "autodream")
-	}
+	query := `
+		INSERT INTO consolidated_memory (id, organization_id, agent_id, task_id, content, embedding, source_type)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT(id) DO UPDATE SET
+			content = excluded.content,
+			embedding = excluded.embedding
+	`
+	_, err = tx.ExecContext(ctx, query, id, orgID, agentID, taskID, content, string(embedding), "autodream")
 	if err != nil {
 		return err
 	}
