@@ -2130,6 +2130,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let my_plan_handle = my_plan_ui.as_weak();
 
     let pricing_ui = app::Pricing::new().unwrap();
+        pricing_ui.on_save_state(|| {});
     let pricing_handle_fetch = pricing_ui.as_weak();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -3203,6 +3204,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ui.set_is_advanced(val);
         }
     }));
+
+    let pricing_ui = app::Pricing::new()?;
+
+    let pricing_handle_adv = pricing_ui.as_weak();
+    let pr_ui_weak = pricing_handle_adv.clone();
+    add_advanced_listener(Box::new(move |val| {
+        if let Some(ui) = pr_ui_weak.upgrade() {
+            ui.set_is_advanced(val);
+        }
+    }));
+
+    pricing_ui.on_save_state({
+        let ui_handle = pricing_handle_adv.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+                let state = std::collections::HashMap::from([
+                    ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
+                    ("step".to_string(), ui.get_step().to_string()),
+                ]);
+                #[cfg(not(target_arch = "wasm32"))]
+                tokio::spawn(async move {
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                        let _ = client.save_wizard_state(request).await;
+                    }
+                });
+            }
+        }
+    });
+
+
 
     let billing_handle = billing_ui.as_weak();
     let bi_ui_weak = billing_handle.clone();
@@ -4614,6 +4647,7 @@ mod tests {
         login.invoke_login("test@ohc.com".into(), "password".into());
 
         let pricing = app::Pricing::new().unwrap();
+        pricing.on_save_state(|| {});
         let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let plan_selected_clone = plan_selected.clone();
         pricing.on_select_plan(move |plan| *plan_selected_clone.borrow_mut() = plan.to_string());
@@ -4634,6 +4668,7 @@ mod tests {
     fn test_e2e_cost_transparency_flow_4() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let pricing = app::Pricing::new().unwrap();
+        pricing.on_save_state(|| {});
         pricing.set_is_annual(false);
         let toggle_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let toggle_clone = toggle_called.clone();
@@ -7115,6 +7150,7 @@ mod remaining_e2e_tests {
         my_plan_ui.invoke_download_invoice();
 
         let pricing_ui = app::Pricing::new().unwrap();
+        pricing_ui.on_save_state(|| {});
     let pricing_handle_fetch = pricing_ui.as_weak();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -7262,6 +7298,7 @@ mod remaining_e2e_tests {
         assert!(*upgrade_opened.borrow(), "Upgrade should be opened from MyPlan");
 
         let pricing_ui = app::Pricing::new().unwrap();
+        pricing_ui.on_save_state(|| {});
     let pricing_handle_fetch = pricing_ui.as_weak();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -7311,6 +7348,7 @@ mod remaining_e2e_tests {
         assert!(*login_successful.borrow(), "User login should be successful");
 
         let pricing_ui = app::Pricing::new().unwrap();
+        pricing_ui.on_save_state(|| {});
     let pricing_handle_fetch = pricing_ui.as_weak();
     tokio::spawn(async move {
         if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -8383,6 +8421,7 @@ mod additional_pricing_tests {
     fn test_e2e_cost_transparency_flow_12_add_credits() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let pricing = app::Pricing::new().unwrap();
+        pricing.on_save_state(|| {});
 
         let pricing_handle_add_credits = pricing.as_weak();
         pricing.on_add_credits(move || {
@@ -8399,6 +8438,7 @@ mod additional_pricing_tests {
     fn test_e2e_cost_transparency_flow_11_step_transition() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let pricing = app::Pricing::new().unwrap();
+        pricing.on_save_state(|| {});
         assert_eq!(pricing.get_step(), 0);
         pricing.set_step(1);
         assert_eq!(pricing.get_step(), 1);
@@ -8408,6 +8448,7 @@ mod additional_pricing_tests {
     fn test_e2e_cost_transparency_flow_9_projected_cost() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let pricing = app::Pricing::new().unwrap();
+        pricing.on_save_state(|| {});
         pricing.set_projected_cost("$15.00 / month".into());
         assert_eq!(pricing.get_projected_cost(), "$15.00 / month");
     }
@@ -8416,6 +8457,7 @@ mod additional_pricing_tests {
     fn test_e2e_cost_transparency_flow_10_usage_progress() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let pricing = app::Pricing::new().unwrap();
+        pricing.on_save_state(|| {});
         pricing.set_usage_progress(0.75);
         assert_eq!(pricing.get_usage_progress(), 0.75);
     }
@@ -8426,6 +8468,7 @@ mod additional_pricing_tests {
     fn test_e2e_cost_transparency_flow_6_starter_price() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let pricing = app::Pricing::new().unwrap();
+        pricing.on_save_state(|| {});
         pricing.set_is_annual(false);
         assert_eq!(pricing.get_tiers().row_data(1).unwrap().price, "$9/mo");
         pricing.set_is_annual(true);
@@ -8436,6 +8479,7 @@ mod additional_pricing_tests {
     fn test_e2e_cost_transparency_flow_7_pro_price() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let pricing = app::Pricing::new().unwrap();
+        pricing.on_save_state(|| {});
         pricing.set_is_annual(false);
         assert_eq!(pricing.get_tiers().row_data(2).unwrap().price, "$29/mo");
         pricing.set_is_annual(true);
@@ -8446,6 +8490,7 @@ mod additional_pricing_tests {
     fn test_e2e_cost_transparency_flow_8_business_price() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let pricing = app::Pricing::new().unwrap();
+        pricing.on_save_state(|| {});
         pricing.set_is_annual(false);
         assert_eq!(pricing.get_tiers().row_data(3).unwrap().price, "$79/mo");
         pricing.set_is_annual(true);
