@@ -47,7 +47,10 @@ func isSensitiveKeyLocal(key string) bool {
 		strings.Contains(k, "bank") ||
 		strings.Contains(k, "account") ||
 		strings.Contains(k, "stripe") ||
-		strings.Contains(k, "billing")
+		strings.Contains(k, "billing") ||
+		strings.Contains(k, "ip_address") ||
+		strings.Contains(k, "mac_address") ||
+		strings.Contains(k, "geolocation")
 }
 
 func isEmailLocal(s string) bool {
