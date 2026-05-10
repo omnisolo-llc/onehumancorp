@@ -16,7 +16,7 @@ export component SetupWizard inherits Window {
     min-width: 375px;
     preferred-width: 400px;
     height: 800px;
-    title: "Setup Wizard";
+    title: "Setup Wizard"; // Functional Verification
 
     in-out property <int> step: 0;
 
@@ -431,14 +431,14 @@ export component SetupWizard inherits Window {
                         }
                         Rectangle {
                             height: 60px;
-                            background: website_template == "Modern" ? white : (website_template == "Classic" ? #f1f5f9 : (website_template == "Bold" ? #7e22ce : #334155));
+                            background: website_template == "✨ Modern" ? white : (website_template == "Classic" ? #f1f5f9 : (website_template == "Bold" ? #7e22ce : #334155));
                             border-radius: 4px;
                             VerticalBox {
                                 alignment: center;
                                 Text {
                                     text: company_name;
                                     color: website_template == "Bold" ? white : black;
-                                    font-family: website_template == "Modern" ? "Inter" : "Outfit";
+                                    font-family: website_template == "✨ Modern" ? "Inter" : "Outfit";
                                     horizontal-alignment: center;
                                 }
                             }
@@ -448,12 +448,12 @@ export component SetupWizard inherits Window {
 
                 GlassCard {
                     height: 80px;
-                    background: website_template == "Modern" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    background: website_template == "✨ Modern" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
                         Text { text: "✨ Modern"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Clean, minimal design perfect for " + company_name; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
-                    TouchArea { clicked => { select_template("Modern"); save_state(); } }
+                    TouchArea { clicked => { select_template("✨ Modern"); save_state(); } }
                 }
                 GlassCard {
                     height: 80px;
