@@ -16,50 +16,6 @@ import (
 var ErrTokenBudgetExceeded = errors.New("token budget exceeded")
 var ErrCircuitBreakerOpen = errors.New("circuit breaker is open")
 
-// CircuitBreaker state management
-type CircuitBreaker struct {
-	mu           sync.Mutex
-	failureCount int
-	lastFailure  time.Time
-	threshold    int
-	timeout      time.Duration
-}
-
-func NewCircuitBreaker(threshold int, timeout time.Duration) *CircuitBreaker {
-	return &CircuitBreaker{
-		threshold: threshold,
-		timeout:   timeout,
-	}
-}
-
-func (cb *CircuitBreaker) Allow() bool {
-	cb.mu.Lock()
-	defer cb.mu.Unlock()
-
-	if cb.failureCount >= cb.threshold {
-		if time.Since(cb.lastFailure) > cb.timeout {
-			// Half-open state
-			cb.failureCount = 0
-			return true
-		}
-		return false
-	}
-	return true
-}
-
-func (cb *CircuitBreaker) RecordFailure() {
-	cb.mu.Lock()
-	defer cb.mu.Unlock()
-	cb.failureCount++
-	cb.lastFailure = time.Now()
-}
-
-func (cb *CircuitBreaker) RecordSuccess() {
-	cb.mu.Lock()
-	defer cb.mu.Unlock()
-	cb.failureCount = 0
-}
-
 // SubAgentSpawner defines the interface for spawning and monitoring sub-agents.
 type SubAgentSpawner interface {
 	Spawn(ctx context.Context, task *SharedTask) error
@@ -71,7 +27,6 @@ type DefaultSubAgentSpawner struct {
 	mesh      MeshTransport
 	isSQLite  bool
 	semaphore chan struct{}
-	cb        *CircuitBreaker
 }
 
 // NewDefaultSubAgentSpawner creates a new instance of DefaultSubAgentSpawner.
@@ -87,7 +42,6 @@ func NewDefaultSubAgentSpawner(mesh MeshTransport, isSQLite bool, maxConcurrency
 		mesh:      mesh,
 		isSQLite:  isSQLite,
 		semaphore: sem,
-		cb:        NewCircuitBreaker(3, 30*time.Second), // 3 failures, 30s timeout
 	}
 }
 
@@ -113,7 +67,7 @@ func (s *DefaultSubAgentSpawner) Spawn(ctx context.Context, task *SharedTask) er
 
 // runSubAgent simulates the sub-agent execution with retries and heartbeats.
 func (s *DefaultSubAgentSpawner) runSubAgent(ctx context.Context, task *SharedTask) {
-	if !s.cb.Allow() {
+	if !globalCB.Allow() {
 		s.broadcastLifecycleEvent(ctx, task.ID, "SUB_AGENT_PAUSED")
 		return
 	}
@@ -128,12 +82,12 @@ func (s *DefaultSubAgentSpawner) runSubAgent(ctx context.Context, task *SharedTa
 		cancel()
 
 		if err == nil {
-			s.cb.RecordSuccess()
+			globalCB.RecordResult(nil)
 			s.broadcastLifecycleEvent(ctx, task.ID, "SUB_AGENT_COMPLETED")
 			return
 		}
 
-		s.cb.RecordFailure()
+		globalCB.RecordResult(err)
 
 		// When LLM API is unavailable or runs out of tokens, we PAUSE instead of FAIL immediately.
 		// If it's just a normal error and we've reached max attempts, we also pause to allow owner intervention.

@@ -24,9 +24,11 @@ go_test(
         "harness_metrics_test.go",
         "local_buffer_test.go",
         "pii_test.go",
+        "buffer_integration_test.go",
     ],
     embed = [":telemetry"],
     deps = [
         "@com_github_mattn_go_sqlite3//:go_sqlite3",
+        "@com_github_stretchr_testify//assert:go_default_library",
     ],
 )

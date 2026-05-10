@@ -108,9 +108,14 @@ func TestSubAgentWorker_Poll_Failure(t *testing.T) {
 
 	worker := NewSubAgentWorker(db, sm, spawner)
 
+	// Override RetryBackoffDuration so the test runs quickly
+	oldBackoff := RetryBackoffDuration
+	RetryBackoffDuration = 10 * time.Millisecond
+	defer func() { RetryBackoffDuration = oldBackoff }()
+
 	worker.Poll(context.Background())
 
-	// Wait for async processing
+	// Wait for async processing + retries
 	time.Sleep(100 * time.Millisecond)
 
 	// Verify job status

@@ -36,6 +36,36 @@ func (f *faultInjectingCloudDB) UpdateTaskStatus(ctx context.Context, id string,
 	return nil
 }
 
+type faultInjectingCloudDBCircuitBreaker struct {
+	PostgresTaskStore
+	fails   bool
+	retries int
+}
+
+func (f *faultInjectingCloudDBCircuitBreaker) CreateTask(ctx context.Context, task *SharedTask) error {
+	if f.fails {
+		f.retries++
+		return errors.New("simulated network failure")
+	}
+	return nil
+}
+
+func (f *faultInjectingCloudDBCircuitBreaker) GetTask(ctx context.Context, id string) (*SharedTask, error) {
+	if f.fails {
+		f.retries++
+		return nil, errors.New("simulated network failure")
+	}
+	return &SharedTask{ID: id, Status: "DONE"}, nil
+}
+
+func (f *faultInjectingCloudDBCircuitBreaker) UpdateTaskStatus(ctx context.Context, id string, status string) error {
+	if f.fails {
+		f.retries++
+		return errors.New("simulated network failure")
+	}
+	return nil
+}
+
 func TestChaosSyncDaemonNetworkFailure(t *testing.T) {
 	localDB := setupSyncTestDB(t)
 	defer localDB.Close()
@@ -94,6 +124,35 @@ func TestChaosSyncDaemonDegradation(t *testing.T) {
 	localTask, err := localStore.GetTask(context.Background(), "task-chaos-2")
 	assert.NoError(t, err)
 	assert.Equal(t, "CLOUD_PROCESSING", localTask.Status)
+}
+
+func TestChaosSyncDaemonCircuitBreakerRetries(t *testing.T) {
+	localDB := setupSyncTestDB(t)
+	defer localDB.Close()
+
+	localStore := NewSqliteTaskStore(localDB)
+	cloudStore := &faultInjectingCloudDBCircuitBreaker{fails: true}
+
+	task := &SharedTask{
+		ID:             "task-chaos-circuit",
+		OrganizationID: "org-chaos",
+		Title:          "Chaos Task Circuit",
+		Status:         "CLOUD_ESCALATION",
+	}
+
+	err := localStore.CreateTask(context.Background(), task)
+	assert.NoError(t, err)
+
+	err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_ESCALATION")
+	assert.NoError(t, err)
+
+	err = syncPendingEscalations(context.Background(), localStore, cloudStore)
+	assert.NoError(t, err)
+
+	// We expect the sync pending escalations to try but fail
+    // It only tries once per sync daemon run right now. We verify the failure doesn't crash it.
+	// The actual retries are implemented in SubAgentWorker via RunWithTimeoutAndRetry
+	assert.True(t, cloudStore.retries > 0)
 }
 
 func TestChaosStressVerification(t *testing.T) {

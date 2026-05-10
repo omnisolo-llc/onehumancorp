@@ -118,7 +118,7 @@ func (w *SubAgentWorker) processJob(ctx context.Context, jobID, taskID string) {
 	// Inform state machine that job is running
 	_ = w.sm.ProcessEvent(ctx, taskID, EventDecompositionComplete)
 
-	err := w.spawner.SpawnIsolated(ctx, job)
+	err := RunWithTimeoutAndRetry(ctx, job, w.spawner)
 
 	duration := time.Since(start).Seconds()
 	meter := otel.Meter("subagent_worker")
