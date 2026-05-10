@@ -147,7 +147,7 @@ fn test_new_integrations_present() {
     let invoked_clone = invoked.clone();
 
     ui.on_configure_integration(move |name| {
-        if name == "Ayrshare" || name == "Listmonk" || name == "EasyPost" || name == "Jitsi" || name == "Cal.com" || name == "Mercado Pago" || name == "Twilio" {
+        if name == "Ayrshare" || name == "Listmonk" || name == "EasyPost" || name == "Jitsi" || name == "Cal.com" || name == "Mercado Pago" || name == "Twilio" || name == "Meta" {
             *invoked_clone.borrow_mut() = true;
         }
     });
