@@ -17,7 +17,7 @@ func TestParityNullHandling(t *testing.T) {
 
 	task := &SharedTask{
 		OrganizationID: "org-parity",
-		Title:          "Parity Task",
+		Title:          "Parity Task fixed",
 	}
 
 	err := store.CreateTask(context.Background(), task)
@@ -46,7 +46,7 @@ func TestParityGetTask(t *testing.T) {
 	sqliteStore := NewSqliteTaskStore(sqliteDB)
 	task := &SharedTask{
 		OrganizationID: "org-parity",
-		Title:          "Parity Task",
+		Title:          "Parity Task fixed",
 	}
 
 	err := sqliteStore.CreateTask(context.Background(), task)
@@ -64,7 +64,7 @@ func TestParityTimezone(t *testing.T) {
 
 	task := &SharedTask{
 		OrganizationID: "org-parity",
-		Title:          "Parity Task",
+		Title:          "Parity Task fixed",
 	}
 	err := store.CreateTask(context.Background(), task)
 	require.NoError(t, err)
