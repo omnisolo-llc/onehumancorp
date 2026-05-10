@@ -481,7 +481,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 // If they haven't reached step 10, they need to complete the wizard.
                                 if let Some(step) = state.get("step") {
                                     if let Ok(s) = step.parse::<i32>() {
-                                        if s < 10 {
+                                        if s < 100 {
                                             needs_wizard = true;
                                         }
                                     } else {
@@ -751,7 +751,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                 let state = inner.state;
                                 if let Some(step) = state.get("step") {
                                     if let Ok(s) = step.parse::<i32>() {
-                                        if s < 10 {
+                                        if s < 100 {
                                             needs_wizard = true;
                                         }
                                     } else {
@@ -4067,7 +4067,7 @@ mod growth_e2e_tests {
 
                         if let Some(step) = state.get("step") {
                             if let Ok(s) = step.parse::<i32>() {
-                                if s < 10 {
+                                if s < 100 {
                                     needs_wizard = true;
                                 }
                             } else {
@@ -4198,7 +4198,7 @@ mod growth_e2e_tests {
 
                         if let Some(step) = state.get("step") {
                             if let Ok(s) = step.parse::<i32>() {
-                                if s < 10 {
+                                if s < 100 {
                                     needs_wizard = true;
                                 }
                             } else {
