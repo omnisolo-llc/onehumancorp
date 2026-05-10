@@ -26,7 +26,6 @@ func setupTestDB(t *testing.T) *sql.DB {
 			category TEXT,
 			description TEXT,
 			status TEXT,
-			state TEXT,
 			created_at DATETIME,
 			updated_at DATETIME
 		);
