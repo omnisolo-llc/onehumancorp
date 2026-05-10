@@ -15,6 +15,9 @@ echo -e "${BOLD}${CYAN}      OHC: Local Standalone Desktop Runtime           ${R
 echo -e "${BOLD}${BLUE}======================================================${RESET}"
 echo ""
 
+# Enforce strict local permissions to prevent unauthorized access
+umask 077
+
 # Export optimized variables for the local footprint
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false

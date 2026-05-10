@@ -407,14 +407,23 @@ impl Store {
     }
 
     pub fn issue_token(&self, _user: &User) -> Result<String, String> {
+        let is_thin_client = std::env::var("OHC_SOURCE_MODE").unwrap_or_default() == "thin_client";
+
         #[cfg(not(test))]
         {
-            // ZERO SECRETS ENFORCEMENT:
-            // JWT generation via static symmetric secrets is disabled.
-            // Authentication relies exclusively on SPIFFE/SPIRE for identity validation.
-            return Err("Zero Secrets constraint: Static JWT issuance is permanently disabled. Use SPIFFE/SPIRE context.".to_string());
+            if !is_thin_client {
+                // ZERO SECRETS ENFORCEMENT:
+                // JWT generation via static symmetric secrets is disabled.
+                // Authentication relies exclusively on SPIFFE/SPIRE for identity validation.
+                return Err("Zero Secrets constraint: Static JWT issuance is permanently disabled. Use SPIFFE/SPIRE context.".to_string());
+            }
         }
-        #[cfg(test)]
+
+        let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "secret".to_string());
+        if secret == "secret" && is_thin_client {
+            return Err("JWT_SECRET must be set for Thin Client mode. Static JWT issuance requires a secure cryptographic secret.".to_string());
+        }
+
         {
             let now = chrono::Utc::now();
             let claims = Claims {
@@ -438,14 +447,23 @@ impl Store {
     }
 
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
+        let is_thin_client = std::env::var("OHC_SOURCE_MODE").unwrap_or_default() == "thin_client";
+
         #[cfg(not(test))]
         {
-            // ZERO SECRETS ENFORCEMENT:
-            // Static JWT validation is disabled.
-            // OHC strictly requires SPIFFE/SPIRE mTLS identities.
-            return Err("Zero Secrets constraint: Static JWT validation is disabled.".to_string());
+            if !is_thin_client {
+                // ZERO SECRETS ENFORCEMENT:
+                // Static JWT validation is disabled.
+                // OHC strictly requires SPIFFE/SPIRE mTLS identities.
+                return Err("Zero Secrets constraint: Static JWT validation is disabled.".to_string());
+            }
         }
-        #[cfg(test)]
+
+        let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "secret".to_string());
+        if secret == "secret" && is_thin_client {
+            return Err("JWT_SECRET must be set for Thin Client mode. Static JWT validation requires a secure cryptographic secret.".to_string());
+        }
+
         {
             let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
             let token_data = jsonwebtoken::decode::<Claims>(
@@ -1033,5 +1051,39 @@ mod isolation_tests {
         if let Err(status) = res {
             assert!(status.code() == tonic::Code::InvalidArgument || status.code() == tonic::Code::Unauthenticated);
         }
+    }
+
+    #[tokio::test]
+    async fn test_thin_client_auth_success() {
+        let s = Store::new();
+        let u = s.create_user("thin-user".to_string(), "thin@test.com".to_string(), "thinpass1".to_string(), vec![ROLE_OPERATOR.to_string()], "".to_string()).unwrap();
+
+        // Using unsafe to modify environment since temp_env::async_with_vars requires features not currently available in our bazel setup
+        unsafe {
+            std::env::set_var("OHC_SOURCE_MODE", "thin_client");
+            std::env::set_var("JWT_SECRET", "super_secure_test_secret_for_thin_client_testing_only_do_not_use");
+        }
+
+        let token_res = s.issue_token(&u);
+        assert!(token_res.is_ok(), "Thin client with proper secret should be allowed to issue token");
+
+        let token = token_res.unwrap();
+        let validate_res = s.validate_token(&token).await;
+        assert!(validate_res.is_ok(), "Thin client with proper secret should validate tokens");
+    }
+
+    #[tokio::test]
+    async fn test_thin_client_auth_fails_without_secret() {
+        let s = Store::new();
+        let u = s.create_user("thin-user2".to_string(), "thin2@test.com".to_string(), "thinpass2".to_string(), vec![ROLE_OPERATOR.to_string()], "".to_string()).unwrap();
+
+        unsafe {
+            std::env::set_var("OHC_SOURCE_MODE", "thin_client");
+            std::env::remove_var("JWT_SECRET");
+        }
+
+        let token_res = s.issue_token(&u);
+        assert!(token_res.is_err(), "Thin client without a set secret must fail to issue token to prevent test key usage in prod");
+        assert!(token_res.unwrap_err().contains("secure cryptographic secret"));
     }
 }
