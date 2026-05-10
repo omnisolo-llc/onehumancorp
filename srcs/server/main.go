@@ -46,15 +46,6 @@ func main() {
 		if err := os.Chmod(dbPath, 0600); err != nil {
 			log.Printf("Warning: Failed to set secure permissions on %s: %v", dbPath, err)
 		}
-
-		// Ensure encryption is applied
-		sqliteKey := os.Getenv("OHC_SQLITE_KEY")
-		if sqliteKey != "" {
-			_, err = db.Exec("PRAGMA key = '" + sqliteKey + "'")
-			if err != nil {
-				log.Printf("Warning: Failed to execute PRAGMA key for encryption: %v", err)
-			}
-		}
 	}
 
 	// Create memory_embeddings table

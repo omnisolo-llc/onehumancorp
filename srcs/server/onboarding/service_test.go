@@ -18,7 +18,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 	}
 
 	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS tenants (
+		CREATE TABLE tenants (
 			id TEXT PRIMARY KEY,
 			owner_email TEXT,
 			tier TEXT,
@@ -26,11 +26,10 @@ func setupTestDB(t *testing.T) *sql.DB {
 			category TEXT,
 			description TEXT,
 			status TEXT,
-			state TEXT,
 			created_at DATETIME,
 			updated_at DATETIME
 		);
-		CREATE TABLE IF NOT EXISTS shared_tasks (
+		CREATE TABLE shared_tasks (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT,
 			title TEXT,

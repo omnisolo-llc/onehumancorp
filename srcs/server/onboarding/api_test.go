@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -15,16 +14,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 )
-
-func generateTestJWT(tenantID string) string {
-	payload := map[string]string{
-		"organization_id": tenantID,
-	}
-	payloadBytes, _ := json.Marshal(payload)
-	payloadB64 := base64.RawURLEncoding.EncodeToString(payloadBytes)
-
-	return "header." + payloadB64 + ".signature"
-}
 
 func TestAPIEndToEndFlow(t *testing.T) {
 	db := setupTestDB(t)
@@ -73,9 +62,7 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	// 3. Poll Status
 	req1, err := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
 	assert.NoError(t, err)
-
-	testJWT := generateTestJWT(startRes.TenantID)
-	req1.Header.Set("Authorization", "Bearer " + testJWT)
+	req1.Header.Set("X-Tenant-Id", startRes.TenantID)
 	statusResp, err := http.DefaultClient.Do(req1)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp.StatusCode)
@@ -95,7 +82,7 @@ func TestAPIEndToEndFlow(t *testing.T) {
 
 	// 5. Poll Status Again
 	req2, _ := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
-	req2.Header.Set("Authorization", "Bearer " + testJWT)
+	req2.Header.Set("X-Tenant-Id", startRes.TenantID)
 	statusResp2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp2.StatusCode)
