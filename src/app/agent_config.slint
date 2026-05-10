@@ -49,7 +49,7 @@ export component AgentConfig inherits Window {
         if (step == 0) : VerticalBox {
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Developer: Raw Config Override"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                Text { text: "Advanced: Settings Override"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                 LineEdit { placeholder-text: "{ \"agent_id\": \"override-123\" }"; }
             }
             spacing: 20px;
@@ -138,7 +138,7 @@ export component AgentConfig inherits Window {
         if (step == 1) : VerticalBox {
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Developer: Capability API Scope (JSON)"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                Text { text: "Advanced: What this helper can do"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                 LineEdit { placeholder-text: "[\"read:messages\", \"write:messages\"]"; text <=> api_scope_override; }
             }
             spacing: 16px;
@@ -166,7 +166,7 @@ export component AgentConfig inherits Window {
         if (step == 2) : VerticalBox {
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Developer: Cron Expression Override"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                Text { text: "Advanced: Schedule Override"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                 LineEdit { placeholder-text: "0 * * * *"; text <=> cron_override; }
             }
             spacing: 20px;
@@ -188,7 +188,7 @@ export component AgentConfig inherits Window {
         if (step == 3) : VerticalBox {
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Developer: Raw Activation Payload (JSON)"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                Text { text: "Advanced: Startup Data"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                 LineEdit { placeholder-text: "{\"agent_id\":\"" + selected_agent + "\",\"config\":{}}"; text <=> raw_activation_payload; }
             }
             spacing: 16px;
