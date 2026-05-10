@@ -45,6 +45,7 @@ func NewPostgresTaskStore(db *sql.DB) *PostgresTaskStore {
 }
 
 func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string, agentID string) (*SharedTask, error) {
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
