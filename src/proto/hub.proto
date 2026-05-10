@@ -118,6 +118,10 @@ message MeshEvent {
   int64 timestamp = 4;
 }
 
+message PublishMeshEventRequest {
+  MeshEvent event = 1;
+}
+
 // TeammateMeshEvent for rich payload task broadcasting
 message TeammateMeshEvent {
   string agent_id = 1;
@@ -245,6 +249,7 @@ service HubService {
   rpc AdvertiseCapabilities(AgentCapabilities) returns (PublishMessageResponse);
   rpc DiscoverAgents(Query) returns (stream AgentCapabilities);
   rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
+  rpc PublishMeshEvent(PublishMeshEventRequest) returns (PublishMessageResponse);
   rpc PublishTeammateMeshEvent(PublishTeammateMeshEventRequest) returns (PublishMessageResponse);
   rpc StreamTeammateMesh(EventStreamRequest) returns (stream TeammateMeshEvent);
   
