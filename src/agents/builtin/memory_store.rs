@@ -329,15 +329,31 @@ impl VectorRepository {
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
+                // Prune old task summaries with low reference count
                 sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
+                // Prune extremely old advisory records with zero references
+                let very_old = older_than - chrono::Duration::days(180);
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count = 0 AND source_type = 'ADVISORY'")
+                    .bind(very_old)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
+                // Prune old task summaries with low reference count
                 sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
                     .bind(older_than)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                // Prune extremely old advisory records with zero references
+                let very_old = older_than - chrono::Duration::days(180);
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count = 0 AND source_type = 'ADVISORY'")
+                    .bind(very_old)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
@@ -2307,6 +2323,7 @@ mod e2e_consolidation_tests {
                 metadata TEXT
             );"
         ).execute(&pool).await.unwrap();
+        // Memory Consolidation Worker test table initialized
 
         VectorRepository::new_sqlite(pool)
     }
@@ -2494,5 +2511,37 @@ mod e2e_consolidation_tests {
         assert!(!remaining_ids.contains(&"prune_1".to_string()), "Should have pruned old, un-overridden record");
         assert!(remaining_ids.contains(&"keep_1".to_string()), "Should have kept the one with owner override");
         assert!(remaining_ids.contains(&"keep_2".to_string()), "Should have kept the recent record");
+    }
+
+    #[tokio::test]
+    async fn test_e2e_stale_context_pruning_advisory() {
+        let repo = setup_sqlite_repo().await;
+        let now = chrono::Utc::now();
+        let threshold = now - chrono::Duration::days(180);
+
+        let very_old_time = now - chrono::Duration::days(400); // More than 180 days before threshold
+
+        let prune_adv = EmbeddingRecord {
+            id: "prune_adv_1".to_string(),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "test".to_string(),
+            content: "old advisory".to_string(),
+            embedding: vec![1.0; 10],
+            source_type: "ADVISORY".to_string(),
+            created_at: very_old_time,
+            last_referenced_at: very_old_time,
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&prune_adv).await.unwrap();
+
+        // Run pruning with threshold
+        repo.prune_stale(threshold).await.unwrap();
+
+        let results = repo.cross_department_search("org_maya", &vec![1.0; 10], 10).await.unwrap();
+        assert!(results.is_empty(), "Should have pruned the extremely old advisory record with zero references");
     }
 }
