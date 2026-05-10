@@ -1475,6 +1475,25 @@ impl Agent {
             // Add assistant message to history (including tool calls).
             messages.push(resp.message.clone());
 
+            // 3-Tier Memory Mechanic: Raw transcripts (Automatic Recording)
+            if let Some(store) = &self_with_memory.memory_store {
+                let session_id = final_cfg.thread_id.clone().unwrap_or_else(|| format!("session-{}", final_cfg.agent_id));
+                let mut turn_content = format!("[Iteration {}] Assistant: {}\n", iteration, resp.message.content);
+                if !resp.message.tool_calls.is_empty() {
+                    turn_content.push_str("Tool Calls:\n");
+                    for tc in &resp.message.tool_calls {
+                        turn_content.push_str(&format!("  - {} ({})\n", tc.name, tc.arguments));
+                    }
+                }
+                let store_clone = store.clone();
+                let session_id_clone = session_id.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = store_clone.append_transcript(&session_id_clone, &turn_content).await {
+                        tracing::error!("Failed to record turn transcript: {}", e);
+                    }
+                });
+            }
+
             // Telemetry: track individual tool executions
             let tool_call_counter = meter.u64_counter("ohc_agent_tool_execution_total").build();
             for tc in &tool_calls {
@@ -2028,10 +2047,30 @@ impl Agent {
                 role: Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results,
+                tool_results: tool_results.clone(),
                 response_id: None,
                 previous_response_id: last_response_id.clone(),
             });
+
+            // 3-Tier Memory Mechanic: Raw transcripts (Automatic Recording of Tool Results)
+            if let Some(store) = &self_with_memory.memory_store {
+                let session_id = final_cfg.thread_id.clone().unwrap_or_else(|| format!("session-{}", final_cfg.agent_id));
+                let mut turn_content = format!("[Iteration {}] Tool Results:\n", iteration);
+                for tr in &tool_results {
+                    let mut content_preview = tr.content.clone();
+                    if content_preview.len() > 50000 {
+                        content_preview.truncate(50000);
+                        content_preview.push_str("... [truncated in log due to extreme size]");
+                    }
+                    turn_content.push_str(&format!("  - Call ID: {}, Result: {}, Error: {}\n", tr.tool_call_id, content_preview, tr.error));
+                }
+                let store_clone = store.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = store_clone.append_transcript(&session_id, &turn_content).await {
+                        tracing::error!("Failed to record tool results transcript: {}", e);
+                    }
+                });
+            }
 
             // State Management Checkpointing Mechanic
             // 1. Configured Checkpointer (Database or Git)
@@ -2273,10 +2312,73 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+    use crate::memory_store::LongTermMemory;
+
     #[derive(serde::Deserialize, PartialEq, Debug)]
     struct MyStructuredOutput {
         city: String,
         population: u32,
+    }
+
+    #[tokio::test]
+    async fn test_anthropic_3_tier_recording_and_topic_write() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(crate::memory_store::Anthropic3TierMemoryStore::new(temp_dir.path()).unwrap());
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "I will record this topic.".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_topic".to_string(),
+                            name: "TopicWrite".to_string(),
+                            arguments: serde_json::json!({
+                                "topic_name": "test_topic",
+                                "content": "Detailed content for test topic"
+                            }),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("res1".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("res1".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("Topic written and turn recorded."),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("res2".to_string()),
+                }
+            ]),
+        });
+
+        let accessor = store.as_anthropic_accessor();
+        let tool = crate::tools::anthropic_memory::topic_write_tool(accessor.unwrap());
+        let agent = Agent::new(client, vec![tool]).with_memory_store(store.clone());
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.thread_id = Some("test-session-recording".to_string());
+
+        let mut events = vec![];
+        let result = agent.run(&cfg, "Start recording", &mut |e| events.push(e)).await;
+        assert!(result.is_ok());
+
+        // Verify Topic was written
+        let topic_content = store.retrieve_topic("test_topic").await.unwrap();
+        assert_eq!(topic_content, "Detailed content for test topic");
+
+        // Wait a bit for async transcript recording to finish
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+        // Verify Transcript was recorded
+        let search_res = store.search_transcripts("Detailed content for test topic", 10).await.unwrap();
+        assert!(!search_res.is_empty());
+        assert!(search_res.iter().any(|r| r.contains("Detailed content for test topic")));
+        assert!(search_res.iter().any(|r| r.contains("I will record this topic.")));
     }
 
     #[tokio::test]

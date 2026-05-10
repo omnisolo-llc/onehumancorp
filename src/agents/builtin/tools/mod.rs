@@ -126,6 +126,7 @@ pub fn all_tools(
 
     if let Some(accessor) = memory_accessor {
         tools.push(anthropic_memory::topic_retrieve_tool(accessor.clone()));
+        tools.push(anthropic_memory::topic_write_tool(accessor.clone()));
         tools.push(anthropic_memory::transcript_search_tool(accessor));
     }
 

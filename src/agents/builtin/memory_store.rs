@@ -771,6 +771,17 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
+
+    /// 3-Tier: Write a detailed topic file
+    async fn write_topic(&self, _topic_name: &str, _content: &str) -> Result<(), String> {
+        Err("Not implemented".to_string())
+    }
+
+    /// 3-Tier: Append a turn to the session transcript
+    async fn append_transcript(&self, _session_id: &str, _turn_content: &str) -> Result<(), String> {
+        Ok(())
+    }
+
     fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> { None }
 }
 
@@ -869,13 +880,13 @@ impl Anthropic3TierMemoryStore {
         tokio::fs::write(&self.index_file, content).await.map_err(|e| e.to_string())
     }
 
-    pub async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
+    pub async fn write_topic_internal(&self, topic_name: &str, content: &str) -> Result<(), String> {
         let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
         let path = self.topics_dir.join(format!("{}.md", safe_name));
         tokio::fs::write(path, content).await.map_err(|e| e.to_string())
     }
 
-    pub async fn append_transcript(&self, session_id: &str, turn_content: &str) -> Result<(), String> {
+    pub async fn append_transcript_internal(&self, session_id: &str, turn_content: &str) -> Result<(), String> {
         let path = self.transcripts_dir.join(format!("{}.log", session_id));
         use tokio::io::AsyncWriteExt;
         let mut file = tokio::fs::OpenOptions::new().create(true).append(true).open(path).await.map_err(|e| e.to_string())?;
@@ -911,6 +922,10 @@ impl ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor for Anthropic3Tie
             }
         }
         Ok(results)
+    }
+
+    async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
+        self.write_topic_internal(topic_name, content).await
     }
 }
 
@@ -989,6 +1004,15 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
         }
         Ok(results)
     }
+
+    async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
+        self.write_topic_internal(topic_name, content).await
+    }
+
+    async fn append_transcript(&self, session_id: &str, turn_content: &str) -> Result<(), String> {
+        self.append_transcript_internal(session_id, turn_content).await
+    }
+
     fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
         Some(std::sync::Arc::new(self.clone()))
     }
