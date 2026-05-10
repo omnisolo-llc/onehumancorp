@@ -6718,7 +6718,7 @@ dashboard_ui.on_action_grow_business(move || {
         assert_eq!(fix_agent_ui.get_step(), 0);
 
         // Advance to step 1
-        fix_agent_ui.set_step(1);
+        fix_agent_ui.invoke_next_step();
 
         let apply_fix_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let apply_fix_called_clone = apply_fix_called.clone();
@@ -6728,6 +6728,11 @@ dashboard_ui.on_action_grow_business(move || {
 
         fix_agent_ui.invoke_apply_fix();
         assert!(*apply_fix_called.borrow(), "Apply fix should be called");
+
+        // Test prev_step functionality
+        fix_agent_ui.invoke_prev_step();
+        assert_eq!(fix_agent_ui.get_step(), 0);
+        fix_agent_ui.invoke_next_step();
 
         // Advance to step 2 manually as in test simulation we drive state
         fix_agent_ui.set_step(2);

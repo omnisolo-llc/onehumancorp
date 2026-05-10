@@ -333,12 +333,41 @@ impl Agent {
                 }
             }
 
-            let mut tool_results = vec![];
+            // Component: Tools (Read-only concurrent, mutating serial)
+            let mut read_only_calls = vec![];
+            let mut mutating_calls = vec![];
+
             for tc in &msg.tool_calls {
-                let r = match self.execute_tool(tc, session_tools, &messages).await {
-                    Ok(res) => res,
-                    Err(e) => format!("Error: {:?}", e),
-                };
+                if let Some(tool) = session_tools.iter().find(|t| t.name == tc.name) {
+                    if tool.is_read_only {
+                        read_only_calls.push(tc.clone());
+                    } else {
+                        mutating_calls.push(tc.clone());
+                    }
+                } else {
+                    // Default to mutating if not found
+                    mutating_calls.push(tc.clone());
+                }
+            }
+
+            let mut tool_results = vec![crate::types::ToolResult { tool_call_id: String::new(), content: String::new(), error: String::new() }; msg.tool_calls.len()];
+
+            let mut read_only_futures = Vec::new();
+            for tc in &read_only_calls {
+                let tc_clone = tc.clone();
+                let session_tools_clone = session_tools.to_vec();
+                let messages_clone = messages.clone();
+                read_only_futures.push(async move {
+                    let r = match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
+                        Ok(res) => res,
+                        Err(e) => format!("Error: {:?}", e),
+                    };
+                    (tc_clone, r)
+                });
+            }
+            let ro_results = futures::future::join_all(read_only_futures).await;
+            for (tc, r) in ro_results {
+                let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
 
                 on_event(AgentEvent::ToolCall {
                     name: tc.name.clone(),
@@ -347,11 +376,33 @@ impl Agent {
                     iteration: i as i32,
                 });
 
-                tool_results.push(crate::types::ToolResult {
+                tool_results[idx] = crate::types::ToolResult {
                     tool_call_id: tc.id.clone(),
                     content: r,
                     error: String::new(),
+                };
+            }
+
+            for tc in &mutating_calls {
+                let r = match self.execute_tool(tc, session_tools, &messages).await {
+                    Ok(res) => res,
+                    Err(e) => format!("Error: {:?}", e),
+                };
+
+                let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+
+                on_event(AgentEvent::ToolCall {
+                    name: tc.name.clone(),
+                    args_json: tc.arguments.to_string(),
+                    result: r.clone(),
+                    iteration: i as i32,
                 });
+
+                tool_results[idx] = crate::types::ToolResult {
+                    tool_call_id: tc.id.clone(),
+                    content: r,
+                    error: String::new(),
+                };
             }
 
             messages.push(crate::types::Message {
