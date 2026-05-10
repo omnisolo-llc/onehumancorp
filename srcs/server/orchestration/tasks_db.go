@@ -28,7 +28,7 @@ type SharedTask struct {
 type TaskStore interface {
 	ClaimTask(ctx context.Context, organizationID string, agentID string) (*SharedTask, error)
 	CreateTask(ctx context.Context, task *SharedTask) error
-	GetTask(ctx context.Context, id string) (*SharedTask, error)
+	GetTask(ctx context.Context, id string, organizationID string) (*SharedTask, error)
 	UpdateTaskStatus(ctx context.Context, id string, status string) error
 	GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error)
 	PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error)
@@ -171,7 +171,7 @@ func (s *PostgresTaskStore) CreateTask(ctx context.Context, task *SharedTask) er
 	return tx.Commit()
 }
 
-func (s *PostgresTaskStore) GetTask(ctx context.Context, id string) (*SharedTask, error) {
+func (s *PostgresTaskStore) GetTask(ctx context.Context, id string, organizationID string) (*SharedTask, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -181,9 +181,9 @@ func (s *PostgresTaskStore) GetTask(ctx context.Context, id string) (*SharedTask
     query := `
         SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
         FROM shared_tasks
-        WHERE id = $1
+        WHERE id = $1 AND organization_id = $2
     `
-    row := tx.QueryRowContext(ctx, query, id)
+    row := tx.QueryRowContext(ctx, query, id, organizationID)
 
     task := &SharedTask{}
     var payloadBytes, depsBytes []byte
@@ -594,13 +594,13 @@ func (s *SqliteTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]
 	return tasks, nil
 }
 
-func (s *SqliteTaskStore) GetTask(ctx context.Context, id string) (*SharedTask, error) {
+func (s *SqliteTaskStore) GetTask(ctx context.Context, id string, organizationID string) (*SharedTask, error) {
     query := `
         SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
         FROM shared_tasks
-        WHERE id = ?
+        WHERE id = ? AND organization_id = ?
     `
-    row := s.db.QueryRowContext(ctx, query, id)
+    row := s.db.QueryRowContext(ctx, query, id, organizationID)
 
     task := &SharedTask{}
     var payloadBytes, depsBytes []byte

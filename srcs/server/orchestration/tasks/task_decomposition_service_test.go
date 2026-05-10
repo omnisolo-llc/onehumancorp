@@ -72,7 +72,7 @@ func TestTaskDecompositionService_CreateAndGetTask(t *testing.T) {
 		t.Errorf("Expected ID to be populated")
 	}
 
-	fetchedTask, err := svc.GetTask(ctx, task.ID)
+	fetchedTask, err := svc.GetTask(ctx, task.ID, task.OrganizationID)
 	if err != nil {
 		t.Fatalf("Failed to get task: %v", err)
 	}
@@ -173,7 +173,7 @@ func TestTaskDecompositionService_UpdateTaskStatus(t *testing.T) {
 		t.Fatalf("Failed to update task: %v", err)
 	}
 
-	t2, _ := svc.GetTask(ctx, task.ID)
+	t2, _ := svc.GetTask(ctx, task.ID, task.OrganizationID)
 	if t2.Status != "IN_PROGRESS" {
 		t.Errorf("Status not updated")
 	}
@@ -197,7 +197,7 @@ func TestTaskDecompositionService_Errors(t *testing.T) {
 	ctx := context.Background()
 
 	// Try to get a non-existent task
-	_, err := svc.GetTask(ctx, "non-existent")
+	_, err := svc.GetTask(ctx, "non-existent", "org-1")
 	if err != nil {
 		t.Fatalf("Expected nil err and nil task, got %v", err)
 	}
@@ -270,7 +270,7 @@ func TestTaskDecompositionService_FullCoverage(t *testing.T) {
 		t.Fatalf("Failed to create full task: %v", err)
 	}
 
-	fetched, err := svc.GetTask(ctx, task.ID)
+	fetched, err := svc.GetTask(ctx, task.ID, task.OrganizationID)
 	if err != nil {
 		t.Fatalf("Failed to get full task: %v", err)
 	}
@@ -323,7 +323,7 @@ func TestTaskDecompositionService_MoreCoverage(t *testing.T) {
 	// Now close DB to cause failure
 	db.Close()
 
-	_, _ = svc.GetTask(ctx, "id")
+	_, _ = svc.GetTask(ctx, "id", "org-1")
 	_, _ = svc.ClaimTask(ctx, "x", "y")
 	_ = svc.UpdateTaskStatus(ctx, "id", "NEW", "y", "z")
 }

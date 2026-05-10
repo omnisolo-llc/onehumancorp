@@ -56,7 +56,7 @@ func main() {
         if dbKey == "" {
             log.Fatalf("OHC_LOCAL_DB_KEY environment variable is required for local standalone mode encryption")
         }
-        dsn = dbPath + "?_pragma_key=" + dbKey
+        dsn = dbPath + "?_pragma_key=" + dbKey + "&_pragma_cipher=sqlcipher"
     }
 
 	db, err := sql.Open("sqlite3", dsn)

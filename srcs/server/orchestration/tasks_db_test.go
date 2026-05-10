@@ -67,7 +67,7 @@ func TestSqliteTaskStore_CreateTask(t *testing.T) {
 	err := store.CreateTask(ctx, task)
 	require.NoError(t, err)
 
-	savedTask, err := store.GetTask(ctx, task.ID)
+	savedTask, err := store.GetTask(ctx, task.ID, task.OrganizationID)
 	require.NoError(t, err)
 
 	assert.Equal(t, task.ID, savedTask.ID)
@@ -174,7 +174,7 @@ func TestSqliteTaskStore_UpdateTaskStatus(t *testing.T) {
 	err = store.UpdateTaskStatus(ctx, task.ID, "COMPLETED")
 	require.NoError(t, err)
 
-	savedTask, err := store.GetTask(ctx, task.ID)
+	savedTask, err := store.GetTask(ctx, task.ID, task.OrganizationID)
 	require.NoError(t, err)
 	assert.Equal(t, "COMPLETED", savedTask.Status)
 }
@@ -248,12 +248,12 @@ func TestPostgresTaskStore_GetTask(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
-		WithArgs("uuid-1").
+		WithArgs("uuid-1", "org-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
 			AddRow("uuid-1", "org-1", "Title", nil, "PENDING", nil, "P2", nil, nil, []byte("[]"), time.Now(), time.Now()))
 
 	mock.ExpectCommit()
-	task, err := store.GetTask(ctx, "uuid-1")
+	task, err := store.GetTask(ctx, "uuid-1", "org-1")
 	require.NoError(t, err)
 	assert.Equal(t, "uuid-1", task.ID)
 }
@@ -306,11 +306,11 @@ func TestPostgresTaskStore_GetTask_NoTask(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at").
-		WithArgs("uuid-none").
+		WithArgs("uuid-none", "org-1").
 		WillReturnError(sql.ErrNoRows)
 	mock.ExpectRollback()
 
-	task, err := store.GetTask(ctx, "uuid-none")
+	task, err := store.GetTask(ctx, "uuid-none", "org-1")
 	require.Error(t, err)
 	assert.Nil(t, task)
 }
@@ -334,7 +334,7 @@ func TestSqliteTaskStore_GetTask_NoTask(t *testing.T) {
 	store := NewSqliteTaskStore(db)
 	ctx := context.Background()
 
-	task, err := store.GetTask(ctx, "task-none")
+	task, err := store.GetTask(ctx, "task-none", "org-1")
 	require.Error(t, err)
 	assert.Nil(t, task)
 }
@@ -416,7 +416,7 @@ func TestSqliteTaskStore_GetTask_ErrorParsing(t *testing.T) {
 	require.NoError(t, err)
 
     // We expect it to still return the task, but parsing of time might silently fail or fallback
-    task, err := store.GetTask(ctx, "bad-date")
+    task, err := store.GetTask(ctx, "bad-date", "org-1")
     require.NoError(t, err)
     require.NotNil(t, task)
 }
@@ -431,11 +431,11 @@ func TestPostgresTaskStore_GetTask_Errors(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT id").
-		WithArgs("uuid-err").
+		WithArgs("uuid-err", "org-1").
 		WillReturnError(sql.ErrConnDone)
 	mock.ExpectRollback()
 
-	task, err := store.GetTask(ctx, "uuid-err")
+	task, err := store.GetTask(ctx, "uuid-err", "org-1")
 	require.Error(t, err)
 	assert.Nil(t, task)
 }
@@ -477,7 +477,7 @@ func TestSqliteTaskStore_CreateTask_WithPayloads(t *testing.T) {
 	err := store.CreateTask(ctx, task)
 	require.NoError(t, err)
 
-    savedTask, err := store.GetTask(ctx, task.ID)
+    savedTask, err := store.GetTask(ctx, task.ID, task.OrganizationID)
     require.NoError(t, err)
     assert.Equal(t, task.Payload, savedTask.Payload)
 }
@@ -615,9 +615,9 @@ func TestPostgresTaskStore_GetTask_NotFound(t *testing.T) {
 	store := NewPostgresTaskStore(db)
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("task-1").WillReturnError(sql.ErrNoRows)
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("task-1", "org-1").WillReturnError(sql.ErrNoRows)
 
-	_, err = store.GetTask(context.Background(), "task-1")
+	_, err = store.GetTask(context.Background(), "task-1", "org-1")
 	assert.Error(t, err)
 	assert.Equal(t, "task not found", err.Error())
 }
@@ -652,10 +652,10 @@ func TestPostgresTaskStore_GetTask_CommitError(t *testing.T) {
 		"{}", nil, "[]", time.Now(), time.Now(),
 	)
 
-	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("task-1").WillReturnRows(rows)
+	mock.ExpectQuery("SELECT id, organization_id, title").WithArgs("task-1", "org-1").WillReturnRows(rows)
 	mock.ExpectCommit().WillReturnError(sql.ErrConnDone)
 
-	_, err = store.GetTask(context.Background(), "task-1")
+	_, err = store.GetTask(context.Background(), "task-1", "org-1")
 	assert.Error(t, err)
 }
 
@@ -1041,7 +1041,7 @@ func TestSqliteTaskStore_PollDelegatedTasks(t *testing.T) {
 	assert.Equal(t, "ASSIGNED", tasks[1].Status)
 
 	// Verify they are actually ASSIGNED in the DB
-	t1, _ := store.GetTask(ctx, tasks[0].ID)
+	t1, _ := store.GetTask(ctx, tasks[0].ID, tasks[0].OrganizationID)
 	assert.Equal(t, "ASSIGNED", t1.Status)
 }
 

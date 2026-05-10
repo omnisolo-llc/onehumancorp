@@ -88,7 +88,7 @@ func (p *DefaultProvider) SyncDown(ctx context.Context, orgID string) (int, erro
 
 	syncedCount := 0
 	for _, task := range tasks {
-		existing, err := p.localDB.GetTask(ctx, task.ID)
+		existing, err := p.localDB.GetTask(ctx, task.ID, orgID)
 		if err == nil && existing != nil {
 			if existing.UpdatedAt.Before(task.UpdatedAt) && existing.Status != task.Status {
 				if updateErr := p.localDB.UpdateTaskStatus(ctx, task.ID, task.Status); updateErr == nil {

@@ -23,7 +23,7 @@ func TestParityNullHandling(t *testing.T) {
 	err := store.CreateTask(context.Background(), task)
 	require.NoError(t, err)
 
-	fetched, err := store.GetTask(context.Background(), task.ID)
+	fetched, err := store.GetTask(context.Background(), task.ID, task.OrganizationID)
 	require.NoError(t, err)
 
 	assert.Nil(t, fetched.Description)
@@ -69,7 +69,7 @@ func TestParityTimezone(t *testing.T) {
 	err := store.CreateTask(context.Background(), task)
 	require.NoError(t, err)
 
-	fetched, err := store.GetTask(context.Background(), task.ID)
+	fetched, err := store.GetTask(context.Background(), task.ID, task.OrganizationID)
 	require.NoError(t, err)
 
 	assert.False(t, fetched.CreatedAt.IsZero())
@@ -109,7 +109,7 @@ func TestParityGetTaskNotFound(t *testing.T) {
 	defer db.Close()
 	store := NewSqliteTaskStore(db)
 
-	fetched, err := store.GetTask(context.Background(), "non-existent")
+	fetched, err := store.GetTask(context.Background(), "non-existent", "org-1")
 	require.Error(t, err)
 	assert.Nil(t, fetched)
 	assert.Equal(t, "task not found", err.Error())
@@ -128,7 +128,7 @@ func TestParityPayloadDependencies(t *testing.T) {
 	err := store.CreateTask(context.Background(), task)
 	require.NoError(t, err)
 
-	fetched, err := store.GetTask(context.Background(), task.ID)
+	fetched, err := store.GetTask(context.Background(), task.ID, task.OrganizationID)
 	require.NoError(t, err)
 
     assert.Equal(t, `["dep-1"]`, string(fetched.Dependencies))

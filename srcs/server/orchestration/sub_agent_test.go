@@ -164,7 +164,7 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Check if task status updated to ASSIGNED
-	fetchedTask, err := store.GetTask(context.Background(), task.ID)
+	fetchedTask, err := store.GetTask(context.Background(), task.ID, task.OrganizationID)
 	require.NoError(t, err)
 	assert.Equal(t, "ASSIGNED", fetchedTask.Status)
 
@@ -287,7 +287,7 @@ func TestTaskOrchestrator_StartBackgroundWorker(t *testing.T) {
 	cancel() // Stop the worker
 
 	// Ensure task was processed
-	fetchedTask, _ := store.GetTask(context.Background(), "worker-delegated-1")
+	fetchedTask, _ := store.GetTask(context.Background(), "worker-delegated-1", "org-1")
 	assert.Equal(t, "ASSIGNED", fetchedTask.Status)
 }
 

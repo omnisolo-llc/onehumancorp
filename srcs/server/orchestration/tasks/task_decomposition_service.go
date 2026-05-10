@@ -38,7 +38,7 @@ type StateMachineTransition struct {
 
 type TaskDecompositionService interface {
 	CreateTask(ctx context.Context, task *SharedTaskDecomposition) error
-	GetTask(ctx context.Context, id string) (*SharedTaskDecomposition, error)
+	GetTask(ctx context.Context, id string, organizationID string) (*SharedTaskDecomposition, error)
 	ClaimTask(ctx context.Context, organizationID string, agentID string) (*SharedTaskDecomposition, error)
 	UpdateTaskStatus(ctx context.Context, id string, newStatus string, agentID string, reason string) error
 }
@@ -101,7 +101,7 @@ func (s *DBTaskDecompositionService) CreateTask(ctx context.Context, task *Share
 	return err
 }
 
-func (s *DBTaskDecompositionService) GetTask(ctx context.Context, id string) (*SharedTaskDecomposition, error) {
+func (s *DBTaskDecompositionService) GetTask(ctx context.Context, id string, organizationID string) (*SharedTaskDecomposition, error) {
 	query := `
 		SELECT id, organization_id, parent_plan_id, dependencies, title, status, assigned_agent_id, payload, locked_until, priority, created_at
 		FROM shared_tasks_decomposition
@@ -261,7 +261,7 @@ func (s *DBTaskDecompositionService) ClaimTask(ctx context.Context, organization
 		return nil, err
 	}
 
-	return s.GetTask(ctx, candidateID)
+	return s.GetTask(ctx, candidateID, organizationID)
 }
 
 func (s *DBTaskDecompositionService) UpdateTaskStatus(ctx context.Context, id string, newStatus string, agentID string, reason string) error {
