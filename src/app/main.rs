@@ -99,6 +99,7 @@ thread_local! {
     static GLOBAL_BUSINESS_MANAGER: RefCell<Option<slint::Weak<app::BusinessManager>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
     static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
+    static GLOBAL_DIAGNOSTICS: RefCell<Option<slint::Weak<app::Diagnostics>>> = RefCell::new(None);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -117,6 +118,7 @@ thread_local! {
     static GLOBAL_ANALYTICS_CHARTS: RefCell<Option<slint::Weak<app::AnalyticsCharts>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
     static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
+    static GLOBAL_DIAGNOSTICS: RefCell<Option<slint::Weak<app::Diagnostics>>> = RefCell::new(None);
 }
 
 #[cfg(test)]
@@ -298,6 +300,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
     let login_ui_handle = login_ui.as_weak();
+
+    let diagnostics_ui = app::Diagnostics::new()?;
+    let diagnostics_handle = diagnostics_ui.as_weak();
+    GLOBAL_DIAGNOSTICS.with(|g| *g.borrow_mut() = Some(diagnostics_ui.as_weak()));
+
+    diagnostics_ui.on_run_diagnostics({
+        let handle = diagnostics_handle.clone();
+        move || {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let handle_clone = handle.clone();
+                slint::spawn_local(async move {
+                    let client = reqwest::Client::new();
+                    let url = format!("{}/api/health", std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()));
+                    if let Ok(resp) = client.get(&url).send().await {
+                        if let Ok(json) = resp.json::<serde_json::Value>().await {
+                            if let Some(ui) = handle_clone.upgrade() {
+                                let mode = json["mode"].as_str().unwrap_or("STANDALONE").to_uppercase();
+                                ui.set_execution_mode(mode.clone().into());
+
+                                let db_ping = json["db_ping"].as_i64().unwrap_or(0);
+                                ui.set_db_status(if db_ping > 0 { "Connected".into() } else { "Degraded".into() });
+
+                                let mesh = json["mesh_active"].as_bool().unwrap_or(false);
+                                ui.set_mesh_status(if mesh { "ACTIVE".into() } else { "INACTIVE".into() });
+
+                                let cloud = json["cloud_connected"].as_bool().unwrap_or(false);
+                                ui.set_cloud_connectivity(if cloud { "CONNECTED".into() } else { "OFFLINE".into() });
+
+                                let stuck = json["stuck_missions"].as_i64().unwrap_or(0);
+                                ui.set_stuck_missions(stuck as i32);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    });
 
     let setup_wizard_ui = app::SetupWizard::new()?;
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
@@ -1894,6 +1934,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(ui) = ac_handle.upgrade() {
                     let _ = ui.show();
                 }
+            });
+
+            dash.on_action_open_swarm_observability(move || {
+                GLOBAL_DIAGNOSTICS.with(|g| {
+                    if let Some(weak) = g.borrow().as_ref() {
+                        if let Some(ui) = weak.upgrade() {
+                            let _ = ui.show();
+                            ui.invoke_run_diagnostics();
+                        }
+                    }
+                });
             });
 
             let bs_handle = bs_handle_clone_for_dash.clone();
