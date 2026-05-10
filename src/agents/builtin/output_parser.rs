@@ -20,6 +20,29 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
     max_retries: usize,
 ) -> Result<T, ToolError> {
     let mut current_req = req.clone();
+
+    // Inject the schema as a tool definition to encourage the model to use tool_calls API
+    // Note: Since we don't have the schema definition here natively because it's a generic parsing function without it,
+    // we instruct the LLM via a generic tool to emit structured JSON. However, a full implementation would pass the JSON schema.
+    let schema_tool = crate::types::ToolDefinition {
+        name: "structured_output".to_string(),
+        description: "Call this tool to output the parsed structured data.".to_string(),
+        parameters: serde_json::json!({
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "description": "The structured data matching the requested schema."
+                }
+            },
+            "required": ["data"]
+        }),
+    };
+
+    if !current_req.tools.iter().any(|t| t.name == "structured_output") {
+        current_req.tools.push(schema_tool);
+    }
+
     let mut attempt = 0;
 
     loop {
@@ -28,10 +51,73 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
             Ok(r) => r,
             Err(e) => return Err(ToolError::Transient(format!("LLM Error: {}", e))),
         };
-        let completion = resp.message.content.clone();
 
-        // Output Parsing: JSON robust extraction mechanic.
-        // Handles cases where LLM wraps response in markdown e.g. ```json ... ```
+        let msg = &resp.message;
+
+        // Output Parsing: Primary mechanic is extracting from native tool_calls
+        if !msg.tool_calls.is_empty() {
+            if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
+                if let Some(data) = call.arguments.get("data") {
+                    match serde_json::from_value::<T>(data.clone()) {
+                        Ok(parsed) => return Ok(parsed),
+                        Err(e) => {
+                            if attempt >= max_retries {
+                                return Err(ToolError::Fatal(format!("Output parsing failed after {} retries. Last error: {}", max_retries, e)));
+                            }
+
+                            // Let the LLM know the tool call arguments were invalid
+                            // Return the raw error as a ToolMessage directly to the model so it can self-correct.
+                            let mut assistant_msg = msg.clone();
+                            assistant_msg.content = String::new(); // Just a tool call
+                            current_req.messages.push(assistant_msg);
+
+                            let error_msg = format!("Failed to parse tool call arguments as valid JSON matching the schema. Error: {}. Please fix the JSON and retry calling the tool.", e);
+                            current_req.messages.push(Message {
+                                role: crate::types::Role::Tool,
+                                content: String::new(),
+                                tool_calls: vec![],
+                                tool_results: vec![crate::types::ToolResult {
+                                    tool_call_id: call.id.clone(),
+                                    content: String::new(),
+                                    error: error_msg,
+                                }],
+                                response_id: None,
+                                previous_response_id: None,
+                            });
+                            continue;
+                        }
+                    }
+                } else {
+                    if attempt >= max_retries {
+                        return Err(ToolError::Fatal(format!("Output parsing failed after {} retries. Last error: Missing 'data' parameter in structured_output tool.", max_retries)));
+                    }
+
+                    let mut assistant_msg = msg.clone();
+                    assistant_msg.content = String::new();
+                    current_req.messages.push(assistant_msg);
+
+                    let error_msg = "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string();
+                    current_req.messages.push(Message {
+                        role: crate::types::Role::Tool,
+                        content: String::new(),
+                        tool_calls: vec![],
+                        tool_results: vec![crate::types::ToolResult {
+                            tool_call_id: call.id.clone(),
+                            content: String::new(),
+                            error: error_msg,
+                        }],
+                        response_id: None,
+                        previous_response_id: None,
+                    });
+                    continue;
+                }
+            }
+        }
+
+        // Fallback mechanic: Legacy RetryWithErrorOutputParser
+        // Extract JSON from raw text and feed the original prompt, the failed completion, and the parsing error back to the model.
+        let completion = msg.content.clone();
+
         let mut json_str = completion.trim();
         let obj_start = json_str.find('{');
         let arr_start = json_str.find('[');
@@ -72,8 +158,6 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
                     return Err(ToolError::Fatal(format!("Output parsing failed after {} retries. Last error: {}", max_retries, e)));
                 }
 
-                // Fallback mechanic: Legacy RetryWithErrorOutputParser
-                // Feed the original prompt, the failed completion, and the parsing error back to the model.
                 current_req.messages.push(Message::assistant(completion));
                 let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON without markdown formatting.", e);
                 current_req.messages.push(Message::user(error_msg));
@@ -95,25 +179,63 @@ mod tests {
     }
 
     struct MockLlmClient {
-        responses: Mutex<Vec<String>>,
+        responses: Mutex<Vec<ChatResponse>>,
     }
 
     #[async_trait::async_trait]
     impl LlmClientForParser for MockLlmClient {
         async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut resps = self.responses.lock().await;
-            let content = if !resps.is_empty() {
-                resps.remove(0)
+            if !resps.is_empty() {
+                Ok(resps.remove(0))
             } else {
-                "default".to_string()
-            };
+                Ok(ChatResponse {
+                    message: Message::assistant("default"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                })
+            }
+        }
+    }
 
-            Ok(ChatResponse {
-                message: Message::assistant(content),
-                usage: Usage::default(),
-                stop_reason: "stop".to_string(),
+    fn create_test_req() -> ChatRequest {
+        ChatRequest {
+            model: "test".to_string(),
+            system: "".to_string(),
+            messages: vec![],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        }
+    }
+
+    fn create_text_resp(content: &str) -> ChatResponse {
+        ChatResponse {
+            message: Message::assistant(content),
+            usage: Usage::default(),
+            stop_reason: "stop".to_string(),
+            response_id: Some("mock-id".to_string()),
+        }
+    }
+
+    fn create_tool_call_resp(tool_name: &str, args: serde_json::Value) -> ChatResponse {
+        ChatResponse {
+            message: Message {
+                role: crate::types::Role::Assistant,
+                content: "".to_string(),
+                tool_calls: vec![crate::types::ToolCall {
+                    id: "call_1".to_string(),
+                    name: tool_name.to_string(),
+                    arguments: args,
+                }],
+                tool_results: vec![],
                 response_id: Some("mock-id".to_string()),
-            })
+                previous_response_id: None,
+            },
+            usage: Usage::default(),
+            stop_reason: "tool_calls".to_string(),
+            response_id: Some("mock-id".to_string()),
         }
     }
 
@@ -121,19 +243,11 @@ mod tests {
     async fn test_parse_structured_output_markdown_wrapper() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                "```json\n{\n  \"result\": \"success_markdown\"\n}\n```".to_string()
+                create_text_resp("```json\n{\n  \"result\": \"success_markdown\"\n}\n```")
             ]),
         });
 
-        let req = ChatRequest {
-            model: "test".to_string(),
-            system: "".to_string(),
-            messages: vec![],
-            tools: vec![],
-            max_tokens: 100,
-            temperature: 0.0,
-        };
-
+        let req = create_test_req();
         let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
         assert_eq!(result.result, "success_markdown");
     }
@@ -141,19 +255,11 @@ mod tests {
     #[tokio::test]
     async fn test_parse_structured_output_success() {
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![r#"{"result": "success"}"#.to_string()]),
+            responses: Mutex::new(vec![create_text_resp(r#"{"result": "success"}"#)]),
         });
 
-        let req = ChatRequest {
-            model: "test".to_string(),
-            system: "".to_string(),
-            messages: vec![],
-            tools: vec![],
-            max_tokens: 100,
-            temperature: 0.0,
-        };
-
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClient>), req, 3).await.unwrap();
+        let req = create_test_req();
+        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
         assert_eq!(result.result, "success");
     }
 
@@ -161,21 +267,13 @@ mod tests {
     async fn test_parse_structured_output_retry_success() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                "invalid json".to_string(),
-                r#"{"result": "success after retry"}"#.to_string()
+                create_text_resp("invalid json"),
+                create_text_resp(r#"{"result": "success after retry"}"#)
             ]),
         });
 
-        let req = ChatRequest {
-            model: "test".to_string(),
-            system: "".to_string(),
-            messages: vec![],
-            tools: vec![],
-            max_tokens: 100,
-            temperature: 0.0,
-        };
-
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClient>), req, 3).await.unwrap();
+        let req = create_test_req();
+        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
         assert_eq!(result.result, "success after retry");
     }
 
@@ -183,20 +281,58 @@ mod tests {
     async fn test_parse_structured_output_failure() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                "invalid json".to_string(),
-                "still invalid".to_string(),
+                create_text_resp("invalid json"),
+                create_text_resp("still invalid"),
             ]),
         });
 
-        let req = ChatRequest {
-            model: "test".to_string(),
-            system: "".to_string(),
-            messages: vec![],
-            tools: vec![],
-            max_tokens: 100,
-            temperature: 0.0,
-        };
+        let req = create_test_req();
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+        assert!(result.is_err());
+        if let Err(ToolError::Fatal(msg)) = result {
+            assert!(msg.contains("Output parsing failed after 2 retries"));
+        } else {
+            panic!("Expected Fatal error");
+        }
+    }
 
+    #[tokio::test]
+    async fn test_parse_structured_output_tool_calls_success() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success_tool_call"}})),
+            ]),
+        });
+
+        let req = create_test_req();
+        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        assert_eq!(result.result, "success_tool_call");
+    }
+
+    #[tokio::test]
+    async fn test_parse_structured_output_tool_calls_retry_success() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"wrong_field": "test"}})),
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success_tool_call_retry"}})),
+            ]),
+        });
+
+        let req = create_test_req();
+        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        assert_eq!(result.result, "success_tool_call_retry");
+    }
+
+    #[tokio::test]
+    async fn test_parse_structured_output_tool_calls_failure() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"wrong_field": "test"}})),
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"wrong_field_again": "test"}})),
+            ]),
+        });
+
+        let req = create_test_req();
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         if let Err(ToolError::Fatal(msg)) = result {

@@ -33,6 +33,16 @@ func setupTestDB(t *testing.T) *sql.DB {
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS task_dependencies (
+			task_id UUID NOT NULL,
+			depends_on_task_id UUID NOT NULL,
+			PRIMARY KEY (task_id, depends_on_task_id)
+		);
+	`)
+	require.NoError(t, err)
+
 	require.NoError(t, err)
 
 	return db
@@ -64,6 +74,55 @@ func TestSqliteTaskStore_CreateTask(t *testing.T) {
 	assert.Equal(t, task.Title, savedTask.Title)
 	assert.Equal(t, task.Status, savedTask.Status)
 	assert.Equal(t, task.Dependencies, savedTask.Dependencies)
+}
+
+func TestSqliteTaskStore_ClaimTask_WithDependencies(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+	ctx := context.Background()
+
+	parentTask := &SharedTask{
+		ID:             "parent-task",
+		OrganizationID: "org-deps",
+		Title:          "Parent Task",
+		Status:         "PENDING",
+	}
+	err := store.CreateTask(ctx, parentTask)
+	require.NoError(t, err)
+
+	deps, _ := json.Marshal([]string{"parent-task"})
+	childTask := &SharedTask{
+		ID:             "child-task",
+		OrganizationID: "org-deps",
+		Title:          "Child Task",
+		Status:         "PENDING",
+		Dependencies:   deps,
+	}
+	err = store.CreateTask(ctx, childTask)
+	require.NoError(t, err)
+
+	// Since parent is not COMPLETED, claim should grab the parent first
+	claimed1, err := store.ClaimTask(ctx, "org-deps", "agent-x")
+	require.NoError(t, err)
+	require.NotNil(t, claimed1)
+	assert.Equal(t, "parent-task", claimed1.ID)
+
+	// Another claim should return nothing because child is blocked
+	claimed2, err := store.ClaimTask(ctx, "org-deps", "agent-y")
+	require.NoError(t, err)
+	assert.Nil(t, claimed2, "Child should be blocked by pending parent")
+
+	// Complete parent
+	err = store.UpdateTaskStatus(ctx, "parent-task", "COMPLETED")
+	require.NoError(t, err)
+
+	// Now child is free
+	claimed3, err := store.ClaimTask(ctx, "org-deps", "agent-z")
+	require.NoError(t, err)
+	require.NotNil(t, claimed3)
+	assert.Equal(t, "child-task", claimed3.ID)
 }
 
 func TestSqliteTaskStore_ClaimTask(t *testing.T) {
@@ -325,6 +384,11 @@ func TestPostgresTaskStore_CreateTask_WithPayloads(t *testing.T) {
 	mock.ExpectQuery("INSERT INTO shared_tasks").
 		WithArgs(task.OrganizationID, task.Title, task.Description, task.Status, task.AgentID, task.Priority, sqlmock.AnyArg(), task.ParentPlanID, sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).AddRow("uuid-123", time.Now(), time.Now()))
+
+	// Mock inserting dependencies
+	mock.ExpectExec("INSERT INTO task_dependencies \\(task_id, depends_on_task_id\\) VALUES \\(\\$1, \\$2\\) ON CONFLICT DO NOTHING").
+		WithArgs("uuid-123", "dep-1").
+		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	mock.ExpectCommit()
 	err = store.CreateTask(ctx, task)
@@ -1153,4 +1217,46 @@ func TestSqliteTaskStore_PollDelegatedTasks_ScanError(t *testing.T) {
 	ctx := context.Background()
 	_, err = store.PollDelegatedTasks(ctx, 10)
 	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_ReportMissionHandover(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+	ctx := context.Background()
+
+	missionID := "mission-123"
+	blockers := "Need more info"
+
+	// Match any whitespace including newlines
+	mock.ExpectExec("(?s)UPDATE agent_missions\\s+SET status = 'blocked',\\s+mission_log = COALESCE\\(mission_log, ''\\) \\|\\| CASE WHEN COALESCE\\(mission_log, ''\\) = '' THEN '' ELSE '\\s*' END \\|\\| \\$1\\s+WHERE id = \\$2").
+		WithArgs(blockers, missionID).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = store.ReportMissionHandover(ctx, missionID, blockers)
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSqliteTaskStore_ReportMissionHandover(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+	ctx := context.Background()
+
+	missionID := "mission-123"
+	blockers := "Need more info"
+
+	// Match any whitespace including newlines
+	mock.ExpectExec("(?s)UPDATE agent_missions\\s+SET status = 'blocked',\\s+mission_log = COALESCE\\(mission_log, ''\\) \\|\\| CASE WHEN COALESCE\\(mission_log, ''\\) = '' THEN '' ELSE '\\s*' END \\|\\| \\?\\s+WHERE id = \\?").
+		WithArgs(blockers, missionID).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = store.ReportMissionHandover(ctx, missionID, blockers)
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
 }

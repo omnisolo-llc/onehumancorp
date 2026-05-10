@@ -1,6 +1,108 @@
-import { VerticalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
-export component AutodreamWalkthrough {
+export component AutodreamWalkthrough inherits Window {
+    preferred-width: 600px;
+    preferred-height: 600px;
+    min-width: 375px;
+    title: "Understanding AutoDream";
+
+    in-out property <int> current_step: 0;
+    callback close();
+
+    // Glassmorphism background
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+    always-on-top: true;
+
+    GlassCard {
+        background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+        opacity: 0.5;
+        width: parent.width;
+        height: parent.height;
+    }
+
     VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+        alignment: center;
+
+        Text {
+            text: "AutoDream: Your Business's Memory";
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            font-family: "Outfit";
+            horizontal-alignment: center;
+        }
+
+        GlassCard {
+            // Glassmorphism card
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.1);
+            border-width: 1px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 100%;
+
+            VerticalBox {
+                padding: 32px;
+                spacing: 16px;
+
+                Text {
+                    text: current_step == 0 ? "What is AutoDream?" :
+                          current_step == 1 ? "How it Learns" :
+                          current_step == 2 ? "Secure Storage" :
+                          "Getting Smarter";
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: white;
+                    font-family: "Outfit";
+                }
+
+                Text {
+                    text: current_step == 0 ? "AutoDream is the long-term memory for your AI helpers. It securely saves important details from your past conversations and completed tasks." :
+                          current_step == 1 ? "Every day, AutoDream gathers notes from the work your helpers did and turns them into lasting memories, so they never forget your business preferences." :
+                          current_step == 2 ? "Your data is kept completely private and secure. It’s stored in a specialized vault designed just for your business, ensuring fast and safe access." :
+                          "Because AutoDream remembers past interactions, your helpers get smarter over time. They will understand your needs better without you having to repeat yourself.";
+                    color: #94a3b8;
+                    wrap: word-wrap;
+                    font-family: "Inter";
+                    font-size: 16px;
+                }
+
+                HorizontalBox {
+                    alignment: center;
+                    spacing: 20px;
+
+                    Button {
+                        text: "Previous";
+                        enabled: current_step > 0;
+                        height: 44px;
+                        clicked => { current_step = current_step - 1; }
+                    }
+
+                    Text {
+                        text: "Step " + (current_step + 1) + " of 4";
+                        color: #9ca3af;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        font-family: "Inter";
+                    }
+
+                    Button {
+                        text: current_step < 3 ? "Next" : "Done";
+                        height: 44px;
+                        clicked => {
+                            if (current_step < 3) {
+                                current_step = current_step + 1;
+                            } else {
+                                root.visible = false;
+                                close();
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -1,0 +1,96 @@
+    /// Anthropic Claude Agent SDK Archetype: Implements the harness via a single `query()` function
+    /// that returns an async iterator streaming messages. Uses a "dumb loop" Gather-Act-Verify cycle:
+    /// gather context (search files, read code) -> take action (edit files, run commands) -> verify results (run tests, check output).
+    pub async fn run_anthropic_dumb_loop<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        session_tools: &[ohc_builtin_agent_tools::Tool],
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        let mut messages = vec![crate::types::Message::user(initial_message)];
+        let phases = ["Gather", "Act", "Verify"];
+
+        for (i, phase) in phases.iter().enumerate() {
+            on_event(AgentEvent::IterationStarted { iteration: i as i32, message_count: messages.len() });
+
+            let phase_prompt = match *phase {
+                "Gather" => "Phase: Gather context. Use read-only tools like read, head, grep to search files and read code.",
+                "Act" => "Phase: Take action. Use mutating tools like write, edit, bash to edit files and run commands based on gathered context.",
+                "Verify" => "Phase: Verify results. Use bash to run tests or check output to verify your actions.",
+                _ => unreachable!(),
+            };
+
+            let req = crate::types::ChatRequest {
+                model: cfg.model.clone(),
+                system: format!("{}\n\nYou are in the {} phase.", cfg.server_system_message, phase_prompt),
+                messages: messages.clone(),
+                tools: session_tools.iter().map(|t| crate::types::ToolDefinition {
+                    name: t.name.clone(),
+                    description: t.description.clone(),
+                    parameters: t.parameters.clone(),
+                }).collect(),
+                max_tokens: cfg.max_tokens,
+                temperature: cfg.temperature,
+            };
+
+            let resp = self.llm.chat(req).await?;
+            let msg = resp.message;
+            messages.push(msg.clone());
+
+            if msg.tool_calls.is_empty() {
+                if *phase == "Verify" {
+                    return Ok(msg.content);
+                } else {
+                    continue;
+                }
+            }
+
+            let mut tool_results = vec![];
+            for tc in &msg.tool_calls {
+                let r = match self.execute_tool(tc, session_tools, &messages).await {
+                    Ok(res) => res,
+                    Err(e) => format!("Error: {:?}", e),
+                };
+
+                on_event(AgentEvent::ToolCall {
+                    name: tc.name.clone(),
+                    args_json: tc.arguments.to_string(),
+                    result: r.clone(),
+                    iteration: i as i32,
+                });
+
+                tool_results.push(crate::types::ToolResult {
+                    tool_call_id: tc.id.clone(),
+                    content: r,
+                    error: String::new(),
+                });
+            }
+
+            messages.push(crate::types::Message {
+                role: crate::types::Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results,
+                response_id: None,
+                previous_response_id: None,
+            });
+        }
+
+        // Final fallback if Verify phase didn't exit
+        let req = crate::types::ChatRequest {
+            model: cfg.model.clone(),
+            system: "Summarize the final result of the Gather-Act-Verify cycle.".to_string(),
+            messages: messages.clone(),
+            tools: vec![],
+            max_tokens: cfg.max_tokens,
+            temperature: cfg.temperature,
+        };
+        let resp = self.llm.chat(req).await?;
+        Ok(resp.message.content)
+    }

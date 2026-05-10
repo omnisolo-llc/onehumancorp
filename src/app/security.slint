@@ -1,3 +1,4 @@
+import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export struct UiSecurityIssue {
@@ -32,8 +33,7 @@ export component Security inherits Window {
         VerticalBox {
             spacing: 12px;
             
-            for issue in issues : Rectangle {
-                background: white;
+            for issue in issues : GlassCard {
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;

@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "autodream.go",
         "mesh.go",
+        "mesh_redis.go",
         "tasks_db.go",
         "state_machine.go",
         "sip.go",
@@ -19,6 +20,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/pb:pb",
+        "@com_github_redis_go_redis_v9//:go-redis",
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//:metric",
@@ -30,6 +32,7 @@ go_test(
     srcs = [
         "autodream_test.go",
         "mesh_test.go",
+        "mesh_redis_test.go",
         "mesh_system_test.go",
         "tasks_db_test.go",
         "state_machine_test.go",
@@ -45,6 +48,8 @@ go_test(
     embed = [":orchestration"],
     deps = [
         "//srcs/server/pb:pb",
+        "@com_github_alicebob_miniredis_v2//:miniredis",
+        "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
         "@com_github_mattn_go_sqlite3//:go_sqlite3",

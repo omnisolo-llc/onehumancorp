@@ -3,9 +3,9 @@ import { GlassCard } from "glass_card.slint";
 import { AdvancedToggle } from "advanced_toggle.slint";
 
 export component AgentConfig inherits Window {
-    width: 600px;
+    min-width: 375px;
     height: 500px;
-    title: "Configure Helper";
+    title: "Agent Configuration";
 
     callback activate_agent(string, bool, bool, bool, bool, string, string, string, string);
     callback next_step();
@@ -21,6 +21,7 @@ export component AgentConfig inherits Window {
     in-out property <float> frequency_value: 2.0;
     in-out property <string> frequency: round(frequency_value) == 0 ? "Real-time" : (round(frequency_value) == 1 ? "Hourly" : (round(frequency_value) == 2 ? "Daily" : "Weekly"));
     in-out property <bool> is_advanced: false;
+    callback toggle_advanced();
     in-out property <bool> show_toast: false;
     in-out property <string> api_scope_override: "";
     in-out property <string> cron_override: "";
@@ -35,11 +36,11 @@ export component AgentConfig inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Configure Helper"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: "Agent Configuration"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
             AdvancedToggle {
                 is_advanced <=> root.is_advanced;
-                toggled => { save_state(); }
+                toggled => { is_advanced = !is_advanced; save_state(); }
             }
         }
 
@@ -143,7 +144,7 @@ export component AgentConfig inherits Window {
             Text { text: "What should this helper do?"; color: white; font-family: "Inter"; }
             
             HorizontalBox {
-                Text { text: "Reply to customer messages"; color: white; font-family: "Inter"; }
+                Text { text: "Can Reply to Messages"; color: white; font-family: "Inter"; }
                 CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
             }
             HorizontalBox {
@@ -215,7 +216,7 @@ export component AgentConfig inherits Window {
             }
             Rectangle {} // Spacer
             Button {
-                text: step == 3 ? "Activate" : "Next";
+                text: step == 3 ? "Activate Agent" : "Next";
                 clicked => {
                     if (step < 3) {
                         next_step();
@@ -237,7 +238,7 @@ export component AgentConfig inherits Window {
         VerticalBox {
             alignment: center;
             Text {
-                text: "Helper Activated ✓";
+                text: "Agent Activated ✓";
                 font-family: "Outfit";
                 font-size: 16px;
                 font-weight: 700;

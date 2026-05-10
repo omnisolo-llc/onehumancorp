@@ -62,7 +62,7 @@ impl InteropProtocol {
             mission_id: mission_id.to_string(),
             tenant_id: tenant_id.to_string(),
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
-            state_snapshot_json: state_payload.clone(),
+            state_snapshot: state_payload.clone(),
         };
 
         let mut buf = Vec::new();
@@ -101,6 +101,12 @@ impl InteropProtocol {
         let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
 
         result
+    }
+
+    /// Resumes a mission after a mode switch
+    pub async fn resume_mission(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
+        // Handoff uses the same mechanism to synchronize state
+        self.handoff(mission_id, tenant_id, state_payload).await
     }
 
     /// Listens for state handoff updates
@@ -225,7 +231,7 @@ impl InteropProtocol {
             job_id: job_id.to_string(),
             tenant_id: tenant_id.to_string(),
             action_name: action_name.to_string(),
-            payload_json: payload,
+            payload: payload,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 
@@ -435,6 +441,33 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_interop_resume_mission() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "system:state_handoff" {
+                use prost::Message as ProstMessage;
+                let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
+                if decoded.mission_id == "mission_resume_1" {
+                    rx.store(true, Ordering::SeqCst);
+                }
+            }
+        });
+
+        let _cancel = bus.subscribe("system:state_handoff".to_string(), handler).await.unwrap();
+
+        protocol.resume_mission("mission_resume_1", "tenant_1", vec![1, 2, 3]).await.unwrap();
+        sleep(Duration::from_millis(100)).await;
+
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
     async fn test_interop_handoff_idempotency_simulation() {
         let bus = Arc::new(MemoryBus::new());
         let lock = bus.clone();
@@ -572,7 +605,7 @@ mod tests {
             job_id: "job_123".to_string(),
             tenant_id: "tenant_x".to_string(),
             action_name: "test_action".to_string(),
-            payload_json: vec![1, 2, 3],
+            payload: vec![1, 2, 3],
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 
@@ -885,7 +918,7 @@ mod tests {
             source_mode: 0,
             target_mode: 0,
             timestamp_ms: 1000,
-            state_snapshot_json: vec![1, 2, 3],
+            state_snapshot: vec![1, 2, 3],
         };
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
@@ -962,7 +995,7 @@ mod tests {
             job_id: "job1".to_string(),
             tenant_id: "t1".to_string(),
             action_name: "act".to_string(),
-            payload_json: vec![],
+            payload: vec![],
             timestamp_ms: 1000,
         };
         use prost::Message as ProstMessage;

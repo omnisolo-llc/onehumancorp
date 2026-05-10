@@ -136,3 +136,46 @@ fn test_scribe_release_notes_latest_only_toggle() {
     ui.set_show_latest_only(false);
     assert_eq!(ui.get_show_latest_only(), false);
 }
+
+#[test]
+fn test_new_integrations_present() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = crate::app::Integrations::new().unwrap();
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+
+    ui.on_configure_integration(move |name| {
+        if name == "Ayrshare" || name == "Listmonk" || name == "EasyPost" || name == "Jitsi" || name == "Cal.com" || name == "Mercado Pago" || name == "Twilio" || name == "Meta" {
+            *invoked_clone.borrow_mut() = true;
+        }
+    });
+
+    ui.invoke_configure_integration("Ayrshare".into());
+    assert!(*invoked.borrow(), "Ayrshare configuration should be callable");
+    *invoked.borrow_mut() = false;
+
+    ui.invoke_configure_integration("Listmonk".into());
+    assert!(*invoked.borrow(), "Listmonk configuration should be callable");
+    *invoked.borrow_mut() = false;
+
+    ui.invoke_configure_integration("EasyPost".into());
+    assert!(*invoked.borrow(), "EasyPost configuration should be callable");
+    *invoked.borrow_mut() = false;
+
+    ui.invoke_configure_integration("Jitsi".into());
+    assert!(*invoked.borrow(), "Jitsi configuration should be callable");
+    *invoked.borrow_mut() = false;
+
+    ui.invoke_configure_integration("Cal.com".into());
+    assert!(*invoked.borrow(), "Cal.com configuration should be callable");
+    *invoked.borrow_mut() = false;
+
+    ui.invoke_configure_integration("Mercado Pago".into());
+    assert!(*invoked.borrow(), "Mercado Pago configuration should be callable");
+    *invoked.borrow_mut() = false;
+
+    ui.invoke_configure_integration("Twilio".into());
+    assert!(*invoked.borrow(), "Twilio configuration should be callable");
+}

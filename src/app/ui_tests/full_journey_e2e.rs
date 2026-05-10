@@ -1,5 +1,4 @@
 use crate::app;
-use slint::ComponentHandle;
 
 #[test]
 fn test_e2e_full_onboarding_journey() {
@@ -71,7 +70,7 @@ fn test_e2e_full_onboarding_journey() {
     let launch_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launch_called_clone = launch_called.clone();
 
-    wizard_ui.on_launch(move |bt, cn, cd, pp, ae, wt, pn, price, dc, _an, _ap, _pt| {
+    wizard_ui.on_launch(move |bt, cn, _cd, pp, ae, wt, pn, price, dc, _an, _ap, _pt| {
         assert_eq!(bt, "Online Store");
         assert_eq!(cn, "My E2E Bakery");
         assert_eq!(pp, "online");

@@ -91,4 +91,21 @@ mod tests {
             assert_eq!(decrypted, plaintext, "Decryption must match plaintext");
         });
     }
+    #[test]
+    fn test_empty_string() {
+        assert_eq!(encrypt_deterministic(""), "");
+        assert_eq!(decrypt_deterministic(""), "");
+    }
+
+    #[test]
+    fn test_fallback_invalid_base64() {
+        let invalid = "not base64 data";
+        assert_eq!(decrypt_deterministic(invalid), invalid);
+    }
+
+    #[test]
+    fn test_fallback_too_short() {
+        let short = base64::engine::general_purpose::STANDARD.encode("short");
+        assert_eq!(decrypt_deterministic(&short), short);
+    }
 }

@@ -440,6 +440,9 @@ impl Store {
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
                         return Err("Invalid token: empty claims".to_string());
                     }
+                    if crate::config::get().multitenant && data.claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
+                        return Err("Invalid token: organization_id is required in cloud mode".to_string());
+                    }
                     if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
                         return Err("token revoked".to_string());
                     }
@@ -449,6 +452,17 @@ impl Store {
                     Ok(data.claims)
                 }
                 Err(_) => {
+                    let oidc_cfg = {
+                        let c = self.oidc_cfg.read().unwrap();
+                        crate::oidc::OIDCConfig {
+                            issuer_url: c.issuer_url.clone(),
+                            client_id: c.client_id.clone(),
+                            enabled: c.enabled,
+                        }
+                    };
+                    if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
+                        return Ok(claims);
+                    }
                     Err("Invalid token".to_string())
                 }
         }

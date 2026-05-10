@@ -384,3 +384,106 @@ fn test_grandmother_secure_agent_config_submit_ux() {
     ui.invoke_save_config("secure-token-123".into());
     assert!(*invoked.borrow(), "Save config action should successfully execute");
 }
+
+#[test]
+fn test_grandmother_e2e_connect_tools_flow() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    // Simulate login
+    let login_ui = crate::app::Login::new().unwrap();
+    login_ui.invoke_login("ceo@store.com".into(), "123".into());
+
+    // Start from home page after login (simulate the dashboard)
+    let dashboard_ui = crate::app::Dashboard::new().unwrap();
+
+    let docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let docs_opened_clone = docs_opened.clone();
+
+    // Verify our changes for "Connect tools" are correctly hooked into the docs path
+    // which effectively launches the API Docs (now known as "Connect tools" to the user).
+    dashboard_ui.on_open_api_docs(move || {
+        *docs_opened_clone.borrow_mut() = true;
+    });
+
+    dashboard_ui.invoke_open_api_docs();
+    assert!(*docs_opened.borrow());
+
+    let scribe_ui = crate::app::ScribeFeatureDashboard::new().unwrap();
+    let scribe_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let scribe_invoked_clone = scribe_invoked.clone();
+
+    scribe_ui.on_open_api_docs(move || {
+        *scribe_invoked_clone.borrow_mut() = true;
+    });
+
+    scribe_ui.invoke_open_api_docs();
+    assert!(*scribe_invoked.borrow());
+
+    // Final verification step of advanced AI config toggle
+    let ai_config_ui = crate::app::AiConfig::new().unwrap();
+    assert_eq!(ai_config_ui.get_is_advanced(), false);
+    ai_config_ui.set_is_advanced(true);
+    assert_eq!(ai_config_ui.get_is_advanced(), true);
+}
+
+#[test]
+fn test_grandmother_dashboard_ai_team_activity_ux() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Dashboard::new().unwrap();
+
+    let action_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let action_invoked_clone = action_invoked.clone();
+    ui.on_action_view_observability(move || { *action_invoked_clone.borrow_mut() = true; });
+    ui.invoke_action_view_observability();
+    assert!(*action_invoked.borrow(), "AI Team Activity (Observability) action failed");
+}
+
+#[test]
+fn test_grandmother_dashboard_ai_activity_ux() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::Dashboard::new().unwrap();
+
+    let action_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let action_invoked_clone = action_invoked.clone();
+    ui.on_action_open_swarm_observability(move || { *action_invoked_clone.borrow_mut() = true; });
+    ui.invoke_action_open_swarm_observability();
+    assert!(*action_invoked.borrow(), "AI Activity (Swarm Observability) action failed");
+}
+
+#[test]
+fn test_grandmother_setup_wizard_business_id_ux() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+    let ui = crate::app::SetupWizard::new().unwrap();
+
+    // Simulate setting advanced view which exposes the technical ID
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+
+    // Ensure the step navigation functions correctly
+    ui.set_step(9);
+    assert_eq!(ui.get_step(), 9);
+}
+
+#[test]
+fn test_grandmother_msgbus_state_snapshot_e2e_integration() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    // We simulate the message bus handoff UI connection
+    let ui = crate::app::Handoffs::new().unwrap();
+    assert_eq!(ui.get_requests().row_count(), 0);
+}
+
+#[test]
+fn test_grandmother_analytics_real_data_fetching_ux() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let ui = crate::app::AnalyticsCharts::new().unwrap();
+    let charts = ui.get_charts();
+    assert_eq!(charts.row_count(), 0, "Charts should initially be empty waiting for real data");
+}

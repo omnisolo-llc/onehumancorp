@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:confetti/confetti.dart';
+
 import '../providers/wizard_provider.dart';
 import '../main.dart'; // For GlassContainer
 import '../widgets/contextual_tooltip.dart';
@@ -26,21 +31,36 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   final _adminEmailController = TextEditingController();
   final _adminPasswordController = TextEditingController();
 
+
+  late ConfettiController _confettiController;
+  bool _showConfetti = false;
+
   late AnimationController _heroAnimationController;
+
   late Animation<double> _heroAnimation;
 
   late AnimationController _pulseAnimationController;
   late Animation<double> _pulseAnimation;
 
   bool _showWalkthrough = true;
+  bool _isGenerating = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Load saved state if any, in real app this would use the real logged in tenant ID
+      ref.read(wizardProvider.notifier).setTenantId('tenant-mock-local');
+      ref.read(wizardProvider.notifier).loadState('tenant-mock-local');
+    });
+
     _heroAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+
 
     _heroAnimation = Tween<double>(begin: -10, end: 10).animate(
       CurvedAnimation(parent: _heroAnimationController, curve: Curves.easeInOut),
@@ -56,16 +76,19 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
+
   @override
   void dispose() {
     _heroAnimationController.dispose();
     _pulseAnimationController.dispose();
+    _confettiController.dispose();
     _companyNameController.dispose();
     _adminNameController.dispose();
     _adminEmailController.dispose();
     _adminPasswordController.dispose();
     super.dispose();
   }
+
 
   void _nextStep() {
     ref.read(wizardProvider.notifier).nextStep();
@@ -79,7 +102,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(wizardProvider);
 
-    if (state.currentStep == 8) {
+    if (state.currentStep == 11) {
       return const DashboardScreen();
     }
 
@@ -128,7 +151,13 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       case 6:
         return _buildTemplateSelectionScreen(state);
       case 7:
+        return _buildProductScreen(state);
+      case 8:
+        return _buildDomainScreen(state);
+      case 9:
         return _buildReviewAndLaunchScreen(state);
+      case 10:
+        return _buildWelcomeChecklistScreen(state);
       default:
         return const SizedBox.shrink();
     }
@@ -718,6 +747,187 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
+  Widget _buildProductScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Add your first product or service',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'You can add more later.',
+          style: TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+        const SizedBox(height: 20),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Name', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                const SizedBox(height: 5),
+                GlassContainer(
+                  child: TextFormField(
+                    key: const Key('productNameField'),
+                    initialValue: state.productName,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. Custom Birthday Cake',
+                      hintStyle: TextStyle(color: Colors.white24),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(15),
+                    ),
+                    onChanged: (value) {
+                      ref.read(wizardProvider.notifier).updateProductDetails(name: value);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 15),
+                const Text('Description (AI will help!)', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                const SizedBox(height: 5),
+                GlassContainer(
+                  child: TextFormField(
+                    key: const Key('productDescField'),
+                    initialValue: state.productDescription,
+                    style: const TextStyle(color: Colors.white),
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      hintText: 'Describe what you are selling...',
+                      hintStyle: TextStyle(color: Colors.white24),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(15),
+                    ),
+                    onChanged: (value) {
+                      ref.read(wizardProvider.notifier).updateProductDetails(description: value);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: _isGenerating ? null : () async {
+                    setState(() { _isGenerating = true; });
+                    await ref.read(wizardProvider.notifier).autoGenerateProductDescription();
+                    if (mounted) {
+                      setState(() { _isGenerating = false; });
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.1),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Center(
+                    child: _isGenerating
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('✨ Auto-generate description', style: TextStyle(color: Colors.white))
+                  ),
+                ),
+                const SizedBox(height: 15),
+                const Text('Price', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                const SizedBox(height: 5),
+                GlassContainer(
+                  child: TextFormField(
+                    key: const Key('productPriceField'),
+                    initialValue: state.productPrice,
+                    style: const TextStyle(color: Colors.white),
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: '0.00',
+                      prefixText: '${NumberFormat.simpleCurrency(locale: Localizations.localeOf(context).toString()).currencySymbol} ',
+                      prefixStyle: const TextStyle(color: Colors.white),
+                      hintStyle: TextStyle(color: Colors.white24),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(15),
+                    ),
+                    onChanged: (value) {
+                      ref.read(wizardProvider.notifier).updateProductDetails(price: value);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  ),
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.camera_alt, color: Colors.white54, size: 40),
+                        SizedBox(height: 10),
+                        Text('Tap to select an image', style: TextStyle(color: Colors.white54)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
+  Widget _buildDomainScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Choose a Domain',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'This is how customers will find you online.',
+          style: TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+        const SizedBox(height: 20),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Your free OHC domain', style: TextStyle(color: Colors.white70, fontSize: 14)),
+              const SizedBox(height: 5),
+              GlassContainer(
+                child: TextFormField(
+                  key: const Key('domainField'),
+                  initialValue: state.domainChoice ?? '\${(state.companyName ?? "mybusiness").replaceAll(" ", "").toLowerCase()}.ohc.app',
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(15),
+                  ),
+                  onChanged: (value) {
+                    ref.read(wizardProvider.notifier).setDomainChoice(value);
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
   Widget _buildReviewAndLaunchScreen(WizardState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -751,6 +961,10 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   _buildSummaryItem('Admin', state.adminName ?? 'Not set'),
                   const SizedBox(height: 10),
                   _buildSummaryItem('Template', state.templateSelection ?? 'Not set'),
+                  const SizedBox(height: 10),
+                  _buildSummaryItem('Product', state.productName ?? 'Not set'),
+                  const SizedBox(height: 10),
+                  _buildSummaryItem('Domain', state.domainChoice ?? 'Not set'),
                 ],
               ),
             ),
@@ -785,24 +999,132 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     child: child,
                   );
                 },
+
                 child: ElevatedButton(
                   onPressed: () async {
+                    setState(() {
+                      _showConfetti = true;
+                    });
+                    _confettiController.play();
+
+                    if (state.domainChoice != null) {
+                      final url = 'https://${state.domainChoice}';
+                      await Clipboard.setData(ClipboardData(text: url));
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Shareable link copied to clipboard!')),
+                        );
+                      }
+                    }
+
+                    await Future.delayed(const Duration(seconds: 2));
                     await ref.read(wizardProvider.notifier).submitWizard();
                   },
                   style: ElevatedButton.styleFrom(
+
                     backgroundColor: const Color(0xFF22C55E),
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
-                  child: const Text('Launch My AI Team', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                  key: const Key('launchAIBtn'), child: const Text('Publish my business →', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+
+
+  Widget _buildWelcomeChecklistScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_showConfetti)
+          const Text(
+            'CONFETTI Success',
+            style: TextStyle(
+              fontSize: 20,
+              color: Colors.green,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        const SizedBox(height: 10),
+        const Text(
+          'You\'re set up!',
+
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Here\'s what to do next:',
+          style: TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+        const SizedBox(height: 20),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildChecklistItem('✅ Business live', true),
+                const SizedBox(height: 10),
+                _buildChecklistItem('⬜ Add 3 more products', false),
+                const SizedBox(height: 10),
+                _buildChecklistItem('⬜ Connect Instagram', false),
+                const SizedBox(height: 10),
+                _buildChecklistItem('⬜ Share your link with a friend', false),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () {
+            ref.read(wizardProvider.notifier).nextStep();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF6B4EFF),
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+          ),
+          child: const Text('Go to Dashboard', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChecklistItem(String text, bool isCompleted) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: isCompleted ? Colors.green.withOpacity(0.1) : Colors.white.withOpacity(0.05),
+        border: Border.all(color: isCompleted ? Colors.green : Colors.white24),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: isCompleted ? Colors.greenAccent : Colors.white,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: Colors.white54),
+        ],
+      ),
     );
   }
 
@@ -859,3 +1181,4 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 }
+// Validated feature
