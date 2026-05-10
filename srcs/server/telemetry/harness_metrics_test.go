@@ -94,6 +94,13 @@ func TestRecordHarnessInitLatency(t *testing.T) {
 	}
 }
 
+func TestRecordHarnessDbIOLatency(t *testing.T) {
+	ctx := context.Background()
+	err := RecordHarnessDbIOLatency(ctx, 0.5, "SELECT")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+}
 
 func TestRecordBubblewrapSpawn(t *testing.T) {
 	ctx := context.Background()

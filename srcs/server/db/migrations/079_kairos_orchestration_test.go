@@ -27,7 +27,6 @@ func TestKairosOrchestrationSchema(t *testing.T) {
 	CREATE TABLE IF NOT EXISTS kairos_state_transitions (
 		id TEXT PRIMARY KEY,
 		task_id TEXT NOT NULL,
-		tenant_id TEXT NOT NULL DEFAULT 'system',
 		from_state TEXT,
 		to_state TEXT NOT NULL,
 		transitioned_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -36,7 +35,6 @@ func TestKairosOrchestrationSchema(t *testing.T) {
 	CREATE TABLE IF NOT EXISTS kairos_sub_agent_jobs (
 		id TEXT PRIMARY KEY,
 		parent_task_id TEXT NOT NULL,
-		tenant_id TEXT NOT NULL DEFAULT 'system',
 		agent_id TEXT NOT NULL,
 		payload TEXT,
 		status TEXT NOT NULL

@@ -16,7 +16,6 @@ func setupTestDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("Failed to open database: %v", err)
 	}
-	db.SetMaxOpenConns(1)
 
 	_, err = db.Exec(`
 		CREATE TABLE tenants (
@@ -58,25 +57,25 @@ func TestOnboardingFlow(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	tenantStore := NewSqliteTenantStore(db)
-	taskStore := orchestration.NewSqliteTaskStore(db)
+	tenantStore := NewTenantStore(db)
+	taskStore := orchestration.NewTaskStore(db)
 	service := NewService(tenantStore, taskStore)
+
 	ctx := context.Background()
 
 	// 1. Start Onboarding
 	req := OnboardingRequest{
-		Name:        "Maya's Cakes",
-		Category:    "Food",
-		Description: "Custom cakes for all occasions",
+		Name:        "Test Store",
+		Category:    "Retail",
+		Description: "A test retail store",
 	}
 
 	res, err := service.StartOnboarding(ctx, req)
 	assert.NoError(t, err)
-	assert.NotNil(t, res)
 	assert.NotEmpty(t, res.TenantID)
 	assert.Equal(t, "PROVISIONING", res.Status)
 
-	// 2. Check Tasks Dispatched
+	// 2. Verify Tasks are dispatched
 	tasks, err := taskStore.GetTasksByOrganization(ctx, res.TenantID)
 	assert.NoError(t, err)
 	assert.Len(t, tasks, 3)
@@ -107,4 +106,36 @@ func TestOnboardingFlow(t *testing.T) {
 	tenant, err := tenantStore.GetTenant(ctx, res.TenantID)
 	assert.NoError(t, err)
 	assert.Equal(t, "READY", tenant.Status)
+}
+
+func TestAPIStateFlow(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	tenantStore := NewTenantStore(db)
+	taskStore := orchestration.NewTaskStore(db)
+	service := NewService(tenantStore, taskStore)
+
+	ctx := context.Background()
+
+	// 1. Create a dummy tenant directly
+	tenant := &Tenant{
+		Name:        "State Test Store",
+		Category:    "Retail",
+		Description: "A test retail store",
+		Status:      "PROVISIONING",
+	}
+	err := tenantStore.CreateTenant(ctx, tenant)
+	assert.NoError(t, err)
+
+	// 2. Save State
+	err = service.SaveTenantState(ctx, tenant.ID, "{\"step\": 2}")
+	assert.NoError(t, err)
+
+	// 3. Get State
+	stateRes, err := service.GetTenantState(ctx, tenant.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, "{\"step\": 2}", stateRes.State)
+}
+func TestAPIEndToEndFlow(t *testing.T) {
 }
