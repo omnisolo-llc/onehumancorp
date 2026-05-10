@@ -790,6 +790,24 @@ export component SetupWizard inherits Window {
 
             // Step 100: Generated Storefront
             if (step == 100) : VerticalBox {
+                // Confetti animation
+                Rectangle {
+                    height: 100px;
+                    width: 100%;
+                    Text {
+                        text: "🎉🎊✨";
+                        font-size: 64px;
+                        horizontal-alignment: center;
+                        y: parent.height / 2 - 32px;
+
+                        states [
+                            active when step == 100 : {
+                                y: parent.height / 2 - 40px;
+                                in { animate y { duration: 1500ms; easing: ease-in-out; iteration-count: -1; } }
+                            }
+                        ]
+                    }
+                }
                 spacing: 16px;
 
                 Text { text: "Your live storefront!"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
