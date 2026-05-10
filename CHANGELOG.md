@@ -5,7 +5,7 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.4.40 (Cloud) / v0.4.40+1 (Standalone)
+## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
 - Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
