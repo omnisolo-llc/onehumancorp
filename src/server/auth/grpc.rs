@@ -55,8 +55,12 @@ impl AuthConfig {
         }
 
         let token = &auth_str["Bearer ".len()..];
+        if token.is_empty() {
+            return Err(Status::unauthenticated("empty token"));
+        }
         
-        let app_key = b"ohc-builtin-agent-2025";
+        let binding = std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
+        let app_key = binding.as_bytes();
         let mut mac = Hmac::<Sha256>::new_from_slice(app_key).expect("HMAC can take key of any size");
         mac.update(token.as_bytes());
         
@@ -91,7 +95,8 @@ impl AuthConfig {
 
 #[allow(dead_code)]
 fn hmac_token(tok: &str) -> Vec<u8> {
-    let app_key = b"ohc-builtin-agent-2025";
+    let binding = std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
+    let app_key = binding.as_bytes();
     let mut mac = Hmac::<Sha256>::new_from_slice(app_key).expect("HMAC can take key of any size");
     mac.update(tok.as_bytes());
     mac.finalize().into_bytes().to_vec()
@@ -165,5 +170,18 @@ mod tests {
         let mut req2 = Request::new(());
         req2.metadata_mut().insert("authorization", MetadataValue::from_str("Bearer wrong_token").unwrap());
         assert!(cfg.authenticate(&req2).is_err());
+    }
+
+    #[test]
+    fn test_auth_empty_token_rejection() {
+        let hash = hmac_token("secret_token");
+        let cfg = AuthConfig { mode: AuthMode::Token(hash) };
+
+        let mut req = Request::new(());
+        req.metadata_mut().insert("authorization", MetadataValue::from_str("Bearer ").unwrap());
+
+        let res = cfg.authenticate(&req);
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code(), tonic::Code::Unauthenticated);
     }
 }

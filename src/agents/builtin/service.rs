@@ -193,6 +193,9 @@ impl AgentServiceImpl {
                 let tok = auth_val
                     .strip_prefix("Bearer ")
                     .ok_or_else(|| Status::unauthenticated("authorization must be Bearer token"))?;
+                if tok.is_empty() {
+                    return Err(Status::unauthenticated("empty token"));
+                }
                 if !crate::auth::check_token(tok, token_hash) {
                     return Err(Status::unauthenticated("invalid token"));
                 }

@@ -41,6 +41,9 @@ pub fn auth_mode_from_env() -> AuthMode {
 /// Check a bearer token against an expected HMAC hash.
 /// Returns true if the token matches.
 pub fn check_token(provided: &str, expected_hash: &[u8]) -> bool {
+    if provided.is_empty() {
+        return false;
+    }
     let provided_hash = hmac_token(provided);
     // Constant-time comparison
     if provided_hash.len() != expected_hash.len() {
@@ -56,7 +59,8 @@ pub fn check_token(provided: &str, expected_hash: &[u8]) -> bool {
 /// Compute HMAC-SHA256 of the token using the application key.
 /// Mirrors Go hmacToken.
 pub fn hmac_token(tok: &str) -> Vec<u8> {
-    let app_key = b"ohc-builtin-agent-2025";
+    let binding = std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
+    let app_key = binding.as_bytes();
     let mut mac = HmacSha256::new_from_slice(app_key).expect("HMAC init failed");
     mac.update(tok.as_bytes());
     mac.finalize().into_bytes().to_vec()
