@@ -10,45 +10,41 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 
+	"onehumancorp/srcs/server/agents/local"
+	dbWrapper "onehumancorp/srcs/server/db"
 	"onehumancorp/srcs/server/orchestration/autodream"
 )
 
-func getMode() string {
-	if os.Getenv("OHC_MULTITENANT") == "true" {
-		return "Cloud"
-	}
-	return "Standalone"
+type LLMClient interface {
+	GenerateEmbedding(text string) ([]float32, error)
 }
 
 type Memory struct {
 	OrganizationID string `yaml:"organization_id"`
 	TaskID         string `yaml:"task_id"`
+	AgentID        string `yaml:"agent_id"`
 	Content        string `yaml:"content"`
 }
 
 type AutoDreamWorker struct {
-	db *sql.DB
+	db        *sql.DB
+	llmClient LLMClient
 }
 
-func NewAutoDreamWorker(db *sql.DB) *AutoDreamWorker {
+func NewAutoDreamWorker(db *sql.DB, llmClient LLMClient) *AutoDreamWorker {
+	if llmClient == nil {
+		llmClient = local.NewLocalLLMClient()
+	}
 	return &AutoDreamWorker{
-		db: db,
+		db:        db,
+		llmClient: llmClient,
 	}
-}
-
-func GenerateEmbedding(text string) []float32 {
-	// Mock 1536-dimensional embedding
-	embedding := make([]float32, 1536)
-	for i := range embedding {
-		embedding[i] = 0.01 // dummy value
-	}
-	return embedding
 }
 
 func formatVector(vec []float32) string {
-	// pgvector format: [1.1,2.2,3.3]
 	data, _ := json.Marshal(vec)
 	return string(data)
 }
@@ -64,7 +60,10 @@ func (w *AutoDreamWorker) handleDeadLetter(memoryDir, filePath string) {
 
 func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir string) error {
 	start := time.Now()
-	mode := getMode()
+	mode := "Cloud"
+	if dbWrapper.GlobalProvider.IsSQLite() {
+		mode = "Standalone"
+	}
 
 	defer func() {
 		autodream.BatchProcessingDuration.WithLabelValues(mode).Observe(time.Since(start).Seconds())
@@ -79,7 +78,11 @@ func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir 
 		return err
 	}
 
+	processedCount := 0
 	for _, entry := range entries {
+		if processedCount >= 500 {
+			break
+		}
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".yml" {
 			continue
 		}
@@ -104,21 +107,43 @@ func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir 
 			continue
 		}
 
-		embedding := GenerateEmbedding(mem.Content)
+		embedding, err := w.llmClient.GenerateEmbedding(mem.Content)
+		if err != nil {
+			autodream.ConsolidationErrorsTotal.WithLabelValues(mode, "embedding_error").Inc()
+			return fmt.Errorf("failed to generate embedding: %w", err)
+		}
+
 		vecStr := formatVector(embedding)
 
-		query := `
-			INSERT INTO autodream_memories (organization_id, task_id, content, embedding)
-			VALUES ($1, $2, $3, $4)
-		`
+		id := uuid.New().String()
+		sourceType := "autodream"
 		var taskID interface{}
 		if mem.TaskID != "" {
 			taskID = mem.TaskID
 		} else {
 			taskID = nil
 		}
+		var agentID interface{}
+		if mem.AgentID != "" {
+			agentID = mem.AgentID
+		} else {
+			agentID = nil
+		}
 
-		_, err = w.db.ExecContext(ctx, query, mem.OrganizationID, taskID, mem.Content, vecStr)
+		var query string
+		if dbWrapper.GlobalProvider.IsSQLite() {
+			query = `
+				INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding, source_type, agent_id)
+				VALUES (?, ?, ?, ?, ?, ?, ?)
+			`
+		} else {
+			query = `
+				INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding, source_type, agent_id)
+				VALUES ($1, $2, $3, $4, $5, $6, $7)
+			`
+		}
+
+		_, err = w.db.ExecContext(ctx, query, id, mem.OrganizationID, taskID, mem.Content, vecStr, sourceType, agentID)
 		if err != nil {
 			autodream.ConsolidationErrorsTotal.WithLabelValues(mode, "db_insert_error").Inc()
 			return fmt.Errorf("failed to insert memory: %w", err)
@@ -126,6 +151,7 @@ func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir 
 
 		autodream.MemoriesProcessedTotal.WithLabelValues(mode).Inc()
 		_ = os.Remove(filePath)
+		processedCount++
 	}
 
 	return nil
@@ -135,7 +161,6 @@ func (w *AutoDreamWorker) StartDaemon(ctx context.Context, memoryDir string, int
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	// Run once immediately
 	if err := w.ScanAndProcessMemories(ctx, memoryDir); err != nil {
 		log.Printf("autodream daemon error: %v", err)
 	}
