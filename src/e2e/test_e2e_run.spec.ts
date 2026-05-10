@@ -46,7 +46,7 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
     await page.click('button:has-text("Next")');
 
     // 6: Theme -> 7
-    await page.click('text="Modern"');
+    await page.click('text="✨ Modern"');
     await page.click('button:has-text("Next")');
 
     // 7: Domain -> 8
@@ -150,21 +150,28 @@ test('verify website builder flow', async ({ page }) => {
     await page.click('button:has-text("Website Builder")');
 
     // Step 0 -> Step 1
-    await page.click('button:has-text("Start Building")');
+    await page.click('text="Use this template →"');
 
-    // Step 1: Select Template
-    await page.click('text="Modern"');
-    await page.click('button:has-text("Next")');
+    // Step 1: Select Color
+    await page.click('text="Next →"');
 
-    // Step 2: Branding
-    await page.click('button:has-text("Generate Logo")');
-    await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
+    // Step 2: Colors and Generate Logo
+    await page.click('text="✨ Generate a logo for me"');
+    await page.click('text="Next →"');
 
-    // Step 3: Publish
-    await page.click('button:has-text("Publish Site")');
+    // Step 3: Product
+    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Vegan Cake');
+    await page.fill('input[placeholder="e.g. 50.00"]', '25.00');
+    await page.fill('input[placeholder="Short description"]', 'Delicious');
+    await page.click('text="Next →"');
 
-    await expect(page.locator('text="Site Published!"')).toBeVisible({ timeout: 5000 });
+    // Step 4: Domain
+    await page.click('text="🌐 Use a free OHC subdomain"');
+    await page.click('text="Next →"');
+
+    // Step 5: Publish
+    await page.click('text="Publish →"');
+    await expect(page.locator('text="Publishing Site..."')).toBeVisible({ timeout: 5000 });
 });
 
 test('verify login form error message UX wrap behavior', async ({ page }) => {
@@ -288,7 +295,7 @@ test('verify checklist flow and integration', async ({ page }) => {
     await page.click('text="Online"');
     await page.click('button:has-text("Next")');
     // Step 6: Theme -> 7
-    await page.click('text="Modern"');
+    await page.click('text="✨ Modern"');
     await page.click('button:has-text("Next")');
     // Step 7: Domain -> 8
     await page.click('text="Get a free sub-domain"');
@@ -347,7 +354,7 @@ test('verify checklist connects instagram routing', async ({ page }) => {
     await page.click('button:has-text("Next")');
     await page.click('text="Online"');
     await page.click('button:has-text("Next")');
-    await page.click('text="Modern"');
+    await page.click('text="✨ Modern"');
     await page.click('button:has-text("Next")');
     await page.click('text="Get a free sub-domain"');
     await page.click('button:has-text("Next")');
@@ -402,7 +409,7 @@ test('verify checklist share link routing', async ({ page }) => {
     await page.click('button:has-text("Next")');
     await page.click('text="Online"');
     await page.click('button:has-text("Next")');
-    await page.click('text="Modern"');
+    await page.click('text="✨ Modern"');
     await page.click('button:has-text("Next")');
     await page.click('text="Get a free sub-domain"');
     await page.click('button:has-text("Next")');
@@ -457,7 +464,7 @@ test('verify checklist fully completed state', async ({ page }) => {
     await page.click('button:has-text("Next")');
     await page.click('text="Online"');
     await page.click('button:has-text("Next")');
-    await page.click('text="Modern"');
+    await page.click('text="✨ Modern"');
     await page.click('button:has-text("Next")');
     await page.click('text="Get a free sub-domain"');
     await page.click('button:has-text("Next")');
@@ -516,7 +523,7 @@ test('verify checklist completion progress', async ({ page }) => {
     await page.click('button:has-text("Next")');
     await page.click('text="Online"');
     await page.click('button:has-text("Next")');
-    await page.click('text="Modern"');
+    await page.click('text="✨ Modern"');
     await page.click('button:has-text("Next")');
     await page.click('text="Get a free sub-domain"');
     await page.click('button:has-text("Next")');
