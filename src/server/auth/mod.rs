@@ -428,6 +428,12 @@ impl Store {
     }
 
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
+            let header = jsonwebtoken::decode_header(_token).map_err(|e| e.to_string())?;
+            if header.alg == jsonwebtoken::Algorithm::RS256 {
+                let oidc_cfg = self.oidc_cfg.read().unwrap();
+                return crate::oidc::validate_oidc_token(_token, &*oidc_cfg).await;
+            }
+
             let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
             let token_data = jsonwebtoken::decode::<Claims>(
                 _token,

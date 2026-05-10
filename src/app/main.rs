@@ -2700,7 +2700,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                         if is_social_media {
                            // Simulated send to original platform
-                           println!("Sending message back to original platform for conversation {}", active_conv_id);
+                           tracing::info!(conversation_id = %active_conv_id, "Sending message back to original platform for conversation");
                         }
 
                         let mut current_msgs: Vec<app::UiInboxMessage> = ui.get_current_messages().iter().collect();
