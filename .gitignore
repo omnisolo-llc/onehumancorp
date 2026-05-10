@@ -117,4 +117,3 @@ debian-binary
 /*.diff
 /srcs/
 /scratch/
-!dummy_commit.md
