@@ -3156,19 +3156,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dashboard.on_approve_task({
         let dashboard_approve_handle = dashboard_approve_handle.clone();
         move |task_id| {
-                    if let Some(ui) = dashboard_approve_handle.upgrade() {
-                        let current = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals());
-                        let mut remaining = Vec::new();
-                        for i in 0..current.row_count() {
-                            if let Some(item) = current.row_data(i) {
-                                if item.task_id != task_id {
-                                    remaining.push(item);
-                                }
-                            }
+            let task_id_str = task_id.to_string();
+            let _ = slint::spawn_local(async move {
+                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let req = tonic::Request::new(ohc::orchestration::ApproveTaskRequest {
+                        task_id: task_id_str,
+                        is_approved: true,
+                    });
+                    let _ = client.approve_task(req).await;
+                }
+            });
+
+            if let Some(ui) = dashboard_approve_handle.upgrade() {
+                let current = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals());
+                let mut remaining = Vec::new();
+                for i in 0..current.row_count() {
+                    if let Some(item) = current.row_data(i) {
+                        if item.task_id != task_id {
+                            remaining.push(item);
                         }
-                        GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining))));
                     }
                 }
+                GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining))));
+            }
+        }
     });
 
                 let dashboard_briefing_handle = dashboard.as_weak();
@@ -3468,6 +3479,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     GLOBAL_UNIFIED_INBOX.with(|inbox_ref| {
                         if let Some(inbox) = inbox_ref.borrow().as_ref().and_then(|i| i.upgrade()) {
                             inbox.on_approve_task(move |task_id| {
+                                let task_id_str = task_id.to_string();
+                                let _ = slint::spawn_local(async move {
+                                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                                        let req = tonic::Request::new(ohc::orchestration::ApproveTaskRequest {
+                                            task_id: task_id_str,
+                                            is_approved: true,
+                                        });
+                                        let _ = client.approve_task(req).await;
+                                    }
+                                });
+
                                 GLOBAL_UNIFIED_INBOX.with(|inbox_ref_inner| {
                                     if let Some(ui) = inbox_ref_inner.borrow().as_ref().and_then(|i| i.upgrade()) {
                                         let current_approvals = ui.get_pending_approvals();

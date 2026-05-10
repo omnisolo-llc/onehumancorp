@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
 use serde::{Serialize, Deserialize};
+use std::sync::Arc;
+use crate::db::DB;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,12 +91,21 @@ impl ActionRisk {
 
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
+    pub(crate) db: RwLock<Option<Arc<DB>>>,
 }
 
 impl TaskManager {
     pub fn new() -> Self {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
+            db: RwLock::new(None),
+        }
+    }
+
+    pub fn with_db(db: Arc<DB>) -> Self {
+        TaskManager {
+            tasks: RwLock::new(HashMap::new()),
+            db: RwLock::new(Some(db)),
         }
     }
 
@@ -252,34 +263,86 @@ impl TaskManager {
         Err("task not found".to_string())
     }
 
-    pub fn approve_task(&self, task_id: &str, is_approved: bool) -> Result<(), String> {
+    pub async fn approve_task(&self, task_id: &str, is_approved: bool, required_org_id: &str) -> Result<(), String> {
+        let (new_approval_status, new_status, new_payload_opt, new_updated_at, org_id) = {
+            let tasks_read = self.tasks.read().unwrap();
+            if let Some(task) = tasks_read.get(task_id) {
+                if task.organization_id != required_org_id {
+                    return Err("Unauthorized".to_string());
+                }
+                let mut task_clone = task.clone();
+                task_clone.approval_status = Some(if is_approved { "APPROVED".to_string() } else { "REJECTED".to_string() });
+                if is_approved {
+                    task_clone.status = "IN_PROGRESS".to_string();
+                } else {
+                    task_clone.status = "FAILED".to_string();
+
+                    let mut payload_map: serde_json::Value = if task_clone.payload.is_empty() {
+                        serde_json::json!({})
+                    } else {
+                        serde_json::from_str(&task_clone.payload).unwrap_or(serde_json::json!({}))
+                    };
+
+                    if let Some(obj) = payload_map.as_object_mut() {
+                        obj.insert("error".to_string(), serde_json::Value::String("Task was rejected by user".to_string()));
+                        obj.insert("failed_at".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
+                    }
+                    task_clone.payload = payload_map.to_string();
+                }
+                task_clone.updated_at = Utc::now();
+                (task_clone.approval_status.clone(), task_clone.status.clone(), Some(task_clone.payload.clone()), task_clone.updated_at, task_clone.organization_id.clone())
+            } else {
+                return Err("task not found".to_string());
+            }
+        };
+
+        let db_clone = self.db.read().unwrap().clone();
+        if let Some(db) = db_clone {
+            if let Some(new_payload) = &new_payload_opt {
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        let _res = sqlx::query(
+                            "UPDATE shared_tasks_decomposition SET approval_status = $1, status = $2, payload = $3, updated_at = $4 WHERE id = $5 AND organization_id = $6"
+                        )
+                        .bind(&new_approval_status)
+                        .bind(&new_status)
+                        .bind(new_payload)
+                        .bind(new_updated_at)
+                        .bind(task_id)
+                        .bind(&org_id)
+                        .execute(&db.pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    }
+                    crate::db::DbStore::Sqlite(pool) => {
+                        let _res = sqlx::query(
+                            "UPDATE shared_tasks_decomposition SET approval_status = ?, status = ?, payload = ?, updated_at = ? WHERE id = ? AND organization_id = ?"
+                        )
+                        .bind(&new_approval_status)
+                        .bind(&new_status)
+                        .bind(new_payload)
+                        .bind(new_updated_at.to_rfc3339())
+                        .bind(task_id)
+                        .bind(&org_id)
+                        .execute(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    }
+                }
+            }
+        }
+
         let mut tasks = self.tasks.write().unwrap();
         if let Some(task) = tasks.get_mut(task_id) {
-            task.approval_status = Some(if is_approved { "APPROVED".to_string() } else { "REJECTED".to_string() });
-            if is_approved {
-                // Return to IN_PROGRESS so the assigned agent can complete it
-                task.status = "IN_PROGRESS".to_string();
-            } else {
-                // If rejected, fail the task
-                task.status = "FAILED".to_string();
-
-                let mut payload_map: serde_json::Value = if task.payload.is_empty() {
-                    serde_json::json!({})
-                } else {
-                    serde_json::from_str(&task.payload).unwrap_or(serde_json::json!({}))
-                };
-
-                if let Some(obj) = payload_map.as_object_mut() {
-                    obj.insert("error".to_string(), serde_json::Value::String("Task was rejected by user".to_string()));
-                    obj.insert("failed_at".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
-                }
-                task.payload = payload_map.to_string();
+            task.approval_status = new_approval_status;
+            task.status = new_status;
+            if let Some(payload) = new_payload_opt {
+                task.payload = payload;
             }
-            task.updated_at = Utc::now();
-            Ok(())
-        } else {
-            Err("task not found".to_string())
+            task.updated_at = new_updated_at;
         }
+
+        Ok(())
     }
 
     pub fn get_pending_approvals(&self, org_id: &str) -> Vec<SharedTask> {
@@ -414,28 +477,28 @@ mod tests {
         assert_eq!(pending[0].action_risk, Some(ActionRisk::High));
     }
 
-    #[test]
-    fn test_approve_task() {
+    #[tokio::test]
+    async fn test_approve_task() {
         let tm = TaskManager::new();
         let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Task to Approve".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
         task.approval_status = Some("PENDING".to_string());
         tm.insert_task(task.clone());
 
-        tm.approve_task(&task.id, true).unwrap();
+        tm.approve_task(&task.id, true, "org1").await.unwrap();
 
         let fetched = tm.get_task(&task.id).unwrap();
         assert_eq!(fetched.approval_status, Some("APPROVED".to_string()));
         assert_eq!(fetched.status, "IN_PROGRESS");
     }
 
-    #[test]
-    fn test_reject_task() {
+    #[tokio::test]
+    async fn test_reject_task() {
         let tm = TaskManager::new();
         let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Task to Reject".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
         task.approval_status = Some("PENDING".to_string());
         tm.insert_task(task.clone());
 
-        tm.approve_task(&task.id, false).unwrap();
+        tm.approve_task(&task.id, false, "org1").await.unwrap();
 
         let fetched = tm.get_task(&task.id).unwrap();
         assert_eq!(fetched.approval_status, Some("REJECTED".to_string()));
@@ -444,3 +507,34 @@ mod tests {
         assert_eq!(payload["error"], "Task was rejected by user");
     }
 }
+
+    #[tokio::test]
+    async fn test_approve_task_integration() {
+        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+        ).execute(&pool).await;
+
+        let db = std::sync::Arc::new(crate::db::DB {
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+        });
+
+        let tm = TaskManager::with_db(db);
+        let mut task = tm.create_task("org_int".to_string(), "mission1".to_string(), "Int Task".to_string(), "Desc".to_string(), "P2".to_string()).unwrap();
+        task.approval_status = Some("PENDING".to_string());
+        tm.insert_task(task.clone());
+
+        // Insert into DB directly for the query test
+        let _ = sqlx::query("INSERT INTO shared_tasks_decomposition (id, organization_id, status) VALUES (?, ?, ?)")
+            .bind(&task.id).bind("org_int").bind("PENDING")
+            .execute(&pool).await.unwrap();
+
+        tm.approve_task(&task.id, true, "org_int").await.unwrap();
+
+        let row: (String,) = sqlx::query_as("SELECT approval_status FROM shared_tasks_decomposition WHERE id = ?")
+            .bind(&task.id)
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0, "APPROVED");
+    }
