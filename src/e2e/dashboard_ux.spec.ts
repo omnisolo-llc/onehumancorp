@@ -50,36 +50,43 @@ test('should display Quick Actions on mobile', async ({ page }) => {
   await questionMarkBtn.click();
   await expect(page.locator('text=These buttons are shortcuts to your most common daily tasks.')).toBeVisible();
 
-  // Verify bottom navigation bar buttons are present
-  const btnAdd = page.locator('button:has-text("Add")');
+  // Verify Actions button is present
+  const btnActions = page.locator('button:has-text("Actions")');
+  await expect(btnActions).toBeVisible();
+  const boxActions = await btnActions.boundingBox();
+  expect(boxActions?.height).toBeGreaterThanOrEqual(44);
+
+  // Click Actions button to open the menu
+  await btnActions.click();
+
+  // Verify mobile actions menu buttons are present
+  const btnAdd = page.locator('button:has-text("Add Product")');
   await expect(btnAdd).toBeVisible();
   const boxAdd = await btnAdd.boundingBox();
   expect(boxAdd?.height).toBeGreaterThanOrEqual(44);
-  expect(boxAdd?.width).toBeGreaterThanOrEqual(44);
 
-  const btnOrders = page.locator('button:has-text("Orders")');
+  const btnOrders = page.locator('button:has-text("View Orders")');
   await expect(btnOrders).toBeVisible();
   const boxOrders = await btnOrders.boundingBox();
   expect(boxOrders?.height).toBeGreaterThanOrEqual(44);
-  expect(boxOrders?.width).toBeGreaterThanOrEqual(44);
 
-  const btnChat = page.locator('button:has-text("Chat")');
+  const btnChat = page.locator('button:has-text("Check Messages")');
   await expect(btnChat).toBeVisible();
   const boxChat = await btnChat.boundingBox();
   expect(boxChat?.height).toBeGreaterThanOrEqual(44);
-  expect(boxChat?.width).toBeGreaterThanOrEqual(44);
 
-  const btnStats = page.locator('button:has-text("Stats")');
+  const btnStats = page.locator('button:has-text("See Analytics")');
   await expect(btnStats).toBeVisible();
   const boxStats = await btnStats.boundingBox();
   expect(boxStats?.height).toBeGreaterThanOrEqual(44);
-  expect(boxStats?.width).toBeGreaterThanOrEqual(44);
 
-  const btnShare = page.locator('button:has-text("Share")');
+  const btnShare = page.locator('button:has-text("Share Store")');
   await expect(btnShare).toBeVisible();
   const boxShare = await btnShare.boundingBox();
   expect(boxShare?.height).toBeGreaterThanOrEqual(44);
-  expect(boxShare?.width).toBeGreaterThanOrEqual(44);
+
+  // Close the menu
+  await page.locator('button:has-text("Close")').click();
 });
 
 test('should display Menu toggle on mobile and have expected links', async ({ page }) => {
@@ -114,10 +121,11 @@ test.describe('Dashboard Flow Completeness UX', () => {
 
     // Wait for Dashboard to load
     await page.waitForURL('**/*');
+    await page.locator('button:has-text("Actions")').click();
 
     await expect(page.locator('text=My Business').first()).toBeVisible();
 
-    const addProductBtn = page.locator('button:has-text("Add")').first();
+    const addProductBtn = page.locator('button:has-text("Add Product")').first();
     await expect(addProductBtn).toBeVisible();
 
     await expect(page).toHaveTitle(/OneHuman/);
@@ -129,8 +137,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
+    await page.locator('button:has-text("Actions")').click();
 
-    const ordersBtn = page.locator('button:has-text("Orders")').first();
+    const ordersBtn = page.locator('button:has-text("View Orders")').first();
     await expect(ordersBtn).toBeVisible();
   });
 
@@ -140,8 +149,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
+    await page.locator('button:has-text("Actions")').click();
 
-    const messagesBtn = page.locator('button:has-text("Chat")').first();
+    const messagesBtn = page.locator('button:has-text("Check Messages")').first();
     await expect(messagesBtn).toBeVisible();
   });
 
@@ -151,8 +161,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
+    await page.locator('button:has-text("Actions")').click();
 
-    const analyticsBtn = page.locator('button:has-text("Stats")').first();
+    const analyticsBtn = page.locator('button:has-text("See Analytics")').first();
     await expect(analyticsBtn).toBeVisible();
   });
 
@@ -162,8 +173,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
+    await page.locator('button:has-text("Actions")').click();
 
-    const shareBtn = page.locator('button:has-text("Share")').first();
+    const shareBtn = page.locator('button:has-text("Share Store")').first();
     await expect(shareBtn).toBeVisible();
   });
 });

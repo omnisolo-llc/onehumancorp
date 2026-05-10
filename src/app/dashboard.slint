@@ -89,6 +89,7 @@ export component Dashboard inherits Window { // milestones
     in-out property <bool> show_team_hint: false;
     in-out property <bool> show_health_hint: false;
     in-out property <bool> show_menu: false;
+    in-out property <bool> show_mobile_actions_menu: false;
     in-out property <bool> show_swarm_observability: false;
     in property <[SwarmActivity]> swarm_activities;
     in property <[SwarmAgentStatus]> swarm_agent_statuses;
@@ -449,84 +450,60 @@ export component Dashboard inherits Window { // milestones
     }
 }
 
-    // Floating Action Button (Bottom)
-    Rectangle {
-        y: parent.height - 80px;
-        x: parent.width - 80px;
-        width: 60px;
+    // Mobile Actions Menu Toggle Button
+    if (!show_mobile_actions_menu) : Rectangle {
+        x: parent.width - 130px;
+        y: parent.height - 230px;
+        width: 120px;
         height: 60px;
-        background: #8b5cf6;
-        border-radius: 30px;
-        drop-shadow-blur: 10px;
-        drop-shadow-color: rgba(0, 0, 0, 0.5);
 
-        Text {
-            text: "+";
-            color: white;
-            font-size: 32px;
-            font-weight: 700;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-        }
+        HorizontalBox {
+            spacing: 12px;
 
-        TouchArea {
-            clicked => {
-                // We'll map this floating action button to add product for now
-                action_add_product();
+            // In-App Help Center '?' Button
+            TooltipElement {
+                tooltip_id: "quick_actions_menu";
+                Rectangle {
+                    width: 100px;
+                    height: 50px;
+                    border-radius: 25px;
+                    background: #3b82f6; // Blue
+                    drop-shadow-blur: 4px;
+                    drop-shadow-color: #3b82f6;
+
+                    Button {
+                        text: "Actions";
+                        height: 44px;
+                        clicked => { show_mobile_actions_menu = true; }
+                    }
+                }
             }
         }
     }
 
-    // Floating Create Post & Share Store (Bottom Left quick actions)
-    HorizontalBox {
-        y: parent.height - 80px;
-        x: 20px;
-        spacing: 16px;
+    // Mobile Actions Menu Overlay
+    if (show_mobile_actions_menu) : Rectangle {
+        x: parent.width - 200px;
+        y: parent.height - 500px;
+        width: 180px;
+        height: 260px;
+        background: rgba(13, 13, 26, 0.9);
+        border-radius: 12px;
+        border-color: rgba(255, 255, 255, 0.2);
+        border-width: 1px;
+        z: 999;
 
-        Rectangle {
-            width: 60px;
-            height: 60px;
-            background: #3b82f6;
-            border-radius: 30px;
-            drop-shadow-blur: 10px;
-            drop-shadow-color: rgba(0, 0, 0, 0.5);
+        VerticalBox {
+            padding: 8px;
+            spacing: 8px;
+            alignment: center;
 
-            Text {
-                text: "✍️";
-                color: white;
-                font-size: 24px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
-
-            TouchArea {
-                clicked => {
-                    action_open_social_posting();
-                }
-            }
-        }
-
-        Rectangle {
-            width: 60px;
-            height: 60px;
-            background: #10b981; // Emerald
-            border-radius: 30px;
-            drop-shadow-blur: 10px;
-            drop-shadow-color: rgba(0, 0, 0, 0.5);
-
-            Text {
-                text: "🔗";
-                color: white;
-                font-size: 24px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
-
-            TouchArea {
-                clicked => {
-                    action_share_store();
-                }
-            }
+            Button { text: "Add Product"; height: 44px; clicked => { action_add_product(); show_mobile_actions_menu = false; } }
+            Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); show_mobile_actions_menu = false; } }
+            Button { text: "Check Messages"; height: 44px; clicked => { action_check_messages(); show_mobile_actions_menu = false; } }
+            Button { text: "See Analytics"; height: 44px; clicked => { action_see_analytics(); show_mobile_actions_menu = false; } }
+            Button { text: "Share Store"; height: 44px; clicked => { action_share_store(); show_mobile_actions_menu = false; } }
+            Button { text: "Close"; height: 44px; clicked => { show_mobile_actions_menu = false; } }
         }
     }
 

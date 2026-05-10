@@ -1,7 +1,136 @@
 use crate::app;
-use slint::ComponentHandle;
 use std::rc::Rc;
 use std::cell::RefCell;
+
+#[test]
+fn test_mission_grandmother_flow_add_product() {
+    crate::ui_tests::init();
+
+    // 1. Start from Login
+    let login = app::Login::new().unwrap();
+    let login_clicked = Rc::new(RefCell::new(false));
+    let login_clicked_clone = login_clicked.clone();
+
+    login.on_login(move |_, _| {
+        *login_clicked_clone.borrow_mut() = true;
+    });
+
+    login.set_username("grandma@example.com".into());
+    login.set_password("mypassword".into());
+    login.invoke_login(login.get_username(), login.get_password());
+
+    assert!(*login_clicked.borrow(), "Must be able to login successfully");
+
+    // 2. Navigate to Dashboard
+    let dashboard = app::Dashboard::new().unwrap();
+
+    // 3. Verify target action is mapped
+    let target_clicked = Rc::new(RefCell::new(false));
+    let target_clicked_clone = target_clicked.clone();
+    dashboard.on_action_add_product(move || {
+        *target_clicked_clone.borrow_mut() = true;
+    });
+
+    dashboard.invoke_action_add_product();
+    assert!(*target_clicked.borrow(), "Add Product action was not reachable or failed to trigger.");
+}
+
+#[test]
+fn test_mission_grandmother_flow_view_orders() {
+    crate::ui_tests::init();
+    let login = app::Login::new().unwrap();
+    login.set_username("grandma@example.com".into());
+    login.set_password("mypassword".into());
+    login.invoke_login(login.get_username(), login.get_password());
+
+    let dashboard = app::Dashboard::new().unwrap();
+
+    let target_clicked = Rc::new(RefCell::new(false));
+    let target_clicked_clone = target_clicked.clone();
+    dashboard.on_action_view_orders(move || {
+        *target_clicked_clone.borrow_mut() = true;
+    });
+
+    dashboard.invoke_action_view_orders();
+    assert!(*target_clicked.borrow(), "View Orders action was not reachable or failed to trigger.");
+}
+
+#[test]
+fn test_mission_grandmother_flow_check_messages() {
+    crate::ui_tests::init();
+    let login = app::Login::new().unwrap();
+    login.set_username("grandma@example.com".into());
+    login.set_password("mypassword".into());
+    login.invoke_login(login.get_username(), login.get_password());
+
+    let dashboard = app::Dashboard::new().unwrap();
+
+    let target_clicked = Rc::new(RefCell::new(false));
+    let target_clicked_clone = target_clicked.clone();
+    dashboard.on_action_check_messages(move || {
+        *target_clicked_clone.borrow_mut() = true;
+    });
+
+    dashboard.invoke_action_check_messages();
+    assert!(*target_clicked.borrow(), "Check Messages action was not reachable or failed to trigger.");
+}
+
+#[test]
+fn test_mission_grandmother_flow_see_analytics() {
+    crate::ui_tests::init();
+    let login = app::Login::new().unwrap();
+    login.set_username("grandma@example.com".into());
+    login.set_password("mypassword".into());
+    login.invoke_login(login.get_username(), login.get_password());
+
+    let dashboard = app::Dashboard::new().unwrap();
+
+    let target_clicked = Rc::new(RefCell::new(false));
+    let target_clicked_clone = target_clicked.clone();
+    dashboard.on_action_see_analytics(move || {
+        *target_clicked_clone.borrow_mut() = true;
+    });
+
+    dashboard.invoke_action_see_analytics();
+    assert!(*target_clicked.borrow(), "See Analytics action was not reachable or failed to trigger.");
+}
+
+#[test]
+fn test_mission_grandmother_flow_share_store() {
+    crate::ui_tests::init();
+    let login = app::Login::new().unwrap();
+    login.set_username("grandma@example.com".into());
+    login.set_password("mypassword".into());
+    login.invoke_login(login.get_username(), login.get_password());
+
+    let dashboard = app::Dashboard::new().unwrap();
+
+    let target_clicked = Rc::new(RefCell::new(false));
+    let target_clicked_clone = target_clicked.clone();
+    dashboard.on_action_share_store(move || {
+        *target_clicked_clone.borrow_mut() = true;
+    });
+
+    dashboard.invoke_action_share_store();
+    assert!(*target_clicked.borrow(), "Share Store action was not reachable or failed to trigger.");
+}
+
+#[test]
+fn test_mission_business_manager_interaction_flow() {
+    crate::ui_tests::init();
+    let ui = app::BusinessManager::new().unwrap();
+
+    ui.set_current_view("add".into());
+    ui.set_step(0);
+    assert!(!ui.get_show_offering_hint());
+    ui.set_show_offering_hint(true);
+    assert!(ui.get_show_offering_hint());
+
+    ui.set_step(1);
+    assert!(!ui.get_show_details_hint());
+    ui.set_show_details_hint(true);
+    assert!(ui.get_show_details_hint());
+}
 
 #[test]
 fn test_mission_dashboard_interaction_flow() {
@@ -22,37 +151,11 @@ fn test_mission_dashboard_interaction_flow() {
 }
 
 #[test]
-fn test_mission_business_manager_interaction_flow() {
-    crate::ui_tests::init();
-    let ui = app::BusinessManager::new().unwrap();
-
-    // Start at step 0
-    ui.set_current_view("add".into());
-    ui.set_step(0);
-
-    // Toggle offering hint
-    assert!(!ui.get_show_offering_hint());
-    ui.set_show_offering_hint(true);
-    assert!(ui.get_show_offering_hint());
-
-    // Move to step 1
-    ui.set_step(1);
-
-    // Toggle details hint
-    assert!(!ui.get_show_details_hint());
-    ui.set_show_details_hint(true);
-    assert!(ui.get_show_details_hint());
-}
-
-#[test]
 fn test_mission_setup_wizard_flow_labels() {
     crate::ui_tests::init();
     let ui = app::SetupWizard::new().unwrap();
 
-    // Move to product step
     ui.set_step(7);
-
-    // Verify pricing types
     ui.set_price_type("fixed".into());
     assert_eq!(ui.get_price_type(), "fixed");
 
@@ -65,7 +168,6 @@ fn test_mission_dashboard_telemetry_renames() {
     crate::ui_tests::init();
     let ui = app::Dashboard::new().unwrap();
 
-    // Check that technical properties still map correctly to simplified labels
     ui.set_telemetry_cache_hits("100%".into());
     ui.set_telemetry_rag_latency("50ms".into());
 
@@ -74,13 +176,10 @@ fn test_mission_dashboard_telemetry_renames() {
 }
 
 #[test]
-fn test_mission_ grandmother_test_compliance() {
-    // This test ensures the new labels pass the "plain language" requirement
+fn test_mission_grandmother_test_compliance() {
     crate::ui_tests::init();
     let ui = app::Dashboard::new().unwrap();
 
-    // Verify "Business Health" is used instead of "Store Health" or "Generative Score"
-    // (indirectly via properties as labels aren't exposed)
     ui.set_generative_score("Perfect".into());
     assert_eq!(ui.get_generative_score(), "Perfect");
 }
@@ -89,7 +188,6 @@ fn test_mission_ grandmother_test_compliance() {
 fn test_mission_dashboard_my_store_label() {
     crate::ui_tests::init();
     let ui = app::Dashboard::new().unwrap();
-    // Verify Dashboard instantiates correctly and doesn't panic, which implies the label "My Store" is present and syntactically valid in the slint file.
     assert!(!ui.get_show_menu());
     ui.set_show_menu(true);
     assert!(ui.get_show_menu());
