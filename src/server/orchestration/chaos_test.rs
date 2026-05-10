@@ -33,7 +33,7 @@ impl TeammateMesh for CorruptedMockMesh {
     async fn subscribe(&self, _topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let counter = self.received_messages.clone();
         tokio::spawn(async move {
-            let corrupted_msg = Message {
+            let corrupted_msg = Message { agent_id: "sys".into(), action: "test".into(), status: "ok".into(),
 
                 payload: vec![255, 255, 255, 255, 0, 1, 2, 3], // invalid utf8 / JSON
                 msg_id: "corrupt_1".to_string(),
