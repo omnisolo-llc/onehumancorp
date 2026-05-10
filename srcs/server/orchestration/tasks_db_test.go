@@ -1169,3 +1169,45 @@ func TestSqliteTaskStore_PollDelegatedTasks_ScanError(t *testing.T) {
 	_, err = store.PollDelegatedTasks(ctx, 10)
 	assert.Error(t, err)
 }
+
+func TestPostgresTaskStore_ReportMissionHandover(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+	ctx := context.Background()
+
+	missionID := "mission-123"
+	blockers := "Need more info"
+
+	// Match any whitespace including newlines
+	mock.ExpectExec("(?s)UPDATE agent_missions\\s+SET status = 'blocked',\\s+mission_log = COALESCE\\(mission_log, ''\\) \\|\\| CASE WHEN COALESCE\\(mission_log, ''\\) = '' THEN '' ELSE '\\s*' END \\|\\| \\$1\\s+WHERE id = \\$2").
+		WithArgs(blockers, missionID).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = store.ReportMissionHandover(ctx, missionID, blockers)
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSqliteTaskStore_ReportMissionHandover(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+	ctx := context.Background()
+
+	missionID := "mission-123"
+	blockers := "Need more info"
+
+	// Match any whitespace including newlines
+	mock.ExpectExec("(?s)UPDATE agent_missions\\s+SET status = 'blocked',\\s+mission_log = COALESCE\\(mission_log, ''\\) \\|\\| CASE WHEN COALESCE\\(mission_log, ''\\) = '' THEN '' ELSE '\\s*' END \\|\\| \\?\\s+WHERE id = \\?").
+		WithArgs(blockers, missionID).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = store.ReportMissionHandover(ctx, missionID, blockers)
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
