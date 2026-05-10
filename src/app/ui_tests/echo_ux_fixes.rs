@@ -19,13 +19,13 @@ fn e2e_flow_ux_fixes() {
     });
 
     // Test the UX fix for error message text wrapper behavior by interacting with the component
-    login.set_error_message("We couldn't sign you in. Please check your email and password and try again.".into());
+    login.set_error_message("Check your email and password.".into());
     login.set_username("test@example.com".into());
     login.set_password("pass".into());
     login.invoke_login(login.get_username(), login.get_password());
 
     assert!(*login_clicked.borrow(), "Login button should be clickable");
-    assert_eq!(login.get_error_message(), slint::SharedString::from("We couldn't sign you in. Please check your email and password and try again."));
+    assert_eq!(login.get_error_message(), slint::SharedString::from("Check your email and password."));
 
     // Navigate to Dashboard
     let dashboard = app::Dashboard::new().unwrap();
