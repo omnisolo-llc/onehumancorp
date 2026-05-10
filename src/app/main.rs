@@ -2148,6 +2148,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                     GLOBAL_WEBSITE_BUILDER.with(|g| {
                         if let Some(weak) = g.borrow().as_ref() {
@@ -7132,6 +7142,16 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                 }).unwrap();
             }
@@ -7279,6 +7299,16 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                 }).unwrap();
             }
@@ -7328,6 +7358,16 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                 }).unwrap();
             }
