@@ -169,7 +169,8 @@ fn test_e2e_fix_agent_full_journey() {
     assert_eq!(fix_agent_ui.get_step(), 0);
 
     // Advance to step 1
-    fix_agent_ui.set_step(1);
+    fix_agent_ui.invoke_next_step();
+    assert_eq!(fix_agent_ui.get_step(), 1);
 
     let apply_fix_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let apply_fix_called_clone = apply_fix_called.clone();
@@ -180,7 +181,12 @@ fn test_e2e_fix_agent_full_journey() {
     fix_agent_ui.invoke_apply_fix();
     assert!(*apply_fix_called.borrow(), "Apply fix should be called");
 
-    // Advance to step 2
+    // Test back button functionality
+    fix_agent_ui.invoke_prev_step();
+    assert_eq!(fix_agent_ui.get_step(), 0);
+    fix_agent_ui.invoke_next_step();
+
+    // Advance to step 2 manually as apply_fix already simulates this in UI
     fix_agent_ui.set_step(2);
 
     let return_to_agents_called = std::rc::Rc::new(std::cell::RefCell::new(false));
