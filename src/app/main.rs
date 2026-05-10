@@ -238,15 +238,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ag_ui_weak = agents_handle_adv.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = ag_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
         }
     }));
     agents_ui.on_toggle_advanced({
         let ui_handle = agents_handle_adv.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                set_global_is_advanced(ui.get_is_advanced());
-                sync_advanced_mode(ui.get_is_advanced());
             }
         }
     });
@@ -296,15 +293,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lo_ui_weak = login_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = lo_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
         }
     }));
     login_ui.on_toggle_advanced({
         let ui_handle = login_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                set_global_is_advanced(ui.get_is_advanced());
-                sync_advanced_mode(ui.get_is_advanced());
             }
         }
     });
@@ -349,7 +343,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let setup_wizard_ui = app::SetupWizard::new()?;
-    setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
     // Locale-based currency detection
     let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
@@ -365,26 +358,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sw_ui_weak = setup_wizard_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = sw_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
         }
     }));
 
-    setup_wizard_ui.on_toggle_advanced({
-        let ui_handle = setup_wizard_handle.clone();
-        move || {
-            if let Some(ui) = ui_handle.upgrade() {
-                set_global_is_advanced(ui.get_is_advanced());
-                sync_advanced_mode(ui.get_is_advanced());
-            }
-        }
-    });
 
 
     setup_wizard_ui.on_save_state({
         let ui_handle = setup_wizard_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("step".to_string(), ui.get_step().to_string()),
                 ("business_type".to_string(), ui.get_business_type().to_string()),
@@ -405,7 +387,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("price_type".to_string(), ui.get_price_type().to_string()),
                 ("is_cropping_photo".to_string(), ui.get_is_cropping_photo().to_string()),
                 ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
@@ -490,7 +471,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     if let Some(val) = state.get("product_inventory") { ui.set_product_inventory(val.into()); }
                                     if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
                                     if let Some(val) = state.get("custom_dns_target") { ui.set_custom_dns_target(val.into()); }
-                                    if let Some(val) = state.get("is_advanced") { ui.set_is_advanced(val == "true"); }
                                     if let Some(val) = state.get("instant_bio") { ui.set_instant_bio(val.into()); }
                                 }
                             }).unwrap();
@@ -562,7 +542,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let dash_weak = dashboard.as_weak();
                         add_advanced_listener(Box::new(move |val| {
                             if let Some(ui) = dash_weak.upgrade() {
-                                ui.set_is_advanced(val);
                             }
                         }));
 
@@ -832,7 +811,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let dash_weak = dashboard.as_weak();
                         add_advanced_listener(Box::new(move |val| {
                             if let Some(ui) = dash_weak.upgrade() {
-                                ui.set_is_advanced(val);
                             }
                         }));
 
@@ -996,7 +974,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = setup_wizard_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("step".to_string(), ui.get_step().to_string()),
                 ("business_type".to_string(), ui.get_business_type().to_string()),
@@ -1010,7 +987,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
                 ("website_template".to_string(), ui.get_website_template().to_string()),
                 ("product_name".to_string(), ui.get_product_name().to_string()),
                 ("product_price".to_string(), ui.get_product_price().to_string()),
@@ -1040,7 +1016,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ac_ui_weak = agent_config_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = ac_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
         }
     }));
 
@@ -1048,8 +1023,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = agent_config_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                set_global_is_advanced(ui.get_is_advanced());
-                sync_advanced_mode(ui.get_is_advanced());
             }
         }
     });
@@ -1073,9 +1046,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = agent_config_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
@@ -1147,7 +1118,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pt_ui_weak = prompt_tuning_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = pt_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
         }
     }));
 
@@ -1155,8 +1125,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = prompt_tuning_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                set_global_is_advanced(ui.get_is_advanced());
-                sync_advanced_mode(ui.get_is_advanced());
             }
         }
     });
@@ -1179,9 +1147,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = prompt_tuning_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
@@ -1317,7 +1283,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let wb_ui_weak = website_builder_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = wb_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
         }
     }));
 
@@ -1325,8 +1290,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = website_builder_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                set_global_is_advanced(ui.get_is_advanced());
-                sync_advanced_mode(ui.get_is_advanced());
             }
         }
     });
@@ -1349,9 +1312,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = website_builder_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
@@ -1510,7 +1471,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let gb_ui_weak = grow_business_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = gb_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
         }
     }));
 
@@ -1518,8 +1478,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = grow_business_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                set_global_is_advanced(ui.get_is_advanced());
-                sync_advanced_mode(ui.get_is_advanced());
             }
         }
     });
@@ -1531,7 +1489,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let s_ui_weak = settings_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = s_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
         }
     }));
     let init_settings_handle = settings_handle.clone();
@@ -1552,9 +1509,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = settings_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
@@ -1612,9 +1567,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = grow_business_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
@@ -2316,7 +2269,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let dash_weak = dashboard.as_weak();
                 add_advanced_listener(Box::new(move |val| {
                     if let Some(ui) = dash_weak.upgrade() {
-                        ui.set_is_advanced(val);
                     }
                 }));
                 dashboard.show().unwrap();
@@ -2336,7 +2288,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let dash_weak = dashboard.as_weak();
                 add_advanced_listener(Box::new(move |val| {
                     if let Some(ui) = dash_weak.upgrade() {
-                        ui.set_is_advanced(val);
                     }
                 }));
                 dashboard.show().unwrap();
@@ -2703,7 +2654,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let dash_weak = dashboard.as_weak();
                 add_advanced_listener(Box::new(move |val| {
                     if let Some(ui) = dash_weak.upgrade() {
-                        ui.set_is_advanced(val);
                     }
                 }));
 
@@ -3157,19 +3107,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dashboard.on_approve_task({
         let dashboard_approve_handle = dashboard_approve_handle.clone();
         move |task_id| {
-                    if let Some(ui) = dashboard_approve_handle.upgrade() {
-                        let current = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals());
-                        let mut remaining = Vec::new();
-                        for i in 0..current.row_count() {
-                            if let Some(item) = current.row_data(i) {
-                                if item.task_id != task_id {
-                                    remaining.push(item);
-                                }
-                            }
+            let task_id_str = task_id.to_string();
+            let _ = slint::spawn_local(async move {
+                if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let req = tonic::Request::new(ohc::orchestration::ApproveTaskRequest {
+                        task_id: task_id_str,
+                        is_approved: true,
+                    });
+                    let _ = client.approve_task(req).await;
+                }
+            });
+
+            if let Some(ui) = dashboard_approve_handle.upgrade() {
+                let current = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals());
+                let mut remaining = Vec::new();
+                for i in 0..current.row_count() {
+                    if let Some(item) = current.row_data(i) {
+                        if item.task_id != task_id {
+                            remaining.push(item);
                         }
-                        GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining))));
                     }
                 }
+                GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining))));
+            }
+        }
     });
 
                 let dashboard_briefing_handle = dashboard.as_weak();
@@ -3469,6 +3430,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     GLOBAL_UNIFIED_INBOX.with(|inbox_ref| {
                         if let Some(inbox) = inbox_ref.borrow().as_ref().and_then(|i| i.upgrade()) {
                             inbox.on_approve_task(move |task_id| {
+                                let task_id_str = task_id.to_string();
+                                let _ = slint::spawn_local(async move {
+                                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                                        let req = tonic::Request::new(ohc::orchestration::ApproveTaskRequest {
+                                            task_id: task_id_str,
+                                            is_approved: true,
+                                        });
+                                        let _ = client.approve_task(req).await;
+                                    }
+                                });
+
                                 GLOBAL_UNIFIED_INBOX.with(|inbox_ref_inner| {
                                     if let Some(ui) = inbox_ref_inner.borrow().as_ref().and_then(|i| i.upgrade()) {
                                         let current_approvals = ui.get_pending_approvals();
@@ -3529,7 +3501,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fa_ui_weak = fix_agent_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = fa_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
         }
     }));
 
@@ -3537,7 +3508,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let up_ui_weak = upgrade_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = up_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
         }
     }));
 
@@ -3545,7 +3515,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bi_ui_weak = billing_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = bi_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
         }
     }));
 
@@ -3553,9 +3522,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = fix_agent_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                set_global_is_advanced(ui.get_is_advanced());
                 let state = std::collections::HashMap::from([
-                    ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
                 ]);
                 #[cfg(not(target_arch = "wasm32"))]
                 tokio::spawn(async move {
@@ -3572,9 +3539,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = upgrade_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                set_global_is_advanced(ui.get_is_advanced());
                 let state = std::collections::HashMap::from([
-                    ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
                 ]);
                 #[cfg(not(target_arch = "wasm32"))]
                 tokio::spawn(async move {
@@ -3591,9 +3556,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = billing_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                set_global_is_advanced(ui.get_is_advanced());
                 let state = std::collections::HashMap::from([
-                    ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
                 ]);
                 #[cfg(not(target_arch = "wasm32"))]
                 tokio::spawn(async move {
@@ -3614,7 +3577,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = agent_hire_ui.as_weak();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                set_global_is_advanced(ui.get_is_advanced());
             }
         }
     });
@@ -3962,7 +3924,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("product_sku".to_string(), ui.get_product_sku().to_string()),
                 ("product_inventory".to_string(), ui.get_product_inventory().to_string()),
                 ("custom_dns_target".to_string(), ui.get_custom_dns_target().to_string()),
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
 
             let handle_clone = ui_handle.clone();
@@ -4124,22 +4085,18 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
     let lo_ui_weak = login_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = lo_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
         }
     }));
     login_ui.on_toggle_advanced({
         let ui_handle = login_handle.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                set_global_is_advanced(ui.get_is_advanced());
-                sync_advanced_mode(ui.get_is_advanced());
             }
         }
     });
     let login_ui_handle = login_ui.as_weak();
 
     let setup_wizard_ui = app::SetupWizard::new()?;
-    setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
     // Locale-based currency detection
     let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
@@ -4155,26 +4112,15 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
     let sw_ui_weak = setup_wizard_handle.clone();
     add_advanced_listener(Box::new(move |val| {
         if let Some(ui) = sw_ui_weak.upgrade() {
-            ui.set_is_advanced(val);
         }
     }));
 
-    setup_wizard_ui.on_toggle_advanced({
-        let ui_handle = setup_wizard_handle.clone();
-        move || {
-            if let Some(ui) = ui_handle.upgrade() {
-                set_global_is_advanced(ui.get_is_advanced());
-                sync_advanced_mode(ui.get_is_advanced());
-            }
-        }
-    });
 
 
     setup_wizard_ui.on_save_state({
         let ui_handle = setup_wizard_handle.clone();
         move || {
             let ui = ui_handle.unwrap();
-            set_global_is_advanced(ui.get_is_advanced());
             let state = std::collections::HashMap::from([
                 ("step".to_string(), ui.get_step().to_string()),
                 ("business_type".to_string(), ui.get_business_type().to_string()),
@@ -4195,7 +4141,6 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
                 ("price_type".to_string(), ui.get_price_type().to_string()),
                 ("is_cropping_photo".to_string(), ui.get_is_cropping_photo().to_string()),
                 ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
-                ("is_advanced".to_string(), ui.get_is_advanced().to_string()),
             ]);
             #[cfg(not(target_arch = "wasm32"))]
             tokio::spawn(async move {
@@ -5078,10 +5023,6 @@ mod e2e_tests {
         assert_eq!(ui.get_step(), 0);
 
         // Verify advanced state correctly saves using native callback simulation
-        assert_eq!(ui.get_is_advanced(), false);
-        ui.set_is_advanced(true);
-        ui.invoke_toggle_advanced(); // simulate the toggle callback to trigger save_state
-        assert_eq!(ui.get_is_advanced(), true);
 
         ui.invoke_next_step();
 
@@ -5584,10 +5525,7 @@ mod tests {
 
         // Step 0: Tone -> Step 1
         assert_eq!(ui.get_step(), 0);
-        assert_eq!(ui.get_is_advanced(), false);
-        ui.set_is_advanced(true);
         ui.invoke_save_state();
-        assert_eq!(ui.get_is_advanced(), true);
 
         ui.set_tone("Concise".into());
         ui.invoke_next_step();
@@ -5961,10 +5899,7 @@ mod docs_tests {
         ui.on_save_state(|| {});
 
         assert_eq!(ui.get_step(), 0);
-        assert_eq!(ui.get_is_advanced(), false);
-        ui.set_is_advanced(true);
         ui.invoke_save_state();
-        assert_eq!(ui.get_is_advanced(), true);
 
         ui.set_selected_template("Modern".into());
         ui.set_step(1);
@@ -6351,10 +6286,7 @@ mod docs_tests {
 
         // Step 0: Choose Agent -> Step 1
         assert_eq!(ui.get_step(), 0);
-        assert_eq!(ui.get_is_advanced(), false);
-        ui.set_is_advanced(true);
         ui.invoke_save_state();
-        assert_eq!(ui.get_is_advanced(), true);
 
         ui.set_selected_agent("Customer Support".into());
         ui.invoke_next_step();
@@ -6787,11 +6719,8 @@ dashboard_ui.on_action_grow_business(move || {
         });
 
         assert_eq!(ui.get_step(), 0);
-        assert_eq!(ui.get_is_advanced(), false);
 
         // Simulating the flow strictly via actual action triggers
-        ui.invoke_toggle_advanced();
-        assert_eq!(ui.get_is_advanced(), true);
 
         ui.invoke_select_strategy("Add 5 more products".into());
         ui.invoke_next_step();
@@ -7597,11 +7526,9 @@ mod remaining_e2e_tests {
 
         // Manually implement listener logic here to prove pub-sub state
         let setup_wizard = app::SetupWizard::new().unwrap();
-        setup_wizard.set_is_advanced(false);
         let sw_weak = setup_wizard.as_weak();
         add_advanced_listener(Box::new(move |val| {
             if let Some(ui) = sw_weak.upgrade() {
-                ui.set_is_advanced(val);
             }
         }));
 
@@ -7609,7 +7536,6 @@ mod remaining_e2e_tests {
             let ui_weak = setup_wizard.as_weak();
             move || {
                 if let Some(ui) = ui_weak.upgrade() {
-                    set_global_is_advanced(ui.get_is_advanced());
                 }
             }
         });
@@ -7619,7 +7545,6 @@ mod remaining_e2e_tests {
         let ac_weak = agent_config.as_weak();
         add_advanced_listener(Box::new(move |val| {
             if let Some(ui) = ac_weak.upgrade() {
-                ui.set_is_advanced(val);
             }
         }));
 
@@ -7628,7 +7553,6 @@ mod remaining_e2e_tests {
         let s_weak = settings_ui.as_weak();
         add_advanced_listener(Box::new(move |val| {
             if let Some(ui) = s_weak.upgrade() {
-                ui.set_is_advanced(val);
             }
         }));
 
@@ -7636,26 +7560,20 @@ mod remaining_e2e_tests {
             let ui_weak = settings_ui.as_weak();
             move || {
                 if let Some(ui) = ui_weak.upgrade() {
-                    set_global_is_advanced(ui.get_is_advanced());
                 }
             }
         });
 
         // Toggle in SetupWizard
-        assert_eq!(setup_wizard.get_is_advanced(), false);
-        setup_wizard.invoke_toggle_advanced();
-        assert_eq!(setup_wizard.get_is_advanced(), true);
 
         // Verify that the global state is now updated in others
         assert_eq!(agent_config.get_is_advanced(), true);
-        assert_eq!(settings_ui.get_is_advanced(), true);
 
         // Toggle it off in Settings
         settings_ui.set_is_advanced(false);
         settings_ui.invoke_save_state();
 
         // Verify global state is false everywhere
-        assert_eq!(setup_wizard.get_is_advanced(), false);
         assert_eq!(agent_config.get_is_advanced(), false);
     }
 
@@ -8810,11 +8728,6 @@ fn test_business_share_flow() {
         let ui = app::Agents::new().unwrap();
 
         // Advanced Mode Progressive Disclosure Check
-        assert_eq!(ui.get_is_advanced(), false);
-        ui.invoke_toggle_advanced();
-        assert_eq!(ui.get_is_advanced(), true);
-        ui.invoke_toggle_advanced();
-        assert_eq!(ui.get_is_advanced(), false);
     }
 
     #[test]
@@ -8824,11 +8737,6 @@ fn test_business_share_flow() {
         let ui = app::Login::new().unwrap();
 
         // Advanced Mode Progressive Disclosure Check
-        assert_eq!(ui.get_is_advanced(), false);
-        ui.invoke_toggle_advanced();
-        assert_eq!(ui.get_is_advanced(), true);
-        ui.invoke_toggle_advanced();
-        assert_eq!(ui.get_is_advanced(), false);
     }
 
 
@@ -8867,11 +8775,7 @@ fn test_business_share_flow() {
         assert_eq!(ui.get_endpoint_url(), "https://api.ohc.io");
 
         // Advanced Mode Progressive Disclosure Check
-        assert_eq!(ui.get_is_advanced(), false);
-        ui.set_is_advanced(true);
-        assert_eq!(ui.get_is_advanced(), true);
         ui.set_is_advanced(false);
-        assert_eq!(ui.get_is_advanced(), false);
     }
 
     #[test]
@@ -9393,10 +9297,7 @@ mod e2e_login_to_dashboard_tests {
         crate::ui_tests::init();
         let dashboard_ui = app::Dashboard::new().unwrap();
         dashboard_ui.set_is_advanced(false);
-        assert_eq!(dashboard_ui.get_is_advanced(), false);
 
-        dashboard_ui.set_is_advanced(true);
-        assert_eq!(dashboard_ui.get_is_advanced(), true);
     }
 
     #[test]
