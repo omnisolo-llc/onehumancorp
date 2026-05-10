@@ -67,7 +67,7 @@ export component AgentHire inherits Window {
             spacing: 10px;
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Developer: Raw Provider Endpoints"; font-size: 14px; color: #64748b; }
+                Text { text: "Advanced: Connection Settings"; font-size: 14px; color: #64748b; }
                 LineEdit { placeholder-text: "https://custom.api.endpoint"; }
             }
             Text { text: "Step 2 — Choose AI Provider"; font-size: 18px; font-weight: 700; color: #1e293b; }
@@ -116,7 +116,7 @@ export component AgentHire inherits Window {
             spacing: 10px;
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Developer: Raw Rate Limit Config (JSON)"; font-size: 14px; color: #64748b; }
+                Text { text: "Advanced: Safety Limits"; font-size: 14px; color: #64748b; }
                 LineEdit { placeholder-text: "{\"max_sessions_per_day\": 50}"; }
             }
             Text { text: "Step 6 — Resource Limits"; font-size: 18px; font-weight: 700; color: #1e293b; }
@@ -130,7 +130,7 @@ export component AgentHire inherits Window {
             spacing: 10px;
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Developer: Raw JSON Deployment Payload"; font-size: 14px; color: #64748b; }
+                Text { text: "Advanced: Startup Instructions"; font-size: 14px; color: #64748b; }
                 LineEdit { placeholder-text: "{\"role\": \"Support\"}"; height: 60px; }
             }
             Text { text: "Step 7 — Confirm Deployment"; font-size: 18px; font-weight: 700; color: #1e293b; }
