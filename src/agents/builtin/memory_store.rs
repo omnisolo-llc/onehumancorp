@@ -2495,4 +2495,57 @@ mod e2e_consolidation_tests {
         assert!(remaining_ids.contains(&"keep_1".to_string()), "Should have kept the one with owner override");
         assert!(remaining_ids.contains(&"keep_2".to_string()), "Should have kept the recent record");
     }
+
+    #[tokio::test]
+    async fn test_consolidation_edge_cases_and_overrides() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a".to_string(),
+            tenant_id: "org_edge".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true, // both have override
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b".to_string(),
+            tenant_id: "org_edge".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true, // both have override
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        // The fallback logic selects the one with the smaller (or larger) ID depending on order,
+        // but it must be deterministic and result in 1 remaining record.
+        let results = repo.cross_department_search("org_edge", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain after resolving identical-stat conflict");
+    }
 }
