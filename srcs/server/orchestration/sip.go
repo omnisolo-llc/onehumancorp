@@ -50,7 +50,6 @@ func (s *SIPDB) DelegateMission(ctx context.Context, mission *AgentMission) erro
 	return nil
 }
 
-// Handover protocol verified
 func (s *SIPDB) ReportMissionHandover(ctx context.Context, missionID string, blockers string) error {
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE agent_missions
