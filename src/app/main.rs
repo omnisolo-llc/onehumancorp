@@ -507,6 +507,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         let my_plan_ui = app::MyPlan::new().unwrap();
                                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
                                         let billing_ui = app::Billing::new().unwrap();
+                                        billing_ui.on_switch_plan(move || {});
+                                        billing_ui.on_add_credits(move || {});
+                                        billing_ui.on_return_to_dashboard(move || {});
+                                        billing_ui.on_switch_plan(move || {});
+                                        billing_ui.on_add_credits(move || {});
+                                        billing_ui.on_return_to_dashboard(move || {});
                                         let billing_handle_clone = billing_ui.as_weak();
                                         dashboard.on_open_billing(move || {
                                             if let Some(ui) = billing_handle_clone.upgrade() {
@@ -771,6 +777,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let my_plan_ui = app::MyPlan::new().unwrap();
                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
                         let billing_ui = app::Billing::new().unwrap();
+                        billing_ui.on_switch_plan(move || {});
+                        billing_ui.on_add_credits(move || {});
+                        billing_ui.on_return_to_dashboard(move || {});
+                        billing_ui.on_switch_plan(move || {});
+                        billing_ui.on_add_credits(move || {});
+                        billing_ui.on_return_to_dashboard(move || {});
                         let billing_handle_clone = billing_ui.as_weak();
                         dashboard.on_open_billing(move || {
                             if let Some(ui) = billing_handle_clone.upgrade() {
@@ -2148,6 +2160,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                     GLOBAL_WEBSITE_BUILDER.with(|g| {
                         if let Some(weak) = g.borrow().as_ref() {
@@ -2881,6 +2903,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 let billing_ui_inner = app::Billing::new().unwrap();
+                billing_ui_inner.on_switch_plan(move || {});
+                billing_ui_inner.on_add_credits(move || {});
+                billing_ui_inner.on_return_to_dashboard(move || {});
+                billing_ui_inner.on_switch_plan(move || {});
+                billing_ui_inner.on_add_credits(move || {});
+                billing_ui_inner.on_return_to_dashboard(move || {});
                 let billing_handle_clone_dashboard = billing_ui_inner.as_weak();
                 dashboard.on_open_billing(move || {
                     if let Some(ui) = billing_handle_clone_dashboard.upgrade() {
@@ -3184,10 +3212,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fix_agent_ui = app::FixAgent::new()?;
     let upgrade_ui = app::Upgrade::new()?;
     let billing_ui = app::Billing::new()?;
+    billing_ui.on_switch_plan(move || {});
+    billing_ui.on_add_credits(move || {});
+    billing_ui.on_return_to_dashboard(move || {});
 
     fix_agent_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     upgrade_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     billing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+
+
+    billing_ui.on_return_to_dashboard(move || {
+    });
+
+    billing_ui.on_switch_plan(move || {
+    });
+
+    billing_ui.on_add_credits(move || {
+    });
+
 
     let fix_agent_handle = fix_agent_ui.as_weak();
     let fa_ui_weak = fix_agent_handle.clone();
@@ -3329,6 +3371,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     });
 
+
+    billing_ui.on_return_to_dashboard(move || {
+    });
+
+    billing_ui.on_switch_plan(move || {
+    });
+
+    billing_ui.on_add_credits(move || {
+    });
+
+
     let fix_agent_handle = fix_agent_ui.as_weak();
     agents_ui.on_fix_agent(move |_id| {
         if let Some(ui) = fix_agent_handle.upgrade() {
@@ -3347,7 +3400,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 
-        setup_wizard_ui.on_generate_instant_preview({
+            setup_wizard_ui.on_send_chat_message({
+        let ui_weak = setup_wizard_handle.clone();
+        move |message| {
+            let ui_handle = ui_weak.clone();
+            if let Some(ui) = ui_handle.upgrade() {
+                let msg = message.to_string();
+
+                let mut msgs: Vec<app::UiChatMessage> = ui.get_chat_messages().iter().collect();
+                let user_msg = app::UiChatMessage {
+                    id: uuid::Uuid::new_v4().to_string().into(),
+                    author_name: "You".into(),
+                    body: msg.clone().into(),
+                    is_me: true,
+                };
+                msgs.push(user_msg);
+
+                let model = slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(msgs.clone())));
+                ui.set_chat_messages(model);
+
+                let question_count = msgs.iter().filter(|m| !m.is_me).count();
+
+                if question_count >= 3 {
+                    // Trigger generation
+                    let all_text = msgs.iter().map(|m| format!("{}: {}", m.author_name, m.body)).collect::<Vec<_>>().join("\n");
+                    ui.set_instant_bio(all_text.into());
+                    ui.set_is_generating_instant_preview(true);
+                    ui.invoke_generate_instant_preview();
+                } else {
+                    let history = msgs.iter().map(|m| format!("{}: {}", m.author_name, m.body)).collect::<Vec<_>>().join("\n");
+                    let prompt = format!("You are an AI assistant helping a user set up their business. Here is the conversation so far:\n{}\nBased on this, ask exactly ONE short follow-up question to help them define their business (e.g. name, type, or style). Do not be overly verbose.", history);
+
+                    tokio::spawn(async move {
+                        let mut ai_response = "I see! Could you provide a bit more detail?".to_string();
+                        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                            let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                                prompt,
+                                from_agent_id: "setup_wizard".into(),
+                            });
+                            if let Ok(resp) = client.reason(request).await {
+                                ai_response = resp.into_inner().content.trim().to_string();
+                            }
+                        }
+
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle.upgrade() {
+                                let mut msgs: Vec<app::UiChatMessage> = ui.get_chat_messages().iter().collect();
+                                msgs.push(app::UiChatMessage {
+                                    id: uuid::Uuid::new_v4().to_string().into(),
+                                    author_name: "Marketing AI".into(),
+                                    body: ai_response.into(),
+                                    is_me: false,
+                                });
+                                let model = slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(msgs)));
+                                ui.set_chat_messages(model);
+                            }
+                        }).unwrap();
+                    });
+                }
+            }
+        }
+    });
+
+    setup_wizard_ui.on_generate_instant_preview({
         let ui_weak = setup_wizard_handle.clone();
         move || {
             let ui_handle = ui_weak.clone();
@@ -7132,6 +7247,16 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                 }).unwrap();
             }
@@ -7279,6 +7404,16 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                 }).unwrap();
             }
@@ -7328,6 +7463,16 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                 }).unwrap();
             }
