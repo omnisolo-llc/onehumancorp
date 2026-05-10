@@ -8,4 +8,3 @@ This PR contains performance optimization documentation, as the optimizations fo
    - Standalone Mode (SQLite): sub-100us raw query execution time.
 3. **API Response Time under load:**
    - Dashboard API calls execute with caching (via HybridCache) demonstrating excellent scaling in local/standalone scenarios.
-⚡ Bolt: Zero WIP exit.
