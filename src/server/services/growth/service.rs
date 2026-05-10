@@ -276,11 +276,15 @@ impl GrowthService for MyGrowthService {
             .map_err(|e| Status::not_found(format!("referral not found: {}", e)))?;
 
         // Implement Credit Attribution: "both get 1 month free Pro"
-        // In a real app we'd update a billing or organizations table.
-        // For now, we simulate credit attribution.
-        let _ = sqlx::query("UPDATE organizations SET plan_tier = 'Pro', current_period_end = current_period_end + interval '1 month' WHERE id = $1 OR id = (SELECT organization_id FROM referrals WHERE id = $2)")
-            .bind(&org_id)
+        // 1. Reward the referrer (who owns the referral record)
+        let _ = sqlx::query("UPDATE organizations SET plan_tier = 'Pro', current_period_end = COALESCE(current_period_end, NOW()) + interval '1 month' WHERE tenant_id = (SELECT organization_id FROM referrals WHERE id = $1)")
             .bind(&req.id)
+            .execute(&mut *tx)
+            .await;
+
+        // 2. Reward the referee (the current organization converting)
+        let _ = sqlx::query("UPDATE organizations SET plan_tier = 'Pro', current_period_end = COALESCE(current_period_end, NOW()) + interval '1 month' WHERE tenant_id = $1")
+            .bind(&org_id)
             .execute(&mut *tx)
             .await;
 

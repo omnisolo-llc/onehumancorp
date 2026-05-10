@@ -59,8 +59,8 @@ export component Referrals inherits Window { // growth
                     VerticalBox {
                         padding: 20px;
                         spacing: 16px;
-                        Text { text: "🎁 Share the Love, Get Pro"; font-weight: 700; color: white; font-size: 18px; font-family: "Outfit"; }
-                        Text { text: "Invite a friend to OHC. When they start a business, you BOTH get 1 month of Pro for free!"; color: #94a3b8; font-size: 14px; font-family: "Inter"; wrap: word-wrap; }
+                        Text { text: "🎁 Give Pro, Get Pro"; font-weight: 700; color: white; font-size: 20px; font-family: "Outfit"; }
+                        Text { text: "Your friends get 1 month of OHC Pro for free when they sign up with your link. Once they launch their business, you'll get 1 month free too! It's a win-win."; color: #cbd5e1; font-size: 14px; font-family: "Inter"; wrap: word-wrap; }
 
                         GlassCard {
                             height: 44px;
@@ -81,18 +81,26 @@ export component Referrals inherits Window { // growth
                             }
                         }
 
-                        HorizontalBox {
+                        VerticalBox {
                             spacing: 12px;
                             Button {
-                                text: "📷 Share to Instagram";
+                                text: "💬 Share on WhatsApp";
                                 primary: true;
                                 height: 48px;
                                 clicked => { share_link(my_referral_link); }
                             }
-                            Button {
-                                text: "💬 Copy Invite Message";
-                                height: 48px;
-                                clicked => { send_invite_message(my_referral_link); }
+                            HorizontalBox {
+                                spacing: 12px;
+                                Button {
+                                    text: "📷 Instagram";
+                                    height: 48px;
+                                    clicked => { share_link(my_referral_link); }
+                                }
+                                Button {
+                                    text: "📋 Copy Message";
+                                    height: 48px;
+                                    clicked => { send_invite_message(my_referral_link); }
+                                }
                             }
                         }
 

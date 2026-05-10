@@ -238,6 +238,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
+
+    agents_ui.on_hire_agent({
+        let ui_handle = agents_handle_adv.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                // Free tier limit: 1 AI Agent
+                let mut current_agent_count = 0;
+                GLOBAL_DASHBOARD.with(|dash_ref| {
+                    if let Some(dash) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
+                        current_agent_count = dash.get_active_helpers_count();
+                    }
+                });
+
+                if current_agent_count >= 1 {
+                    ui.set_upgrade_prompt_message("🎁 Free Tier allows 1 AI Helper. Upgrade to Pro to build your dream team of specialists!".into());
+                    ui.set_show_upgrade_prompt(true);
+                } else {
+                    // Navigate to hiring screen
+                    GLOBAL_DASHBOARD.with(|dash_ref| {
+                        if let Some(dash) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
+                            dash.invoke_action_manage_my_ai_team();
+                        }
+                    });
+                }
+            }
+        }
+    });
     let agents_ui_for_dashboard = agents_ui.clone_strong();
 
 
@@ -1347,6 +1374,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let ui_handle_clone = ui_handle.clone();
 
             #[cfg(not(target_arch = "wasm32"))]
+            let product_for_social = product.clone();
             tokio::spawn(async move {
                 if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     let mut request = tonic::Request::new(ohc::orchestration::PublishSiteRequest {
@@ -1361,13 +1389,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     if let Ok(resp) = client.publish_site(request).await {
                         let url = resp.into_inner().url;
+                        let product_name_social = product_for_social;
                         slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_handle_clone.upgrade() {
                                 ui.set_is_publishing(false);
                                 ui.set_step(4); // Ensure it stays on review/publish screen
                                 // In Slint <= 1.5 setting clipboard requires backend trait, avoiding for compat
-                                ui.invoke_copy_to_clipboard(url.into());
+                                ui.invoke_copy_to_clipboard(url.clone().into());
                             }
+
+                            // Growth Loop: Automatically draft a social media post for the new product
+                            GLOBAL_DASHBOARD.with(|dash_ref| {
+                                if let Some(dash) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
+                                    let mut current_tasks = Vec::new();
+                                    let current = dash.get_pending_approvals();
+                                    for i in 0..current.row_count() {
+                                        if let Some(item) = current.row_data(i) {
+                                            current_tasks.push(item);
+                                        }
+                                    }
+
+                                    current_tasks.push(app::UiPendingApproval {
+                                        helper_name: "Social Media Agent".into(),
+                                        task_id: format!("social-post-{}", product_name_social).into(),
+                                        title: format!("New Post: {}", product_name_social).into(),
+                                        proposed_content: format!("Just listed: {}! Check it out at {} 🚀 #newarrival #smallbusiness", product_name_social, url).into(),
+                                    });
+                                    dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks)));
+                                }
+                            });
                         }).unwrap();
                     } else {
                         slint::invoke_from_event_loop(move || {
@@ -1564,11 +1614,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_handle = email_marketing_handle.clone();
         move |template| {
             if let Some(ui) = ui_handle.upgrade() {
-                let preview = match template.as_str() {
-                    "Flash sale" => "24-Hour Flash Sale!",
-                    _ => "Generated content...",
-                };
-                ui.set_preview_text(preview.into());
+                let ui_weak = ui.as_weak();
+                let t_str = template.to_string();
+                tokio::spawn(async move {
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let prompt = format!("Draft a short, high-converting marketing email for a small business about '{}'. Focus on scarcity and value.", t_str);
+                        let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                            prompt,
+                            from_agent_id: "EmailMarketingAgent".into(),
+                        });
+                        if let Ok(resp) = client.reason(request).await {
+                            let content = resp.into_inner().content;
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_weak.upgrade() {
+                                    ui.set_preview_text(content.into());
+                                }
+                            }).unwrap();
+                        }
+                    } else {
+                         slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak.upgrade() {
+                                let preview = match t_str.as_str() {
+                                    "Flash sale" => "🔥 24-Hour Flash Sale! Get 20% off everything.",
+                                    "New arrivals" => "📦 Fresh items just landed in our shop! Check them out.",
+                                    "Thank you" => "🙏 Thank you for your support! Here is a little something for your next purchase.",
+                                    _ => "Generated content...",
+                                };
+                                ui.set_preview_text(preview.into());
+                            }
+                        }).unwrap();
+                    }
+                });
             }
         }
     });
@@ -1667,6 +1743,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(ui) = bm_handle_fetch.upgrade() {
                             ui.set_products(slint::ModelRc::new(slint::VecModel::from(ui_products)));
+                        }
+
+                        // Map active milestone to UI if present
+                        if let Some(ms) = snapshot.active_milestone {
+                            GLOBAL_DASHBOARD.with(|dash_ref| {
+                                if let Some(dash) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
+                                    dash.set_milestone_title(ms.title.into());
+                                    dash.set_milestone_message(ms.message.into());
+                                    dash.set_show_milestone(true);
+                                }
+                            });
                         }
                     });
                 }
@@ -2465,7 +2552,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = dashboard_handle_inner.upgrade() {
                                         if used >= 10 { // Free tier limit
-                                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.".into());
+                                            ui.set_upgrade_prompt_message("🎁 You've hit the Free Tier limit of 10 products. Upgrade to Starter to list more items and grow your sales!".into());
                                             ui.set_show_upgrade_prompt(true);
                                             ui.invoke_action_failed("Tier limit reached: 10 products".into());
                                         } else {

@@ -284,6 +284,22 @@ export component Dashboard inherits Window { // milestones
             }
         }
 
+        // Promote Your Store
+        GlassCard {
+            background: @linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                Text { text: "📢 Promote Your Store"; font-size: 18px; font-weight: 700; color: white; }
+                Text { text: "Get more customers by sharing your professional store link."; color: white; opacity: 0.9; font-size: 14px; wrap: word-wrap; }
+                Button {
+                    text: "🚀 Share My Business";
+                    height: 48px;
+                    clicked => { action_share_store(); }
+                }
+            }
+        }
+
         // Actionable Insights from "The Advisor"
         VerticalBox {
             spacing: 12px;

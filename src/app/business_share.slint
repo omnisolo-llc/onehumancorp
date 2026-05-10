@@ -12,6 +12,8 @@ export component BusinessShare inherits Window { // embed
     in property <string> business_name: "My Awesome Store";
     in property <string> business_tagline: "The best place to buy things";
     in property <string> share_link: "ohc://share?b=123";
+    in property <image> business_logo;
+    in property <brush> vibe_gradient: @linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
 
     callback copy_link();
     callback share_to_instagram();
@@ -45,13 +47,19 @@ export component BusinessShare inherits Window { // embed
                 // Cover Image Placeholder
                 Rectangle {
                     height: 180px;
-                    background: @linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+                    background: vibe_gradient;
                     border-top-left-radius: 12px;
                     border-top-right-radius: 12px;
 
                     VerticalBox {
                         alignment: center;
-                        Text { text: "✨"; font-size: 48px; horizontal-alignment: center; }
+                        if (business_logo.width > 0) : Image {
+                            source: business_logo;
+                            width: 80px;
+                            height: 80px;
+                            horizontal-alignment: center;
+                        }
+                        if (business_logo.width == 0) : Text { text: "✨"; font-size: 48px; horizontal-alignment: center; }
                     }
                 }
 

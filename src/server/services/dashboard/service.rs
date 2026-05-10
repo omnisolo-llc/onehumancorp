@@ -426,6 +426,26 @@ impl DashboardService for MyDashboardService {
             org
         };
 
+        // Success Milestones Logic
+        let milestone = if orders.len() >= 10 {
+            Some(Milestone {
+                title: "🎉 You just got your 10th order!".to_string(),
+                message: "This is a huge milestone. Your business is really picking up speed!".to_string(),
+            })
+        } else if orders.len() == 1 {
+            Some(Milestone {
+                title: "🎉 First Sale!".to_string(),
+                message: "Congratulations on your first customer. This is where it all begins!".to_string(),
+            })
+        } else if products.len() >= 5 {
+            Some(Milestone {
+                title: "🚀 Catalog Power".to_string(),
+                message: "You have 5 items live. Stores with more items tend to sell 3x more!".to_string(),
+            })
+        } else {
+            None
+        };
+
         Ok(Response::new(DashboardSnapshot {
             organization: org,
             agents: final_agents,
@@ -435,6 +455,7 @@ impl DashboardService for MyDashboardService {
             updated_at: chrono::Utc::now().to_rfc3339(),
             products,
             orders,
+            active_milestone: milestone,
         }))
     }
 
