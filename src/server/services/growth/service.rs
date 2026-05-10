@@ -4,6 +4,7 @@ use crate::ohc::orchestration::growth_service_server::GrowthService;
 use crate::ohc::orchestration::{CreateReferralRequest, GrowthIdRequest, EmptyRequest};
 use std::sync::RwLock;
 use std::collections::HashMap;
+use std::sync::Arc;
 use chrono::Utc;
 use sqlx::{PgPool, Row};
 use crate::services::growth::referral_api;
@@ -11,6 +12,7 @@ use crate::utils::auth_utils::set_org_context;
 
 pub struct MyGrowthService {
     pool: PgPool,
+    hub: Arc<crate::hub::Hub>,
     experiments: RwLock<Vec<LandingPageExperiment>>,
     downloads: RwLock<Vec<Download>>,
     team_invites: RwLock<Vec<TeamInviteProto>>,
@@ -19,9 +21,10 @@ pub struct MyGrowthService {
 }
 
 impl MyGrowthService {
-    pub fn new(pool: PgPool) -> Self {
+    pub fn new(pool: PgPool, hub: Arc<crate::hub::Hub>) -> Self {
         MyGrowthService {
             pool,
+            hub,
             experiments: RwLock::new(Vec::new()),
             downloads: RwLock::new(Vec::new()),
             team_invites: RwLock::new(Vec::new()),
@@ -508,7 +511,13 @@ impl GrowthService for MyGrowthService {
         let total_conversions: i64 = row.try_get(0).unwrap_or(0);
         let max_quota = 50 + (total_conversions as i32) * 10;
         
-        Ok(Response::new(QuotaMetrics { used: 10, max: max_quota }))
+        let status = self.hub.tracker().check_product_quota(&org_id).await.unwrap_or(crate::pricing::rate_limit::RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        });
+
+        Ok(Response::new(QuotaMetrics { used: 10, max: max_quota, soft_limit_reached: status.soft_limit_reached, upgrade_message: status.user_message.unwrap_or_default(), is_allowed: status.is_allowed }))
     }
 
     async fn get_waitlist(
@@ -554,7 +563,9 @@ mod tests {
         let pool = match pool_opts.connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
         if database_url.contains("localhost") { return; }
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
-        let service = MyGrowthService::new(pool);
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let service = MyGrowthService::new(pool, hub);
 
         let mut req = Request::new(CreateReferralRequest {
             user_id: "test_user".to_string(),

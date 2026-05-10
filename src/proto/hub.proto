@@ -773,6 +773,9 @@ message GetQuotaRequest {
 message QuotaMetrics {
   int32 used = 1;
   int32 max = 2;
+  bool soft_limit_reached = 3;
+  string upgrade_message = 4;
+  bool is_allowed = 5;
 }
 
 message WaitlistEntry {
@@ -1119,6 +1122,9 @@ message AnalyticsSummaryResponse {
   int32 pending_approvals = 6;
   int32 active_handoffs = 7;
   int64 token_velocity = 8;
+  bool soft_limit_reached = 9;
+  string upgrade_message = 10;
+  bool is_allowed = 11;
 }
 
 service OrgService {
