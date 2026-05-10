@@ -5,7 +5,7 @@ go_library(
     srcs = [
         "metrics.go",
         "teammate_mesh.go",
-        "mesh_event.pb.go",
+        "mesh_event.go",
     ],
     importpath = "github.com/onehumancorp/ohc-mono/srcs/server/orchestration/kairos",
     visibility = ["//visibility:public"],
