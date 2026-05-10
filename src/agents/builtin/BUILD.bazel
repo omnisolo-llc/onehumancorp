@@ -50,6 +50,7 @@ rust_library(
         "autogen.rs",
         "masking_tests.rs",
         "lib.rs",
+        "json_store.rs",
         "memory_store.rs",
         "mesh/mod.rs",
         "mesh/transport.rs",
