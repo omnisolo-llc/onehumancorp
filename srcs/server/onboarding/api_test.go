@@ -122,6 +122,9 @@ func TestAPIEndToEndFlow(t *testing.T) {
 }
 
 func TestAPIStateFlow(t *testing.T) {
+	os.Setenv("JWT_SECRET", "test-secret")
+	defer os.Unsetenv("JWT_SECRET")
+
 	db := setupTestDB(t)
 	defer db.Close()
 
