@@ -86,9 +86,7 @@ impl AutoDreamPipeline {
             // Chunk the content to avoid token limits (e.g., 2000 chars roughly to tokens)
             let chunks = Self::chunk_content(&content, 2000);
 
-            let pii_regex = regex::Regex::new(r"\[PRIVATE:.*?\]").unwrap();
             for chunk in chunks {
-                let chunk = pii_regex.replace_all(&chunk, "[REDACTED]").to_string();
                 let cached_embedding = if let Some(cache) = &self.cache {
                     cache.get(&chunk)
                 } else {
