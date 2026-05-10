@@ -294,47 +294,83 @@ mod tests {
                     }
                     checked_files += 1;
                     let content = fs::read_to_string(entry.path()).unwrap_or_default();
+                    let mut in_log_block = false;
+                    let mut current_log_block = String::new();
+                    let mut block_start_line = 0;
+                    let mut paren_count = 0;
+
                     for (i, line) in content.lines().enumerate() {
                         let lower_line = line.to_lowercase();
-                        if lower_line.contains("tracing::info!") ||
-                           lower_line.contains("etracing::info!") ||
-                           lower_line.contains("info!") ||
-                           lower_line.contains("error!") ||
-                           lower_line.contains("warn!") ||
-                           lower_line.contains("debug!") ||
-                           lower_line.contains("tracing::") ||
-                           lower_line.contains("println!") ||
-                           lower_line.contains("log.print") ||
-                           lower_line.contains("fmt.errorf") || lower_line.contains("fmt.error") || lower_line.contains("log.printf") || lower_line.contains("fmt.print") ||
-                           lower_line.contains("console.log") || lower_line.contains("console.error") || lower_line.contains("console.warn") || lower_line.contains("console.info") || lower_line.contains("console.debug") ||
-                           lower_line.contains("eprintln!")
-                        {
-                            if lower_line.contains("tenant_id") ||
-                               lower_line.contains("organization_id") ||
-                               lower_line.contains("org_id") ||
-                               lower_line.contains("session_data") ||
-                               lower_line.contains("session_id") ||
-                               lower_line.contains("payload") ||
-                               lower_line.contains("email") ||
-                               lower_line.contains("password") ||
-                               lower_line.contains("pii") ||
-                               lower_line.contains("api_key") ||
-                               lower_line.contains("secret_key") ||
-                               lower_line.contains("credit") ||
-                               lower_line.contains("card") ||
-                               lower_line.contains("cvv") ||
-                               lower_line.contains("dob") ||
-                               lower_line.contains("birth") ||
-                               lower_line.contains("passport") ||
-                               lower_line.contains("bank") ||
-                               lower_line.contains("account") ||
-                               lower_line.contains("stripe") ||
-                               lower_line.contains("billing") ||
-                               lower_line.contains("ip_address") ||
-                               lower_line.contains("mac_address") ||
-                               lower_line.contains("geolocation") {
-                                violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
+
+                        if !in_log_block {
+                            if lower_line.contains("tracing::info!") ||
+                               lower_line.contains("etracing::info!") ||
+                               lower_line.contains("info!") ||
+                               lower_line.contains("error!") ||
+                               lower_line.contains("warn!") ||
+                               lower_line.contains("debug!") ||
+                               lower_line.contains("tracing::") ||
+                               lower_line.contains("println!") ||
+                               lower_line.contains("log.print") ||
+                               lower_line.contains("fmt.errorf") || lower_line.contains("fmt.error") || lower_line.contains("log.printf") || lower_line.contains("fmt.print") ||
+                               lower_line.contains("console.log") || lower_line.contains("console.error") || lower_line.contains("console.warn") || lower_line.contains("console.info") || lower_line.contains("console.debug") ||
+                               lower_line.contains("eprintln!")
+                            {
+                                in_log_block = true;
+                                block_start_line = i + 1;
+                                current_log_block.clear();
+                                current_log_block.push_str(&lower_line);
+                                paren_count = 0;
+
+                                paren_count += lower_line.chars().filter(|c| *c == '(' || *c == '{').count() as i32;
+                                paren_count -= lower_line.chars().filter(|c| *c == ')' || *c == '}').count() as i32;
+
+                                // In case the statement is entirely on one line with no parens or perfectly balanced
+                                if paren_count <= 0 && (lower_line.contains(")") || lower_line.contains("}") || lower_line.ends_with(";")) {
+                                    in_log_block = false;
+                                }
                             }
+                        } else {
+                            current_log_block.push_str(" ");
+                            current_log_block.push_str(&lower_line);
+
+                            paren_count += lower_line.chars().filter(|c| *c == '(' || *c == '{').count() as i32;
+                            paren_count -= lower_line.chars().filter(|c| *c == ')' || *c == '}').count() as i32;
+
+                            if paren_count <= 0 || lower_line.ends_with(");") || lower_line.ends_with("};") {
+                                in_log_block = false;
+                            }
+                        }
+
+                        // Process the complete block once it's closed, OR if it was a single line
+                        if !in_log_block && !current_log_block.is_empty() {
+                            if current_log_block.contains("tenant_id") ||
+                               current_log_block.contains("organization_id") ||
+                               current_log_block.contains("org_id") ||
+                               current_log_block.contains("session_data") ||
+                               current_log_block.contains("session_id") ||
+                               current_log_block.contains("payload") ||
+                               current_log_block.contains("email") ||
+                               current_log_block.contains("password") ||
+                               current_log_block.contains("pii") ||
+                               current_log_block.contains("api_key") ||
+                               current_log_block.contains("secret_key") ||
+                               current_log_block.contains("credit") ||
+                               current_log_block.contains("card") ||
+                               current_log_block.contains("cvv") ||
+                               current_log_block.contains("dob") ||
+                               current_log_block.contains("birth") ||
+                               current_log_block.contains("passport") ||
+                               current_log_block.contains("bank") ||
+                               current_log_block.contains("account") ||
+                               current_log_block.contains("stripe") ||
+                               current_log_block.contains("billing") ||
+                               current_log_block.contains("ip_address") ||
+                               current_log_block.contains("mac_address") ||
+                               current_log_block.contains("geolocation") {
+                                violations.push(format!("{}:{} (block starting here): {}", entry.path().display(), block_start_line, current_log_block.trim()));
+                            }
+                            current_log_block.clear();
                         }
                     }
                 }
