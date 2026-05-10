@@ -4,7 +4,10 @@ go_library(
     name = "mcp",
     srcs = [
         "client.go",
+        "cloud_secret_provider.go",
+        "local_secret_provider.go",
         "proxy.go",
+        "secret_provider.go",
     ],
     importpath = "onehumancorp/srcs/server/agents/mcp",
     visibility = ["//visibility:public"],
@@ -20,6 +23,7 @@ go_test(
     srcs = [
         "client_test.go",
         "proxy_test.go",
+        "secret_provider_test.go",
     ],
     embed = [":mcp"],
     deps = [
