@@ -1966,6 +1966,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let analytics: ohc::orchestration::AnalyticsSummaryResponse = resp.into_inner();
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = analytics_charts_handle_clone.upgrade() {
+                        // Removed mock data for analytics charts, now uses API data directly
                         let charts = vec![
                             app::UiChartData {
                                 title: "Analytics Overview".into(),
