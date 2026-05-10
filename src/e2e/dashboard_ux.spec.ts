@@ -98,7 +98,7 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
   await expect(page.locator('button:has-text("Billing")')).toBeVisible();
   await expect(page.locator('button:has-text("Connect Apps")')).toBeVisible();
   await expect(page.locator('button:has-text("Video Tutorials")')).toBeVisible();
-  await expect(page.locator('button:has-text("App Tour")')).toBeVisible();
+  await expect(page.locator('button:has-text("How to use this app")')).toBeVisible();
   await expect(page.locator('button:has-text("What\'s New")')).toBeVisible();
 });
 

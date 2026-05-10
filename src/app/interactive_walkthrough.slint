@@ -7,6 +7,8 @@ export component InteractiveWalkthrough inherits Window {
     min-width: 375px;
     background: transparent;
     always-on-top: true;
+    title: "Walkthrough";
+    out property <string> test_title: root.title;
 
     in-out property <int> current_step: 0;
 

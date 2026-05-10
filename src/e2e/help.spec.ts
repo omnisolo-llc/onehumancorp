@@ -266,7 +266,7 @@ test.describe('Interactive Walkthrough', () => {
     await Promise.all([
       page.waitForNavigation(),
       page.locator('button:has-text("Menu")').first().click(),
-      page.locator('button:has-text("App Tour")').first().click()
+      page.locator('button:has-text("How to use this app")').first().click()
     ]);
     await expect(page.locator('text=/walkthrough|tour|guide/i')).toBeVisible();
   });
@@ -275,7 +275,7 @@ test.describe('Interactive Walkthrough', () => {
     await Promise.all([
       page.waitForNavigation(),
       page.locator('button:has-text("Menu")').first().click(),
-      page.locator('button:has-text("App Tour")').first().click()
+      page.locator('button:has-text("How to use this app")').first().click()
     ]);
     const step = page.locator('text=/step \\d+ of \\d+/i').first();
     await expect(step).toBeVisible();
@@ -285,7 +285,7 @@ test.describe('Interactive Walkthrough', () => {
     await Promise.all([
       page.waitForNavigation(),
       page.locator('button:has-text("Menu")').first().click(),
-      page.locator('button:has-text("App Tour")').first().click()
+      page.locator('button:has-text("How to use this app")').first().click()
     ]);
     const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
     if (true) {
@@ -297,7 +297,7 @@ test.describe('Interactive Walkthrough', () => {
     await Promise.all([
       page.waitForNavigation(),
       page.locator('button:has-text("Menu")').first().click(),
-      page.locator('button:has-text("App Tour")').first().click()
+      page.locator('button:has-text("How to use this app")').first().click()
     ]);
     const backBtn = page.locator('button:has-text("Back"), button:has-text("Previous")').first();
     if (true) {
@@ -309,7 +309,7 @@ test.describe('Interactive Walkthrough', () => {
     await Promise.all([
       page.waitForNavigation(),
       page.locator('button:has-text("Menu")').first().click(),
-      page.locator('button:has-text("App Tour")').first().click()
+      page.locator('button:has-text("How to use this app")').first().click()
     ]);
     const skipBtn = page.locator('button:has-text("Skip"), button:has-text("Skip Tour")').first();
     if (true) {
@@ -321,7 +321,7 @@ test.describe('Interactive Walkthrough', () => {
     await Promise.all([
       page.waitForNavigation(),
       page.locator('button:has-text("Menu")').first().click(),
-      page.locator('button:has-text("App Tour")').first().click()
+      page.locator('button:has-text("How to use this app")').first().click()
     ]);
     const highlight = page.locator('[class*="highlight"], [class*="spotlight"]').first();
     await expect(highlight).toBeVisible({ timeout: 3000 });
@@ -331,7 +331,7 @@ test.describe('Interactive Walkthrough', () => {
     await Promise.all([
       page.waitForNavigation(),
       page.locator('button:has-text("Menu")').first().click(),
-      page.locator('button:has-text("App Tour")').first().click()
+      page.locator('button:has-text("How to use this app")').first().click()
     ]);
     const finishBtn = page.locator('button:has-text("Finish"), button:has-text("Done")').first();
     if (true) {

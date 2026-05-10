@@ -84,7 +84,7 @@ test.describe('Dashboard Core', () => {
 
   test('should display help buttons', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Ask AI')).toBeVisible();
+    await expect(page.locator('text=Ask anything')).toBeVisible();
     await expect(page.locator('text=Help')).toBeVisible();
   });
 
