@@ -78,12 +78,12 @@ func TestSyncDaemon(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify local task status changed
-	localTask, err := localStore.GetTask(ctx, "task-1")
+	localTask, err := localStore.GetTask(ctx, "task-1", "org-1")
 	require.NoError(t, err)
 	assert.Equal(t, "CLOUD_PROCESSING", localTask.Status)
 
 	// Verify task exists in cloud DB
-	cloudTask, err := cloudStore.GetTask(ctx, "task-1")
+	cloudTask, err := cloudStore.GetTask(ctx, "task-1", "org-1")
 	require.NoError(t, err)
 	assert.Equal(t, "PENDING", cloudTask.Status)
 	expectedPayload := `{"data": "test [REDACTED]"}`
@@ -103,7 +103,7 @@ func TestSyncDaemon(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify local task status changed and payload updated
-	localTaskDone, err := localStore.GetTask(ctx, "task-1")
+	localTaskDone, err := localStore.GetTask(ctx, "task-1", "org-1")
 	require.NoError(t, err)
 	assert.Equal(t, "DONE", localTaskDone.Status)
 	assert.Equal(t, resultPayload, string(*localTaskDone.Payload))
