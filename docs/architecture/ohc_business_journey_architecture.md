@@ -1,141 +1,190 @@
-# OHC Business Journey Architecture
+# Business Journey Architecture Design Doc
 
-## 1. Overview
-This design document maps the complete end-to-end user journey for the core personas using the OneHumanCorp (OHC) platform. It breaks down the critical phases of the user lifecycle—Acquisition, Onboarding, Activation, Retention, Revenue, and Referral—from the perspective of a non-technical small business owner. The architecture focuses on radical simplicity, ensuring that a user can go from an idea to a live business in under 10 minutes, largely driven by OHC's invisible AI agent departments.
+This document details the complete end-to-end user journey for each of the core personas in the OneHumanCorp (OHC) platform. It covers their acquisition, onboarding, activation, retention, revenue upgrade triggers, and referral mechanisms, aiming to identify and mitigate friction points.
 
-## 2. Personas Analyzed
-We evaluate the user journey against five real-world archetypes:
-- **Maya (The Home Baker):** Relies on Instagram DMs, needs a deposit-based custom order system.
-- **Carlos (The Handyman):** Needs service listings, quote generation, and booking calendar. Mobile-only (Android).
-- **Priya (The Boutique Owner):** Needs online/offline inventory sync, POS tap-to-pay, and analytics.
-- **Leo (The Music Tutor):** Needs calendar booking, auto-Zoom links, and subscriptions.
-- **Fatima (The Food Cart Operator):** Needs bilingual (Arabic/English) pre-order system, printable daily orders, low-end device support.
+## 1. Persona Journeys
 
-## 3. Journey Phases & Friction Analysis
+### 1.1 Maya — The Home Baker
+Maya (28, non-technical) needs a mobile-only storefront to sell custom cakes and field Instagram DMs.
 
-### 3.1 Acquisition
-- **How they arrive:** Organic search (e.g., "how to start a bakery online without coding"), social media ads (Instagram/TikTok), or friend referrals.
-- **Landing Page CTA:** "Launch your business in 10 minutes. AI does the rest. Start Free."
-- **Friction Points:** Requiring credit card upfront, technical jargon ("DNS", "SSL", "Hosting").
+- **Acquisition:** Maya sees a TikTok ad showing a baker taking a customized cake order with a single tap. She clicks the "Launch in 3 minutes" link in bio.
+- **Onboarding:** Maya opens the OHC mobile app. The wizard asks: "What do you sell?" (Cakes). "What's your Instagram?" (@mayascakes). OHC imports 5 recent cake photos, creates a Glassmorphism-style catalog, and generates her site.
+- **Activation:** Maya shares her new OHC storefront link on her Instagram bio. She receives her first custom order with a Stripe-powered deposit within the first day.
+- **Retention:** Maya comes back daily to check her "Orders" feed. Push notifications alert her when a new custom request comes in or when the "Customer Success" agent successfully answers a "do you do vegan cakes?" DM.
+- **Revenue:** Maya hits the 10-product limit on the Free tier. The app shows a friendly CTA: "Add unlimited cakes and unlock a custom domain (mayascakes.com) for $9/mo." She upgrades.
+- **Referral:** Maya adds a "Powered by OHC - Get your own site" badge to her site footer. Another baker clicks it.
 
-### 3.2 Onboarding (The 10-Minute Path to Live)
-- **Minimum Inputs:** Business Name, Type of Business (e.g., Service, Physical Product), Primary Goal (e.g., Take Bookings, Sell Items).
-- **Deferred Inputs:** Logo upload (AI generates a placeholder), custom domain (start on OHC subdomain), full bank details (start accepting payments now, link bank to payout later).
-- **AI Assist:** "The Promoter" agent asks 3 questions and generates a fully designed, mobile-first storefront instantly.
-
-### 3.3 Activation (The "Aha!" Moment)
-- **Goal:** First payment received or first booking confirmed.
-- **Success Metrics (Day 1/Week 1):** User adds 1 product/service, shares their storefront link, and successfully processes a test transaction or real customer order.
-- **Friction Points:** Complex catalog creation. *Solution:* Allow users to just type "I sell vegan chocolate cake for $40" and the AI structures the product variant and description.
-
-### 3.4 Retention
-- **Habit Loop:** Daily dashboard check.
-- **Push Notifications:** "You have a new order from Sarah!" or "Your AI agent replied to 3 Instagram DMs last night."
-- **Weekly Health Reports:** "The Advisor" sends a plain-language summary: "Tuesday was your busiest day. Consider a mid-week promotion."
-- **Friction Points:** Overwhelming dashboards. *Solution:* Mobile-first, feed-style notifications rather than dense analytics tables.
-
-### 3.5 Revenue (Monetization & Upgrades)
-- **Trigger:** Upgrading from Free → Starter ($9/mo) or Pro ($29/mo).
-- **Drivers:** Reaching the 10-product limit, needing a custom domain, or hitting the monthly AI action limit.
-- **Presentation:** Contextual CTA. When Maya tries to add an 11th cake, she sees: "Your business is growing! Upgrade to Starter to add unlimited products and a custom domain."
-
-### 3.6 Referral
-- **Viral Loop:** Priya shares her storefront link. Her friends see a subtle "Powered by OHC: Start your business for free" badge at the bottom.
-- **Incentives:** "Refer a friend, get a month of Pro free."
-
-## 4. Sequence Diagrams (Mermaid.js)
-
-### 4.1 Maya's Journey (Custom Cake Orders via Instagram)
+#### Maya's Customer Journey
 ```mermaid
 sequenceDiagram
-    participant Maya as Maya (Baker)
-    participant IG as Instagram
-    participant Promoter as AI: Marketing
-    participant CS as AI: Customer Success
-    participant Op as AI: Operations
-    participant Store as OHC Storefront
+    actor Maya
+    participant OHC Mobile App
+    participant AI Agent (Promoter)
+    participant AI Agent (Customer Success)
+    participant OHC Backend
+    participant Instagram
 
-    Maya->>Promoter: "Create a site for my custom cakes"
-    Promoter-->>Store: Generates Mobile-First Storefront
-    Maya->>IG: Posts cake photo with OHC Link
-    Customer->>IG: DM: "Do you do vegan cakes?"
-    CS-->>Customer: Auto-reply: "Yes! Order here: [Link]"
-    Customer->>Store: Books custom order & pays deposit
-    Store->>Op: Triggers order processing
-    Op-->>Maya: Push Notification: "New $50 deposit from Alex!"
+    Maya->>Instagram: Clicks OHC Ad
+    Instagram-->>Maya: Opens OHC Web App
+    Maya->>OHC Mobile App: Enters "Cakes" & IG handle
+    OHC Mobile App->>AI Agent (Promoter): Extract photos & design site
+    AI Agent (Promoter)-->>OHC Mobile App: Show preview (30s)
+    Maya->>OHC Mobile App: Approve & Publish
+    Maya->>Instagram: Post new link-in-bio
+    Instagram->>AI Agent (Customer Success): Customer DM "Vegan?"
+    AI Agent (Customer Success)-->>Maya: Drafts reply for review
+    Maya->>OHC Mobile App: 1-Tap Approve
+    AI Agent (Customer Success)->>Instagram: Sends reply
+    Instagram->>OHC Backend: Customer places order
+    OHC Backend-->>Maya: Push Notification "New Custom Order!"
 ```
+**Friction Point:** Importing images from Instagram might fail if the profile is private or the connection times out.
+**Mitigation:** Provide a quick manual upload fallback, using native mobile photo pickers.
 
-### 4.2 Carlos's Journey (Handyman Quote to Booking)
+---
+
+### 1.2 Carlos — The Freelance Handyman
+Carlos (42, non-technical) needs a service listing, booking calendar, and quoting tool on his Android phone.
+
+- **Acquisition:** Carlos hears about OHC from another tradesperson at Home Depot. He searches Google for "easy booking app for handymen" and finds OHC.
+- **Onboarding:** Carlos enters "Handyman Services". The wizard asks for his base hourly rate and 3 common jobs (Plumbing, Painting, Repairs). OHC generates a service menu and calendar view.
+- **Activation:** Carlos sends a link via SMS to his next client: "Book your repair slot here." The client books and pays a $50 deposit.
+- **Retention:** Carlos uses the OHC calendar as his primary daily schedule. The AI "Salesperson" agent drafts quotes based on customer problem descriptions, waiting in his inbox for approval.
+- **Revenue:** Carlos wants to add SMS reminders for his clients so they don't forget appointments. This is a Pro tier feature ($29/mo). He upgrades.
+- **Referral:** Carlos recommends OHC to his plumber friend when discussing how he eliminated no-shows.
+
+#### Carlos's Customer Journey
 ```mermaid
 sequenceDiagram
-    participant Carlos as Carlos (Handyman)
-    participant Client as Client
-    participant Sales as AI: Sales
-    participant Fin as AI: Finance
-    participant Cal as Booking System
+    actor Carlos
+    participant OHC Android App
+    participant AI Agent (Salesperson)
+    participant Client
+    participant Stripe
 
-    Carlos->>Sales: "Set up a plumbing repair service"
-    Sales-->>Cal: Creates service listing & calendar slots
-    Client->>Cal: Selects "Leaky Faucet" & picks Tuesday 2 PM
-    Cal->>Sales: Triggers quote generation
-    Sales-->>Client: Emails quote: "$150 est. Pay $50 deposit to confirm"
-    Client->>Fin: Pays $50 deposit via Apple Pay
-    Fin->>Cal: Confirms Tuesday 2 PM slot
-    Fin-->>Carlos: Notification: "Tuesday 2 PM booked. $50 received."
+    Carlos->>OHC Android App: Setup services & prices
+    OHC Android App-->>Carlos: Generates booking link
+    Carlos->>Client: SMS link to book
+    Client->>OHC Android App: Selects date, describes issue
+    Client->>Stripe: Pays deposit
+    Stripe-->>OHC Android App: Payment confirmed
+    OHC Android App-->>Carlos: Notification "New Booking"
+    OHC Android App->>AI Agent (Salesperson): Analyze issue description
+    AI Agent (Salesperson)-->>Carlos: Drafts formal quote
+    Carlos->>OHC Android App: Approves quote
+    OHC Android App->>Client: Sends final quote
 ```
+**Friction Point:** Setting up availability can be tedious.
+**Mitigation:** Integrate 1-click Google Calendar sync to automatically block out busy times, rather than manual entry.
 
-### 4.3 Priya's Journey (In-Store & Online Sync)
+---
+
+### 1.3 Priya — The Boutique Owner
+Priya (35, semi-technical) needs omni-channel sales (in-store POS + online) with inventory sync.
+
+- **Acquisition:** Priya is frustrated with Shopify's POS pricing. She reads a blog comparing Shopify vs OHC.
+- **Onboarding:** Priya signs up on her MacBook. The wizard helps her bulk import a CSV of her current inventory (with variants). She orders the Stripe Terminal.
+- **Activation:** Priya completes her first in-store sale using her phone's Tap-to-Pay. The inventory instantly drops by 1 online.
+- **Retention:** Priya checks her daily "Advisory" report every morning: "Yesterday's revenue: $450. Red dresses are selling fast."
+- **Revenue:** Priya's catalog grows beyond 100 items, and she wants advanced automated email marketing (The Promoter Agent). She upgrades to Pro ($29/mo).
+- **Referral:** Priya hosts a local business meetup and demonstrates her unified dashboard.
+
+#### Priya's Customer Journey
 ```mermaid
 sequenceDiagram
-    participant Priya as Priya (Boutique)
-    participant WalkIn as In-Store Customer
-    participant Online as Online Customer
-    participant Op as AI: Operations
-    participant Advisor as AI: Advisor
+    actor Priya
+    participant OHC Dashboard (Web/Mobile)
+    participant In-Store Customer
+    participant Online Store
+    participant AI Agent (Advisor)
 
-    WalkIn->>Priya: Buys red dress (Size M)
-    Priya->>Op: Taps-to-pay on OHC Mobile POS
-    Op-->>Op: Deducts 1 Red Dress (Size M) from global inventory
-    Online->>OHC Storefront: Tries to buy Red Dress (Size M)
-    OHC Storefront-->>Online: Shows "Sold Out"
-    Advisor-->>Priya: Weekly Report: "Red dresses sold out fast! Restock soon."
+    Priya->>OHC Dashboard (Web/Mobile): Bulk import inventory
+    In-Store Customer->>Priya: Buys item in person
+    Priya->>OHC Dashboard (Web/Mobile): Tap-to-Pay checkout
+    OHC Dashboard (Web/Mobile)-->>Online Store: Sync inventory (-1)
+    Online Store->>OHC Dashboard (Web/Mobile): Customer buys online
+    OHC Dashboard (Web/Mobile)-->>Priya: Notification "Ship order"
+    AI Agent (Advisor)->>Priya: Daily morning brief (Sales trends)
 ```
+**Friction Point:** Bulk importing variants (size/color) via CSV can easily fail due to formatting.
+**Mitigation:** The AI agent should proactively parse the messy CSV, map columns intelligently, and present a preview before confirming.
 
-### 4.4 Leo's Journey (Music Tutor Subscriptions)
+---
+
+### 1.4 Leo — The Music Tutor
+Leo (22, non-technical) needs subscription-based lesson bookings, Zoom integration, and a TikTok link-in-bio.
+
+- **Acquisition:** Leo searches for "how to sell guitar lessons online" and finds an OHC landing page targeted at educators.
+- **Onboarding:** Leo connects his Zoom account and sets up a recurring subscription package ($100/mo for 4 lessons). He chooses a vibrant, youth-focused design template for his link-in-bio.
+- **Activation:** Leo posts a guitar cover on TikTok with his OHC link. A student signs up for a trial lesson.
+- **Retention:** Leo manages all his student links, payments, and schedules from the app. The "Salesperson" agent notifies him if a student cancels and drafts an email offering a makeup class.
+- **Revenue:** To access unlimited AI follow-ups for inactive students, he upgrades to Starter ($9/mo).
+- **Referral:** A student of his becomes a tutor and uses Leo's referral link to start.
+
+#### Leo's Customer Journey
 ```mermaid
 sequenceDiagram
-    participant Leo as Leo (Music Tutor)
-    participant Student as Student
-    participant Sales as AI: Sales
-    participant Fin as AI: Finance
-    participant Cal as Booking System
+    actor Leo
+    participant OHC App
+    participant TikTok
+    participant Student
+    participant AI Agent (Salesperson)
+    participant Zoom
 
-    Leo->>Sales: "Set up monthly guitar lessons"
-    Sales-->>Cal: Creates subscription package & calendar
-    Student->>Cal: Subscribes to 4 lessons/month
-    Student->>Fin: Pays $200 monthly subscription via Stripe
-    Fin->>Cal: Generates auto-Zoom links for booked slots
-    Fin-->>Leo: Notification: "New subscription! $200 received."
+    Leo->>OHC App: Create subscription package & connect Zoom
+    OHC App-->>Leo: Link-in-bio generated
+    Leo->>TikTok: Posts video + Link
+    Student->>TikTok: Clicks link
+    Student->>OHC App: Buys subscription
+    OHC App->>Zoom: Generate recurring meeting link
+    OHC App-->>Student: Email with Zoom link
+    Student->>OHC App: Cancels a lesson
+    OHC App->>AI Agent (Salesperson): Student inactive
+    AI Agent (Salesperson)-->>Leo: Drafts makeup class email
+    Leo->>OHC App: Approve email
 ```
+**Friction Point:** Connecting external apps (Zoom, Google Calendar) involves OAuth flows that can drop users.
+**Mitigation:** Native integration where OHC just handles the video link directly, or providing clear, step-by-step guidance within the app without kicking them out to a browser.
 
-### 4.5 Fatima's Journey (Food Cart Pre-orders)
+---
+
+### 1.5 Fatima — The Food Cart Operator
+Fatima (50, non-technical, limited English) needs a simple, multi-lingual pre-order menu for pickup.
+
+- **Acquisition:** Fatima's daughter sets it up for her, looking for "free restaurant menu maker app".
+- **Onboarding:** The app language is set to Arabic. Fatima's daughter takes photos of the dishes; the AI automatically removes the background and suggests English descriptions.
+- **Activation:** Fatima puts a QR code on her cart. A customer scans it, orders Falafel, and pays via Apple Pay. Fatima's phone rings with a distinct "New Order" chime.
+- **Retention:** Fatima uses the daily printable summary (or views it on her large-text Android phone) to prep meals. She uses the 1-tap "Sold Out" toggle when she runs out of ingredients.
+- **Revenue:** Fatima stays on the Free tier initially, but upgrades to Starter ($9/mo) when she wants a custom domain to put on business cards.
+- **Referral:** Other food cart owners in the same plaza ask how she is taking digital orders so fast.
+
+#### Fatima's Customer Journey
 ```mermaid
 sequenceDiagram
-    participant Fatima as Fatima (Food Cart)
-    participant Customer as Customer
-    participant Op as AI: Operations
-    participant Store as OHC Storefront
+    actor Fatima
+    participant OHC Mobile App
+    participant AI Agent (Promoter)
+    participant Customer
 
-    Fatima->>Store: Turns on "Accept Pre-orders"
-    Customer->>Store: Pre-orders Chicken over Rice & pays online
-    Store->>Op: Triggers pre-order
-    Op-->>Fatima: Phone notification & prints to daily list
-    Fatima->>Op: Marks order as "Ready for Pickup"
-    Op-->>Customer: SMS: "Your order is ready!"
+    Fatima->>OHC Mobile App: Set language to Arabic, take dish photos
+    OHC Mobile App->>AI Agent (Promoter): Enhance photos, draft EN descriptions
+    AI Agent (Promoter)-->>Fatima: Show dual-language menu
+    Fatima->>OHC Mobile App: Print QR code
+    Customer->>Customer: Scans QR code
+    Customer->>OHC Mobile App (Web): Orders and pays
+    OHC Mobile App (Web)-->>Fatima: LOUD notification "New Order"
+    Fatima->>OHC Mobile App: 1-Tap toggle "Sold Out"
 ```
+**Friction Point:** Slow data connections can cause the app to hang when uploading photos or receiving orders.
+**Mitigation:** Aggressive offline-first caching. Ensure the app works smoothly to toggle state, syncing when connectivity is restored. Use lightweight WebSockets/Push for orders.
 
-## 5. Architectural Invariants for the Journey
-1. **No-Code Absolute:** At no point in any sequence should a user see HTML, CSS, DNS records, or API keys.
-2. **Mobile Keyboard Native:** All inputs must trigger the correct native mobile keyboard (e.g., number pad for pricing).
-3. **Optimistic UI:** Actions like marking an order "shipped" must visually update instantly on mobile, with background retries if the network is flaky.
-4. **AI as Interceptor:** AI agents must sit between the raw database state and the user interface, translating complex data (like daily transaction logs) into human-readable narratives (like weekly reports).
+---
+
+## 2. Key Architectural Takeaways
+
+1.  **Mobile-First is Mandatory:** Complex tasks (CSV uploads, template generation, approving AI drafts) must be seamlessly integrated into the 375px viewport.
+2.  **AI as a Buffer:** The AI agents act as shock absorbers for complexity. They handle messy data (Priya's CSV), draft copy (Leo's emails, Fatima's menu), and simplify scheduling (Carlos).
+3.  **The "Ah-Ha" Moment (Activation):** The platform's success hinges on the speed between *Onboarding* and *First Transaction*. Any friction here (OAuth, DNS setup, complex layout builders) must be eliminated or deferred until later.
+4.  **Actionable Push Notifications:** Retention relies on bringing the user back via push notifications that require only a 1-tap approval, turning tedious management into an engaging, low-effort habit.
+
+[PR: #9774]
