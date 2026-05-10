@@ -1,0 +1,8 @@
+Shopify: Complex onboarding, strong mobile app, no strong AI (Sidekick is a chatbot).
+Wix: Easy setup with Wix ADI, good templates, limited mobile editor.
+Squarespace: Beautiful templates, no strong AI.
+GoDaddy: Simple setup, poor reputation, aggressive upsells.
+Zyro/Hostinger: Budget option, fast setup, thin features.
+Webflow/Framer: For developers/designers.
+Square Online: Strong POS integration.
+Durable/10Web: AI website builders.
