@@ -1,3 +1,4 @@
+import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export struct UiChatChannel {
@@ -34,8 +35,7 @@ export component Channels inherits Window {
         VerticalBox {
             spacing: 10px;
             
-            for c in channels : Rectangle {
-                background: white;
+            for c in channels : GlassCard {
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;

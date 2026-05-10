@@ -96,6 +96,7 @@ thread_local! {
     static GLOBAL_UNIFIED_INBOX: RefCell<Option<slint::Weak<app::UnifiedInbox>>> = RefCell::new(None);
     static GLOBAL_ANALYTICS_CHARTS: RefCell<Option<slint::Weak<app::AnalyticsCharts>>> = RefCell::new(None);
     static GLOBAL_BUSINESS_SHARE: RefCell<Option<slint::Weak<app::BusinessShare>>> = RefCell::new(None);
+    static GLOBAL_BUSINESS_MANAGER: RefCell<Option<slint::Weak<app::BusinessManager>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
     static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
 }
@@ -481,7 +482,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 // If they haven't reached step 10, they need to complete the wizard.
                                 if let Some(step) = state.get("step") {
                                     if let Ok(s) = step.parse::<i32>() {
-                                        if s < 10 {
+                                        if s < 100 {
                                             needs_wizard = true;
                                         }
                                     } else {
@@ -751,7 +752,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                 let state = inner.state;
                                 if let Some(step) = state.get("step") {
                                     if let Ok(s) = step.parse::<i32>() {
-                                        if s < 10 {
+                                        if s < 100 {
                                             needs_wizard = true;
                                         }
                                     } else {
@@ -1675,6 +1676,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let business_manager_ui = app::BusinessManager::new().unwrap();
+    GLOBAL_BUSINESS_MANAGER.with(|g| *g.borrow_mut() = Some(business_manager_ui.as_weak()));
 
     let product_model = slint::VecModel::from(Vec::<app::UiProduct>::new());
     let product_model_rc = std::rc::Rc::new(product_model);
@@ -2532,8 +2534,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     let dashboard_handle_inner = dashboard_handle_clone_add_product.clone();
 
+                    GLOBAL_BUSINESS_MANAGER.with(|bm| {
+                        if let Some(weak_bm) = bm.borrow().clone() {
+                            if let Some(bm_ui) = weak_bm.upgrade() {
+                                bm_ui.set_current_view("add".into());
+                                bm_ui.set_step(0);
+                                let _ = bm_ui.show();
+                            }
+                        }
+                    });
+
                     #[cfg(not(target_arch = "wasm32"))]
                     tokio::spawn(async move {
+
                         if let Ok(mut client) = GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                             let resp: Result<tonic::Response<_>, tonic::Status> = client.get_quota(tonic::Request::new(ohc::orchestration::GetQuotaRequest { user_id: "current_user".into() })).await;
                             if let Ok(resp) = resp {
@@ -3139,6 +3152,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+                let ai_chat_handle_for_open = ai_chat_handle.clone();
+                dashboard.on_open_ai_chat(move || {
+                    if let Some(ui) = ai_chat_handle_for_open.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
 
                 dashboard.on_open_kairos_orchestration_walkthrough(move || {
                     if let Some(ui) = kairos_orchestration_walkthrough_handle.upgrade() {
@@ -3146,11 +3166,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                dashboard.on_open_ai_chat(move || {
-                    if let Some(ui) = ai_chat_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
 
                 dashboard.on_open_interactive_walkthrough(move || {
                     if let Some(ui) = interactive_walkthrough_handle.upgrade() {
@@ -4065,7 +4080,7 @@ mod growth_e2e_tests {
 
                         if let Some(step) = state.get("step") {
                             if let Ok(s) = step.parse::<i32>() {
-                                if s < 10 {
+                                if s < 100 {
                                     needs_wizard = true;
                                 }
                             } else {
@@ -4196,7 +4211,7 @@ mod growth_e2e_tests {
 
                         if let Some(step) = state.get("step") {
                             if let Ok(s) = step.parse::<i32>() {
-                                if s < 10 {
+                                if s < 100 {
                                     needs_wizard = true;
                                 }
                             } else {
