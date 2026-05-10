@@ -393,6 +393,8 @@ impl DB {
                         title TEXT,
                         price REAL,
                         inventory_count INTEGER,
+                        supplier_name TEXT,
+                        supplier_contact TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
