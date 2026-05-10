@@ -35,7 +35,7 @@ func (m *mockLocalDB) CreateTask(ctx context.Context, task *orchestration.Shared
 	return m.createErr
 }
 
-func (m *mockLocalDB) GetTask(ctx context.Context, id string) (*orchestration.SharedTask, error) {
+func (m *mockLocalDB) GetTask(ctx context.Context, id string, organizationID string) (*orchestration.SharedTask, error) {
 	return m.getByIDRes, m.getByIDErr
 }
 
