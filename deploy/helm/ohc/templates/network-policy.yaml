@@ -14,27 +14,23 @@ spec:
     - Egress
   ingress:
     - from:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels:
+              tenant: {{ .Release.Namespace }}
               app: {{ include "ohc.fullname" . }}-core
     - from:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels:
+              tenant: {{ .Release.Namespace }}
               app: {{ .Release.Name }}-backend
       ports:
         - protocol: TCP
           port: {{ .Values.backend.service.port }}
   egress:
     - to:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Release.Namespace }}
     - to:
         - namespaceSelector:
             matchLabels:
@@ -60,11 +56,9 @@ spec:
               - 169.254.169.254/32
     {{- if .Values.cnpg.enabled }}
     - to:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels:
+              tenant: {{ .Release.Namespace }}
               app: {{ .Values.cnpg.clusterName }}-rw
       ports:
         - protocol: TCP
@@ -72,11 +66,9 @@ spec:
     {{- end }}
     {{- if .Values.redis.enabled }}
     - to:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels:
+              tenant: {{ .Release.Namespace }}
               app: {{ .Release.Name }}-redis-master
       ports:
         - protocol: TCP
@@ -108,20 +100,18 @@ spec:
     - Egress
   ingress:
     - from:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels:
+              tenant: {{ .Release.Namespace }}
               app: {{ .Release.Name }}-backend
       ports:
         - protocol: TCP
           port: {{ .Values.ohcCore.service.port }}
   egress:
     - to:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Release.Namespace }}
     - to:
         - namespaceSelector:
             matchLabels:
@@ -163,20 +153,18 @@ spec:
     - Egress
   ingress:
     - from:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels:
+              tenant: {{ .Release.Namespace }}
               app: {{ .Release.Name }}-backend
       ports:
         - protocol: TCP
           port: {{ .Values.chatwoot.service.port }}
   egress:
     - to:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Release.Namespace }}
     - to:
         - namespaceSelector:
             matchLabels:
@@ -218,20 +206,18 @@ spec:
     - Egress
   ingress:
     - from:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels:
+              tenant: {{ .Release.Namespace }}
               app: {{ .Release.Name }}-backend
       ports:
         - protocol: TCP
           port: {{ .Values.powersync.service.targetPort }}
   egress:
     - to:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Release.Namespace }}
     - to:
         - namespaceSelector:
             matchLabels:

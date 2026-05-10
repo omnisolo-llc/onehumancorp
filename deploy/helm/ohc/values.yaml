@@ -73,6 +73,8 @@ redis:
   architecture: standalone
   auth:
     enabled: false
+  podLabels:
+    tenant: "{{ .Release.Namespace }}"
 
 # CloudNative PostgreSQL operator cluster
 # Set cnpg.enabled=true when the CNPG operator is installed in the cluster.
@@ -84,6 +86,8 @@ cnpg:
     size: 10Gi
   database: ohc
   owner: ohc
+  podLabels:
+    tenant: "{{ .Release.Namespace }}"
 
 # Chatwoot – open-source chat platform used for all chat room communication
 # (agent-to-agent, agent-to-human, agent-to-customer, human-to-customer).
@@ -159,6 +163,8 @@ kube-prometheus-stack:
   enabled: true
   grafana:
     enabled: true
+    env:
+      GF_LOG_CONSOLE_FORMAT: "json"
     sidecar:
       dashboards:
         enabled: true

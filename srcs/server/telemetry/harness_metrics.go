@@ -12,7 +12,7 @@ import (
 
 
 func getDeploymentModeAttribute() attribute.KeyValue {
-	isStandalone := os.Getenv("OHC_STANDALONE") == "true" || os.Getenv("STANDALONE_MODE") == "true"
+	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
 	mode := "cloud"
 	if isStandalone {
 		mode = "standalone"
@@ -21,7 +21,7 @@ func getDeploymentModeAttribute() attribute.KeyValue {
 }
 func isTelemetryEnabled() bool {
 	// In standalone mode, do not sync telemetry to cloud unless explicitly enabled
-	isStandalone := os.Getenv("OHC_STANDALONE") == "true" || os.Getenv("STANDALONE_MODE") == "true"
+	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
 	if isStandalone {
 		return os.Getenv("OHC_TELEMETRY_ENABLED") == "true"
 	}

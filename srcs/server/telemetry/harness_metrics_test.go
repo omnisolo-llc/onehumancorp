@@ -15,13 +15,13 @@ func TestRecordHarnessExecutionDuration(t *testing.T) {
 }
 
 func TestTelemetryStandaloneOptOut(t *testing.T) {
-	os.Setenv("STANDALONE_MODE", "true")
+	os.Setenv("OHC_STANDALONE", "true")
 	os.Setenv("OHC_TELEMETRY_ENABLED", "false")
-	defer os.Unsetenv("STANDALONE_MODE")
+	defer os.Unsetenv("OHC_STANDALONE")
 	defer os.Unsetenv("OHC_TELEMETRY_ENABLED")
 
 	if isTelemetryEnabled() {
-		t.Errorf("Expected telemetry to be disabled when STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=false")
+		t.Errorf("Expected telemetry to be disabled when OHC_STANDALONE=true and OHC_TELEMETRY_ENABLED=false")
 	}
 
 	// Make sure the functions don't panic or fail when disabled
@@ -32,21 +32,19 @@ func TestTelemetryStandaloneOptOut(t *testing.T) {
 }
 
 func TestTelemetryStandaloneOptIn(t *testing.T) {
-	os.Setenv("STANDALONE_MODE", "true")
+	os.Setenv("OHC_STANDALONE", "true")
 	os.Setenv("OHC_TELEMETRY_ENABLED", "true")
-	defer os.Unsetenv("STANDALONE_MODE")
+	defer os.Unsetenv("OHC_STANDALONE")
 	defer os.Unsetenv("OHC_TELEMETRY_ENABLED")
 
 	if !isTelemetryEnabled() {
-		t.Errorf("Expected telemetry to be enabled when STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=true")
+		t.Errorf("Expected telemetry to be enabled when OHC_STANDALONE=true and OHC_TELEMETRY_ENABLED=true")
 	}
 }
 
 func TestTelemetryCloudMode(t *testing.T) {
-	os.Setenv("STANDALONE_MODE", "false")
 	os.Setenv("OHC_STANDALONE", "false")
 	os.Setenv("OHC_TELEMETRY_ENABLED", "false")
-	defer os.Unsetenv("STANDALONE_MODE")
 	defer os.Unsetenv("OHC_STANDALONE")
 	defer os.Unsetenv("OHC_TELEMETRY_ENABLED")
 
@@ -72,12 +70,12 @@ func TestRecordHarnessViolation(t *testing.T) {
 }
 
 func TestGetDeploymentModeAttribute(t *testing.T) {
-	os.Setenv("STANDALONE_MODE", "true")
+	os.Setenv("OHC_STANDALONE", "true")
 	attr := getDeploymentModeAttribute()
 	if attr.Value.AsString() != "standalone" {
 		t.Errorf("Expected standalone mode attribute, got %v", attr.Value.AsString())
 	}
-	os.Unsetenv("STANDALONE_MODE")
+	os.Unsetenv("OHC_STANDALONE")
 	os.Setenv("OHC_STANDALONE", "false")
 	attr = getDeploymentModeAttribute()
 	if attr.Value.AsString() != "cloud" {
