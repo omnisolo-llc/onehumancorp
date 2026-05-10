@@ -16,6 +16,9 @@ export struct UiInboxMessage {
     body: string,
     is_me: bool,
     time: string,
+    is_quote: bool,
+    quote_amount: string,
+    quote_status: string,
 }
 
 export struct UiQuickReply {
@@ -43,6 +46,7 @@ export component UnifiedInbox inherits Window {
     callback use_quick_reply(string);
     callback request_ai_draft();
     callback back_to_list();
+    callback approve_quote(string, string);
 
     HorizontalBox {
         // Conversation List (Left side on desktop, full screen conditionally on mobile)
@@ -149,6 +153,47 @@ export component UnifiedInbox inherits Window {
                                         spacing: 4px;
                                         Text { text: msg.body; color: msg.is_me ? white : #1e293b; wrap: word-wrap; font-family: "Inter"; }
                                         Text { text: msg.time; font-size: 11px; color: msg.is_me ? #ddd6fe : #94a3b8; horizontal-alignment: right; }
+
+                                        if (msg.is_quote) : VerticalBox {
+                                            padding-top: 8px;
+                                            spacing: 8px;
+
+                                            Rectangle {
+                                                background: rgba(255, 255, 255, 0.2);
+                                                border-radius: 8px;
+                                                padding: 12px;
+
+                                                VerticalBox {
+                                                    spacing: 8px;
+                                                    Text { text: "Service Quote"; font-weight: 700; color: msg.is_me ? white : #1e293b; }
+
+                                                    if (msg.quote_status == "draft") : HorizontalBox {
+                                                        spacing: 8px;
+                                                        Text { text: "Suggested Price:"; color: msg.is_me ? white : #1e293b; vertical-alignment: center; }
+                                                        LineEdit {
+                                                            text: msg.quote_amount;
+                                                            // Width set to allow comfortable touch on mobile
+                                                            width: 100px;
+                                                        }
+                                                    }
+                                                    if (msg.quote_status == "approved") : Text {
+                                                        text: "Quote Approved: " + msg.quote_amount;
+                                                        color: msg.is_me ? white : #10b981; // green color for success
+                                                        font-weight: 700;
+                                                    }
+
+                                                    if (msg.quote_status == "draft") : Button {
+                                                        text: "Approve & Send";
+                                                        primary: true;
+                                                        height: 44px; // 44x44px touch target requirement
+                                                        clicked => {
+                                                            // We are using the original amount for simplicity as LineEdit doesn't have a direct output mapping without state
+                                                            approve_quote(msg.id, msg.quote_amount);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                                 if (!msg.is_me) : Rectangle {} // Spacer

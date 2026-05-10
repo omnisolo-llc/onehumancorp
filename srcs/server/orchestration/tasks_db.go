@@ -32,6 +32,7 @@ type TaskStore interface {
 	UpdateTaskStatus(ctx context.Context, id string, status string) error
 	GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error)
 	PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error)
+	ReportMissionHandover(ctx context.Context, missionID string, blockers string) error
 }
 
 // PostgresTaskStore implementation
@@ -58,7 +59,11 @@ func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string
 	query := `
 		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
 		FROM shared_tasks
-		WHERE status = 'PENDING' AND organization_id = $1
+		WHERE status = 'PENDING' AND organization_id = $1 AND NOT EXISTS (
+            SELECT 1 FROM task_dependencies td
+            JOIN shared_tasks dep ON dep.id = td.depends_on_task_id
+            WHERE td.task_id = shared_tasks.id AND dep.status != 'COMPLETED'
+        )
 		FOR UPDATE SKIP LOCKED
 		LIMIT 1
 	`
@@ -147,6 +152,17 @@ func (s *PostgresTaskStore) CreateTask(ctx context.Context, task *SharedTask) er
 
 	if err != nil {
 		return err
+	}
+
+	if len(task.Dependencies) > 0 {
+		var deps []string
+		if err := json.Unmarshal(task.Dependencies, &deps); err == nil {
+			for _, depID := range deps {
+				if _, err := tx.ExecContext(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", task.ID, depID); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	return tx.Commit()
 }
@@ -279,6 +295,16 @@ func (s *PostgresTaskStore) PollDelegatedTasks(ctx context.Context, limit int) (
 	return tasks, nil
 }
 
+func (s *PostgresTaskStore) ReportMissionHandover(ctx context.Context, missionID string, blockers string) error {
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE agent_missions
+		SET status = 'blocked',
+		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '
+' END || $1
+		WHERE id = $2`, blockers, missionID)
+	return err
+}
+
 func (s *PostgresTaskStore) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -353,7 +379,11 @@ func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, 
 	query := `
 		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
 		FROM shared_tasks
-		WHERE status = 'PENDING' AND organization_id = ?
+		WHERE status = 'PENDING' AND organization_id = ? AND NOT EXISTS (
+            SELECT 1 FROM task_dependencies td
+            JOIN shared_tasks dep ON dep.id = td.depends_on_task_id
+            WHERE td.task_id = shared_tasks.id AND dep.status != 'COMPLETED'
+        )
 		LIMIT 1
 	`
 	row := tx.QueryRowContext(ctx, query, organizationID)
@@ -420,6 +450,12 @@ func (s *SqliteTaskStore) CreateTask(ctx context.Context, task *SharedTask) erro
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
     // Generate UUID in Go for SQLite if it doesn't have gen_random_uuid()
 	query := `
 		INSERT INTO shared_tasks (id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at)
@@ -448,7 +484,7 @@ func (s *SqliteTaskStore) CreateTask(ctx context.Context, task *SharedTask) erro
         task.Priority = "P2"
     }
 
-	_, err := s.db.ExecContext(ctx, query,
+	_, err = tx.ExecContext(ctx, query,
         task.ID, task.OrganizationID, task.Title, task.Description, task.Status,
 		task.AgentID, task.Priority, payloadBytes, task.ParentPlanID, depsBytes,
 	)
@@ -457,8 +493,21 @@ func (s *SqliteTaskStore) CreateTask(ctx context.Context, task *SharedTask) erro
         task.CreatedAt = time.Now()
         task.UpdatedAt = time.Now()
     }
+	if err == nil && len(task.Dependencies) > 0 {
+		var deps []string
+		if errUnpack := json.Unmarshal(task.Dependencies, &deps); errUnpack == nil {
+			for _, depID := range deps {
+				if _, errDep := tx.ExecContext(ctx, "INSERT OR IGNORE INTO task_dependencies (task_id, depends_on_task_id) VALUES (?, ?)", task.ID, depID); errDep != nil {
+					return errDep
+				}
+			}
+		}
+	}
 
-	return err
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *SqliteTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error) {
@@ -588,6 +637,16 @@ func (s *SqliteTaskStore) UpdateTaskStatus(ctx context.Context, id string, statu
 	return err
 }
 
+
+func (s *SqliteTaskStore) ReportMissionHandover(ctx context.Context, missionID string, blockers string) error {
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE agent_missions
+		SET status = 'blocked',
+		    mission_log = COALESCE(mission_log, '') || CASE WHEN COALESCE(mission_log, '') = '' THEN '' ELSE '
+' END || ?
+		WHERE id = ?`, blockers, missionID)
+	return err
+}
 
 func (s *SqliteTaskStore) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error) {
     query := `

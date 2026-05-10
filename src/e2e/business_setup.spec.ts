@@ -16,7 +16,7 @@ test.describe('Business Setup Wizard', () => {
   test('should display the Setup Wizard hero animation elements', async ({ page }) => {
     await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
     await expect(page.locator('text=Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
-    await expect(page.locator('text=Guided Setup')).toBeVisible();
+    await expect(page.locator('text=🚀 Start My Business')).toBeVisible();
     await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
   });
 
@@ -25,49 +25,64 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show next button on welcome step', async ({ page }) => {
-    await expect(page.locator('text=Guided Setup')).toBeVisible();
+    await expect(page.locator('text=🚀 Start My Business')).toBeVisible();
   });
 
   test('should navigate to business type step', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await expect(page.locator('text=/What kind of business are you building/i')).toBeVisible();
   });
 
+  test('should support Instant Build (AI) journey', async ({ page }) => {
+    await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
+    await page.click('text=⚡ Instant Build (AI) →');
+
+    await expect(page.locator('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]')).toBeVisible();
+    await page.fill('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]', 'I run a local tech shop');
+
+    await page.click('text=Generate Storefront →');
+
+    await expect(page.locator('text="Launch My Business →"')).toBeVisible({ timeout: 15000 });
+    await page.click('text="Launch My Business →"');
+
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+  });
+
   test('should show business type options', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await expect(page.locator('text=Online Store')).toBeVisible();
     await expect(page.locator('text=Service Business')).toBeVisible();
     await expect(page.locator('text=Restaurant / Food')).toBeVisible();
   });
 
   test('should select online store option', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.locator('text=Online Store').click();
     await expect(page.locator('text=Give your business a name')).toBeVisible();
   });
 
   test('should select service business option', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.locator('text=Service Business').click();
   });
 
   test('should select restaurant option', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.locator('text=Restaurant / Food').click();
   });
 
   test('should select creative portfolio option', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.locator('text=Creative').click();
   });
 
   test('should select local business option', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.locator('text=Local Business').click();
   });
 
   test('should navigate through wizard steps', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -75,7 +90,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should allow going back', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     const backButton = page.locator('button:has-text("Back")');
     await expect(backButton).toBeVisible();
     await backButton.click();
@@ -83,13 +98,13 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show company name input', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await expect(page.locator('input[placeholder="e.g. Maya\'s Cakes"]').first()).toBeVisible();
   });
 
   test('should show what you sell step', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -97,7 +112,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show physical products option', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -105,7 +120,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show digital products option', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -113,7 +128,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show services option', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -121,7 +136,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show payments step', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -131,7 +146,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show admin account step', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -143,7 +158,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show template selection step', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -159,7 +174,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show domain step', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -180,7 +195,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show review and launch step', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -203,7 +218,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show launch button on final step', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -222,11 +237,11 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Next →');
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
   });
 
   test('should show welcome checklist after successful launch', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -247,7 +262,7 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Next →');
 
     // Launch the business
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
 
     // Wait for the success state/confetti
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
@@ -279,10 +294,10 @@ test.describe('Business Setup Wizard', () => {
   test('should display the Setup Wizard hero animation elements and complete full setup flow', async ({ page }) => {
     await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
     await expect(page.locator('text=Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
-    await expect(page.locator('text=Guided Setup')).toBeVisible();
+    await expect(page.locator('text=🚀 Start My Business')).toBeVisible();
     await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
 
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await expect(page.locator('text=What kind of business are you building?')).toBeVisible();
     await page.click('text=🛒 Online Store');
     await page.click('text=Next →');
@@ -328,7 +343,7 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 
   test('should require business type selection', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     const nextBtn = page.locator('text=Next →');
     if (await nextBtn.isVisible()) {
       await nextBtn.click();
@@ -337,14 +352,14 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 
   test('should require company name', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.locator('text=Online Store').click();
     await page.click('text=Next →'); // To step 3
     await expect(page.locator('text=/required|name.*required/i')).toBeVisible({ timeout: 3000 });
   });
 
   test('should validate email format', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -359,7 +374,7 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 
   test('should validate password strength', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -374,7 +389,7 @@ test.describe('Business Setup Wizard Validation', () => {
 });
 
   test('should use Minimalist template and verify launch successfully triggers', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -396,13 +411,13 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text=Next →');
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('should input specific product name "Custom Vegan Cookies" and advance to launch', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -424,13 +439,13 @@ test.describe('Business Setup Wizard Validation', () => {
 
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('should set product price "24.99" and verify launch', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -452,13 +467,13 @@ test.describe('Business Setup Wizard Validation', () => {
 
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('should use a "custom domain" option and validate launch step proceeds', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -482,13 +497,13 @@ test.describe('Business Setup Wizard Validation', () => {
     // Based on the UI, domain_choice is set to "custom"
     await page.click('text=Next →');
 
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('should select "Use OHC subdomain" and successfully launch wizard', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
     await page.click('text=Next →');
@@ -510,8 +525,8 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -521,7 +536,7 @@ test.describe('Business Setup Wizard Validation', () => {
 test.describe('E2E Onboarding Persona Journeys', () => {
 
   test('Persona: Maya - The Home Baker (Physical Products)', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await expect(page.locator('text=What kind of business are you building?')).toBeVisible();
 
     // Choose business type
@@ -563,12 +578,12 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.click('text=Next →');
 
     // Review and launch
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('Persona: Carlos - The Freelance Handyman (Services)', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await expect(page.locator('text=What kind of business are you building?')).toBeVisible();
 
     await page.locator('text=Service Business').click();
@@ -600,12 +615,12 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('Persona: Priya - The Boutique Owner (Omnichannel)', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.locator('text=Online Store').click();
     await page.click('text=Next →');
 
@@ -634,12 +649,12 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.fill('input[placeholder="target.ohc.app"]', "priya.com");
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('Persona: Leo - The Music Tutor (Subscriptions)', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.locator('text=Service Business').click();
     await page.click('text=Next →');
 
@@ -668,12 +683,12 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('Persona: Fatima - The Food Cart (Pre-orders)', async ({ page }) => {
-    await page.click('text=Guided Setup');
+    await page.click('text=🚀 Start My Business');
     await page.locator('text=Restaurant / Food').click();
     await page.click('text=Next →');
 
@@ -701,7 +716,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 });
@@ -736,7 +751,7 @@ test.describe('E2E Onboarding Persona Journeys - Portfolio', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 });

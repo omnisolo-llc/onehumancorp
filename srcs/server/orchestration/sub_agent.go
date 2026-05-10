@@ -137,7 +137,7 @@ func (s *DefaultSubAgentSpawner) runSubAgent(ctx context.Context, task *SharedTa
 
 		// When LLM API is unavailable or runs out of tokens, we PAUSE instead of FAIL immediately.
 		// If it's just a normal error and we've reached max attempts, we also pause to allow owner intervention.
-		if attempt == maxRetries || errors.Is(err, ErrTokenBudgetExceeded) {
+		if attempt == maxRetries || errors.Is(err, ErrTokenBudgetExceeded) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			s.broadcastLifecycleEvent(ctx, task.ID, "SUB_AGENT_PAUSED")
 			return
 		}

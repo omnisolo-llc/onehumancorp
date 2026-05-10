@@ -8,6 +8,7 @@ pub mod billing;
 pub mod ultraplan;
 #[path = "../agents/builtin/autodream.rs"]
 pub mod autodream;
+pub mod autodream_pipeline;
 pub mod tasks;
 pub mod settings;
 pub mod scheduler;
@@ -53,6 +54,7 @@ pub mod services {
     pub mod scheduler;
     pub mod agent;
     pub mod autodream;
+    pub mod booking;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -165,7 +167,7 @@ impl MyHubService {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
-        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db);
+        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db, hub.clone());
         MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent }
     }
 }
@@ -1221,6 +1223,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     maintenance_worker.start();
 
     // Start Agent Memory Pipeline
+    hub.clone().start_token_burn_rate_worker();
     let memory_embedding_api = Arc::new(crate::workers::agent_memory_pipeline::DefaultMemoryEmbeddingApi::new());
     let agent_memory_pipeline = Arc::new(crate::workers::agent_memory_pipeline::AgentMemoryPipeline::new(db.clone(), memory_embedding_api));
     let agent_memory_pipeline_clone = agent_memory_pipeline.clone();
@@ -1304,6 +1307,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
+    let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
+    let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
+    let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));
+    let mkt_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(dept_orchestrator.clone())));
+    dept_orchestrator.register_department(ops_agent).await;
+    dept_orchestrator.register_department(cs_agent).await;
+    dept_orchestrator.register_department(mkt_agent).await;
+
     let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
         handoff_mesh.clone(),
         db.clone(),
@@ -1404,6 +1415,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
+        .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             crate::utils::tier_middleware::tier_middleware,

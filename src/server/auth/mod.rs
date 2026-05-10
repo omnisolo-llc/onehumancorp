@@ -440,6 +440,9 @@ impl Store {
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
                         return Err("Invalid token: empty claims".to_string());
                     }
+                    if crate::config::get().multitenant && data.claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
+                        return Err("Invalid token: organization_id is required in cloud mode".to_string());
+                    }
                     if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
                         return Err("token revoked".to_string());
                     }

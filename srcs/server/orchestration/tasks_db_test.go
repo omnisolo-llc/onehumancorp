@@ -33,6 +33,16 @@ func setupTestDB(t *testing.T) *sql.DB {
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS task_dependencies (
+			task_id UUID NOT NULL,
+			depends_on_task_id UUID NOT NULL,
+			PRIMARY KEY (task_id, depends_on_task_id)
+		);
+	`)
+	require.NoError(t, err)
+
 	require.NoError(t, err)
 
 	return db
@@ -325,6 +335,11 @@ func TestPostgresTaskStore_CreateTask_WithPayloads(t *testing.T) {
 	mock.ExpectQuery("INSERT INTO shared_tasks").
 		WithArgs(task.OrganizationID, task.Title, task.Description, task.Status, task.AgentID, task.Priority, sqlmock.AnyArg(), task.ParentPlanID, sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).AddRow("uuid-123", time.Now(), time.Now()))
+
+	// Mock inserting dependencies
+	mock.ExpectExec("INSERT INTO task_dependencies \\(task_id, depends_on_task_id\\) VALUES \\(\\$1, \\$2\\) ON CONFLICT DO NOTHING").
+		WithArgs("uuid-123", "dep-1").
+		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	mock.ExpectCommit()
 	err = store.CreateTask(ctx, task)
@@ -930,4 +945,227 @@ func TestSqliteTaskStore_GetTasksByOrganization_ParseDateError(t *testing.T) {
 	// fallback parsing should leave it empty/default or ignore
 	assert.True(t, tasks[0].CreatedAt.IsZero())
 	assert.True(t, tasks[0].UpdatedAt.IsZero())
+}
+
+// Append to tasks_db_test.go so we don't mess up parity tests
+func TestSqliteTaskStore_PollDelegatedTasks(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer db.Close()
+	_, err = db.Exec(`
+		CREATE TABLE shared_tasks (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			title TEXT NOT NULL,
+			description TEXT,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			agent_id TEXT,
+			priority TEXT NOT NULL DEFAULT 'P2',
+			payload TEXT,
+			parent_plan_id TEXT,
+			dependencies TEXT NOT NULL DEFAULT '[]',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	require.NoError(t, err)
+
+	store := NewSqliteTaskStore(db)
+	ctx := context.Background()
+
+	task1 := &SharedTask{Title: "Task 1", OrganizationID: "org1", Status: "PENDING", Priority: "DELEGATED"}
+	task2 := &SharedTask{Title: "Task 2", OrganizationID: "org1", Status: "PENDING", Priority: "DELEGATED"}
+	task3 := &SharedTask{Title: "Task 3", OrganizationID: "org1", Status: "PENDING", Priority: "P2"} // Should not be polled
+
+	err = store.CreateTask(ctx, task1)
+	require.NoError(t, err)
+	err = store.CreateTask(ctx, task2)
+	require.NoError(t, err)
+	err = store.CreateTask(ctx, task3)
+	require.NoError(t, err)
+
+	tasks, err := store.PollDelegatedTasks(ctx, 10)
+	require.NoError(t, err)
+
+	assert.Len(t, tasks, 2)
+	assert.Equal(t, "ASSIGNED", tasks[0].Status)
+	assert.Equal(t, "ASSIGNED", tasks[1].Status)
+
+	// Verify they are actually ASSIGNED in the DB
+	t1, _ := store.GetTask(ctx, tasks[0].ID)
+	assert.Equal(t, "ASSIGNED", t1.Status)
+}
+
+func TestPostgresTaskStore_PollDelegatedTasks_Errors(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+	ctx := context.Background()
+
+	// Test tx begin error
+	mock.ExpectBegin().WillReturnError(assert.AnError)
+	_, err = store.PollDelegatedTasks(ctx, 10)
+	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestPostgresTaskStore_PollDelegatedTasks_FullCoverage(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+	ctx := context.Background()
+
+	// Setup successful polling expectations
+	mock.ExpectBegin()
+
+	// Use specific values to test scan logic
+	var payloadBytes = []byte(`{"key":"value"}`)
+	var depsBytes = []byte(`["dep1"]`)
+
+	rows := sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
+		AddRow("id1", "org1", "Task 1", nil, "PENDING", nil, "DELEGATED", payloadBytes, nil, depsBytes, time.Now(), time.Now()).
+		AddRow("id2", "org1", "Task 2", nil, "PENDING", nil, "DELEGATED", nil, nil, nil, time.Now(), time.Now())
+
+	mock.ExpectQuery("SELECT (.+) FROM shared_tasks WHERE status = 'PENDING' AND priority = 'DELEGATED'").WithArgs(10).WillReturnRows(rows)
+
+	// Since two tasks are returned, expect two updates
+	mock.ExpectExec("UPDATE shared_tasks SET status = 'ASSIGNED', updated_at = CURRENT_TIMESTAMP WHERE id = (.+)").WithArgs("id1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectExec("UPDATE shared_tasks SET status = 'ASSIGNED', updated_at = CURRENT_TIMESTAMP WHERE id = (.+)").WithArgs("id2").WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectCommit()
+
+	tasks, err := store.PollDelegatedTasks(ctx, 10)
+	require.NoError(t, err)
+	assert.Len(t, tasks, 2)
+	assert.Equal(t, "ASSIGNED", tasks[0].Status)
+	assert.Equal(t, "ASSIGNED", tasks[1].Status)
+}
+
+func TestSqliteTaskStore_PollDelegatedTasks_Errors(t *testing.T) {
+	// We can't practically mock Mattn sqlite, so testing an open/close error
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	store := NewSqliteTaskStore(db)
+	ctx := context.Background()
+
+	// Intentionally close db to cause begin error
+	db.Close()
+
+	_, err = store.PollDelegatedTasks(ctx, 10)
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_PollDelegatedTasks_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+	ctx := context.Background()
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT (.+) FROM shared_tasks").WithArgs(10).WillReturnError(assert.AnError)
+
+	_, err = store.PollDelegatedTasks(ctx, 10)
+	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestPostgresTaskStore_PollDelegatedTasks_ScanError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+	ctx := context.Background()
+
+	mock.ExpectBegin()
+	rows := sqlmock.NewRows([]string{"id", "organization_id"}).AddRow("id1", "org1")
+	mock.ExpectQuery("SELECT (.+) FROM shared_tasks").WithArgs(10).WillReturnRows(rows)
+
+	_, err = store.PollDelegatedTasks(ctx, 10)
+	assert.Error(t, err)
+}
+
+func TestPostgresTaskStore_PollDelegatedTasks_UpdateError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+	ctx := context.Background()
+
+	mock.ExpectBegin()
+	var payloadBytes = []byte(`{"key":"value"}`)
+	var depsBytes = []byte(`["dep1"]`)
+
+	rows := sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
+		AddRow("id1", "org1", "Task 1", nil, "PENDING", nil, "DELEGATED", payloadBytes, nil, depsBytes, time.Now(), time.Now())
+
+	mock.ExpectQuery("SELECT (.+) FROM shared_tasks").WithArgs(10).WillReturnRows(rows)
+
+	mock.ExpectExec("UPDATE shared_tasks").WithArgs("id1").WillReturnError(assert.AnError)
+
+	_, err = store.PollDelegatedTasks(ctx, 10)
+	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestPostgresTaskStore_PollDelegatedTasks_CommitError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+	ctx := context.Background()
+
+	mock.ExpectBegin()
+	rows := sqlmock.NewRows([]string{"id", "organization_id", "title", "description", "status", "agent_id", "priority", "payload", "parent_plan_id", "dependencies", "created_at", "updated_at"}).
+		AddRow("id1", "org1", "Task 1", nil, "PENDING", nil, "DELEGATED", nil, nil, nil, time.Now(), time.Now())
+
+	mock.ExpectQuery("SELECT (.+) FROM shared_tasks").WithArgs(10).WillReturnRows(rows)
+
+	mock.ExpectExec("UPDATE shared_tasks").WithArgs("id1").WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectCommit().WillReturnError(assert.AnError)
+
+	_, err = store.PollDelegatedTasks(ctx, 10)
+	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestSqliteTaskStore_PollDelegatedTasks_ScanError(t *testing.T) {
+	// Given we are scanning a set structure, it's easiest to create a table with wrong schema
+	badDB, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer badDB.Close()
+
+	_, err = badDB.Exec(`
+		CREATE TABLE shared_tasks (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			title TEXT NOT NULL,
+			description TEXT,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			agent_id TEXT,
+			priority TEXT NOT NULL DEFAULT 'P2',
+			payload TEXT,
+			parent_plan_id TEXT,
+			dependencies TEXT NOT NULL DEFAULT '[]',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	require.NoError(t, err)
+
+	_, err = badDB.Exec(`INSERT INTO shared_tasks (id, organization_id, title, status, priority) VALUES ('1', 'org', 't1', 'PENDING', 'DELEGATED')`)
+	require.NoError(t, err)
+	// Mess up the schema to cause scan error
+	_, err = badDB.Exec(`ALTER TABLE shared_tasks DROP COLUMN title`)
+	require.NoError(t, err)
+	// Now select will fail
+	store := NewSqliteTaskStore(badDB)
+	ctx := context.Background()
+	_, err = store.PollDelegatedTasks(ctx, 10)
+	assert.Error(t, err)
 }
