@@ -29,8 +29,36 @@ The OHC platform currently lacks a formalized multi-tenant tier system to handle
 ## Architecture
 The system will implement a `TierService` as middleware within the orchestration and API layers. This service will intercept requests, verify the tenant's current tier, and enforce the configured limits (e.g., product count, AI actions). Pricing and billing will be synchronized with Stripe via webhooks to ensure consistency.
 
+### Tier Enforcement Flow (Mermaid.js)
+```mermaid
+sequenceDiagram
+    participant User as Business Owner
+    participant API as API / Orchestrator
+    participant Tier as TierService (Middleware)
+    participant DB as OHC-SIP DB
+    participant Stripe as Stripe Billing
+
+    User->>API: Request: Create Product #11
+    API->>Tier: Check Limits (tenant_id)
+    Tier->>DB: Fetch Current Usage & Tier
+    DB-->>Tier: Tier: Free (Limit: 10), Usage: 10
+    Tier-->>API: Limit Exceeded (402 Payment Required)
+    API-->>User: Show Upgrade Prompt (1-Tap Stripe)
+
+    User->>Stripe: Complete Checkout (Starter Tier)
+    Stripe->>API: Webhook: Subscription.Updated
+    API->>DB: Update Tenant Tier to 'Starter'
+    API-->>User: "Upgrade Successful! You can now add more products."
+```
+
 ## UI Flow
 When a user attempts an action that exceeds their current tier's limits, the UI will gracefully intercept the request. Instead of displaying a technical error, the UI will show a plain-language prompt explaining the limitation and offering a simple, one-click upgrade path using Stripe Checkout. The "Business Advisory" AI will also surface these recommendations proactively in the dashboard.
 
 ## Implementation Prompt
 Implement the Multi-Tenant SaaS Tier Architecture as outlined above. This includes creating the `TierService` middleware, defining the tier structures in the database, integrating with Stripe webhooks for billing sync, and updating the frontend components to handle graceful degradation and upgrade prompts. Ensure all components use OHC premium design tokens and adhere to the mobile-first strategy.
+
+## Priority
+P0
+
+## Estimated Scope
+Large
