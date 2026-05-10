@@ -5,7 +5,7 @@ import { AdvancedToggle } from "advanced_toggle.slint";
 export component AgentConfig inherits Window {
     min-width: 375px;
     height: 500px;
-    title: "Configure Helper";
+    title: "Agent Configuration";
 
     callback activate_agent(string, bool, bool, bool, bool, string, string, string, string);
     callback next_step();
@@ -36,7 +36,7 @@ export component AgentConfig inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Configure Helper"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: "Agent Configuration"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
             AdvancedToggle {
                 is_advanced <=> root.is_advanced;
@@ -144,7 +144,7 @@ export component AgentConfig inherits Window {
             Text { text: "What should this helper do?"; color: white; font-family: "Inter"; }
             
             HorizontalBox {
-                Text { text: "Reply to customer messages"; color: white; font-family: "Inter"; }
+                Text { text: "Can Reply to Messages"; color: white; font-family: "Inter"; }
                 CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
             }
             HorizontalBox {
@@ -216,7 +216,7 @@ export component AgentConfig inherits Window {
             }
             Rectangle {} // Spacer
             Button {
-                text: step == 3 ? "Activate" : "Next";
+                text: step == 3 ? "Activate Agent" : "Next";
                 clicked => {
                     if (step < 3) {
                         next_step();
@@ -238,7 +238,7 @@ export component AgentConfig inherits Window {
         VerticalBox {
             alignment: center;
             Text {
-                text: "Helper Activated ✓";
+                text: "Agent Activated ✓";
                 font-family: "Outfit";
                 font-size: 16px;
                 font-weight: 700;
