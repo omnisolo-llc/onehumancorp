@@ -36,15 +36,16 @@ pub async fn bench_db_query_time() {
     let iterations = 1000;
 
     // Cloud Mode (Postgres)
-    let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
-    let mut pg_times = Vec::new();
-    for _ in 0..iterations {
-        let start = Instant::now();
-        let _ = sqlx::query("SELECT 1").execute(&pg_pool).await;
-        pg_times.push(start.elapsed().as_micros());
+    if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await {
+        let mut pg_times = Vec::new();
+        for _ in 0..iterations {
+            let start = Instant::now();
+            let _ = sqlx::query("SELECT 1").execute(&pg_pool).await;
+            pg_times.push(start.elapsed().as_micros());
+        }
+        pg_times.sort();
+        println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[(iterations as f32 * 0.95) as usize], pg_times[(iterations as f32 * 0.99) as usize]);
     }
-    pg_times.sort();
-    println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[(iterations as f32 * 0.95) as usize], pg_times[(iterations as f32 * 0.99) as usize]);
 
     // Standalone Mode (SQLite)
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
@@ -70,31 +71,34 @@ pub async fn bench_api_response_time() {
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
     // Cloud setup
-    let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
-    let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
-    let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
-    let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
+    if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await {
+        let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
+        let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
+        let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
 
-    let mut cloud_times = Vec::new();
-    for _ in 0..iterations {
-        let req = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
-        let mut request = tonic::Request::new(req);
-        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
-        let start = Instant::now();
-        use crate::ohc::app::dashboard_service_server::DashboardService;
-        let _ = dashboard_service_cloud.get_dashboard(request).await;
-        cloud_times.push(start.elapsed().as_micros());
+        let mut cloud_times = Vec::new();
+        for _ in 0..iterations {
+            let req = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+            let mut request = tonic::Request::new(req);
+            request.extensions_mut().insert(crate::auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+            let start = Instant::now();
+            use crate::ohc::app::dashboard_service_server::DashboardService;
+            let _ = dashboard_service_cloud.get_dashboard(request).await;
+            cloud_times.push(start.elapsed().as_micros());
+        }
+        cloud_times.sort();
+        println!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[(iterations as f32 * 0.95) as usize], cloud_times[(iterations as f32 * 0.99) as usize]);
     }
-    cloud_times.sort();
-    println!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[(iterations as f32 * 0.95) as usize], cloud_times[(iterations as f32 * 0.99) as usize]);
 
     // Standalone setup
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
 
-    let db_standalone = crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlite_pool) };
+    // Use dummy pg pool for sqlite test
+    let dummy_pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+    let db_standalone = crate::db::DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(sqlite_pool) };
     let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
     let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
 
@@ -124,6 +128,7 @@ pub async fn bench_dashboard_snapshot() {
 
     let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(&database_url).await.unwrap();
         // Run minimal migrations for benchmark
