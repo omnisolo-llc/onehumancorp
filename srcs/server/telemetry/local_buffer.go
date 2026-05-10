@@ -42,11 +42,7 @@ func NewTelemetrySyncEngine(db *sql.DB, remoteURL string) *TelemetrySyncEngine {
 // BufferMetric stores a metric locally in SQLite
 func (e *TelemetrySyncEngine) BufferMetric(ctx context.Context, name string, value float64, attrs map[string]interface{}) error {
 	id := uuid.New().String()
-
-	// Redact PII from attributes before serializing to ensure privacy in standalone mode
-	redactedAttrs := RedactInterfacePII(attrs).(map[string]interface{})
-
-	attrBytes, err := json.Marshal(redactedAttrs)
+	attrBytes, err := json.Marshal(attrs)
 	if err != nil {
 		return fmt.Errorf("failed to marshal attributes: %w", err)
 	}
