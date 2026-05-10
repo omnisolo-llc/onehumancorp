@@ -31,6 +31,8 @@ export component Pricing inherits Window {
     in property <string> current_usage: "450 / 1000 AI Actions";
     in property <string> projected_cost: "$9.00 / month";
     in property <float> usage_progress: 0.45;
+    in property <string> current_storage: "1.2 GB / 5GB";
+    in property <float> storage_progress: 0.24;
 
     in property <[UiPricingTier]> tiers: [
         {
@@ -159,37 +161,15 @@ export component Pricing inherits Window {
                     padding: 16px;
                     spacing: 12px;
                     Text { text: "Storage"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                    Text { text: "1.2 GB / 5GB"; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
+                    Text { text: current_storage; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
 
-                    Rectangle {
+                    storage_bg := Rectangle {
                         height: 8px;
                         border-radius: 4px;
                         background: rgba(255, 255, 255, 0.1);
                         Rectangle {
                             x: 0;
-                            width: 24%;
-                            height: 100%;
-                            background: #a855f7;
-                            border-radius: 4px;
-                        }
-                    }
-                }
-            }
-
-            GlassCard {
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 12px;
-                    Text { text: "Storage"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                    Text { text: "1.2 GB / 5GB"; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
-
-                    Rectangle {
-                        height: 8px;
-                        border-radius: 4px;
-                        background: rgba(255, 255, 255, 0.1);
-                        Rectangle {
-                            x: 0;
-                            width: 24%;
+                            width: storage_progress * storage_bg.width;
                             height: 100%;
                             background: #a855f7;
                             border-radius: 4px;
