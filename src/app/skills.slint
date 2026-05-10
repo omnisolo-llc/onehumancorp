@@ -1,4 +1,3 @@
-import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
 
 export struct UiSkill {
@@ -40,7 +39,8 @@ export component Skills inherits Window {
         VerticalBox {
             spacing: 12px;
             
-            for s in skills : GlassCard {
+            for s in skills : Rectangle {
+                background: white;
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;

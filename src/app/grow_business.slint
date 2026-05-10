@@ -25,6 +25,7 @@ export component GrowBusiness inherits Window {
     next_step => { step = step + 1; }
     prev_step => { step = step - 1; }
     select_strategy(s) => { selected_strategy = s; }
+    toggle_advanced => { save_state(); }
     return_to_dashboard => {
         step = 0;
         selected_strategy = "";
@@ -43,7 +44,7 @@ export component GrowBusiness inherits Window {
             Rectangle {}
             AdvancedToggle {
                 is_advanced <=> root.is_advanced;
-                toggled => { is_advanced = !is_advanced; save_state(); }
+                toggled => { toggle_advanced(); }
             }
         }
 

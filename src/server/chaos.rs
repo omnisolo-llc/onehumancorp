@@ -11,6 +11,7 @@ mod tests {
     use std::time::Duration;
     use sqlx::postgres::PgPoolOptions;
     use crate::sip::SipDB;
+    use ohc_builtin_agent::legacy_mesh::DistributedLock;
 
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]
@@ -38,6 +39,18 @@ mod tests {
         assert!(delegate_res.is_err(), "delegate_mission_with_tx should fail gracefully without panic");
     }
 
+    #[tokio::test]
+    async fn test_corrupt_agent_lock_failure() {
+        // Simulating a redis drop or corruption.
+        let client = redis::Client::open("redis://127.0.0.1:0/").unwrap();
+        let lock = DistributedLock::new(client, "test_chaos_lock");
+
+        let acquire_res = lock.acquire(Duration::from_millis(100), Duration::from_millis(500)).await;
+        assert!(acquire_res.is_err());
+
+        let release_res = lock.release().await;
+        assert!(release_res.is_err());
+    }
 
     // Testing graceful degradation during network latency
     #[tokio::test]

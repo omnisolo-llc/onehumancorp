@@ -1,4 +1,3 @@
-pub mod env_wizard;
 pub mod social_posting;
 pub mod onboarding_e2e_tests;
 pub mod full_journey_e2e;

@@ -29,7 +29,7 @@ export component Login inherits Window {
 
     // Test hooks
     out property <string> sso_button_text: root.loading ? "Connecting..." : "Use Google or Apple";
-    out property <string> settings_button_text: "Fix App Issues";
+    out property <string> settings_button_text: "⚙ App Settings";
     out property <string> toggle_button_text: is_sign_up ? "Have an account? Sign In" : "New here? Create an account";
     out property <string> submit_button_text: is_sign_up ? (root.loading ? "Creating account..." : "Sign Up") : (root.loading ? "Signing in..." : "Sign In");
 
@@ -103,20 +103,10 @@ export component Login inherits Window {
                     spacing: 8px;
                     alignment: center;
                     Text { width: 100%; wrap: word-wrap; text: verification_message; color: #10b981; horizontal-alignment: center; font-family: "Inter"; }
-                    Rectangle {
-                        background: #38bdf8;
-                        border-radius: 4px;
+                    Button {
                         height: 44px;
-                        width: 100%;
-                        TouchArea { clicked => { resend_verification(username); } }
-                        Text {
-                            text: "Resend Verification Email";
-                            color: white;
-                            horizontal-alignment: center;
-                            font-family: "Inter";
-                            font-weight: 700;
-                            font-size: 16px;
-                        }
+                        text: "Resend Verification Email";
+                        clicked => { resend_verification(username); }
                     }
                 }
 
@@ -138,7 +128,7 @@ export component Login inherits Window {
                         }
                         Text {
                             width: 100%;
-                            text: "Please try again or click 'Forgot Password' to get a new one.";
+                            text: "Please try again or reset your password if you forgot it.";
                             color: #ef4444;
                             font-family: "Inter";
                             font-size: 12px;

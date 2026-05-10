@@ -31,23 +31,22 @@ impl PlanTier {
             PlanTier::Free => Some(500),
             PlanTier::Starter => Some(5000), // 5GB
             PlanTier::Pro => Some(50000),    // 50GB
-            PlanTier::Business => Some(512000),      // 500GB
+            PlanTier::Business => None,      // Custom/Unlimited
         }
     }
 
     pub fn max_agents(&self) -> Option<usize> {
         match self {
             PlanTier::Free => Some(1),
-            PlanTier::Starter => Some(3),
-            PlanTier::Pro => Some(10),
-            PlanTier::Business => None,
+            PlanTier::Starter => Some(5),
+            PlanTier::Pro | PlanTier::Business => None,
         }
     }
 
     pub fn max_products(&self) -> Option<usize> {
         match self {
             PlanTier::Free => Some(10),
-            PlanTier::Starter => Some(100),
+            PlanTier::Starter => Some(50),
             PlanTier::Pro | PlanTier::Business => None,
         }
     }
@@ -326,15 +325,15 @@ mod tests {
         assert_eq!(PlanTier::Free.storage_limit_mb(), Some(500));
         assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5000));
         assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(50000));
-        assert_eq!(PlanTier::Business.storage_limit_mb(), Some(512000));
+        assert_eq!(PlanTier::Business.storage_limit_mb(), None);
 
         assert_eq!(PlanTier::Free.max_agents(), Some(1));
-        assert_eq!(PlanTier::Starter.max_agents(), Some(3));
-        assert_eq!(PlanTier::Pro.max_agents(), Some(10));
+        assert_eq!(PlanTier::Starter.max_agents(), Some(5));
+        assert_eq!(PlanTier::Pro.max_agents(), None);
         assert_eq!(PlanTier::Business.max_agents(), None);
 
         assert_eq!(PlanTier::Free.max_products(), Some(10));
-        assert_eq!(PlanTier::Starter.max_products(), Some(100));
+        assert_eq!(PlanTier::Starter.max_products(), Some(50));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
     }

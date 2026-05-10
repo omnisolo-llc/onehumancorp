@@ -27,11 +27,106 @@ type TenantStore interface {
 	UpdateTenantState(ctx context.Context, id string, state string) error
 }
 
+type PostgresTenantStore struct {
+	db *sql.DB
+}
 
+func NewPostgresTenantStore(db *sql.DB) *PostgresTenantStore {
+	return &PostgresTenantStore{db: db}
+}
 
+func (s *PostgresTenantStore) CreateTenant(ctx context.Context, tenant *Tenant) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
+	query := `
+		INSERT INTO tenants (name, category, description, status, owner_email, tier, state)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, created_at, updated_at
+	`
 
+	if tenant.Status == "" {
+		tenant.Status = "PENDING"
+	}
+	if tenant.Tier == "" {
+		tenant.Tier = "free"
+	}
 
+	err = tx.QueryRowContext(ctx, query,
+		tenant.Name, tenant.Category, tenant.Description, tenant.Status,
+		tenant.OwnerEmail, tenant.Tier, tenant.State,
+	).Scan(&tenant.ID, &tenant.CreatedAt, &tenant.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *PostgresTenantStore) GetTenant(ctx context.Context, id string) (*Tenant, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	query := `
+		SELECT id, name, category, description, status, created_at, updated_at, owner_email, tier, COALESCE(state, '')
+		FROM tenants
+		WHERE id = $1
+	`
+	row := tx.QueryRowContext(ctx, query, id)
+
+	tenant := &Tenant{}
+	err = row.Scan(
+		&tenant.ID, &tenant.Name, &tenant.Category, &tenant.Description, &tenant.Status,
+		&tenant.CreatedAt, &tenant.UpdatedAt, &tenant.OwnerEmail, &tenant.Tier, &tenant.State,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, errors.New("tenant not found")
+	} else if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return tenant, nil
+}
+
+func (s *PostgresTenantStore) UpdateTenantStatus(ctx context.Context, id string, status string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	query := `UPDATE tenants SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+	_, err = tx.ExecContext(ctx, query, status, id)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *PostgresTenantStore) UpdateTenantState(ctx context.Context, id string, state string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	query := `UPDATE tenants SET state = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+	_, err = tx.ExecContext(ctx, query, state, id)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
 
 type SqliteTenantStore struct {
 	db *sql.DB

@@ -27,11 +27,10 @@ export component Pricing inherits Window {
     in-out property <int> step: 0;
     in-out property <bool> is_advanced: false;
     callback toggle_advanced();
+    toggle_advanced => { }
     in property <string> current_usage: "450 / 1000 AI Actions";
     in property <string> projected_cost: "$9.00 / month";
     in property <float> usage_progress: 0.45;
-    in property <string> current_storage: "1.2 GB / 5GB";
-    in property <float> storage_progress: 0.24;
 
     in property <[UiPricingTier]> tiers: [
         {
@@ -49,7 +48,7 @@ export component Pricing inherits Window {
             price: is_annual ? "$7/mo (20% off)" : "$9/mo",
             description: "Up to 1000 AI Actions, 5GB storage.",
             is_recommended: false,
-            agent_limit: "3 agent limit",
+            agent_limit: "5 agent limit",
             storage_limit: "5GB storage limit",
             support_level: "Email support",
             features: ["Custom Domain", "Advanced Agents", "Email Support"],
@@ -59,7 +58,7 @@ export component Pricing inherits Window {
             price: is_annual ? "$23/mo (20% off)" : "$29/mo",
             description: "Unlimited AI Actions, 50GB storage.",
             is_recommended: true,
-            agent_limit: "10 agent limit",
+            agent_limit: "Unlimited number of agents",
             storage_limit: "50GB storage limit",
             support_level: "Priority support",
             features: ["Multiple Locations", "Pro Agents", "Priority Support"],
@@ -70,7 +69,7 @@ export component Pricing inherits Window {
             description: "Business features and support.",
             is_recommended: false,
             agent_limit: "Unlimited number of agents",
-            storage_limit: "500GB storage limit",
+            storage_limit: "Unlimited storage limit",
             support_level: "Dedicated support",
             features: ["White-label", "Custom Agents", "Dedicated Support"],
         },
@@ -90,7 +89,7 @@ export component Pricing inherits Window {
             Rectangle {}
             AdvancedToggle {
                 is_advanced <=> root.is_advanced;
-                toggled => { is_advanced = !is_advanced; toggle_advanced(); }
+                toggled => { toggle_advanced(); }
             }
         }
 
@@ -160,15 +159,37 @@ export component Pricing inherits Window {
                     padding: 16px;
                     spacing: 12px;
                     Text { text: "Storage"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                    Text { text: current_storage; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
+                    Text { text: "1.2 GB / 5GB"; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
 
-                    storage_bg := Rectangle {
+                    Rectangle {
                         height: 8px;
                         border-radius: 4px;
                         background: rgba(255, 255, 255, 0.1);
                         Rectangle {
                             x: 0;
-                            width: storage_progress * storage_bg.width;
+                            width: 24%;
+                            height: 100%;
+                            background: #a855f7;
+                            border-radius: 4px;
+                        }
+                    }
+                }
+            }
+
+            GlassCard {
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+                    Text { text: "Storage"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                    Text { text: "1.2 GB / 5GB"; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
+
+                    Rectangle {
+                        height: 8px;
+                        border-radius: 4px;
+                        background: rgba(255, 255, 255, 0.1);
+                        Rectangle {
+                            x: 0;
+                            width: 24%;
                             height: 100%;
                             background: #a855f7;
                             border-radius: 4px;

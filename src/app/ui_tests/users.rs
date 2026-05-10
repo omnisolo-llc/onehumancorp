@@ -70,6 +70,7 @@ fn create() -> app::UserManagement { crate::ui_tests::init(); app::UserManagemen
 }
 
 // --- Referral Widget UI Tests ---
+
 #[test] fn e2e_referral_widget_render_verify() {
     let ui = create();
     ui.window().set_size(slint::PhysicalSize::new(1024, 768));

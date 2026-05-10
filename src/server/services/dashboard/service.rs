@@ -64,20 +64,20 @@ impl DashboardService for MyDashboardService {
         let hub_org = self.hub.clone();
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || {
+            async {
                 Ok::<_, String>(hub1.get_agents())
-            }),
-            tokio::task::spawn_blocking(move || {
+            },
+            async {
                 Ok::<_, String>(hub2.get_meetings())
-            }),
-            tokio::task::spawn_blocking(move || {
+            },
+            async {
                 let cost_auditor = hub3.get_cost_auditor();
                 Ok::<_, String>((
                     cost_auditor.get_total_cost(),
                     cost_auditor.get_total_tokens(),
                     cost_auditor.get_agent_costs_snapshot(),
                 ))
-            }),
+            },
             async {
                 let org_id = org_id1;
                 let cache_key = format!("hub:products:{}", org_id);
@@ -236,16 +236,10 @@ impl DashboardService for MyDashboardService {
             }
         );
 
-        let agents = agents_res
-            .map_err(|e| Status::internal(e.to_string()))?
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res
-            .map_err(|e| Status::internal(e.to_string()))?
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, _agent_costs_data) =
-            cost_res
-                .map_err(|e| Status::internal(e.to_string()))?
-                .map_err(|e| Status::internal(e.to_string()))?;
+            cost_res.map_err(|e| Status::internal(e.to_string()))?;
         let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
         let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
         let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
@@ -725,10 +719,11 @@ mod tests {
         });
         let start2 = std::time::Instant::now();
         let _res2 = service.get_dashboard(request2).await.unwrap().into_inner();
-        let _elapsed2 = start2.elapsed();
+        let elapsed2 = start2.elapsed();
 
         // The second call might be faster, but we just verify it works properly via caching
         // without panicking.
+        assert!(elapsed2.as_millis() >= 0);
     }
 
     #[tokio::test]

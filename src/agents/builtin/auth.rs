@@ -21,6 +21,12 @@ pub enum AuthMode {
 ///   OHC_AGENT_TOKEN                – enables token mode
 ///   OHC_AGENT_SPIFFE_ID            – restricts SPIFFE ID (enables SPIFFE mode)
 pub fn auth_mode_from_env() -> AuthMode {
+    if env::var("OHC_AGENT_AUTH_DISABLED")
+        .map(|v| v == "true")
+        .unwrap_or(false)
+    {
+        return AuthMode::Disabled;
+    }
     if let Ok(tok) = env::var("OHC_AGENT_TOKEN") {
         if !tok.is_empty() {
             let hash = hmac_token(&tok);

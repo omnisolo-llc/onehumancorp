@@ -3,8 +3,6 @@ package onboarding
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"time"
 	"testing"
 
 	"onehumancorp/srcs/server/orchestration"
@@ -14,7 +12,7 @@ import (
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", time.Now().UnixNano()))
+	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("Failed to open database: %v", err)
 	}
@@ -28,9 +26,10 @@ func setupTestDB(t *testing.T) *sql.DB {
 			category TEXT,
 			description TEXT,
 			status TEXT,
-
+			state TEXT,
 			created_at DATETIME,
-			updated_at DATETIME
+			updated_at DATETIME,
+			state TEXT
 		);
 		CREATE TABLE shared_tasks (
 			id TEXT PRIMARY KEY,
@@ -38,14 +37,15 @@ func setupTestDB(t *testing.T) *sql.DB {
 			title TEXT,
 			description TEXT,
 			status TEXT,
-
+			state TEXT,
 			agent_id TEXT,
 			priority TEXT,
 			payload BLOB,
 			parent_plan_id TEXT,
 			dependencies BLOB,
 			created_at DATETIME,
-			updated_at DATETIME
+			updated_at DATETIME,
+			state TEXT
 		);
 	`)
 	if err != nil {

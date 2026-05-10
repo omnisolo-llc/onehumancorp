@@ -10,10 +10,6 @@ type OnboardingMetric struct {
 	CompletionRate float64 `json:"completion_rate"`
 }
 
-type ViralCoefficientResponse struct {
-	KFactor float64 `json:"k_factor"`
-}
-
 func HandleOnboardingMetrics(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -28,18 +24,4 @@ func HandleOnboardingMetrics(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(metrics)
-}
-
-func HandleViralCoefficient(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	response := ViralCoefficientResponse{
-		KFactor: 1.2,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
 }

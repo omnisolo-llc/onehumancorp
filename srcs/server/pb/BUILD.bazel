@@ -5,7 +5,4 @@ go_library(
     srcs = ["agent.go"],
     importpath = "onehumancorp/srcs/server/pb",
     visibility = ["//visibility:public"],
-    deps = [
-        "//srcs/server/pb/interop:interoppb",
-    ],
 )

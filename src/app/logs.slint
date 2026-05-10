@@ -1,4 +1,3 @@
-import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export struct UiLogLine {
@@ -23,14 +22,14 @@ export component Logs inherits Window {
 
         HorizontalBox {
             Text { text: "Service Logs"; font-size: 20px; font-weight: 700; color: #1e293b; }
-            GlassCard {}
+            Rectangle {}
             Button { 
                 text: "Refresh"; 
                 clicked => { refresh(); }
             }
         }
 
-        GlassCard {
+        Rectangle {
             background: #0f172a;
             border-radius: 8px;
             

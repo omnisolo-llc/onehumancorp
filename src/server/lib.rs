@@ -34,6 +34,7 @@ pub mod interop;
 pub mod benchmarks;
 
 pub mod config;
+pub mod http;
 pub mod builder;
 use crate::orchestration::mesh::TeammateMesh;
 
@@ -159,8 +160,6 @@ pub struct MyHubService {
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
     onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
-    publish_counter: opentelemetry::metrics::Counter<u64>,
-    stream_counter: opentelemetry::metrics::Counter<u64>,
 }
 
 impl MyHubService {
@@ -169,12 +168,7 @@ impl MyHubService {
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
         let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db, hub.clone());
-
-        let meter = opentelemetry::global::meter("ohc.orchestration.hub");
-        let publish_counter = meter.u64_counter("hub.mesh_events.published").build();
-        let stream_counter = meter.u64_counter("hub.mesh_events.stream_started").build();
-
-        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent, publish_counter, stream_counter }
+        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent }
     }
 }
 
@@ -1078,23 +1072,6 @@ impl HubService for MyHubService {
 
     type StreamMeshEventsStream = Pin<Box<dyn Stream<Item = Result<MeshEvent, Status>> + Send>>;
 
-    async fn publish_mesh_event(
-        &self,
-        request: Request<crate::ohc::orchestration::PublishMeshEventRequest>,
-    ) -> Result<Response<PublishMessageResponse>, Status> {
-        let req = request.into_inner();
-        if let Some(event) = req.event {
-            self.publish_counter.add(1, &[opentelemetry::KeyValue::new("topic", event.topic.clone())]);
-
-            match self.hub.publish_mesh_event(event) {
-                Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
-                Err(e) => Err(Status::internal(e)),
-            }
-        } else {
-            Err(Status::invalid_argument("event is required"))
-        }
-    }
-
     async fn stream_mesh_events(
         &self,
         request: Request<EventStreamRequest>,
@@ -1104,8 +1081,6 @@ impl HubService for MyHubService {
             return Err(Status::invalid_argument("topic is required"));
         }
         
-        self.stream_counter.add(1, &[opentelemetry::KeyValue::new("topic", req.topic.clone())]);
-
         let rx = self.hub.subscribe_mesh_events(req.topic);
         
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
@@ -1211,18 +1186,6 @@ impl HubService for MyHubService {
 }
 
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize logging
-    let use_json = std::env::var("LOG_FORMAT").unwrap_or_default() == "json";
-
-    let subscriber = tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()));
-
-    if use_json {
-        subscriber.json().init();
-    } else {
-        subscriber.init();
-    }
-
     // Initialize database
     let db = Arc::new(db::DB::new().await?);
     db.run_migrations().await?;
@@ -1480,7 +1443,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
-    let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
+    let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
@@ -1582,4 +1545,3 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 }
 pub mod tools;
 pub mod workers;
-// Validation dummy comment

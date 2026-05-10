@@ -1,7 +1,5 @@
-import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { VectorMemoryVisualizer } from "vector_memory_visualizer.slint";
-import { GlassCard } from "glass_card.slint";
 
 export component SwarmMemory inherits Window {
     width: 900px;
@@ -27,15 +25,20 @@ export component SwarmMemory inherits Window {
             Text { text: "Live Activity"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Text { text: "Live updates"; color: #64748b; }
             
-            VectorMemoryVisualizer {
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
                 
                 VerticalBox {
                     padding: 16px;
                     spacing: 10px;
                     alignment: start;
                     
-                    VectorMemoryVisualizer {
+                    Rectangle {
                         background: #f1f5f9;
+                        border-radius: 8px;
                         
                         VerticalBox {
                             padding: 8px;
@@ -55,15 +58,20 @@ export component SwarmMemory inherits Window {
             Text { text: "Saved Information"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Text { text: "Cloud Backup"; color: #64748b; }
             
-            VectorMemoryVisualizer {
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
                 
                 VerticalBox {
                     padding: 16px;
                     spacing: 10px;
                     alignment: start;
                     
-                    VectorMemoryVisualizer {
+                    Rectangle {
                         background: #f1f5f9;
+                        border-radius: 8px;
                         
                         VerticalBox {
                             padding: 8px;
@@ -83,7 +91,11 @@ export component SwarmMemory inherits Window {
             Text { text: "AutoDream Memory Pipeline"; font-size: 20px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
             Text { text: "Long-Term Context Engine"; color: #64748b; font-family: "Inter"; }
             
-            VectorMemoryVisualizer {
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
                 
                 VerticalBox {
                     padding: 16px;

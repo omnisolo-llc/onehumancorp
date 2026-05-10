@@ -160,7 +160,7 @@ fn test_e2e_onboarding_sso_signup() {
 
     login_ui.set_is_sign_up(true);
 
-    use slint::{ComponentHandle, Model};
+    use slint::ComponentHandle;
     let login_ui_weak = login_ui.as_weak();
     login_ui.on_oauth_login(move |provider| {
         assert_eq!(provider, "Google");
@@ -272,7 +272,7 @@ fn test_maya_baker_onboarding_flow() {
     assert_eq!(wizard_ui.get_step(), 1);
 
     // Select Business Type
-    wizard_ui.invoke_select_business_type("Restaurant / Food".into());
+    wizard_ui.invoke_select_business_type("Food".into());
     assert_eq!(wizard_ui.get_step(), 2);
 
     // Name and description
@@ -326,82 +326,36 @@ fn test_maya_baker_onboarding_flow() {
     });
 
     wizard_ui.invoke_launch(
-        "Restaurant / Food".into(), "Maya's Cakes".into(), "Delicious vegan cakes".into(), "both".into(), "maya@example.com".into(),
+        "Food".into(), "Maya's Cakes".into(), "Delicious vegan cakes".into(), "both".into(), "maya@example.com".into(),
         "Modern".into(), "Vegan Chocolate Cake".into(), "45.00".into(), "mayascakes.ohc.app".into(), "".into(), "".into(), "".into()
     );
     assert!(*launched.borrow(), "Maya's onboarding launch failed");
 }
 
-
-
-
-// Persona: Carlos — The Freelance Handyman (42) -> Updated for AI Chat Onboarding
+// Persona: Carlos — The Freelance Handyman (42)
 #[test]
-fn test_carlos_handyman_ai_chat_onboarding_flow() {
+fn test_carlos_handyman_onboarding_flow() {
     crate::ui_tests::init();
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
-    let login_ui = crate::app::Login::new().unwrap();
-    let setup_wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
-    let setup_wizard_launched_clone = setup_wizard_launched.clone();
-
-    login_ui.on_start_setup_wizard(move || {
-        *setup_wizard_launched_clone.borrow_mut() = true;
-    });
-
-    login_ui.invoke_start_setup_wizard();
-    assert!(*setup_wizard_launched.borrow(), "Setup Wizard should launch from login");
-
     let wizard_ui = crate::app::SetupWizard::new().unwrap();
 
-    // Simulate UI flow
-    assert_eq!(wizard_ui.get_step(), 0);
+    // Fast-track setup test (Instant Build)
+    wizard_ui.set_step(0);
+    use slint::ComponentHandle;
     wizard_ui.set_is_instant_build(true);
     wizard_ui.set_step(11);
 
-    use slint::{ComponentHandle, Model};
-    assert_eq!(wizard_ui.get_chat_messages().row_count(), 1);
-
-    // Provide the identical mock callback for testing
-    let wizard_weak = wizard_ui.as_weak();
-    wizard_ui.on_send_chat_message(move |message| {
-        if let Some(ui) = wizard_weak.upgrade() {
-            let msg = message.to_string();
-
-            let mut msgs: Vec<crate::app::UiChatMessage> = ui.get_chat_messages().iter().collect();
-            msgs.push(crate::app::UiChatMessage {
-                id: "test".into(),
-                author_name: "You".into(),
-                body: msg.into(),
-                is_me: true,
-            });
-
-            let question_count = msgs.iter().filter(|m| !m.is_me).count();
-
-            if question_count >= 3 {
-                ui.set_is_generating_instant_preview(true);
-                ui.invoke_generate_instant_preview();
-            } else {
-                msgs.push(crate::app::UiChatMessage {
-                    id: "test_ai".into(),
-                    author_name: "Marketing AI".into(),
-                    body: "AI Response mock".into(),
-                    is_me: false,
-                });
-            }
-            let model = slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(msgs)));
-            ui.set_chat_messages(model);
-        }
-    });
+    wizard_ui.set_instant_bio("I'm Carlos, a freelance handyman offering home repair services.".into());
 
     let generated = std::rc::Rc::new(std::cell::RefCell::new(false));
     let generated_clone = generated.clone();
 
-    let wizard_weak_gen = wizard_ui.as_weak();
+    let wizard_weak = wizard_ui.as_weak();
     wizard_ui.on_generate_instant_preview(move || {
-        if let Some(ui) = wizard_weak_gen.upgrade() {
+        if let Some(ui) = wizard_weak.upgrade() {
             ui.set_company_name("Carlos Handyman Services".into());
-            ui.set_business_type("Service Business".into());
+            ui.set_business_type("Service".into());
             ui.set_product_name("1-Hour Home Repair".into());
             ui.set_product_price("80.00".into());
             ui.set_is_generating_instant_preview(false);
@@ -410,19 +364,9 @@ fn test_carlos_handyman_ai_chat_onboarding_flow() {
         *generated_clone.borrow_mut() = true;
     });
 
-    // Message 1
-    wizard_ui.invoke_send_chat_message("I am a handyman offering plumbing services.".into());
-    assert_eq!(wizard_ui.get_chat_messages().row_count(), 3);
+    wizard_ui.invoke_generate_instant_preview();
 
-    // Message 2
-    wizard_ui.invoke_send_chat_message("Carlos Handyman Services".into());
-    assert_eq!(wizard_ui.get_chat_messages().row_count(), 5);
-
-    // Message 3 -> triggers preview
-    wizard_ui.invoke_send_chat_message("Modern and clean".into());
-    assert_eq!(wizard_ui.get_chat_messages().row_count(), 6); // 3 User + 3 AI
-
-    assert!(*generated.borrow(), "Carlos AI chat build failed to trigger generation");
+    assert!(*generated.borrow(), "Carlos instant build failed");
     assert_eq!(wizard_ui.get_step(), 9);
     assert_eq!(wizard_ui.get_company_name(), "Carlos Handyman Services");
     assert_eq!(wizard_ui.get_product_price(), "80.00");

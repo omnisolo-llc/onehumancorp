@@ -8,15 +8,13 @@ export struct UiPromptExample {
 }
 
 export component PromptTuning inherits Window {
-    min-width: 375px;
+    width: 700px;
     height: 500px;
     title: "Tune Helper";
 
     in-out property <int> step: 0;
     in-out property <string> tone: "Friendly & Warm";
     in-out property <bool> is_advanced: false;
-    callback toggle_advanced();
-    toggle_advanced => { }
     in-out property <bool> show_toast: false;
     
     in-out property <bool> focus_only_business: false;
@@ -48,7 +46,7 @@ export component PromptTuning inherits Window {
                 Rectangle {}
                 AdvancedToggle {
                     is_advanced <=> root.is_advanced;
-                    toggled => { is_advanced = !is_advanced; save_state(); }
+                    toggled => { save_state(); }
                 }
             }
 

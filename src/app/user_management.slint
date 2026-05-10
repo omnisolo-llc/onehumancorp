@@ -17,24 +17,16 @@ export component GrowthReferralWidget inherits GlassCard {
     background: ta.has-hover ? rgba(255, 255, 255, 0.05) : rgba(255, 255, 255, 0.03);
     drop-shadow-blur: ta.has-hover ? 25px : 20px;
 
-    property <float> widget_scale: ta.has-hover ? 1.02 : 1.0;
-    property <length> base_width: 300px;
-    property <length> base_height: 150px;
-    width: base_width * widget_scale;
-    height: base_height * widget_scale;
-
     animate background { duration: 200ms; easing: ease-in-out; }
     animate drop-shadow-blur { duration: 200ms; easing: ease-in-out; }
-    animate width { duration: 300ms; easing: cubic-bezier(0.4, 0, 0.2, 1); }
-    animate height { duration: 300ms; easing: cubic-bezier(0.4, 0, 0.2, 1); }
 
     ta := TouchArea {}
 
     VerticalBox {
         padding: 16px;
         spacing: 10px;
-        Text { text: "Referral Program"; font-family: "Outfit"; font-weight: 700; color: #ffffff; }
-        Text { text: "Share OHC with a friend, both get 1 month free Pro."; font-family: "Inter"; color: rgba(255, 255, 255, 0.7); font-size: 14px; }
+        Text { text: "Referral Program"; font-family: "Outfit"; font-weight: 700; color: #1e293b; }
+        Text { text: "Share OHC with a friend, both get 1 month free Pro."; font-family: "Inter"; color: #64748b; font-size: 14px; }
         Button { text: "Invite User"; clicked => { root.invite_user(); } }
     }
 }
@@ -57,10 +49,8 @@ export component UserManagement inherits Window {
         HorizontalBox {
             Text { text: "User Management"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
-            HorizontalLayout { alignment: end;
-                GrowthReferralWidget {
-                    invite_user => { root.invite_user(); }
-                }
+            GrowthReferralWidget {
+                invite_user => { root.invite_user(); }
             }
         }
 

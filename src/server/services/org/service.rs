@@ -111,12 +111,6 @@ impl OrgService for MyOrgService {
             0.0
         };
         
-        let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| crate::auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
-        let status = self.hub.tracker().check_agent_quota(&org_id).await.unwrap_or(crate::pricing::rate_limit::RateLimitStatus {
-            is_allowed: true,
-            soft_limit_reached: false,
-            user_message: None,
-        });
 
         
         Ok(Response::new(AnalyticsSummaryResponse {
@@ -128,9 +122,6 @@ impl OrgService for MyOrgService {
             pending_approvals: 2,
             active_handoffs: 1,
             token_velocity: summary.total_tokens,
-            soft_limit_reached: status.soft_limit_reached,
-            upgrade_message: status.user_message.unwrap_or_default(),
-            is_allowed: status.is_allowed,
         }))
     }
 }

@@ -119,29 +119,24 @@ impl DB {
                 .create_if_missing(true)
                 .extension("sqlite_vec");
 
-            // Enforce SQLCipher for Standalone mode unconditionally
-            let key = if let Some(k) = database_url.split("key=").nth(1) {
-                k.split('&').next().unwrap_or("").to_string()
-            } else {
-                std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
-            };
+            // Enforce SQLCipher for Standalone mode
+            if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+                let key = if let Some(k) = database_url.split("key=").nth(1) {
+                    k.split('&').next().unwrap_or("").to_string()
+                } else {
+                    std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+                };
 
-            if key.is_empty() {
-                panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
+                if key.is_empty() {
+                    panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
+                }
+
+                conn_opts = conn_opts.pragma("key", key);
+                // Force full encryption of the database
+                conn_opts = conn_opts.pragma("cipher", "sqlcipher");
             }
 
-            conn_opts = conn_opts.pragma("key", key);
-            // Force full encryption of the database
-            conn_opts = conn_opts.pragma("cipher", "sqlcipher");
-
             let sqlite_pool = SqlitePoolOptions::new()
-                .after_connect(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("PRAGMA secure_delete = ON").await?;
-                        Ok(())
-                    })
-                })
                 .connect_with(conn_opts)
                 .await?;
 
@@ -398,8 +393,6 @@ impl DB {
                         title TEXT,
                         price REAL,
                         inventory_count INTEGER,
-                        supplier_name TEXT,
-                        supplier_contact TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -975,7 +968,6 @@ mod autodream_db_tests {
         // we use a SQLite in-memory test to verify connection pools don't reuse tenant state
         // and verify our query bindings safely isolate the tenant parameter natively.
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .max_connections(1)
             .connect("sqlite::memory:")
             .await
@@ -1026,7 +1018,6 @@ mod autodream_db_tests {
             .pragma("key", "secure_test_key_123");
 
         let pool_result = sqlx::sqlite::SqlitePoolOptions::new()
-            .after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .connect_with(opts)
             .await;
 

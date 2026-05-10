@@ -1,14 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'screens/help/video_tutorials_screen.dart';
 import 'screens/unified_inbox_screen.dart';
-import 'widgets/walkthrough_overlay.dart';
 import 'screens/business_setup_wizard_screen.dart';
 import 'screens/help/help_center_screen.dart';
 import 'screens/help/ai_help_chat_screen.dart';
-
-
+import 'screens/help/video_tutorials_screen.dart';
+import 'screens/help/walkthrough_screen.dart';
 import 'screens/referral_program_screen.dart';
 import 'widgets/milestone_notification.dart';
 
@@ -61,33 +59,8 @@ class GlassContainer extends StatelessWidget {
   }
 }
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
-
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> {
-  int _currentStep = -1;
-
-  void _startTour() {
-    setState(() {
-      _currentStep = 0;
-    });
-  }
-
-  void _nextStep() {
-    setState(() {
-      _currentStep++;
-    });
-  }
-
-  void _skipTour() {
-    setState(() {
-      _currentStep = -1;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +80,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: const Text('App Tour', style: TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(context); // Close drawer
-                _startTour();
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const WalkthroughScreen()));
               },
             ),
             ListTile(
@@ -165,33 +138,24 @@ IconButton(
                   message: 'Keep up the great work!',
                 ),
                 const SizedBox(height: 20),
-                WalkthroughHighlight(
-                  showHighlight: _currentStep == 0,
-                  speechBubbleText: "This is your total revenue. It updates automatically when you make a sale!",
-                  onDismiss: _nextStep,
-                  child: GlassContainer(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Revenue',
-                          style: TextStyle(fontSize: 14, color: Colors.white70),
-                        ),
-                        SizedBox(height: 5),
-                        Text(
-                          '\$0.00',
-                          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
-                        ),
-                      ],
-                    ),
+                GlassContainer(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Revenue',
+                        style: TextStyle(fontSize: 14, color: Colors.white70),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        '\$0.00',
+                        style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 20),
-                WalkthroughHighlight(
-                  showHighlight: _currentStep == 1,
-                  speechBubbleText: "Check this list to see what you should do next to grow your business.",
-                  onDismiss: _nextStep,
-                  child: GlassContainer(
+                GlassContainer(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -247,7 +211,6 @@ IconButton(
                       ),
                     ],
                   ),
-                  ),
                 ),
                 const SizedBox(height: 20),
                 GlassContainer(
@@ -284,27 +247,22 @@ IconButton(
                   ),
                 ),
                 const SizedBox(height: 20),
-                WalkthroughHighlight(
-                  showHighlight: _currentStep == 2,
-                  speechBubbleText: "All your customer messages end up here. Reply to them quickly!",
-                  onDismiss: _skipTour,
-                  child: ElevatedButton(
-                    key: const Key('inboxBtn'),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const UnifiedInboxScreen()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6B4EFF),
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                ElevatedButton(
+                  key: const Key('inboxBtn'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const UnifiedInboxScreen()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6B4EFF),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Text('Inbox', style: TextStyle(color: Colors.white, fontSize: 16)),
                   ),
+                  child: const Text('Inbox', style: TextStyle(color: Colors.white, fontSize: 16)),
                 ),
               ],
             ),

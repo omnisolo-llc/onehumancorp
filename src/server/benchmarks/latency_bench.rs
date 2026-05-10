@@ -10,7 +10,7 @@ pub async fn bench_queue_latency() {
     tracing::info!("--- Cloud Mode (Postgres) ---");
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
-    if database_url != "postgres://localhost/dummy" && database_url.starts_with("postgres") {
+    if database_url != "postgres://localhost/dummy" {
         let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect(&database_url).await;
 
@@ -36,18 +36,15 @@ pub async fn bench_db_query_time() {
     let iterations = 1000;
 
     // Cloud Mode (Postgres)
-    // Only run if the database URL actually points to postgres, otherwise skip
-    if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
-        let mut pg_times = Vec::new();
-        for _ in 0..iterations {
-            let start = Instant::now();
-            let _ = sqlx::query("SELECT 1").execute(&pg_pool).await;
-            pg_times.push(start.elapsed().as_micros());
-        }
-        pg_times.sort();
-        println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[(iterations as f32 * 0.95) as usize], pg_times[(iterations as f32 * 0.99) as usize]);
+    let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+    let mut pg_times = Vec::new();
+    for _ in 0..iterations {
+        let start = Instant::now();
+        let _ = sqlx::query("SELECT 1").execute(&pg_pool).await;
+        pg_times.push(start.elapsed().as_micros());
     }
+    pg_times.sort();
+    println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[(iterations as f32 * 0.95) as usize], pg_times[(iterations as f32 * 0.99) as usize]);
 
     // Standalone Mode (SQLite)
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
@@ -73,25 +70,23 @@ pub async fn bench_api_response_time() {
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
     // Cloud setup
-    if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
-        let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
-        let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
-        let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
+    let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+    let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
+    let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
+    let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
 
-        let mut cloud_times = Vec::new();
-        for _ in 0..iterations {
-            let req = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
-            let mut request = tonic::Request::new(req);
-            request.extensions_mut().insert(crate::auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
-            let start = Instant::now();
-            use crate::ohc::app::dashboard_service_server::DashboardService;
-            let _ = dashboard_service_cloud.get_dashboard(request).await;
-            cloud_times.push(start.elapsed().as_micros());
-        }
-        cloud_times.sort();
-        println!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[(iterations as f32 * 0.95) as usize], cloud_times[(iterations as f32 * 0.99) as usize]);
+    let mut cloud_times = Vec::new();
+    for _ in 0..iterations {
+        let req = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let mut request = tonic::Request::new(req);
+        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+        let start = Instant::now();
+        use crate::ohc::app::dashboard_service_server::DashboardService;
+        let _ = dashboard_service_cloud.get_dashboard(request).await;
+        cloud_times.push(start.elapsed().as_micros());
     }
+    cloud_times.sort();
+    println!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[(iterations as f32 * 0.95) as usize], cloud_times[(iterations as f32 * 0.99) as usize]);
 
     // Standalone setup
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
@@ -99,8 +94,7 @@ pub async fn bench_api_response_time() {
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
 
-    let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-    let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
+    let db_standalone = crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlite_pool) };
     let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
     let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
 
@@ -344,7 +338,7 @@ mod tests {
         bench_queue("Memory_Stress", mem_queue).await;
 
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-        if database_url != "postgres://localhost/dummy" && database_url.starts_with("postgres") {
+        if database_url != "postgres://localhost/dummy" {
             if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect(&database_url).await {
                 let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
                 bench_queue("Postgres_Stress", pg_queue).await;

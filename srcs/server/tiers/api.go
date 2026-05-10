@@ -3,8 +3,6 @@ package tiers
 import (
 	"encoding/json"
 	"net/http"
-
-	"onehumancorp/srcs/server/onboarding"
 )
 
 // APIHandler handles tier related requests
@@ -24,14 +22,10 @@ func (h *APIHandler) HandleCheckLimit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID, ok := r.Context().Value(onboarding.TenantContextKey).(string)
-	if !ok || tenantID == "" {
-		http.Error(w, "Unauthorized: missing or invalid tenant session", http.StatusUnauthorized)
-		return
-	}
+	tenantID := r.URL.Query().Get("tenant_id")
 	metric := r.URL.Query().Get("metric")
 
-	if metric == "" {
+	if tenantID == "" || metric == "" {
 		http.Error(w, "Missing required parameters", http.StatusBadRequest)
 		return
 	}

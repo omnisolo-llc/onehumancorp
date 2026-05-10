@@ -21,6 +21,7 @@ pub trait MeshTransport: Send + Sync {
 pub struct MemoryTransport {
     subs: DashMap<String, broadcast::Sender<Message>>,
     presence: DashMap<String, (String, std::time::Instant)>, // agent_id -> (status, expires_at)
+    locks: DashMap<String, (String, std::time::Instant)>, // resource -> (owner, expires_at)
 }
 
 impl MemoryTransport {
@@ -28,6 +29,7 @@ impl MemoryTransport {
         MemoryTransport {
             subs: DashMap::new(),
             presence: DashMap::new(),
+            locks: DashMap::new(),
         }
     }
 }
@@ -63,58 +65,41 @@ impl MeshTransport for MemoryTransport {
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        let lock_path = std::env::temp_dir().join(format!("ohc_mesh_lock_{}", resource));
-        let expires_at = chrono::Utc::now().timestamp_millis() + (ttl_seconds * 1000) as i64;
-        let payload = format!("{}:{}", owner, expires_at);
+        let now = std::time::Instant::now();
 
-        match std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
-            Ok(mut f) => {
-                use std::io::Write;
-                let _ = f.write_all(payload.as_bytes());
+        // Remove expired locks
+        let expired_keys: Vec<String> = self.locks.iter()
+            .filter(|entry| entry.value().1 <= now)
+            .map(|entry| entry.key().clone())
+            .collect();
+
+        for key in expired_keys {
+            self.locks.remove(&key);
+        }
+
+        let expires_at = now + std::time::Duration::from_secs(ttl_seconds);
+        use dashmap::mapref::entry::Entry;
+        match self.locks.entry(resource.to_string()) {
+            Entry::Vacant(e) => {
+                e.insert((owner.to_string(), expires_at));
                 Ok(true)
             }
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
-                if let Ok(owner_bytes) = std::fs::read(&lock_path) {
-                    let current_data = String::from_utf8_lossy(&owner_bytes).into_owned();
-                    if let Some((stored_owner, stored_exp)) = current_data.split_once(':') {
-                        if let Ok(exp) = stored_exp.parse::<i64>() {
-                            if stored_owner == owner || exp <= chrono::Utc::now().timestamp_millis() {
-                                let _ = std::fs::remove_file(&lock_path);
-                                if let Ok(mut f) = std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
-                                    use std::io::Write;
-                                    let _ = f.write_all(payload.as_bytes());
-                                    return Ok(true);
-                                }
-                            }
-                        }
-                    } else {
-                        // Malformed, overwrite
-                        let _ = std::fs::remove_file(&lock_path);
-                        if let Ok(mut f) = std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
-                            use std::io::Write;
-                            let _ = f.write_all(payload.as_bytes());
-                            return Ok(true);
-                        }
-                    }
+            Entry::Occupied(mut e) => {
+                if e.get().1 <= now || e.get().0 == owner {
+                    e.insert((owner.to_string(), expires_at));
+                    Ok(true)
+                } else {
+                    Ok(false)
                 }
-                Ok(false)
             }
-            Err(e) => Err(e.to_string()),
         }
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
-        let lock_path = std::env::temp_dir().join(format!("ohc_mesh_lock_{}", resource));
-        if let Ok(owner_bytes) = std::fs::read(&lock_path) {
-            let current_data = String::from_utf8_lossy(&owner_bytes).into_owned();
-            if let Some((stored_owner, _)) = current_data.split_once(':') {
-                if stored_owner == owner {
-                    let _ = std::fs::remove_file(lock_path);
-                }
-            }
-        }
+        self.locks.remove_if(resource, |_, (lock_owner, _)| lock_owner == owner);
         Ok(())
     }
+
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
         let expires_at = std::time::Instant::now() + std::time::Duration::from_secs(ttl_seconds);
         self.presence.insert(agent_id.to_string(), (status.to_string(), expires_at));
