@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   Future<void> submitBusinessData(Map<String, dynamic> data) async {
-    final url = Uri.parse('https://api.onehumancorp.com/api/onboarding/start');
+    final url = Uri.parse('/api/onboarding/start');
     try {
       final response = await http.post(
         url,
@@ -25,7 +25,7 @@ class ApiService {
   }
 
   Future<void> saveState(Map<String, dynamic> state, String tenantId) async {
-    final url = Uri.parse('https://api.onehumancorp.com/api/onboarding/state');
+    final url = Uri.parse('/api/onboarding/state');
     try {
       final response = await http.post(
         url,
@@ -44,7 +44,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>?> getState(String tenantId) async {
-    final url = Uri.parse('https://api.onehumancorp.com/api/onboarding/state');
+    final url = Uri.parse('/api/onboarding/state');
     try {
       final response = await http.get(
         url,
