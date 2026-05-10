@@ -302,9 +302,20 @@ impl AgentServiceImpl {
             } else {
                 &self.cfg.system_prompt
             };
-            inject_memories_into_prompt(&memories, base_prompt)
+
+            let mut reduced_prompt = base_prompt.to_string();
+            let stop_words = [" a ", " an ", " the ", " is ", " are ", " and ", " or ", " but ", " in ", " on ", " at ", " to ", " for ", " with ", " by ", " about ", " as ", " of "];
+            for word in stop_words.iter() {
+                reduced_prompt = reduced_prompt.replace(word, " ");
+            }
+            inject_memories_into_prompt(&memories, &reduced_prompt)
         } else {
-            inject_memories_into_prompt(&memories, &req.system_prompt)
+            let mut reduced_prompt = req.system_prompt.to_string();
+            let stop_words = [" a ", " an ", " the ", " is ", " are ", " and ", " or ", " but ", " in ", " on ", " at ", " to ", " for ", " with ", " by ", " about ", " as ", " of "];
+            for word in stop_words.iter() {
+                reduced_prompt = reduced_prompt.replace(word, " ");
+            }
+            inject_memories_into_prompt(&memories, &reduced_prompt)
         };
 
         let long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>> = self.memory.as_ref().map(|repo| {
