@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "interop",
+    srcs = [
+        "bus.go",
+        "protocol.go",
+    ],
+    importpath = "onehumancorp/srcs/server/interop",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/pb/interop:interoppb",
+        "@com_github_golang_protobuf//proto:go_default_library",
+    ],
+)
+
+go_test(
+    name = "interop_test",
+    srcs = ["protocol_test.go"],
+    embed = [":interop"],
+    deps = [
+        "//srcs/server/pb/interop:interoppb",
+    ],
+)
