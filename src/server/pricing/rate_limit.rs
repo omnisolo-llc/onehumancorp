@@ -145,7 +145,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "You have reached your {} tier limit of {} AI actions this month. Consider upgrading to keep your business running smoothly!",
+                        "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
@@ -163,8 +163,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "Agent {} has reached its {} tier limit of {} actions this month. Upgrade to unlock more power.",
-                        agent_id,
+                        "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
@@ -197,7 +196,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "You've reached your {} tier limit of {} products. Upgrade to add more!",
+                        "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
@@ -288,7 +287,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "You have reached your {} tier limit of {}MB storage. Consider upgrading to keep your business running smoothly!",
+                        "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",

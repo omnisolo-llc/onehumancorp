@@ -30,14 +30,17 @@ impl StripeClient {
         StripeClient { api_key }
     }
 
-    pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, payment_method: Option<crate::integrations::stripe::routing::PaymentMethod>) -> Result<String, String> {
+    pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
         let _ = crate::telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             customer_id, // assume customer_id is a proxy for organization_id
             "stripe_checkout_session",
             0.10 // mock cost for api orchestration
         ).await;
-        let pm = payment_method.unwrap_or(crate::integrations::stripe::routing::PaymentMethod::CreditCard);
+
+        // Use PaymentRouter to optimize method
+        let pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount_usd);
+
         match pm {
             crate::integrations::stripe::routing::PaymentMethod::Ach => {
                 Ok("https://checkout.stripe.com/c/pay/cs_test_ach...".to_string())
