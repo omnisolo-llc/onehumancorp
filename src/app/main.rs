@@ -319,6 +319,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }));
 
+    setup_wizard_ui.on_toggle_advanced({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+                sync_advanced_mode(ui.get_is_advanced());
+            }
+        }
+    });
+
+
     setup_wizard_ui.on_save_state({
         let ui_handle = setup_wizard_handle.clone();
         move || {
@@ -981,6 +992,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ui.set_is_advanced(val);
         }
     }));
+
+    agent_config_ui.on_toggle_advanced({
+        let ui_handle = agent_config_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+                sync_advanced_mode(ui.get_is_advanced());
+            }
+        }
+    });
+
     let init_agent_config_handle = agent_config_handle.clone();
     let init_agent_config_handle_for_hire = agent_config_handle.clone();
     tokio::spawn(async move {
@@ -1077,6 +1099,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ui.set_is_advanced(val);
         }
     }));
+
+    prompt_tuning_ui.on_toggle_advanced({
+        let ui_handle = prompt_tuning_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+                sync_advanced_mode(ui.get_is_advanced());
+            }
+        }
+    });
+
     let init_prompt_tuning_handle = prompt_tuning_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -1236,6 +1269,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ui.set_is_advanced(val);
         }
     }));
+
+    website_builder_ui.on_toggle_advanced({
+        let ui_handle = website_builder_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+                sync_advanced_mode(ui.get_is_advanced());
+            }
+        }
+    });
+
     let init_website_builder_handle = website_builder_handle.clone();
     tokio::spawn(async move {
         if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
@@ -1418,6 +1462,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ui.set_is_advanced(val);
         }
     }));
+
+    grow_business_ui.on_toggle_advanced({
+        let ui_handle = grow_business_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+                sync_advanced_mode(ui.get_is_advanced());
+            }
+        }
+    });
+
 
     let settings_ui = app::Settings::new()?;
     settings_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
@@ -3872,6 +3927,17 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
             ui.set_is_advanced(val);
         }
     }));
+
+    setup_wizard_ui.on_toggle_advanced({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                set_global_is_advanced(ui.get_is_advanced());
+                sync_advanced_mode(ui.get_is_advanced());
+            }
+        }
+    });
+
 
     setup_wizard_ui.on_save_state({
         let ui_handle = setup_wizard_handle.clone();
