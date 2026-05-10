@@ -137,8 +137,15 @@ export component Login inherits Window {
                 Button {
                     height: 44px;
                     enabled: !root.loading;
-                    text: root.sso_button_text;
-                    clicked => { oauth_login("SSO"); }
+                    text: "Continue with Google";
+                    clicked => { oauth_login("Google"); }
+                }
+
+                Button {
+                    height: 44px;
+                    enabled: !root.loading;
+                    text: "Continue with Apple";
+                    clicked => { oauth_login("Apple"); }
                 }
 
                 Button {

@@ -22,6 +22,11 @@ export component WelcomeChecklist inherits Window {
     in-out property <int> progress: 0;
     in-out property <bool> is_completed: false;
 
+    property <bool> pulse_toggle: false;
+    Timer {
+        interval: 800ms; running: true; triggered => { pulse_toggle = !pulse_toggle; }
+    }
+
     VerticalBox {
         alignment: center;
         spacing: 20px;
@@ -99,6 +104,8 @@ export component WelcomeChecklist inherits Window {
                 if is_completed : Text {
                     text: "Congratulations! You have completed all setup tasks. Awesome job!";
                     color: #10b981;
+                    opacity: pulse_toggle ? 1.0 : 0.6;
+                    animate opacity { duration: 800ms; easing: ease-in-out; }
                     font-size: 16px;
                     font-weight: 700;
                     font-family: "Inter";

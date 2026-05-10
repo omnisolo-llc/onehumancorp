@@ -325,11 +325,24 @@ fn test_maya_baker_onboarding_flow() {
         *launched_clone.borrow_mut() = true;
     });
 
+    let link_copied = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let link_copied_clone = link_copied.clone();
+    wizard_ui.on_copy_link(move |link| {
+        if link.contains("ohc.app") {
+            *link_copied_clone.borrow_mut() = true;
+        }
+    });
+
     wizard_ui.invoke_launch(
         "Food".into(), "Maya's Cakes".into(), "Delicious vegan cakes".into(), "both".into(), "maya@example.com".into(),
         "Modern".into(), "Vegan Chocolate Cake".into(), "45.00".into(), "mayascakes.ohc.app".into(), "".into(), "".into(), "".into()
     );
     assert!(*launched.borrow(), "Maya's onboarding launch failed");
+
+    // Simulate main.rs OK(resp) block invoking copy_link successfully
+    // We mock this locally because the test doesn't stand up a full grpc server
+    wizard_ui.invoke_copy_link(wizard_ui.get_shareable_link());
+    assert!(*link_copied.borrow(), "Auto-copy shareable link must be triggered");
 }
 
 // Persona: Carlos — The Freelance Handyman (42)

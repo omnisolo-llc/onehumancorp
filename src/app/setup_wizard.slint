@@ -58,6 +58,11 @@ export component SetupWizard inherits Window {
     in-out property <bool> is_cropping_photo: false;
 
     // Animation state
+    property <bool> toggle_confetti: false;
+    Timer {
+        interval: 1000ms; running: launch_success; triggered => { toggle_confetti = !toggle_confetti; }
+    }
+
     property <float> pulse_scale: 1.0;
     in-out property <string> shareable_link: "https://mybusiness.ohc.app";
 
@@ -518,7 +523,7 @@ export component SetupWizard inherits Window {
 
                 if (price_type != "request_quote") : VerticalBox {
                     spacing: 8px;
-                    Text { text: price_type == "fixed" ? "Price" : "Starting Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                    Text { text: price_type == "fixed" ? "Price (detected: " + product_currency + ")" : "Starting Price (detected: " + product_currency + ")"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                     HorizontalBox {
                         spacing: 8px;
                         GlassCard {
@@ -619,15 +624,27 @@ export component SetupWizard inherits Window {
                         padding: 16px;
                         alignment: center;
                         spacing: 16px;
-                        Text {
-                            text: "🎉 CONFETTI Success! Your business is live! 🎉";
-                            font-size: 24px;
-                            font-family: "Outfit";
-                            color: #10b981;
-                            font-weight: 700;
-                            horizontal-alignment: center;
-                            opacity: pulse_scale;
-                            animate opacity { duration: 500ms; easing: ease-in-out; }
+                        VerticalBox {
+                            alignment: center;
+                            spacing: 8px;
+                            HorizontalBox {
+                                alignment: center;
+                                spacing: 12px;
+                                Text { text: "🎊"; font-size: 28px; y: toggle_confetti ? -15px : -25px; animate y { duration: 1000ms; easing: ease-in-out; } }
+                                Text { text: "🎉"; font-size: 32px; y: toggle_confetti ? -25px : -15px; animate y { duration: 1000ms; easing: ease-in-out; } }
+                                Text {
+                                    text: "Success! Your business is live!";
+                                    font-size: 24px;
+                                    font-family: "Outfit";
+                                    color: #10b981;
+                                    font-weight: 700;
+                                    horizontal-alignment: center;
+                                    opacity: toggle_confetti ? 1.0 : 0.7;
+                                    animate opacity { duration: 1000ms; easing: ease-in-out; }
+                                }
+                                Text { text: "🎉"; font-size: 32px; y: toggle_confetti ? -20px : -30px; animate y { duration: 1000ms; easing: ease-in-out; } }
+                                Text { text: "🎊"; font-size: 28px; y: toggle_confetti ? -10px : -20px; animate y { duration: 1000ms; easing: ease-in-out; } }
+                            }
                         }
                         Text { text: "You can now start selling to the world."; font-size: 16px; font-family: "Inter"; color: white; horizontal-alignment: center; }
                         Button {
