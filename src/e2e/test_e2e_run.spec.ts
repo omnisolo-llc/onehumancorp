@@ -7,7 +7,7 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
     // Login
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.click('button:has-text("Sign In")');
 
     // Wait for the Dashboard
     await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
@@ -81,7 +81,7 @@ test('verify wizard AI agent configuration', async ({ page }) => {
     // Login
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.click('button:has-text("Sign In")');
 
     // Navigate to agent settings
     await page.click('text="Manage Agents"');
@@ -105,7 +105,7 @@ test('verify wizard prompt tuning', async ({ page }) => {
     // Login
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.click('button:has-text("Sign In")');
 
     // Navigate to agent settings
     await page.click('text="Manage Agents"');
@@ -131,7 +131,7 @@ test('verify grow business suggestions', async ({ page }) => {
     await page.goto('/');
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.click('button:has-text("Sign In")');
 
     await page.click('button:has-text("Grow Business")');
     await expect(page.locator('text="Actionable Insights"')).toBeVisible();
@@ -145,7 +145,7 @@ test('verify website builder flow', async ({ page }) => {
     await page.goto('/');
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.click('button:has-text("Sign In")');
 
     await page.click('button:has-text("Website Builder")');
 
@@ -204,14 +204,14 @@ test('verify sign up and sign in toggle', async ({ page }) => {
     await expect(page.locator('button:has-text("Sign In")')).toBeVisible();
 
     // Click Don't have an account
-    await page.click('button:has-text("Don\'t have an account? Sign Up")');
+    await page.click('button:has-text("New here? Create an account")');
 
     // Ensure we are at Sign Up
     await expect(page.locator('button:has-text("Sign Up")')).toBeVisible();
-    await expect(page.locator('button:has-text("Already have an account? Sign In")')).toBeVisible();
+    await expect(page.locator('button:has-text("Have an account? Sign In")')).toBeVisible();
 
     // Toggle back
-    await page.click('button:has-text("Already have an account? Sign In")');
+    await page.click('button:has-text("Have an account? Sign In")');
 
     // Ensure we are back at Sign In
     await expect(page.locator('button:has-text("Sign In")')).toBeVisible();
@@ -255,7 +255,7 @@ test('verify checklist flow and integration', async ({ page }) => {
     // Login
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.click('button:has-text("Sign In")');
 
     // Wait for the Dashboard
     await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
@@ -324,7 +324,7 @@ test('verify checklist connects instagram routing', async ({ page }) => {
     // Login
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.click('button:has-text("Sign In")');
 
     // Wait for the Dashboard
     await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
@@ -379,7 +379,7 @@ test('verify checklist share link routing', async ({ page }) => {
     // Login
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.click('button:has-text("Sign In")');
 
     // Wait for the Dashboard
     await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
@@ -434,7 +434,7 @@ test('verify checklist fully completed state', async ({ page }) => {
     // Login
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.click('button:has-text("Sign In")');
 
     // Wait for the Dashboard
     await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
@@ -493,7 +493,7 @@ test('verify checklist completion progress', async ({ page }) => {
     // Login
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.click('button:has-text("Sign In")');
 
     // Wait for the Dashboard
     await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();

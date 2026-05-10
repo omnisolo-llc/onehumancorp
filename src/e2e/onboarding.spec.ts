@@ -7,7 +7,7 @@ test.describe('Onboarding Wizard', () => {
     // Login
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.click('button:has-text("Sign In")');
 
     // Wait for the Dashboard
     await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
@@ -42,7 +42,7 @@ test.describe('Onboarding Wizard', () => {
     // Re login and check if it still works
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.click('button:has-text("Sign In")');
 
     await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
     await page.click('button:has-text("Start Setup")');
