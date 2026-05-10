@@ -112,15 +112,12 @@ export component CostDashboard inherits Window {
                         Text { text: ac.cost; color: white; }
                     }
                     HorizontalBox {
-                        Text { text: "ROI: " + ac.roi; color: #64748b; font-size: 12px; }
+                        Text { text: "Value Provided: " + ac.roi; color: #64748b; font-size: 12px; }
                         Rectangle {}
-                        Text { text: "Token Efficiency: " + ac.efficiency; color: #64748b; font-size: 12px; }
+                        Text { text: "Smart Usage: " + ac.efficiency; color: #64748b; font-size: 12px; }
                     }
                     HorizontalBox {
                         Text { text: "Storage Usage: " + ac.storage_usage; color: #64748b; font-size: 12px; }
-                    }
-                    HorizontalBox {
-                        Text { text: "Token Efficiency: " + ac.efficiency; color: #64748b; font-size: 12px; }
                     }
                     Rectangle {
                         height: 8px;
