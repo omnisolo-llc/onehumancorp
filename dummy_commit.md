@@ -4,4 +4,3 @@ Trigger Zero WIP PR
 💰 Miser: [Zero WIP PR Exit]
 Trigger Zero WIP PR
 Trigger Zero WIP PR
-Maintainer: Hybrid Privacy Audit
