@@ -5,6 +5,7 @@ export component BusinessShare inherits Window { // embed
     width: 375px;
     height: 700px;
     title: "Share my business";
+    out property <string> test_title: root.title;
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -55,7 +56,7 @@ export component BusinessShare inherits Window { // embed
                 }
 
                 VerticalBox {
-                    padding: 20px;
+                    padding: 24px;
                     spacing: 8px;
 
                     Text {

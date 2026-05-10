@@ -4,6 +4,7 @@ use crate::ohc::orchestration::growth_service_server::GrowthService;
 use crate::ohc::orchestration::{CreateReferralRequest, GrowthIdRequest, EmptyRequest};
 use std::sync::RwLock;
 use std::collections::HashMap;
+use std::sync::Arc;
 use chrono::Utc;
 use sqlx::{PgPool, Row};
 use crate::services::growth::referral_api;
@@ -11,6 +12,7 @@ use crate::utils::auth_utils::set_org_context;
 
 pub struct MyGrowthService {
     pool: PgPool,
+    hub: Arc<crate::hub::Hub>,
     experiments: RwLock<Vec<LandingPageExperiment>>,
     downloads: RwLock<Vec<Download>>,
     team_invites: RwLock<Vec<TeamInviteProto>>,
@@ -19,9 +21,10 @@ pub struct MyGrowthService {
 }
 
 impl MyGrowthService {
-    pub fn new(pool: PgPool) -> Self {
+    pub fn new(pool: PgPool, hub: Arc<crate::hub::Hub>) -> Self {
         MyGrowthService {
             pool,
+            hub,
             experiments: RwLock::new(Vec::new()),
             downloads: RwLock::new(Vec::new()),
             team_invites: RwLock::new(Vec::new()),
@@ -93,8 +96,6 @@ impl GrowthService for MyGrowthService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-
         let total_referrals = rows.len() as i32;
         let mut click_count = 0;
         let mut conversions = 0;
@@ -120,6 +121,19 @@ impl GrowthService for MyGrowthService {
         let waitlist_position = self.waitlist.read().unwrap().len() as i32 + 42;
         let download_count = self.downloads.read().unwrap().len() as i32 + 105;
 
+        // Generate clean business URL for sharing
+        let business_name: String = sqlx::query_scalar("SELECT business_name FROM tenants WHERE tenant_id = $1::uuid")
+            .bind(&org_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .unwrap_or(None)
+            .unwrap_or_else(|| "My Awesome Store".to_string());
+
+        let slug = crate::utils::slug::slugify(&business_name);
+        let business_share_url = format!("ohc.app/b/{}", slug);
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
         Ok(Response::new(ReferralStatsResponse {
             total_referrals,
             click_count,
@@ -128,6 +142,8 @@ impl GrowthService for MyGrowthService {
             bonus_credit,
             download_count,
             waitlist_position,
+            business_share_url,
+            business_name,
         }))
     }
 
@@ -504,7 +520,13 @@ impl GrowthService for MyGrowthService {
         let total_conversions: i64 = row.try_get(0).unwrap_or(0);
         let max_quota = 50 + (total_conversions as i32) * 10;
         
-        Ok(Response::new(QuotaMetrics { used: 10, max: max_quota }))
+        let status = self.hub.tracker().check_product_quota(&org_id).await.unwrap_or(crate::pricing::rate_limit::RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        });
+
+        Ok(Response::new(QuotaMetrics { used: 10, max: max_quota, soft_limit_reached: status.soft_limit_reached, upgrade_message: status.user_message.unwrap_or_default(), is_allowed: status.is_allowed }))
     }
 
     async fn get_waitlist(
@@ -546,11 +568,13 @@ mod tests {
     #[tokio::test]
     async fn test_referral_flow() {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = match pool_opts.connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
         if database_url.contains("localhost") { return; }
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
-        let service = MyGrowthService::new(pool);
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let service = MyGrowthService::new(pool, hub);
 
         let mut req = Request::new(CreateReferralRequest {
             user_id: "test_user".to_string(),

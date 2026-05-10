@@ -44,7 +44,7 @@ func runTeammateMeshTests(t *testing.T, mesh TeammateMesh, isLocal bool) {
 
 	t.Run("Acquire and Release Lock", func(t *testing.T) {
 		ctx := context.Background()
-		lockKey := "testlock"
+		lockKey := "ohc:lock:system:task:testlock"
 
 		acquired, err := mesh.AcquireLock(ctx, lockKey, 1*time.Second)
 		require.NoError(t, err)
@@ -134,7 +134,7 @@ func TestRedisTeammateMesh(t *testing.T) {
 func TestLocalTeammateMesh_LockExpiry(t *testing.T) {
 	mesh := NewLocalTeammateMesh()
 	ctx := context.Background()
-	lockKey := "expirylock"
+	lockKey := "ohc:lock:system:task:expirylock"
 
 	acquired, err := mesh.AcquireLock(ctx, lockKey, 50*time.Millisecond)
 	require.NoError(t, err)
@@ -179,4 +179,28 @@ func TestRedisTeammateMesh_GetActiveAgents_Error(t *testing.T) {
 
 	_, err = mesh.GetActiveAgents(context.Background())
 	require.Error(t, err)
+}
+
+// Add coverage for publish error on LocalTeammateMesh if context is cancelled, though it currently ignores context
+func TestLocalTeammateMesh_PublishError(t *testing.T) {
+	// Not practically testable as Publish always returns nil.
+}
+
+func TestHybridTeammateMesh(t *testing.T) {
+	// Test with redis
+	mr, err := miniredis.Run()
+	require.NoError(t, err)
+	defer mr.Close()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+	defer redisClient.Close()
+
+	meshRedis := NewHybridTeammateMesh(redisClient, nil)
+	assert.IsType(t, &RedisTeammateMesh{}, meshRedis)
+
+	// Test without redis
+	meshLocal := NewHybridTeammateMesh(nil, nil)
+	assert.IsType(t, &LocalTeammateMesh{}, meshLocal)
 }

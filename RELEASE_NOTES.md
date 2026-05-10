@@ -1,3 +1,37 @@
+## v0.4.40 (Cloud) / v0.4.40+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
+
+### Privacy/Offline Improvements
+- Implement offline-first local vector embeddings cache for the OHC Swarm.
+
+## v0.4.39 (Cloud) / v0.4.39+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Add auto-scaling limits for Sub-Agent Queue and Teammate Mesh APIs to handle increased load spikes.
+
+### Privacy/Offline Improvements
+- Enforce full local SIPDB SQLite encryption parity for Standalone builds to protect sensitive user telemetry.
+
+## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhance multi-tenant onboarding flow tests for the Welcome Checklist to ensure reliable scaling.
+
+### Privacy/Offline Improvements
+- Bolster Standalone Wizard state test coverage for improved offline reliability and progressive disclosure validation.
+
+## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
+
+- Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
+- Privacy/Offline (Standalone): Ensured local agents leverage Teammate Mesh gracefully with local-only fallback and zero-trust isolated environments.
+
+## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
+
+- Scaling (Cloud): Fix orchestration mesh tests that failed due to multiple declarations and invalid imports.
+- Privacy/Offline (Standalone): Add missing `RedactInterfacePII` to fix backend telemetry data sync crashes.
+
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
 - Scaling (Cloud): update api routing to use axum 0.8 style path variables (#11553).

@@ -147,8 +147,8 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
     let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let c = called.clone();
     ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
-    ui.invoke_configure_integration("Manychat".into());
-    assert_eq!(*called.borrow(), "Manychat");
+    ui.invoke_configure_integration("Meta".into());
+    assert_eq!(*called.borrow(), "Meta");
 }
 
 #[test] fn integr_flow_configure_calendly() {
@@ -167,4 +167,31 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
     ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
     ui.invoke_configure_integration("Mailchimp".into());
     assert_eq!(*called.borrow(), "Mailchimp");
+}
+
+#[test] fn integr_flow_configure_facebook() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("Facebook".into());
+    assert_eq!(*called.borrow(), "Facebook");
+}
+
+#[test] fn integr_flow_configure_instagram() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("Instagram".into());
+    assert_eq!(*called.borrow(), "Instagram");
+}
+
+#[test] fn integr_flow_configure_whatsapp() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("WhatsApp".into());
+    assert_eq!(*called.borrow(), "WhatsApp");
 }

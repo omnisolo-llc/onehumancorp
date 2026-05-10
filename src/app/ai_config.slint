@@ -11,7 +11,7 @@ export struct UiAiConfigProvider {
 }
 
 export component AiConfig inherits Window {
-    width: 600px;
+    min-width: 375px;
     height: 700px;
     title: "AI Providers";
 
@@ -24,7 +24,6 @@ export component AiConfig inherits Window {
     callback edit_provider(string);
     callback toggle_advanced();
 
-    toggle_advanced => { }
 
     VerticalBox {
         spacing: 20px;
@@ -35,13 +34,13 @@ export component AiConfig inherits Window {
             Rectangle {}
             AdvancedToggle {
                 is_advanced <=> root.is_advanced;
-                toggled => { toggle_advanced(); }
+                toggled => { is_advanced = !is_advanced; toggle_advanced(); }
             }
             if (is_advanced) : GlassCard {
                 width: 140px;
                 height: 36px;
                 background: rgba(168, 85, 247, 0.8);
-                VerticalBox { alignment: center; Text { text: "+ Add Custom API"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: "+ Add Custom AI"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => { add_provider(); } }
             }
         }
@@ -80,7 +79,7 @@ export component AiConfig inherits Window {
 
                     if (is_advanced) : VerticalBox {
                         spacing: 8px;
-                        Text { text: "API Endpoint: " + p.base_url; font-family: "Inter"; font-size: 12px; color: #cbd5e1; }
+                        Text { text: "AI Address: " + p.base_url; font-family: "Inter"; font-size: 12px; color: #cbd5e1; }
                         HorizontalBox {
                             spacing: 8px;
                             Text { text: "Models:"; font-family: "Inter"; font-size: 12px; color: #cbd5e1; vertical-alignment: center; }

@@ -9,6 +9,10 @@ import (
 	"path/filepath"
 )
 
+var (
+	sqliteLimiter = make(chan struct{}, 1)
+)
+
 type SIPDB struct {
 	db          *sql.DB
 	ContextRoot string
@@ -24,6 +28,12 @@ type AgentMission struct {
 	Payload json.RawMessage
 }
 
+// DelegateMission implements the Omni-Context Sub-agent Routing feature.
+// Instead of an agent needing to independently discover and fetch context via file system reads
+// (e.g., calling read_file on AGENTS.md), the OHC orchestrator automatically appends the
+// contents of these critical files into the system prompt payload *before* the sub-agent is
+// even instantiated. This achieves zero-latency context loading, prevents grounding drift,
+// and ensures perfect deterministic alignment with project rules.
 func (s *SIPDB) DelegateMission(ctx context.Context, mission *AgentMission) error {
 	payloadStr := string(mission.Payload)
 
@@ -39,6 +49,16 @@ func (s *SIPDB) DelegateMission(ctx context.Context, mission *AgentMission) erro
 	}
 
 	mission.Payload = json.RawMessage(payloadStr)
+
+	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
+	if isStandalone {
+		select {
+		case sqliteLimiter <- struct{}{}:
+			defer func() { <-sqliteLimiter }()
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 
 	_, err := s.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ($1, $2, $3)", mission.ID, mission.Status, string(mission.Payload))
 	if err != nil {

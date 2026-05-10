@@ -19,12 +19,12 @@ func TestUnifiedDataModelRLSIntegration(t *testing.T) {
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		t.Skipf("Skipping integration test: %v", err)
+		t.Fatalf("Integration test failed to connect: %v", err)
 	}
 	defer db.Close()
 
 	if err := db.Ping(); err != nil {
-		t.Skipf("Skipping integration test due to ping failure: %v", err)
+		t.Fatalf("Integration test failed to ping: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -111,25 +111,62 @@ func TestUnifiedDataModelRLSIntegration(t *testing.T) {
 		);
 
 		ALTER TABLE test_tenant ENABLE ROW LEVEL SECURITY;
+		ALTER TABLE test_tenant FORCE ROW LEVEL SECURITY;
 		ALTER TABLE test_customer ENABLE ROW LEVEL SECURITY;
+		ALTER TABLE test_customer FORCE ROW LEVEL SECURITY;
 		ALTER TABLE test_catalog_item ENABLE ROW LEVEL SECURITY;
+		ALTER TABLE test_catalog_item FORCE ROW LEVEL SECURITY;
 		ALTER TABLE test_item_variant ENABLE ROW LEVEL SECURITY;
+		ALTER TABLE test_item_variant FORCE ROW LEVEL SECURITY;
 		ALTER TABLE test_order ENABLE ROW LEVEL SECURITY;
+		ALTER TABLE test_order FORCE ROW LEVEL SECURITY;
 		ALTER TABLE test_order_line_item ENABLE ROW LEVEL SECURITY;
+		ALTER TABLE test_order_line_item FORCE ROW LEVEL SECURITY;
 		ALTER TABLE test_agent_memory ENABLE ROW LEVEL SECURITY;
+		ALTER TABLE test_agent_memory FORCE ROW LEVEL SECURITY;
 
-		CREATE POLICY tenant_isolation_test_tenant ON test_tenant USING (id = current_setting('app.current_tenant', true)::uuid);
-		CREATE POLICY tenant_isolation_test_customer ON test_customer USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
-		CREATE POLICY tenant_isolation_test_catalog_item ON test_catalog_item USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
-		CREATE POLICY tenant_isolation_test_item_variant ON test_item_variant USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
-		CREATE POLICY tenant_isolation_test_order ON test_order USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
-		CREATE POLICY tenant_isolation_test_order_line_item ON test_order_line_item USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
-		CREATE POLICY tenant_isolation_test_agent_memory ON test_agent_memory USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
+		CREATE POLICY tenant_isolation_test_tenant ON test_tenant USING (id = nullif(current_setting('app.current_tenant', true), '')::uuid);
+		CREATE POLICY tenant_isolation_test_customer ON test_customer USING (tenant_id = nullif(current_setting('app.current_tenant', true), '')::uuid);
+		CREATE POLICY tenant_isolation_test_catalog_item ON test_catalog_item USING (tenant_id = nullif(current_setting('app.current_tenant', true), '')::uuid);
+		CREATE POLICY tenant_isolation_test_item_variant ON test_item_variant USING (tenant_id = nullif(current_setting('app.current_tenant', true), '')::uuid);
+		CREATE POLICY tenant_isolation_test_order ON test_order USING (tenant_id = nullif(current_setting('app.current_tenant', true), '')::uuid);
+		CREATE POLICY tenant_isolation_test_order_line_item ON test_order_line_item USING (tenant_id = nullif(current_setting('app.current_tenant', true), '')::uuid);
+		CREATE POLICY tenant_isolation_test_agent_memory ON test_agent_memory USING (tenant_id = nullif(current_setting('app.current_tenant', true), '')::uuid);
+
+		DO $$
+		BEGIN
+		  IF NOT EXISTS (
+			SELECT FROM pg_catalog.pg_roles
+			WHERE  rolname = 'rls_test_user') THEN
+			CREATE ROLE rls_test_user LOGIN;
+		  END IF;
+		END
+		$$;
+		GRANT ALL PRIVILEGES ON TABLE test_tenant TO rls_test_user;
+		GRANT ALL PRIVILEGES ON TABLE test_customer TO rls_test_user;
+		GRANT ALL PRIVILEGES ON TABLE test_catalog_item TO rls_test_user;
+		GRANT ALL PRIVILEGES ON TABLE test_item_variant TO rls_test_user;
+		GRANT ALL PRIVILEGES ON TABLE test_order TO rls_test_user;
+		GRANT ALL PRIVILEGES ON TABLE test_order_line_item TO rls_test_user;
+		GRANT ALL PRIVILEGES ON TABLE test_agent_memory TO rls_test_user;
 	`
 	_, err = db.ExecContext(ctx, setupSQL)
 	assert.NoError(t, err)
 
 	// 2. Insert test data
+	// Need to bypass RLS for setup (running as superuser, disable FORCE RLS)
+	disableSQL := `
+		ALTER TABLE test_tenant NO FORCE ROW LEVEL SECURITY;
+		ALTER TABLE test_customer NO FORCE ROW LEVEL SECURITY;
+		ALTER TABLE test_catalog_item NO FORCE ROW LEVEL SECURITY;
+		ALTER TABLE test_item_variant NO FORCE ROW LEVEL SECURITY;
+		ALTER TABLE test_order NO FORCE ROW LEVEL SECURITY;
+		ALTER TABLE test_order_line_item NO FORCE ROW LEVEL SECURITY;
+		ALTER TABLE test_agent_memory NO FORCE ROW LEVEL SECURITY;
+	`
+	_, err = db.ExecContext(ctx, disableSQL)
+	assert.NoError(t, err)
+
 	insertSQL := `
 		-- Insert two tenants
 		INSERT INTO test_tenant (id, name, domain, tier) VALUES
@@ -138,32 +175,47 @@ func TestUnifiedDataModelRLSIntegration(t *testing.T) {
 
 		-- Insert customers
 		INSERT INTO test_customer (id, tenant_id, email) VALUES
-		('a1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'custA@a.com'),
-		('b1111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'custB@b.com');
+		('aaaaaaaa-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'custA@a.com'),
+		('bbbbbbbb-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'custB@b.com');
 
 		-- Insert catalog items
 		INSERT INTO test_catalog_item (id, tenant_id, title, item_type) VALUES
-		('c1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'Item A', 'product'),
-		('c2222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', 'Item B', 'service');
+		('cccccccc-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'Item A', 'product'),
+		('cccccccc-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', 'Item B', 'service');
 
 		-- Insert item variants
 		INSERT INTO test_item_variant (id, tenant_id, catalog_item_id, sku, price) VALUES
-		('v1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111111', 'SKU-A', 10.00),
-		('v2222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', 'c2222222-2222-2222-2222-222222222222', 'SKU-B', 20.00);
+		('dddddddd-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'cccccccc-1111-1111-1111-111111111111', 'SKU-A', 10.00),
+		('dddddddd-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', 'cccccccc-2222-2222-2222-222222222222', 'SKU-B', 20.00);
 
 		-- Insert orders
 		INSERT INTO test_order (id, tenant_id, customer_id, status, total_amount) VALUES
-		('o1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'a1111111-1111-1111-1111-111111111111', 'confirmed', 10.00),
-		('o2222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', 'b1111111-1111-1111-1111-111111111111', 'confirmed', 20.00);
+		('eeeeeeee-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-1111-1111-1111-111111111111', 'confirmed', 10.00),
+		('eeeeeeee-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', 'bbbbbbbb-1111-1111-1111-111111111111', 'confirmed', 20.00);
 	`
 	_, err = db.ExecContext(ctx, insertSQL)
 	assert.NoError(t, err)
+
+	enableSQL := `
+		ALTER TABLE test_tenant FORCE ROW LEVEL SECURITY;
+		ALTER TABLE test_customer FORCE ROW LEVEL SECURITY;
+		ALTER TABLE test_catalog_item FORCE ROW LEVEL SECURITY;
+		ALTER TABLE test_item_variant FORCE ROW LEVEL SECURITY;
+		ALTER TABLE test_order FORCE ROW LEVEL SECURITY;
+		ALTER TABLE test_order_line_item FORCE ROW LEVEL SECURITY;
+		ALTER TABLE test_agent_memory FORCE ROW LEVEL SECURITY;
+	`
+	_, err = db.ExecContext(ctx, enableSQL)
+	assert.NoError(t, err)
+
 
 	// 3. Test Tenant A
 	connA, err := db.Conn(ctx)
 	assert.NoError(t, err)
 	defer connA.Close()
 
+	_, err = connA.ExecContext(ctx, "SET ROLE rls_test_user")
+	assert.NoError(t, err)
 	_, err = connA.ExecContext(ctx, "SET app.current_tenant = '11111111-1111-1111-1111-111111111111'")
 	assert.NoError(t, err)
 
@@ -182,6 +234,8 @@ func TestUnifiedDataModelRLSIntegration(t *testing.T) {
 	assert.NoError(t, err)
 	defer connB.Close()
 
+	_, err = connB.ExecContext(ctx, "SET ROLE rls_test_user")
+	assert.NoError(t, err)
 	_, err = connB.ExecContext(ctx, "SET app.current_tenant = '22222222-2222-2222-2222-222222222222'")
 	assert.NoError(t, err)
 
@@ -201,7 +255,9 @@ func TestUnifiedDataModelRLSIntegration(t *testing.T) {
 	assert.NoError(t, err)
 	defer connEmpty.Close()
 
-	_, err = connEmpty.ExecContext(ctx, "SET app.current_tenant = '00000000-0000-0000-0000-000000000000'")
+	_, err = connEmpty.ExecContext(ctx, "SET ROLE rls_test_user")
+	assert.NoError(t, err)
+	_, err = connEmpty.ExecContext(ctx, "SET app.current_tenant = ''")
 	assert.NoError(t, err)
 
 	rowsEmpty, err := connEmpty.QueryContext(ctx, "SELECT id FROM test_order")
@@ -223,6 +279,7 @@ func TestUnifiedDataModelRLSIntegration(t *testing.T) {
 		DROP TABLE IF EXISTS test_catalog_item CASCADE;
 		DROP TABLE IF EXISTS test_customer CASCADE;
 		DROP TABLE IF EXISTS test_tenant CASCADE;
+		DROP ROLE IF EXISTS rls_test_user;
 	`)
 	assert.NoError(t, err)
 }

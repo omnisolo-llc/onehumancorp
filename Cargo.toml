@@ -1,16 +1,16 @@
 [package]
 name = "ohc-mono"
-version = "0.4.35"
+version = "0.4.39"
 edition = "2024"
 build = "src/server/build.rs"
+
+[lib]
+name = "server_lib"
+path = "src/server/lib.rs"
 
 [[bin]]
 name = "server"
 path = "src/server/main.rs"
-
-[[bin]]
-name = "ohc-builtin-agent"
-path = "src/agents/builtin/main.rs"
 
 [dependencies]
 tokio = { workspace = true, features = ["full"] }
@@ -21,7 +21,7 @@ serde_yaml = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 aes-gcm = "0.10"
 jsonwebtoken = "9"
 base64 = "0.22"
@@ -60,6 +60,8 @@ protoc-gen-prost = { workspace = true }
 protoc-gen-tonic = { workspace = true }
 prost-types = { workspace = true }
 tempfile = "3.27.0"
+tree-sitter = "0.26.8"
+tree-sitter-bash = "0.25.1"
 
 [build-dependencies]
 tonic-build = "0.12"

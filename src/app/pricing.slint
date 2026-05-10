@@ -1,5 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
 
 export struct UiPricingTier {
     name: string,
@@ -24,9 +25,13 @@ export component Pricing inherits Window {
 
     // Billing & Credits Wizard State
     in-out property <int> step: 0;
+    in-out property <bool> is_advanced: false;
+    callback toggle_advanced();
     in property <string> current_usage: "450 / 1000 AI Actions";
     in property <string> projected_cost: "$9.00 / month";
     in property <float> usage_progress: 0.45;
+    in property <string> current_storage: "1.2 GB / 5GB";
+    in property <float> storage_progress: 0.24;
 
     in property <[UiPricingTier]> tiers: [
         {
@@ -44,7 +49,7 @@ export component Pricing inherits Window {
             price: is_annual ? "$7/mo (20% off)" : "$9/mo",
             description: "Up to 1000 AI Actions, 5GB storage.",
             is_recommended: false,
-            agent_limit: "5 agent limit",
+            agent_limit: "3 agent limit",
             storage_limit: "5GB storage limit",
             support_level: "Email support",
             features: ["Custom Domain", "Advanced Agents", "Email Support"],
@@ -54,7 +59,7 @@ export component Pricing inherits Window {
             price: is_annual ? "$23/mo (20% off)" : "$29/mo",
             description: "Unlimited AI Actions, 50GB storage.",
             is_recommended: true,
-            agent_limit: "Unlimited number of agents",
+            agent_limit: "10 agent limit",
             storage_limit: "50GB storage limit",
             support_level: "Priority support",
             features: ["Multiple Locations", "Pro Agents", "Priority Support"],
@@ -65,7 +70,7 @@ export component Pricing inherits Window {
             description: "Business features and support.",
             is_recommended: false,
             agent_limit: "Unlimited number of agents",
-            storage_limit: "Unlimited storage limit",
+            storage_limit: "500GB storage limit",
             support_level: "Dedicated support",
             features: ["White-label", "Custom Agents", "Dedicated Support"],
         },
@@ -80,7 +85,14 @@ export component Pricing inherits Window {
         padding: 24px;
         width: 100%;
 
-        Text { text: "Pricing & Billing"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+        HorizontalBox {
+            Text { text: "Pricing & Billing"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { is_advanced = !is_advanced; toggle_advanced(); }
+            }
+        }
 
         HorizontalBox {
             spacing: 10px;
@@ -113,6 +125,11 @@ export component Pricing inherits Window {
 
         // Step 0: "What does this cost?" Flow
         if (step == 0) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Raw Configuration JSON"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "{\"current_usage\": \"" + current_usage + "\"}"; }
+            }
             spacing: 16px;
             Text { text: "Your Current Usage"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
 
@@ -143,37 +160,15 @@ export component Pricing inherits Window {
                     padding: 16px;
                     spacing: 12px;
                     Text { text: "Storage"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                    Text { text: "1.2 GB / 5GB"; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
+                    Text { text: current_storage; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
 
-                    Rectangle {
+                    storage_bg := Rectangle {
                         height: 8px;
                         border-radius: 4px;
                         background: rgba(255, 255, 255, 0.1);
                         Rectangle {
                             x: 0;
-                            width: 24%;
-                            height: 100%;
-                            background: #a855f7;
-                            border-radius: 4px;
-                        }
-                    }
-                }
-            }
-
-            GlassCard {
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 12px;
-                    Text { text: "Storage"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                    Text { text: "1.2 GB / 5GB"; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
-
-                    Rectangle {
-                        height: 8px;
-                        border-radius: 4px;
-                        background: rgba(255, 255, 255, 0.1);
-                        Rectangle {
-                            x: 0;
-                            width: 24%;
+                            width: storage_progress * storage_bg.width;
                             height: 100%;
                             background: #a855f7;
                             border-radius: 4px;
@@ -212,6 +207,11 @@ export component Pricing inherits Window {
 
         // Step 1: Plans
         if (step == 1) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Override Tier Rules"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "[\"allow_custom_domains\"]"; }
+            }
             spacing: 16px;
             Text { text: "Upgrade Plan"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
 

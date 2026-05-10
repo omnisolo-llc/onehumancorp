@@ -9,7 +9,7 @@ export struct UiMcpTool {
 export component Integrations inherits Window {
     width: 500px;
     height: 600px;
-    title: "Integrations & Tools";
+    title: "Integrations & Tools ";
     out property <string> test_title: root.title;
 
     background: #f8fafc;
@@ -27,41 +27,125 @@ export component Integrations inherits Window {
 
         HorizontalBox {
             spacing: 16px;
-            
+
             Rectangle {
                 background: white;
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
                 width: 220px;
-                
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📘 Facebook"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Unified Social Media DMs"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Facebook"); }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📷 Instagram"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Unified Social Media DMs"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Instagram"); }
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 16px;
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "💬 WhatsApp"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Unified Social Media DMs"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("WhatsApp"); }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
                     Text { text: "✈️ Telegram"; font-weight: 700; color: #1e293b; }
                     Text { text: "Connect your bot for mobile alerts"; color: #64748b; wrap: word-wrap; }
-                    Button { 
-                        text: "Configure"; 
+                    Button {
+                        text: "Configure";
                         clicked => { configure_integration("Telegram"); }
                     }
                 }
             }
-            
+        }
+
+        HorizontalBox {
+            spacing: 16px;
+
             Rectangle {
                 background: white;
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
                 width: 220px;
-                
+
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
                     Text { text: "👾 Discord"; font-weight: 700; color: #1e293b; }
                     Text { text: "Stream agent logs to a channel"; color: #64748b; wrap: word-wrap; }
-                    Button { 
-                        text: "Configure"; 
+                    Button {
+                        text: "Configure";
                         clicked => { configure_integration("Discord"); }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "💬 Twilio"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Send SMS alerts to customers"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Twilio"); }
                     }
                 }
             }
@@ -149,6 +233,25 @@ export component Integrations inherits Window {
                     }
                 }
             }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "💬 Ayrshare"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Unified Social Media Inbox & Cross-Posting"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Ayrshare"); }
+                    }
+                }
+            }
         }
 
 
@@ -165,11 +268,11 @@ export component Integrations inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
-                    Text { text: "💬 Manychat"; font-weight: 700; color: #1e293b; }
+                    Text { text: "💬 Meta"; font-weight: 700; color: #1e293b; }
                     Text { text: "Unified Social Media Inbox"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
-                        clicked => { configure_integration("Manychat"); }
+                        clicked => { configure_integration("Meta"); }
                     }
                 }
             }
@@ -189,6 +292,25 @@ export component Integrations inherits Window {
                     Button {
                         text: "Configure";
                         clicked => { configure_integration("Resend"); }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📧 Listmonk"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Embedded No-Jargon Email Campaigns"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Listmonk"); }
                     }
                 }
             }
@@ -231,6 +353,25 @@ export component Integrations inherits Window {
                     Button {
                         text: "Configure";
                         clicked => { configure_integration("Shippo"); }
+                    }
+                }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📦 EasyPost"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Painless Shipping Labels & Tracking"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("EasyPost"); }
                     }
                 }
             }
@@ -299,9 +440,28 @@ export component Integrations inherits Window {
                     }
                 }
             }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "📹 Jitsi Meet"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Zero-Setup Online Lessons"; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Configure";
+                        clicked => { configure_integration("Jitsi"); }
+                    }
+                }
+            }
         }
 
-        Text { text: "Advanced Tool Connections"; font-size: 20px; font-weight: 700; color: #1e293b; }
+        Text { text: "Connect Custom Software"; font-size: 20px; font-weight: 700; color: #1e293b; }
         Text { text: "Manually trigger advanced connected tools for your business."; color: #64748b; }
 
         Rectangle {

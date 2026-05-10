@@ -6,6 +6,11 @@ pub mod agent_service {
 }
 pub use agent_service::*;
 
+pub mod interop {
+    #![allow(clippy::all)]
+    pub use interop_proto::ohc::interop::*;
+}
+
 pub mod hub {
     #![allow(clippy::all)]
     pub use hub_proto::ohc::orchestration::*;
