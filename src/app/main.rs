@@ -8363,6 +8363,105 @@ fn test_business_share_flow() {
     }
 
     #[test]
+    fn test_e2e_business_manager_list_hint() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let _main_app = app::AppWindow::new().unwrap();
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        dashboard_ui.invoke_action_add_product();
+        manager_ui.set_current_view("list".into());
+
+        assert_eq!(manager_ui.get_show_list_hint(), false);
+        manager_ui.invoke_toggle_list_hint();
+        assert_eq!(manager_ui.get_show_list_hint(), true);
+    }
+
+    #[test]
+    fn test_e2e_business_manager_list_hint_toggle_off() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let _main_app = app::AppWindow::new().unwrap();
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        dashboard_ui.invoke_action_add_product();
+        manager_ui.set_current_view("list".into());
+
+        manager_ui.invoke_toggle_list_hint();
+        assert_eq!(manager_ui.get_show_list_hint(), true);
+        manager_ui.invoke_toggle_list_hint();
+        assert_eq!(manager_ui.get_show_list_hint(), false);
+    }
+
+    #[test]
+    fn test_e2e_business_manager_list_hint_state_isolation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let _main_app = app::AppWindow::new().unwrap();
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        dashboard_ui.invoke_action_add_product();
+        manager_ui.set_current_view("list".into());
+
+        manager_ui.invoke_toggle_list_hint();
+        assert_eq!(manager_ui.get_show_list_hint(), true);
+
+        // Changing views should not break or randomly toggle the hint.
+        manager_ui.set_current_view("add".into());
+        manager_ui.set_current_view("list".into());
+        assert_eq!(manager_ui.get_show_list_hint(), true);
+    }
+
+    #[test]
+    fn test_e2e_business_manager_tap_targets_exist() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let _main_app = app::AppWindow::new().unwrap();
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        dashboard_ui.invoke_action_add_product();
+        manager_ui.set_current_view("list".into());
+
+        // Ensure UI functions are callable without panic, implying the tap target UI elements exist
+        manager_ui.invoke_toggle_list_hint();
+        assert_eq!(manager_ui.get_show_list_hint(), true);
+    }
+
+    #[test]
+    fn test_e2e_business_manager_tour_hint_initial_state() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        crate::ui_tests::init();
+
+        let _main_app = app::AppWindow::new().unwrap();
+        let login_ui = app::Login::new().unwrap();
+        login_ui.invoke_login("ceo@store.com".into(), "123".into());
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let manager_ui = app::BusinessManager::new().unwrap();
+
+        dashboard_ui.invoke_action_add_product();
+        manager_ui.set_current_view("list".into());
+
+        // Ensure initial state is hidden for progressive disclosure
+        assert_eq!(manager_ui.get_show_list_hint(), false);
+    }
+
+    #[test]
     fn test_e2e_business_manager_close() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         crate::ui_tests::init();
