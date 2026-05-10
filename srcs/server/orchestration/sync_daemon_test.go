@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -279,7 +281,9 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		id TEXT PRIMARY KEY,
 		status TEXT NOT NULL,
 		payload BLOB,
-		synced_to_cloud BOOLEAN DEFAULT FALSE
+		synced_to_cloud BOOLEAN DEFAULT FALSE,
+        sync_error TEXT,
+        last_synced_at DATETIME
 	);
 	`
 	_, err = db.Exec(createTableQuery)
@@ -295,7 +299,13 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 	_, err = db.Exec(insertDataQuery)
 	require.NoError(t, err)
 
-	daemon := NewHybridMCPRAGDaemon(db, "http://remote-api.test")
+    server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	daemon := NewHybridMCPRAGDaemon(db, server.URL)
+	ClearSemaphore() // Ensure clean state
 
 	err = daemon.SyncPendingMissions(context.Background())
 	require.NoError(t, err)

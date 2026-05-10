@@ -14,6 +14,7 @@ import (
 	"onehumancorp/srcs/server/telemetry"
 	"onehumancorp/srcs/server/growth"
 	"onehumancorp/srcs/server/dashboard"
+	"onehumancorp/srcs/server/api/sync"
 	"onehumancorp/srcs/server/tiers"
 
 	_ "github.com/mutecomm/go-sqlcipher/v4"
@@ -144,6 +145,8 @@ func main() {
 	mux.HandleFunc("/api/v1/autodream/sync", dashboard.HandleAutoDreamSync)
 	mux.HandleFunc("/api/v1/autodream/query", dashboard.HandleAutoDreamQuery)
 	mux.HandleFunc("/api/mesh/broadcast", dashboard.HandleMeshBroadcast)
+	syncHandler := sync.NewSyncHandler(taskStore)
+	mux.HandleFunc("/api/sync/missions", syncHandler.HandleSyncMissions)
 
 	go func() {
 		log.Println("Listening on :8080...")
