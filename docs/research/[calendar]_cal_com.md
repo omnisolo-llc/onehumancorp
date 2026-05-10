@@ -1,5 +1,3 @@
-# Scout: Tool Integration Research Q2
-
 ## 2. Calendar & Scheduling
 **Title**: Integrate Cal.com for Zero-Config Booking & Calendar Sync
 **Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
