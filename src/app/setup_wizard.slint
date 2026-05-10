@@ -3,6 +3,15 @@ import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView } from "std-wi
 import { GlassCard } from "glass_card.slint";
 import { AdvancedToggle } from "advanced_toggle.slint";
 
+export struct UiChatMessage {
+    id: string,
+    author_name: string,
+    body: string,
+    is_me: bool,
+}
+
+
+
 export component SetupWizard inherits Window {
     min-width: 375px;
     preferred-width: 400px;
@@ -50,6 +59,13 @@ export component SetupWizard inherits Window {
     in-out property <bool> is_instant_build: false;
     in-out property <string> instant_bio: "";
     in-out property <bool> is_generating_instant_preview: false;
+
+    in-out property <[UiChatMessage]> chat_messages: [
+        { id: "1", author_name: "Marketing AI", body: "Hi! Let's get your business online. What kind of business are you building?", is_me: false }
+    ];
+    in-out property <string> chat_input: "";
+    callback send_chat_message(string);
+
     in-out property <bool> is_generating_company_description: false;
     in-out property <bool> is_generating_product_description: false;
 
@@ -654,18 +670,70 @@ export component SetupWizard inherits Window {
                 }
             }
 
-            // Step 11: Instant Build
+
+            // Step 11: Instant Build (AI Chat)
             if (step == 11) : VerticalBox {
                 spacing: 16px;
-                Text { text: "Describe your business in a sentence"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
-                Text { text: ""; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                Text { text: "AI Assistant Setup"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
 
-                LineEdit {
-                    placeholder-text: "e.g. I run a local bakery called Maya's Cakes...";
-                    text <=> instant_bio;
-                    height: 120px;
-                    edited => { save_state(); }
-                    enabled: !is_generating_instant_preview;
+                GlassCard {
+                    height: 300px;
+                    background: rgba(255, 255, 255, 0.05);
+                    border-color: rgba(255, 255, 255, 0.1);
+                    border-width: 1px;
+                    border-radius: 12px;
+
+                    ScrollView {
+                        VerticalBox {
+                            spacing: 12px;
+                            padding: 16px;
+                            alignment: start;
+
+                            for msg in chat_messages : HorizontalBox {
+                                alignment: msg.is_me ? end : start;
+                                if (msg.is_me) : Rectangle {} // Spacer
+                                GlassCard {
+                                    background: msg.is_me ? rgba(168, 85, 247, 0.3) : rgba(255, 255, 255, 0.1);
+                                    border-color: msg.is_me ? rgba(168, 85, 247, 0.5) : rgba(255, 255, 255, 0.2);
+                                    border-width: 1px;
+                                    width: 240px;
+
+                                    VerticalBox {
+                                        padding: 10px;
+                                        spacing: 4px;
+                                        Text {
+                                            text: msg.author_name;
+                                            font-family: "Inter";
+                                            font-weight: 700;
+                                            color: msg.is_me ? white : #a855f7;
+                                            horizontal-alignment: msg.is_me ? right : left;
+                                        }
+                                        Text { text: msg.body; color: white; font-family: "Inter"; wrap: word-wrap; }
+                                    }
+                                }
+                                if (!msg.is_me) : Rectangle {} // Spacer
+                            }
+                        }
+                    }
+                }
+
+                HorizontalBox {
+                    spacing: 10px;
+                    LineEdit {
+                        placeholder-text: "Type your answer...";
+                        text <=> chat_input;
+                        height: 44px;
+                        enabled: !is_generating_instant_preview;
+                    }
+                    Button {
+                        text: "Send";
+                        width: 80px;
+                        enabled: !is_generating_instant_preview && chat_input != "";
+                        clicked => {
+                            send_chat_message(chat_input);
+                            chat_input = "";
+                        }
+                    }
                 }
 
                 if (is_generating_instant_preview) : GlassCard {
@@ -673,20 +741,8 @@ export component SetupWizard inherits Window {
                     background: rgba(168, 85, 247, 0.5);
                     VerticalBox { alignment: center; Text { text: "Designing your storefront..."; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 }
-
-                if (!is_generating_instant_preview) : GlassCard {
-                    height: 54px;
-                    background: rgba(168, 85, 247, 1.0);
-                    VerticalBox { alignment: center; Text { text: "Generate Storefront →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                    TouchArea {
-                        enabled: instant_bio != "";
-                        clicked => {
-                            is_generating_instant_preview = true;
-                            generate_instant_preview();
-                        }
-                    }
-                }
             }
+
 
             // Step 10: Checklist
             if (step == 10) : VerticalBox {
