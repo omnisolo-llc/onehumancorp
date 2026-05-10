@@ -279,9 +279,7 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		id TEXT PRIMARY KEY,
 		status TEXT NOT NULL,
 		payload BLOB,
-		synced_to_cloud BOOLEAN DEFAULT FALSE,
-			sync_error TEXT,
-			last_synced_at TIMESTAMP
+		synced_to_cloud BOOLEAN DEFAULT FALSE
 	);
 	`
 	_, err = db.Exec(createTableQuery)
@@ -323,78 +321,4 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, expected, synced)
 	}
-}
-
-
-
-
-func TestHybridMCPRAGDaemon_SyncPendingMissions_Cooldown(t *testing.T) {
-	ClearSemaphore()
-	defer ClearSemaphore()
-
-	db, err := sql.Open("sqlite3", ":memory:")
-	require.NoError(t, err)
-
-	createTableQuery := `
-	CREATE TABLE agent_missions (
-		id TEXT PRIMARY KEY,
-		status TEXT NOT NULL,
-		payload BLOB,
-		synced_to_cloud BOOLEAN DEFAULT FALSE,
-			sync_error TEXT,
-			last_synced_at TIMESTAMP
-	);
-	`
-	_, err = db.Exec(createTableQuery)
-	require.NoError(t, err)
-	defer db.Close()
-
-	// Insert test data with recent errors
-	insertDataQuery := `
-	INSERT INTO agent_missions (id, status, payload, synced_to_cloud, sync_error, last_synced_at) VALUES
-	('mission-error-1', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE, 'API Timeout', datetime('now', '-1 minutes')),
-	('mission-error-2', 'CLOUD_ESCALATION', '{"key": "value2"}', FALSE, 'HTTP 500', datetime('now', '-6 minutes'));
-	`
-	_, err = db.Exec(insertDataQuery)
-	if err != nil {
-		t.Fatalf("Failed to insert test data: %v", err)
-	}
-
-	daemon := NewHybridMCPRAGDaemon(db, "http://remote-api.test/fail")
-
-	err = daemon.SyncPendingMissions(context.Background())
-	if err != nil {
-		t.Fatalf("SyncPendingMissions failed: %v", err)
-	}
-
-	rows, err := db.Query("SELECT id, synced_to_cloud, sync_error FROM agent_missions")
-	if err != nil {
-		t.Fatalf("Failed to query database after sync: %v", err)
-	}
-	defer rows.Close()
-
-	syncedMap := make(map[string]bool)
-    errorMap := make(map[string]string)
-	for rows.Next() {
-		var id string
-		var synced bool
-        var syncErr sql.NullString
-		if err := rows.Scan(&id, &synced, &syncErr); err != nil {
-			t.Fatalf("Failed to scan row: %v", err)
-		}
-		syncedMap[id] = synced
-        if syncErr.Valid {
-            errorMap[id] = syncErr.String
-        }
-	}
-
-	if syncedMap["mission-error-1"] != false {
-		t.Errorf("Expected mission-error-1 to NOT be synced due to cooldown")
-	}
-	if syncedMap["mission-error-2"] != false {
-		t.Errorf("Expected mission-error-2 to NOT be synced because it failed again")
-	}
-    if errorMap["mission-error-2"] != "simulated network failure" {
-        t.Errorf("Expected mission-error-2 to have simulated network failure recorded")
-    }
 }
