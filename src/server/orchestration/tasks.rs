@@ -22,7 +22,27 @@ impl TaskDecompositionService {
         }
     }
 
-    pub async fn create_task(&self, task: SharedTask) -> Result<SharedTask, String> {
+    pub async fn create_task(&self, mut task: SharedTask) -> Result<SharedTask, String> {
+        let mut tier = crate::pricing::rate_limit::PlanTier::Free;
+        if let DbStore::Postgres = &self.db.store {
+            if let Ok(org_tier) = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM organizations WHERE id = $1")
+                .bind(&task.organization_id)
+                .fetch_optional(&self.db.pool)
+                .await
+            {
+                if let Some(t) = org_tier {
+                    tier = match t.to_lowercase().as_str() {
+                        "starter" => crate::pricing::rate_limit::PlanTier::Starter,
+                        "pro" => crate::pricing::rate_limit::PlanTier::Pro,
+                        "business" => crate::pricing::rate_limit::PlanTier::Business,
+                        _ => crate::pricing::rate_limit::PlanTier::Free,
+                    };
+                }
+            }
+        }
+        if let Some(desc) = &task.description {
+            task.description = Some(crate::pricing::calculator::truncate_context_for_tier(desc, &tier));
+        }
         let tracer = global::tracer("ohc.orchestration");
         let _span = tracer.start("create_task");
         match &self.db.store {

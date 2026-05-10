@@ -198,3 +198,21 @@ mod tests {
         assert_eq!(efficiency, 25.0); // 250 / 10
     }
 }
+/// Intelligent context truncation to ensure LLM calls consume the minimum tokens needed.
+/// This enforces maximum context windows based on the tenant's tier to manage infrastructure costs.
+pub fn truncate_context_for_tier(context: &str, tier: &crate::pricing::rate_limit::PlanTier) -> String {
+    let max_chars = match tier {
+        crate::pricing::rate_limit::PlanTier::Free => 4000,
+        crate::pricing::rate_limit::PlanTier::Starter => 16000,
+        crate::pricing::rate_limit::PlanTier::Pro => 64000,
+        crate::pricing::rate_limit::PlanTier::Business => 128000,
+    };
+
+    let chars_count = context.chars().count();
+    if chars_count > max_chars {
+        let truncated: String = context.chars().take(max_chars).collect();
+        format!("{}\n...[Context Truncated]...", truncated)
+    } else {
+        context.to_string()
+    }
+}
