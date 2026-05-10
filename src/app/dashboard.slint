@@ -65,6 +65,7 @@ export component Dashboard inherits Window { // milestones
     callback action_check_messages();
     callback action_see_analytics();
     callback action_share_store();
+    callback action_view_observability();
     callback action_open_referrals();
     callback action_open_email_marketing();
     callback action_open_social_posting();
@@ -197,6 +198,20 @@ export component Dashboard inherits Window { // milestones
                     clicked => { dismiss_milestone(); }
                 }
             }
+        }
+
+        GlassCard {
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+            height: 80px;
+
+            VerticalBox {
+                alignment: center;
+                padding: 16px;
+                Text { text: "View Swarm Observability"; color: #00d3ff; font-family: "Inter"; font-weight: 700; horizontal-alignment: center; }
+            }
+            TouchArea { clicked => { action_view_observability(); } }
         }
 
         // AI Assistant Health (Telemetry Visualization)
