@@ -46,11 +46,20 @@ fn init_otel() {
     global::set_tracer_provider(tracer_provider.clone());
     let tracer = opentelemetry::trace::TracerProvider::tracer(&tracer_provider, "ohc-agent");
 
-    tracing_subscriber::registry()
+    let format = env::var("LOG_FORMAT").unwrap_or_else(|_| "text".to_string());
+    if format.to_lowercase() == "json" {
+        tracing_subscriber::registry()
+            .with(fmt::layer().json())
+            .with(EnvFilter::from_default_env().add_directive(Level::INFO.into()))
+            .with(tracing_opentelemetry::layer().with_tracer(tracer.clone()))
+            .init();
+    } else {
+        tracing_subscriber::registry()
         .with(fmt::layer())
         .with(EnvFilter::from_default_env().add_directive(Level::INFO.into()))
-        .with(tracing_opentelemetry::layer().with_tracer(tracer))
+        .with(tracing_opentelemetry::layer().with_tracer(tracer.clone()))
         .init();
+    }
 }
 
 #[tokio::main]

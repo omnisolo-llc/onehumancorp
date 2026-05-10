@@ -10,6 +10,9 @@ use ohc::orchestration::RegisterAgentRequest;
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::Agent;
 
+#[cfg(not(target_arch = "wasm32"))]
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+
 pub fn get_tooltip_text(id: &str) -> slint::SharedString {
     static TOOLTIPS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
     let tooltips = TOOLTIPS.get_or_init(|| serde_json::from_str(include_str!("tooltips.json")).unwrap_or_default());
@@ -220,6 +223,18 @@ pub fn setup_welcome_checklist_routing(
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let format = std::env::var("LOG_FORMAT").unwrap_or_else(|_| "text".to_string());
+    if format.to_lowercase() == "json" {
+        tracing_subscriber::registry()
+            .with(tracing_subscriber::fmt::layer().json())
+            .with(tracing_subscriber::EnvFilter::from_default_env())
+            .init();
+    } else {
+        tracing_subscriber::registry()
+            .with(tracing_subscriber::fmt::layer())
+            .with(tracing_subscriber::EnvFilter::from_default_env())
+            .init();
+    }
     let agents_ui = app::Agents::new()?;
     agents_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     let agents_handle_adv = agents_ui.as_weak();

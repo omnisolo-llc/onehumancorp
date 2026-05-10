@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: infra-dashboard
+  labels:
+    grafana_dashboard: "1"
+data:
+  infra.json: |-
+    {
+      "title": "OHC Infrastructure Dashboard",
+      "panels": [
+        {
+          "type": "text",
+          "title": "Welcome",
+          "content": "<div style=\"background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; font-family: 'Inter', sans-serif;\"><h2 style=\"font-family: 'Outfit', sans-serif; color: white;\">OHC Premium Infrastructure Overview</h2><p style=\"color: #E2E8F0;\">Multi-tenant Kubernetes scaling & observability stack.</p></div>"
+        },
+        {
+          "type": "graph",
+          "title": "Pod CPU Usage",
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) by (pod)",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "type": "graph",
+          "title": "Pod Memory Usage",
+          "targets": [
+            {
+              "expr": "sum(container_memory_usage_bytes{container!=\"\"}) by (pod)",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "type": "graph",
+          "title": "HTTP Request Rates",
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total[5m])) by (status)",
+              "legendFormat": "HTTP {{status}}"
+            }
+          ]
+        }
+      ]
+    }
