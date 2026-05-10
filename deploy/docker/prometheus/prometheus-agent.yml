@@ -1,14 +1,12 @@
 global:
   scrape_interval: 15s
-remote_write:
-  - url: "http://localhost:9090/api/v1/write"
+  evaluation_interval: 15s
+
 scrape_configs:
-  - job_name: 'ohc-standalone'
+  - job_name: "ohc-backend"
     static_configs:
-      - targets: ['localhost:8080']
-  - job_name: 'ohc-core-standalone'
+      - targets: ["localhost:8080"]
+
+  - job_name: "ohc-core"
     static_configs:
-      - targets: ['localhost:18789']
-  - job_name: 'pushgateway-standalone'
-    static_configs:
-      - targets: ['localhost:9091']
+      - targets: ["localhost:18789"]

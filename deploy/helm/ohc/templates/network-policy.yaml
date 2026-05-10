@@ -49,9 +49,12 @@ spec:
           port: 53
     - to:
         - ipBlock:
-            cidr: 0.0.0.0/0
+            cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
@@ -81,9 +84,12 @@ spec:
     {{- end }}
     - to:
         - ipBlock:
-            cidr: 0.0.0.0/0
+            cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
@@ -130,9 +136,12 @@ spec:
           port: 53
     - to:
         - ipBlock:
-            cidr: 0.0.0.0/0
+            cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
@@ -179,9 +188,12 @@ spec:
           port: 53
     - to:
         - ipBlock:
-            cidr: 0.0.0.0/0
+            cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
@@ -228,10 +240,92 @@ spec:
           port: 53
     - to:
         - ipBlock:
-            cidr: 0.0.0.0/0
+            cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
+{{- end }}
+
+---
+{{- if .Values.cnpg.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ohc.fullname" . }}-cnpg
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: {{ .Values.cnpg.clusterName }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-backend
+      ports:
+        - protocol: TCP
+          port: 5432
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+{{- end }}
+
+---
+{{- if .Values.redis.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ohc.fullname" . }}-redis
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-backend
+        - podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-chatwoot
+      ports:
+        - protocol: TCP
+          port: 6379
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
 {{- end }}
