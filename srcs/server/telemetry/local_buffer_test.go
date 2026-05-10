@@ -14,6 +14,7 @@ import (
 
 func setupTestDB(t *testing.T) *sql.DB {
 	db, err := sql.Open("sqlite3", ":memory:")
+	db.SetMaxOpenConns(1)
 	if err != nil {
 		t.Fatalf("Failed to open test db: %v", err)
 	}

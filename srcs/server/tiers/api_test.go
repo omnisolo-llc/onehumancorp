@@ -13,6 +13,7 @@ import (
 
 func TestAPIHandler(t *testing.T) {
 	db, err := sql.Open("sqlite3", ":memory:")
+	db.SetMaxOpenConns(1)
 	if err != nil {
 		t.Fatalf("failed to open memory db: %v", err)
 	}

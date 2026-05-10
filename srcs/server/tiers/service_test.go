@@ -11,6 +11,7 @@ import (
 
 func TestTierService(t *testing.T) {
 	db, err := sql.Open("sqlite3", ":memory:")
+	db.SetMaxOpenConns(1)
 	if err != nil {
 		t.Fatalf("failed to open memory db: %v", err)
 	}
@@ -208,6 +209,7 @@ func TestTierLimits(t *testing.T) {
 
 func TestTierService_FailingUsageQuery(t *testing.T) {
 	db, err := sql.Open("sqlite3", ":memory:")
+	db.SetMaxOpenConns(1)
 	if err != nil {
 		t.Fatalf("failed to open memory db: %v", err)
 	}
