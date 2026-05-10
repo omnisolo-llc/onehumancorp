@@ -131,12 +131,12 @@ func main() {
 
 	growthSvc := growth.NewGrowthService(db)
 	mux.HandleFunc("/api/growth/referrals/click", growthSvc.HandleReferralClick)
-	mux.HandleFunc("/api/growth/referrals/convert", growthSvc.HandleReferralConvert)
+	mux.HandleFunc("/api/growth/referrals/convert", onboarding.TenantAuthMiddleware(growthSvc.HandleReferralConvert))
 	mux.HandleFunc("/api/growth/team-invites/accept", growthSvc.HandleTeamInviteAccept)
 
 	tierSvc := tiers.NewTierService(db)
 	tierAPI := tiers.NewAPIHandler(tierSvc)
-	mux.HandleFunc("/api/tiers/check", tierAPI.HandleCheckLimit)
+	mux.HandleFunc("/api/tiers/check", onboarding.TenantAuthMiddleware(tierAPI.HandleCheckLimit))
 
 	mux.HandleFunc("/api/dashboard/onboarding/metrics", dashboard.HandleOnboardingMetrics)
 	mux.HandleFunc("/api/dashboard/growth/viral-coefficient", dashboard.HandleViralCoefficient)
@@ -146,7 +146,7 @@ func main() {
 	mux.HandleFunc("/api/v1/autodream/query", dashboard.HandleAutoDreamQuery)
 	mux.HandleFunc("/api/mesh/broadcast", dashboard.HandleMeshBroadcast)
 	syncHandler := sync.NewSyncHandler(taskStore)
-	mux.HandleFunc("/api/sync/missions", syncHandler.HandleSyncMissions)
+	mux.HandleFunc("/api/sync/missions", onboarding.TenantAuthMiddleware(syncHandler.HandleSyncMissions))
 
 	go func() {
 		log.Println("Listening on :8080...")

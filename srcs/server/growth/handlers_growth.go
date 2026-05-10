@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"log"
 	"time"
+
+	"onehumancorp/srcs/server/onboarding"
 )
 
 type Referral struct {
@@ -95,6 +97,12 @@ func (s *GrowthService) HandleReferralConvert(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	tenantID, ok := r.Context().Value(onboarding.TenantContextKey).(string)
+	if !ok || tenantID == "" {
+		http.Error(w, "Unauthorized: missing or invalid tenant session", http.StatusUnauthorized)
+		return
+	}
+
 	var req struct {
 		ID        string `json:"id"`
 		InviteeID string `json:"invitee_id"`
@@ -104,20 +112,23 @@ func (s *GrowthService) HandleReferralConvert(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Securely derive InviteeID from the authenticated session context, ignoring what is in the body
+	inviteeID := tenantID
+
 	var ref Referral
 	err := s.db.QueryRow(`
 		INSERT INTO referrals (id, invitee_id, clicks, conversions)
 		VALUES ($1, $2, 0, 1)
 		ON CONFLICT(id) DO UPDATE SET conversions = referrals.conversions + 1, invitee_id = $2
 		RETURNING id, clicks, conversions
-	`, req.ID, req.InviteeID).Scan(&ref.ID, &ref.Clicks, &ref.Conversions)
+	`, req.ID, inviteeID).Scan(&ref.ID, &ref.Clicks, &ref.Conversions)
 
 	if err == nil {
 		oneMonthLater := time.Now().AddDate(0, 1, 0)
 		var inviterID sql.NullString
 		s.db.QueryRow("SELECT inviter_id FROM referrals WHERE id = $1", req.ID).Scan(&inviterID)
 
-		s.db.Exec("UPDATE organizations SET plan_tier = 'Pro', pro_until = $1 WHERE id = $2", oneMonthLater, req.InviteeID)
+		s.db.Exec("UPDATE organizations SET plan_tier = 'Pro', pro_until = $1 WHERE id = $2", oneMonthLater, inviteeID)
 		if inviterID.Valid && inviterID.String != "" {
 			s.db.Exec("UPDATE organizations SET plan_tier = 'Pro', pro_until = $1 WHERE id = $2", oneMonthLater, inviterID.String)
 		}
