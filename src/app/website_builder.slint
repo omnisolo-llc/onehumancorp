@@ -4,7 +4,7 @@ import { AdvancedToggle } from "advanced_toggle.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit, CheckBox } from "std-widgets.slint";
 
 export component WebsiteBuilder inherits Window { // storefront
-    width: 600px;
+    min-width: 375px;
     height: 600px;
     title: "Build My Website";
 
@@ -31,7 +31,6 @@ export component WebsiteBuilder inherits Window { // storefront
     in-out property <bool> is_publishing: false;
     in-out property <bool> is_advanced: false;
     callback toggle_advanced();
-    toggle_advanced => { }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -44,7 +43,7 @@ export component WebsiteBuilder inherits Window { // storefront
             Rectangle {}
             AdvancedToggle {
                 is_advanced <=> root.is_advanced;
-                toggled => { toggle_advanced(); }
+                toggled => { is_advanced = !is_advanced; toggle_advanced(); }
             }
 
         }

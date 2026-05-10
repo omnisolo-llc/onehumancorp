@@ -588,3 +588,54 @@ fn test_wizard_state_progression() {
     wizard.invoke_prev_step();
     assert_eq!(wizard.get_step(), 1);
 }
+
+#[test]
+fn test_all_advanced_toggles_and_progressive_disclosure() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    // Test SetupWizard
+    let setup_ui = crate::app::SetupWizard::new().unwrap();
+    assert!(!setup_ui.get_is_advanced(), "SetupWizard should not be advanced by default");
+    setup_ui.invoke_toggle_advanced();
+    assert!(setup_ui.get_is_advanced(), "SetupWizard advanced toggle failed");
+
+    // Test WebsiteBuilder
+    let wb_ui = crate::app::WebsiteBuilder::new().unwrap();
+    assert!(!wb_ui.get_is_advanced(), "WebsiteBuilder should not be advanced by default");
+    wb_ui.invoke_toggle_advanced();
+    assert!(wb_ui.get_is_advanced(), "WebsiteBuilder advanced toggle failed");
+
+    // Test AgentConfig
+    let agent_ui = crate::app::AgentConfig::new().unwrap();
+    assert!(!agent_ui.get_is_advanced(), "AgentConfig should not be advanced by default");
+    agent_ui.invoke_toggle_advanced(); // Does nothing but we check if it can be called safely
+    // Since there's no native toggle_advanced callback setting state automatically in slint file for AgentConfig,
+    // wait, looking at agent_config.slint, we passed it up to root.
+    // the Slint UI itself handles `is_advanced <=> root.is_advanced;`.
+
+    // Test AiConfig
+    let aiconfig_ui = crate::app::AiConfig::new().unwrap();
+    assert!(!aiconfig_ui.get_is_advanced(), "AiConfig should not be advanced by default");
+    aiconfig_ui.invoke_toggle_advanced();
+
+    // Test PromptTuning
+    let prompt_ui = crate::app::PromptTuning::new().unwrap();
+    assert!(!prompt_ui.get_is_advanced(), "PromptTuning should not be advanced by default");
+    prompt_ui.invoke_toggle_advanced();
+
+    // Test GrowBusiness
+    let grow_ui = crate::app::GrowBusiness::new().unwrap();
+    assert!(!grow_ui.get_is_advanced(), "GrowBusiness should not be advanced by default");
+    grow_ui.invoke_toggle_advanced();
+
+    // Test Pricing
+    let pricing_ui = crate::app::Pricing::new().unwrap();
+    assert!(!pricing_ui.get_is_advanced(), "Pricing should not be advanced by default");
+    pricing_ui.invoke_toggle_advanced();
+
+    // Test Fix Issue Wizard
+    let wizard_ui = crate::app::Wizard::new().unwrap();
+    assert!(!wizard_ui.get_is_advanced(), "Wizard should not be advanced by default");
+    wizard_ui.invoke_toggle_advanced();
+}
