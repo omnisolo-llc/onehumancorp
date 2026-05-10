@@ -1,7 +1,6 @@
 import { PasswordInput } from "password_input.slint";
 import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
-import { AdvancedToggle } from "advanced_toggle.slint";
 
 export struct UiChatMessage {
     id: string,
@@ -39,9 +38,6 @@ export component SetupWizard inherits Window {
     in-out property <string> admin_name: "";
     in-out property <string> admin_email: "";
     in-out property <string> admin_password: "";
-
-    in-out property <bool> is_advanced: false;
-
     // New Steps State
     in-out property <string> website_template: "";
     in-out property <string> product_name: "";
@@ -101,8 +97,6 @@ export component SetupWizard inherits Window {
     callback show_welcome_checklist();
     callback select_domain(string);
     callback save_state();
-    callback toggle_advanced();
-
     next_step => { step = step + 1; save_state(); }
     select_business_type(t) => { business_type = t; step = step + 1; save_state(); }
     toggle_sell_physical => { sell_physical = !sell_physical; save_state(); }
@@ -113,8 +107,6 @@ export component SetupWizard inherits Window {
     select_payment_pref(p) => { payment_pref = p; save_state(); }
     select_template(t) => { website_template = t; save_state(); }
     select_domain(d) => { domain_choice = d; save_state(); }
-    toggle_advanced => { save_state(); }
-
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     Timer {
@@ -146,10 +138,7 @@ export component SetupWizard inherits Window {
                 font-family: "Inter";
                 color: #94a3b8;
             }
-            AdvancedToggle {
-                is_advanced <=> root.is_advanced;
-                toggled => { toggle_advanced(); }
-            }
+
         }
 
         ScrollView {
@@ -195,11 +184,7 @@ export component SetupWizard inherits Window {
 
             // Step 1: Business Type
             if (step == 1) : VerticalBox {
-                if (is_advanced) : VerticalBox {
-                    spacing: 8px;
-                    Text { text: "Raw Config Settings"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                    LineEdit { placeholder-text: "{}"; height: 44px; }
-                }
+
                 spacing: 20px;
                 Text { text: "What kind of business are you building?"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
 
@@ -555,13 +540,7 @@ export component SetupWizard inherits Window {
                     }
                 }
 
-                if (is_advanced) : VerticalBox {
-                    spacing: 8px;
-                    Text { text: "Product SKU (Optional)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "e.g. CAKE-001"; text <=> product_sku; height: 44px; edited => { save_state(); } }
-                    Text { text: "Inventory Count"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "∞"; text <=> product_inventory; height: 44px; input-type: number; edited => { save_state(); } }
-                }
+
 
                 GlassCard {
                     height: 100px;
@@ -586,11 +565,7 @@ export component SetupWizard inherits Window {
                 Text { text: "Choose a Domain"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
                 Text { text: "Where will customers find you?"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
-                if (is_advanced) : VerticalBox {
-                    spacing: 8px;
-                    Text { text: "Custom DNS Target (A/CNAME)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                    LineEdit { placeholder-text: "target.ohc.app"; text <=> custom_dns_target; height: 44px; edited => { save_state(); } }
-                }
+
 
                 GlassCard {
                     height: 80px;
@@ -627,7 +602,7 @@ export component SetupWizard inherits Window {
                         Text { text: "Template: " + website_template; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                         Text { text: "First Product: " + product_name; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                         Text { text: "Domain: " + domain_choice; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                        if (is_advanced) : Text { text: "Business ID: " + company_name + "-tenant"; font-family: "Inter"; font-size: 14px; color: #a855f7; }
+
                     }
                 }
 

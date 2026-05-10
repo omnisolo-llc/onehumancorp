@@ -27,7 +27,7 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text('11-50').last);
   await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.text('Next'));
+  await tester.tap(find.byType(ElevatedButton).last);
   await tester.pump(const Duration(milliseconds: 500));
 
   // 3. Goal Selection Screen
@@ -35,42 +35,42 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text('Support'));
   await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.text('Next'));
+  await tester.tap(find.byType(ElevatedButton).last);
   await tester.pump(const Duration(milliseconds: 500));
 
   // 4. External Integrations Screen
-  await tester.tap(find.text('Next'));
+  await tester.tap(find.byType(ElevatedButton).last);
   await tester.pump(const Duration(milliseconds: 500));
 
   // 5. Deployment Preference Screen
   await tester.tap(find.text('Cloud'));
   await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.text('Next'));
+  await tester.tap(find.byType(ElevatedButton).last);
   await tester.pump(const Duration(milliseconds: 500));
 
   // 6. Administrator Account Screen
   await tester.enterText(find.byKey(const Key('adminNameField')), 'John Doe');
   await tester.enterText(find.byKey(const Key('adminEmailField')), 'john@acme.com');
   await tester.enterText(find.byKey(const Key('adminPasswordField')), 'securePassword123');
-  await tester.tap(find.text('Next').last);
+  await tester.tap(find.byType(ElevatedButton).last);
   await tester.pump(const Duration(milliseconds: 500));
 
   // 7. Template Selection Screen
   await tester.tap(find.text('Modern'));
   await tester.pump(const Duration(milliseconds: 100));
-  await tester.tap(find.text('Next').last);
+  await tester.tap(find.byType(ElevatedButton).last);
   await tester.pump(const Duration(milliseconds: 500));
 
   // 8. Product Screen
-  await tester.tap(find.text('Next').last);
+  await tester.tap(find.byType(ElevatedButton).last);
   await tester.pump(const Duration(milliseconds: 500));
 
   // 9. Domain Screen
-  await tester.tap(find.text('Next').last);
+  await tester.tap(find.byType(ElevatedButton).last);
   await tester.pump(const Duration(milliseconds: 500));
 
   // 10. Review & Launch Screen
-  final launchBtn = find.text('Launch My AI Team');
+  final launchBtn = find.byKey(const Key('launchAIBtn'));
   await tester.ensureVisible(launchBtn);
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(launchBtn);
