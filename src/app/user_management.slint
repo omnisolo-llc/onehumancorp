@@ -29,7 +29,7 @@ export component GrowthReferralWidget inherits GlassCard {
     VerticalBox {
         padding: 16px;
         spacing: 10px;
-        Text { text: "Invite a Friend"; font-family: "Outfit"; font-weight: 700; color: #1e293b; accessible-role: heading; accessible-label: "Invite a Friend"; }
+        Text { text: "Invite a Friend"; font-family: "Outfit"; font-weight: 700; color: #1e293b; accessible-role: none; accessible-label: "Invite a Friend"; }
         Text { text: "Share OHC with a friend, both get 1 month free Pro."; font-family: "Inter"; color: #64748b; font-size: 14px; }
         Button { text: "Invite a Friend"; accessible-label: "Invite a Friend"; clicked => { root.invite_user(); } }
     }
@@ -51,7 +51,7 @@ export component UserManagement inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Team Members"; font-size: 20px; font-weight: 700; color: #1e293b; accessible-role: heading; accessible-label: "Team Members"; }
+            Text { text: "Team Members"; font-size: 20px; font-weight: 700; color: #1e293b; accessible-role: none; accessible-label: "Team Members"; }
             Rectangle {}
             GrowthReferralWidget {
                 invite_user => { root.invite_user(); }
