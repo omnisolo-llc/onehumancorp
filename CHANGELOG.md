@@ -5,6 +5,15 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🗺️ Guide: Added 5 distinct E2E tests for the onboarding functionality to ensure reliable scaling.
+
+### Privacy/Offline Improvements
+- 🗺️ Guide: Added 5 distinct E2E tests for the onboarding functionality to ensure reliable scaling.
+
+
 ## v0.4.40 (Cloud) / v0.4.40+1 (Standalone)
 
 ### Cloud Scaling Improvements
