@@ -227,9 +227,124 @@ Provide your response, which will be passed to the next agent in the sequence.",
     }
 }
 
+/// The Orchestrator that manages a concurrent fan-out/fan-in flow of agents.
+pub struct ConcurrentChatManager {
+    pub workers: Vec<ChatAgent>,
+    pub aggregator: ChatAgent,
+}
+
+impl ConcurrentChatManager {
+    pub fn new(workers: Vec<ChatAgent>, aggregator: ChatAgent) -> Self {
+        Self { workers, aggregator }
+    }
+
+    /// Run the concurrent chat loop, fanning out to workers and fanning in to the aggregator.
+    pub async fn run_concurrent(&self, initial_task: &str) -> Result<Vec<Message>, String> {
+        let mut transcript = Vec::new();
+        transcript.push(Message::user(format!("Admin: {}", initial_task)));
+
+        let mut futures = Vec::new();
+        for worker in &self.workers {
+            let worker_cfg = worker.clone();
+            let task = initial_task.to_string();
+            futures.push(tokio::spawn(async move {
+                tracing::info!("Concurrent Step: {} is running...", worker_cfg.name);
+                let prompt_context = format!(
+                    "You are participating in a concurrent workflow as {}.\n\nYour input task/context is:\n{}\n\nProvide your response.",
+                    worker_cfg.name, task
+                );
+                let mut run_cfg = worker_cfg.run_config.clone();
+                run_cfg.server_system_message = format!("You are {}. {}", worker_cfg.name, worker_cfg.description);
+                let mut on_event = |_| {};
+                let response_text = worker_cfg.agent.run(&run_cfg, &prompt_context, &mut on_event).await
+                    .map_err(|e| format!("Agent {} failed: {}", worker_cfg.name, e))?;
+                Ok::<String, String>(format!("{}: {}", worker_cfg.name, response_text))
+            }));
+        }
+
+        let join_results = futures::future::join_all(futures).await;
+        let mut results = Vec::new();
+        for join_res in join_results {
+            match join_res {
+                Ok(Ok(res)) => {
+                    transcript.push(Message::assistant(res.clone()));
+                    results.push(res);
+                }
+                Ok(Err(e)) => return Err(e),
+                Err(e) => return Err(format!("Task panicked or cancelled: {}", e)),
+            }
+        }
+
+        tracing::info!("Concurrent Step: Aggregator {} is running...", self.aggregator.name);
+        let aggregated_input = results.join("\n\n---\n\n");
+        let prompt_context = format!("You are participating in a concurrent workflow as an aggregator ({}).\n\nYour input task/context is:\n{}\n\nHere are the results from the concurrent workers:\n{}\n\nProvide your final aggregated response.", self.aggregator.name, initial_task, aggregated_input);
+        let mut run_cfg = self.aggregator.run_config.clone();
+        run_cfg.server_system_message = format!("You are {}. {}", self.aggregator.name, self.aggregator.description);
+        let mut on_event = |_| {};
+        let response_text = self.aggregator.agent.run(&run_cfg, &prompt_context, &mut on_event).await.map_err(|e| format!("Aggregator {} failed: {}", self.aggregator.name, e))?;
+        transcript.push(Message::assistant(format!("{}: {}", self.aggregator.name, response_text)));
+
+        Ok(transcript)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_autogen_concurrent_chat() {
+        let agent1_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec!["Worker1 output".to_string()]),
+        });
+        let agent1 = Arc::new(Agent::new(agent1_llm, vec![]));
+
+        let agent2_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec!["Worker2 output".to_string()]),
+        });
+        let agent2 = Arc::new(Agent::new(agent2_llm, vec![]));
+
+        let aggregator_llm = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec!["Aggregated output".to_string()]),
+        });
+        let aggregator_agent = Arc::new(Agent::new(aggregator_llm, vec![]));
+
+        let cfg = AgentRunConfig::default();
+
+        let worker1 = ChatAgent {
+            name: "Worker1".to_string(),
+            description: "First concurrent worker.".to_string(),
+            agent: agent1,
+            run_config: cfg.clone(),
+        };
+
+        let worker2 = ChatAgent {
+            name: "Worker2".to_string(),
+            description: "Second concurrent worker.".to_string(),
+            agent: agent2,
+            run_config: cfg.clone(),
+        };
+
+        let aggregator = ChatAgent {
+            name: "Aggregator".to_string(),
+            description: "Aggregates the concurrent results.".to_string(),
+            agent: aggregator_agent,
+            run_config: cfg.clone(),
+        };
+
+        let manager = ConcurrentChatManager::new(vec![worker1, worker2], aggregator);
+
+        let result = manager.run_concurrent("Initial concurrent task").await;
+        assert!(result.is_ok());
+
+        let transcript = result.unwrap();
+
+        assert_eq!(transcript.len(), 4);
+        assert!(transcript[0].content.contains("Initial concurrent task"));
+        assert!(transcript[1].content.contains("Worker1: Worker1 output") || transcript[1].content.contains("Worker2: Worker2 output"));
+        assert!(transcript[2].content.contains("Worker1: Worker1 output") || transcript[2].content.contains("Worker2: Worker2 output"));
+        assert!(transcript[3].content.contains("Aggregator: Aggregated output"));
+    }
 
     #[tokio::test]
     async fn test_autogen_sequential_chat() {
