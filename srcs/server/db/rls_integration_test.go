@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// simulateRLSQuery simulates Postgres RLS using SQLite WHERE clauses for parity mock tests
+// simulateRLSQuery is how our SQLite query layer must be implemented to maintain parity
 func simulateRLSQuery(ctx context.Context, db *sql.DB, tenantID string, query string) (*sql.Rows, error) {
 	finalQuery := "SELECT id, name FROM (" + query + ") WHERE tenant_id = ?"
 	return db.QueryContext(ctx, finalQuery, tenantID)
