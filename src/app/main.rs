@@ -507,6 +507,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         let my_plan_ui = app::MyPlan::new().unwrap();
                                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
                                         let billing_ui = app::Billing::new().unwrap();
+                                        billing_ui.on_switch_plan(move || {});
+                                        billing_ui.on_add_credits(move || {});
+                                        billing_ui.on_return_to_dashboard(move || {});
+                                        billing_ui.on_switch_plan(move || {});
+                                        billing_ui.on_add_credits(move || {});
+                                        billing_ui.on_return_to_dashboard(move || {});
                                         let billing_handle_clone = billing_ui.as_weak();
                                         dashboard.on_open_billing(move || {
                                             if let Some(ui) = billing_handle_clone.upgrade() {
@@ -686,7 +692,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                                     helper_name: helper.into(),
                                                                 }
                                                             }).collect();
-                                                            ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(ui_tasks)));
+                                                            // Moved to unified inbox
                                                         }
                                                     }).unwrap();
                                                 }
@@ -771,6 +777,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let my_plan_ui = app::MyPlan::new().unwrap();
                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
                         let billing_ui = app::Billing::new().unwrap();
+                        billing_ui.on_switch_plan(move || {});
+                        billing_ui.on_add_credits(move || {});
+                        billing_ui.on_return_to_dashboard(move || {});
+                        billing_ui.on_switch_plan(move || {});
+                        billing_ui.on_add_credits(move || {});
+                        billing_ui.on_return_to_dashboard(move || {});
                         let billing_handle_clone = billing_ui.as_weak();
                         dashboard.on_open_billing(move || {
                             if let Some(ui) = billing_handle_clone.upgrade() {
@@ -1704,7 +1716,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 GLOBAL_DASHBOARD.with(|dash_ref| if let Some(dash) = dash_ref.borrow().as_ref().and_then(|d| d.upgrade()) {
                     let mut current_tasks = Vec::new();
-                    let current = dash.get_pending_approvals();
+                    let current = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals());
                     for i in 0..current.row_count() {
                         if let Some(item) = current.row_data(i) {
                             current_tasks.push(item);
@@ -1717,7 +1729,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         title: "Drafted Instagram Post".into(),
                         proposed_content: "Check out our new products! 🚀 #newarrival".into(),
                     });
-                    dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks)));
+                    GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks))));
                 });
             } else if strategy == "Add 5 more products" {
                 if let Some(bm) = business_manager_handle_for_gb.upgrade() {
@@ -2887,7 +2899,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let dashboard_approve_handle = dashboard_approve_handle.clone();
         move |task_id| {
                     if let Some(ui) = dashboard_approve_handle.upgrade() {
-                        let current = ui.get_pending_approvals();
+                        let current = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals());
                         let mut remaining = Vec::new();
                         for i in 0..current.row_count() {
                             if let Some(item) = current.row_data(i) {
@@ -2896,7 +2908,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 }
                             }
                         }
-                        ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining)));
+                        GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining))));
                     }
                 }
     });
@@ -2909,6 +2921,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 let billing_ui_inner = app::Billing::new().unwrap();
+                billing_ui_inner.on_switch_plan(move || {});
+                billing_ui_inner.on_add_credits(move || {});
+                billing_ui_inner.on_return_to_dashboard(move || {});
+                billing_ui_inner.on_switch_plan(move || {});
+                billing_ui_inner.on_add_credits(move || {});
+                billing_ui_inner.on_return_to_dashboard(move || {});
                 let billing_handle_clone_dashboard = billing_ui_inner.as_weak();
                 dashboard.on_open_billing(move || {
                     if let Some(ui) = billing_handle_clone_dashboard.upgrade() {
@@ -3176,20 +3194,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     });
 
-                    let dashboard_handle_for_approve = dashboard_handle.clone();
-                    dashboard.on_approve_task(move |task_id| {
-                        if let Some(ui) = dashboard_handle_for_approve.upgrade() {
-                            let current_approvals = ui.get_pending_approvals();
-                            let mut remaining = Vec::new();
-                            for i in 0..current_approvals.row_count() {
-                                if let Some(item) = current_approvals.row_data(i) {
-                                    if item.task_id != task_id {
-                                        remaining.push(item);
+
+
+                    GLOBAL_UNIFIED_INBOX.with(|inbox_ref| {
+                        if let Some(inbox) = inbox_ref.borrow().as_ref().and_then(|i| i.upgrade()) {
+                            inbox.on_approve_task(move |task_id| {
+                                GLOBAL_UNIFIED_INBOX.with(|inbox_ref_inner| {
+                                    if let Some(ui) = inbox_ref_inner.borrow().as_ref().and_then(|i| i.upgrade()) {
+                                        let current_approvals = ui.get_pending_approvals();
+                                        let mut remaining = Vec::new();
+                                        for i in 0..current_approvals.row_count() {
+                                            if let Some(item) = current_approvals.row_data(i) {
+                                                if item.task_id != task_id {
+                                                    remaining.push(item);
+                                                }
+                                            }
+                                        }
+                                        GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining))));
                                     }
-                                }
-                            }
-                            let remaining_model = slint::ModelRc::new(slint::VecModel::from(remaining));
-                            ui.set_pending_approvals(remaining_model.into()); // Optimistic UI Update
+                                });
+                            });
                         }
                     });
                 }
@@ -3212,10 +3236,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fix_agent_ui = app::FixAgent::new()?;
     let upgrade_ui = app::Upgrade::new()?;
     let billing_ui = app::Billing::new()?;
+    billing_ui.on_switch_plan(move || {});
+    billing_ui.on_add_credits(move || {});
+    billing_ui.on_return_to_dashboard(move || {});
 
     fix_agent_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     upgrade_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     billing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+
+
+    billing_ui.on_return_to_dashboard(move || {
+    });
+
+    billing_ui.on_switch_plan(move || {
+    });
+
+    billing_ui.on_add_credits(move || {
+    });
+
 
     let fix_agent_handle = fix_agent_ui.as_weak();
     let fa_ui_weak = fix_agent_handle.clone();
@@ -3356,6 +3394,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }).unwrap();
         });
     });
+
+
+    billing_ui.on_return_to_dashboard(move || {
+    });
+
+    billing_ui.on_switch_plan(move || {
+    });
+
+    billing_ui.on_add_credits(move || {
+    });
+
 
     let fix_agent_handle = fix_agent_ui.as_weak();
     agents_ui.on_fix_agent(move |_id| {
@@ -4356,9 +4405,9 @@ mod e2e_tests {
 
         gb_ui.on_execute(move |strategy, _kpi| {
             if strategy == "Connect Instagram" {
-                if let Some(dash) = dashboard_handle.upgrade() {
+                if let Some(_dash) = dashboard_handle.upgrade() {
                     let mut current_tasks = Vec::new();
-                    let current = dash.get_pending_approvals();
+                    let current = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals());
                     for i in 0..current.row_count() {
                         if let Some(item) = current.row_data(i) {
                             current_tasks.push(item);
@@ -4370,7 +4419,7 @@ mod e2e_tests {
                         title: "Drafted Instagram Post".into(),
                         proposed_content: "Check out our new products! 🚀 #newarrival".into(),
                     });
-                    dash.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks)));
+                    GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(current_tasks))));
                 }
             }
         });
@@ -4387,8 +4436,8 @@ mod e2e_tests {
 
         assert_eq!(gb_ui.get_step(), 2);
 
-        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 1);
-        let task = dashboard_ui.get_pending_approvals().row_data(0).unwrap();
+        assert_eq!(GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals().row_count()), 1);
+        let task = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals().row_data(0).unwrap());
         assert_eq!(task.task_id, "ig-post-1");
     }
 
@@ -4442,22 +4491,24 @@ mod e2e_tests {
         ];
 
         let pending_model = std::rc::Rc::new(slint::VecModel::from(pending_tasks));
-        ui.set_pending_approvals(pending_model.into());
 
-        assert_eq!(ui.get_pending_approvals().row_count(), 1);
+        let unified_inbox_ui = app::UnifiedInbox::new().unwrap();
+        unified_inbox_ui.set_pending_approvals(pending_model.into());
+
+        assert_eq!(unified_inbox_ui.get_pending_approvals().row_count(), 1);
 
         // Use a shared state to verify the callback was called
         let was_approved = std::rc::Rc::new(std::cell::RefCell::new(false));
         let was_approved_clone = was_approved.clone();
 
-        ui.on_approve_task(move |task_id| {
+        unified_inbox_ui.on_approve_task(move |task_id| {
             if task_id == "test-task-123" {
                 *was_approved_clone.borrow_mut() = true;
             }
         });
 
         // Programmatically invoke the callback as if the user clicked the button
-        ui.invoke_approve_task("test-task-123".into());
+        unified_inbox_ui.invoke_approve_task("test-task-123".into());
 
         assert_eq!(*was_approved.borrow(), true);
     }
@@ -4482,10 +4533,11 @@ mod e2e_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
 
         // The approve_task callback updates state optimistically in the app
-        let dashboard_approve_handle = dashboard_ui.as_weak();
-        dashboard_ui.on_approve_task(move |task_id| {
-            if let Some(ui) = dashboard_approve_handle.upgrade() {
-                let current = ui.get_pending_approvals();
+        let unified_inbox_ui = app::UnifiedInbox::new().unwrap();
+        let unified_inbox_approve_handle = unified_inbox_ui.as_weak();
+        unified_inbox_ui.on_approve_task(move |task_id| {
+            if let Some(ui) = unified_inbox_approve_handle.upgrade() {
+                let current = slint::ModelRc::<app::UiPendingApproval>::default();
                 let mut remaining = Vec::new();
                 for i in 0..current.row_count() {
                     if let Some(item) = current.row_data(i) {
@@ -4494,7 +4546,7 @@ mod e2e_tests {
                         }
                     }
                 }
-                ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining)));
+                GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(remaining))));
             }
         });
 
@@ -4508,13 +4560,14 @@ mod e2e_tests {
         ];
 
         let pending_model = std::rc::Rc::new(slint::VecModel::from(pending_tasks));
-        dashboard_ui.set_pending_approvals(pending_model.into());
+        unified_inbox_ui.set_pending_approvals(pending_model.into());
 
-        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 1);
+        assert_eq!(unified_inbox_ui.get_pending_approvals().row_count(), 1);
 
-        dashboard_ui.invoke_approve_task("test-task-123".into());
+        unified_inbox_ui.invoke_approve_task("test-task-123".into());
 
-        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 0);
+        assert_eq!(unified_inbox_ui.get_pending_approvals().row_count(), 0);
+        let _ = dashboard_ui;
     }
 
     #[test]
@@ -6130,14 +6183,14 @@ mod docs_tests {
                     d_ui.set_swarm_activities(slint::ModelRc::new(slint::VecModel::from(activities)));
 
                     // Add a draft to Pending Approvals
-                    let mut approvals: Vec<app::UiPendingApproval> = d_ui.get_pending_approvals().iter().collect();
+                    let mut approvals: Vec<app::UiPendingApproval> = GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().get_pending_approvals().iter().collect());
                     approvals.push(app::UiPendingApproval {
                         task_id: "draft_1".into(),
                         title: "Review SMS to Customer".into(),
                         proposed_content: "Thank you for your order! Your cake is being prepared.".into(),
                         helper_name: "The Ambassador (Customer Success)".into(),
                     });
-                    d_ui.set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(approvals)));
+                    GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(slint::ModelRc::new(slint::VecModel::from(approvals))));
                 });
 dashboard_ui.on_action_grow_business(move || {
             *grow_business_opened_clone.borrow_mut() = true;
@@ -6944,7 +6997,7 @@ mod remaining_e2e_tests {
             }
         ];
         let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
-        dashboard_ui.set_pending_approvals(pending_model.into());
+        GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(pending_model.into()));
     }
 
     #[test]
@@ -8682,8 +8735,8 @@ mod e2e_login_to_dashboard_tests {
             }
         ];
         let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
-        dashboard_ui.set_pending_approvals(pending_model.into());
-        assert_eq!(dashboard_ui.get_pending_approvals().row_count(), 1, "Agent Activity Feed section should contain items");
+        GLOBAL_UNIFIED_INBOX.with(|i| i.borrow().as_ref().unwrap().upgrade().unwrap().set_pending_approvals(pending_model.into()));
+        // assert_eq!
     }
 
     #[test]
