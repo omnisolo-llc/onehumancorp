@@ -44,6 +44,9 @@ func (w *McpSyncWorker) Start(ctx context.Context, interval time.Duration) {
 // SyncPendingMetrics queries the telemetry_buffer for metrics with sync_status = 'pending'
 // and securely transmits them to the Cloud Gateway.
 func (w *McpSyncWorker) SyncPendingMetrics(ctx context.Context) error {
+	if !isTelemetryEnabled() {
+		return fmt.Errorf("telemetry is not enabled")
+	}
 	if w.provider == nil || w.provider.DB == nil {
 		return fmt.Errorf("database connection is nil")
 	}

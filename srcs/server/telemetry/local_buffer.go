@@ -58,6 +58,10 @@ func (e *TelemetrySyncEngine) BufferMetric(ctx context.Context, name string, val
 
 // SyncPendingMetrics attempts to send buffered metrics to the cloud observability endpoint
 func (e *TelemetrySyncEngine) SyncPendingMetrics(ctx context.Context) error {
+	if !isTelemetryEnabled() {
+		return fmt.Errorf("telemetry is not enabled")
+	}
+
 	rows, err := e.db.QueryContext(ctx, "SELECT id, metric_name, value, attributes, timestamp FROM local_telemetry_metrics WHERE synced_to_cloud = FALSE LIMIT 100")
 	if err != nil {
 		return fmt.Errorf("failed to query pending metrics: %w", err)

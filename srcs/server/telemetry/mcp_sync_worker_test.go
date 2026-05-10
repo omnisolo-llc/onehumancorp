@@ -8,6 +8,9 @@ import (
 )
 
 func TestMcpSyncWorker_SyncPendingMetrics(t *testing.T) {
+	// Enable telemetry for test
+	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
 	// Initialize a test database provider (SQLite in-memory)
 	// We use a uniquely named URI for memory DB per test to prevent test collisions as specified in guidelines
 

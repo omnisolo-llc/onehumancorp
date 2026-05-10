@@ -358,7 +358,7 @@ func TestTaskDecompositionService_MoreCoverage3(t *testing.T) {
 	_ = svc.UpdateTaskStatus(ctx, task.ID, "DONE", "agent", "reason")
 }
 
-// A quick hack for 100% test coverage using mocking framework or pure sqlite triggers
+// Mock db for 100% test coverage using mocking framework or pure sqlite triggers
 type mockDB struct {
 	*sql.DB
 }

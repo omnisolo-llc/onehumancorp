@@ -144,7 +144,9 @@ func TestTelemetrySyncEngine_SyncPendingMetrics_Failure(t *testing.T) {
 }
 
 func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
-	t.Parallel()
+	// Removed t.Parallel() to allow t.Setenv for isolated environment variables
+	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
 	db := setupTestDB(t)
 	defer db.Close()
 

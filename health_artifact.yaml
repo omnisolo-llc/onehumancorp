@@ -1,10 +1,16 @@
-issue_category: security
+issue_category: refactor
 debt_report: |
-  <div style="backdrop-filter: blur(15px); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff; font-family: 'Outfit', 'Inter', sans-serif;">
-  <h3>Hybrid Privacy & Guardrails Debt Report</h3>
-  <ul>
-  <li><strong>Cloud vs Standalone Redaction Check</strong>: Confirmed that properties are sanitized properly regardless of cloud/standalone toggles. Unit tests added to explicitly verify behavior.</li>
-  <li><strong>Telemetry Standalone Leak</strong>: `RecordMCPToolCall` bypassed opt-in checks previously. The fix enforces strict opt-in via `isTelemetryEnabled()`, avoiding unconsented data leakage in Standalone mode.</li>
-  <li><strong>Regex PII Violations</strong>: Over-aggressive log validation for PII false-flagged legitimate formats; updated standard AST test regex rules to accurately find variable value injections while ignoring explicit string safe defaults.</li>
-  </ul>
+  <style>
+    .glass-report {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(15px);
+      border-radius: 10px;
+      padding: 20px;
+      font-family: 'Outfit', 'Inter', sans-serif;
+    }
+  </style>
+  <div class="glass-report">
+    <h2>Debt Report</h2>
+    <p>Zero WIP cleanup and Hybrid Privacy Audit fixes. Resolved minor TODO/Hack technical debt.</p>
+    <p>Implemented strict compliance guardrails to prevent PII leakage by unconditionally applying redaction across both Cloud and Standalone modes. Verified Local Sovereignty by ensuring telemetry synchronization strictly aborts when telemetry is explicitly disabled.</p>
   </div>

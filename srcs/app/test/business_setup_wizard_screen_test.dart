@@ -1,3 +1,4 @@
+import 'package:app/providers/wizard_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,8 +12,6 @@ class MockApiService extends ApiService {
     return 'A fantastic AI-generated description for $productName!';
   }
 }
-import 'package:app/providers/wizard_provider.dart';
-
 void main() {
   group('BusinessSetupWizardScreen Environment Tests', () {
     Future<void> navigateToStep4(WidgetTester tester) async {

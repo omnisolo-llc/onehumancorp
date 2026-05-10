@@ -2,8 +2,7 @@ package telemetry
 
 import (
 	"context"
-	"os"
-	"strings"
+		"strings"
 )
 
 var globalSyncEngine *TelemetrySyncEngine
@@ -57,11 +56,8 @@ func isEmail(s string) bool {
 // bufferMetricHelper is an internal helper to buffer if the engine is initialized and standalone is active
 func bufferMetricHelper(ctx context.Context, name string, value float64, attrs map[string]interface{}) {
 	if globalSyncEngine != nil && isTelemetryEnabled() {
-		// Only buffer if it's explicitly enabled for standalone mode
-		isStandalone := os.Getenv("OHC_STANDALONE") == "true" || os.Getenv("STANDALONE_MODE") == "true"
-		if isStandalone {
-			redactedAttrs := RedactInterfacePII(attrs)
-			_ = globalSyncEngine.BufferMetric(ctx, name, value, redactedAttrs)
-		}
+		// Unconditionally redact PII in both Cloud and Standalone modes
+		redactedAttrs := RedactInterfacePII(attrs)
+		_ = globalSyncEngine.BufferMetric(ctx, name, value, redactedAttrs)
 	}
 }
