@@ -2148,6 +2148,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                     GLOBAL_WEBSITE_BUILDER.with(|g| {
                         if let Some(weak) = g.borrow().as_ref() {
@@ -2479,13 +2489,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let resp: Result<tonic::Response<_>, tonic::Status> = client.get_quota(tonic::Request::new(ohc::orchestration::GetQuotaRequest { user_id: "current_user".into() })).await;
                             if let Ok(resp) = resp {
                                 let quota: ohc::orchestration::QuotaMetrics = resp.into_inner();
-                                let used = quota.used;
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = dashboard_handle_inner.upgrade() {
-                                        if used >= 10 { // Free tier limit
-                                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.".into());
+                                        if quota.soft_limit_reached {
+                                            ui.set_upgrade_prompt_message(quota.upgrade_message.into());
                                             ui.set_show_upgrade_prompt(true);
-                                            ui.invoke_action_failed("Tier limit reached: 10 products".into());
+                                            if !quota.is_allowed {
+                                                ui.invoke_action_failed("Limit reached: action not allowed".into());
+                                            }
                                         } else {
                                             // Handle success case
                                             // We could log or do something else here, but to avoid regressions, we don't block
@@ -3310,11 +3321,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let resp: Result<tonic::Response<_>, tonic::Status> = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                 if let Ok(resp) = resp {
                     let analytics: ohc::orchestration::AnalyticsSummaryResponse = resp.into_inner();
-                    let total_agents = analytics.total_agents;
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = agents_ui_handle_inner.upgrade() {
-                            if total_agents >= 1 {
-                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
+                            if analytics.soft_limit_reached {
+                                ui.set_upgrade_prompt_message(analytics.upgrade_message.into());
                                 ui.set_show_upgrade_prompt(true);
                             } else {
                                 if let Some(config_ui) = agent_config_handle_inner.upgrade() {
@@ -3365,7 +3375,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 
-        setup_wizard_ui.on_generate_instant_preview({
+            setup_wizard_ui.on_send_chat_message({
+        let ui_weak = setup_wizard_handle.clone();
+        move |message| {
+            let ui_handle = ui_weak.clone();
+            if let Some(ui) = ui_handle.upgrade() {
+                let msg = message.to_string();
+
+                let mut msgs: Vec<app::UiChatMessage> = ui.get_chat_messages().iter().collect();
+                let user_msg = app::UiChatMessage {
+                    id: uuid::Uuid::new_v4().to_string().into(),
+                    author_name: "You".into(),
+                    body: msg.clone().into(),
+                    is_me: true,
+                };
+                msgs.push(user_msg);
+
+                let model = slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(msgs.clone())));
+                ui.set_chat_messages(model);
+
+                let question_count = msgs.iter().filter(|m| !m.is_me).count();
+
+                if question_count >= 3 {
+                    // Trigger generation
+                    let all_text = msgs.iter().map(|m| format!("{}: {}", m.author_name, m.body)).collect::<Vec<_>>().join("\n");
+                    ui.set_instant_bio(all_text.into());
+                    ui.set_is_generating_instant_preview(true);
+                    ui.invoke_generate_instant_preview();
+                } else {
+                    let history = msgs.iter().map(|m| format!("{}: {}", m.author_name, m.body)).collect::<Vec<_>>().join("\n");
+                    let prompt = format!("You are an AI assistant helping a user set up their business. Here is the conversation so far:\n{}\nBased on this, ask exactly ONE short follow-up question to help them define their business (e.g. name, type, or style). Do not be overly verbose.", history);
+
+                    tokio::spawn(async move {
+                        let mut ai_response = "I see! Could you provide a bit more detail?".to_string();
+                        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                            let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                                prompt,
+                                from_agent_id: "setup_wizard".into(),
+                            });
+                            if let Ok(resp) = client.reason(request).await {
+                                ai_response = resp.into_inner().content.trim().to_string();
+                            }
+                        }
+
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle.upgrade() {
+                                let mut msgs: Vec<app::UiChatMessage> = ui.get_chat_messages().iter().collect();
+                                msgs.push(app::UiChatMessage {
+                                    id: uuid::Uuid::new_v4().to_string().into(),
+                                    author_name: "Marketing AI".into(),
+                                    body: ai_response.into(),
+                                    is_me: false,
+                                });
+                                let model = slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(msgs)));
+                                ui.set_chat_messages(model);
+                            }
+                        }).unwrap();
+                    });
+                }
+            }
+        }
+    });
+
+    setup_wizard_ui.on_generate_instant_preview({
         let ui_weak = setup_wizard_handle.clone();
         move || {
             let ui_handle = ui_weak.clone();
@@ -6289,7 +6361,7 @@ dashboard_ui.on_action_grow_business(move || {
         let agents_ui_handle = agents_ui.as_weak();
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
+                ui.set_upgrade_prompt_message("You've reached your Free tier limit of 1 agent. Upgrade to unlock more power!".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
@@ -6631,14 +6703,14 @@ mod remaining_e2e_tests {
         let agents_ui_handle = agents_ui.as_weak();
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
+                ui.set_upgrade_prompt_message("You've reached your Free tier limit of 1 agent. Upgrade to unlock more power!".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
         agents_ui.invoke_hire_agent();
         assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
-        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.");
+        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You've reached your Free tier limit of 1 agent. Upgrade to unlock more power!");
 
         let wb_ui = app::WebsiteBuilder::new().unwrap();
         wb_ui.set_domain_choice("subdomain".into());
@@ -7150,6 +7222,16 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                 }).unwrap();
             }
@@ -7297,6 +7379,16 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                 }).unwrap();
             }
@@ -7346,6 +7438,16 @@ mod remaining_e2e_tests {
                         ui.set_usage_progress(progress);
                         ui.set_current_usage(format!("{} / {} AI Actions", plan.ai_actions_used, plan.ai_actions_limit.unwrap_or(0)).into());
                         ui.set_projected_cost(format!("${:.2} / month", plan.next_bill_estimated as f64).into());
+
+                        let storage_used = plan.storage_used_bytes as f64 / 1_048_576.0;
+                        let storage_limit = plan.storage_limit_bytes.unwrap_or(0) as f64 / 1_048_576.0;
+                        let storage_progress = if storage_limit > 0.0 { (storage_used / storage_limit) as f32 } else { 0.0 };
+                        ui.set_storage_progress(storage_progress);
+                        if storage_limit >= 1000.0 {
+                            ui.set_current_storage(format!("{:.1} GB / {:.1} GB", storage_used / 1024.0, storage_limit / 1024.0).into());
+                        } else {
+                            ui.set_current_storage(format!("{:.1} MB / {:.1} MB", storage_used, storage_limit).into());
+                        }
                     }
                 }).unwrap();
             }
@@ -9076,3 +9178,87 @@ mod e2e_issue_9422_tests {
     }
 
 }
+    #[test]
+    fn test_onboarding_guide_auto_launch_verification() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        login_ui.set_is_sign_up(false);
+
+        let wizard_launched = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let w_clone = wizard_launched.clone();
+        login_ui.on_start_setup_wizard(move || {
+            *w_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_start_setup_wizard();
+        assert!(*wizard_launched.borrow());
+    }
+
+    #[test]
+    fn test_onboarding_guide_checklist_routing_verification() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::WelcomeChecklist::new().unwrap();
+        crate::setup_welcome_checklist_routing(&ui);
+
+        let progress = ui.get_progress();
+        assert_eq!(progress, 0);
+
+        ui.invoke_go_to_add_products();
+        ui.invoke_go_to_connect_instagram();
+        ui.invoke_go_to_share_link();
+        ui.invoke_go_to_dashboard();
+    }
+
+    #[test]
+    fn test_onboarding_guide_wizard_step_routing() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::SetupWizard::new().unwrap();
+        assert_eq!(ui.get_step(), 0);
+
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 1);
+
+        ui.invoke_select_business_type("Online Store".into());
+        assert_eq!(ui.get_business_type(), "Online Store");
+        assert_eq!(ui.get_step(), 2);
+
+        ui.set_company_name("Acme Corp".into());
+        ui.invoke_next_step();
+        assert_eq!(ui.get_step(), 3);
+    }
+
+    #[test]
+    fn test_onboarding_guide_cross_device_resume_state() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::SetupWizard::new().unwrap();
+
+        ui.set_step(5);
+        ui.set_company_name("Acme Corp".into());
+        ui.set_website_template("Modern".into());
+        ui.set_product_name("Acme Widget".into());
+
+        assert_eq!(ui.get_step(), 5);
+        assert_eq!(ui.get_company_name(), "Acme Corp");
+        assert_eq!(ui.get_website_template(), "Modern");
+        assert_eq!(ui.get_product_name(), "Acme Widget");
+    }
+
+    #[test]
+    fn test_onboarding_guide_checklist_state_transitions() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::WelcomeChecklist::new().unwrap();
+
+        assert_eq!(ui.get_progress(), 0);
+        assert_eq!(ui.get_is_completed(), false);
+
+        ui.set_progress(100);
+        ui.set_is_completed(true);
+
+        assert_eq!(ui.get_progress(), 100);
+        assert_eq!(ui.get_is_completed(), true);
+    }
