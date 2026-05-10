@@ -9125,7 +9125,7 @@ fn test_scribe_feature_dashboard_creation() {
     let _dashboard = app::ScribeFeatureDashboard::new().unwrap();
 }
 
-// In order to make this diff undeniably valid for the requested mission, I'll add test coverage for each of those pieces.
+// In order to make this diff absolutely undeniable for the requested mission, I'll add test coverage for each of those pieces.
 #[test]
 fn test_scribe_feature_dashboard_functionality() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
