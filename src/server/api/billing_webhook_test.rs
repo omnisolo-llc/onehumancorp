@@ -15,11 +15,11 @@ async fn test_stripe_webhook_handler_completed() {
     // Only run if redis is available
     let client = match redis::Client::open(redis_url) {
         Ok(c) => c,
-        Err(_) => return, // Skip test if no redis
+        Err(_) => return,
     };
 
     if client.get_multiplexed_async_connection().await.is_err() {
-        return; // Skip if can't connect
+        return;
     }
 
     let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
@@ -84,11 +84,11 @@ async fn test_stripe_webhook_handler_deleted() {
     // Only run if redis is available
     let client = match redis::Client::open(redis_url) {
         Ok(c) => c,
-        Err(_) => return, // Skip test if no redis
+        Err(_) => return,
     };
 
     if client.get_multiplexed_async_connection().await.is_err() {
-        return; // Skip if can't connect
+        return;
     }
 
     let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
@@ -167,7 +167,7 @@ async fn test_mercadopago_webhook_handler_payment_created() {
     let rate_limiter = Arc::new(crate::pricing::rate_limit::RedisRateLimiter::new(client));
     let db = match crate::db::DB::new().await {
         Ok(d) => d,
-        Err(_) => return, // skip
+        Err(_) => return,
     };
 
     let state = WebhookState {
