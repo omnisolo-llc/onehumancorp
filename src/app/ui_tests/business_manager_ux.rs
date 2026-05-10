@@ -13,6 +13,9 @@ fn create() -> app::BusinessManager {
 
 #[test]
 fn test_business_manager_ux_list_view() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     let app = create();
 
     // Add dummy products to test touch targets
@@ -49,6 +52,9 @@ fn test_business_manager_ux_list_view() {
 
 #[test]
 fn test_business_manager_ux_add_new() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     let app = create();
 
     app.invoke_action_add_new();
@@ -59,6 +65,9 @@ fn test_business_manager_ux_add_new() {
 
 #[test]
 fn test_business_manager_ux_select_type() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     let app = create();
     app.set_current_view("add".into());
     app.set_step(0);
@@ -69,6 +78,9 @@ fn test_business_manager_ux_select_type() {
 
 #[test]
 fn test_business_manager_ux_next_step() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     let app = create();
     app.set_current_view("add".into());
     app.set_step(0);
@@ -80,6 +92,9 @@ fn test_business_manager_ux_next_step() {
 
 #[test]
 fn test_business_manager_ux_submit() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+        return;
+    }
     let app = create();
     app.set_current_view("add".into());
     app.set_step(1);
