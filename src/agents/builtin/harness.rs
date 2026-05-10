@@ -185,6 +185,10 @@ impl LocalBackend {
     }
 
     pub fn is_bwrap_available(&self) -> bool {
+        if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {
+            return false;
+        }
+
         static BWRAP_AVAILABLE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
         static BWRAP_CHECKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 

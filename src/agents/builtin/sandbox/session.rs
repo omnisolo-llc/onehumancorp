@@ -86,13 +86,18 @@ impl ShellSession {
         static BWRAP_CHECKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
         if !BWRAP_CHECKED.load(std::sync::atomic::Ordering::Relaxed) {
-            let is_available = std::process::Command::new("bwrap")
+            let mut is_available = std::process::Command::new("bwrap")
                 .arg("--version")
                 .stdout(std::process::Stdio::null())
                 .stderr(std::process::Stdio::null())
                 .status()
                 .map(|s| s.success())
                 .unwrap_or(false);
+
+            if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {
+                is_available = false;
+            }
+
             BWRAP_AVAILABLE.store(is_available, std::sync::atomic::Ordering::Relaxed);
             BWRAP_CHECKED.store(true, std::sync::atomic::Ordering::Relaxed);
         }
