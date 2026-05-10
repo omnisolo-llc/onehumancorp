@@ -10,24 +10,18 @@ import (
 	"strings"
 	"time"
 
-	"onehumancorp/srcs/server/harness/network"
 	"onehumancorp/srcs/server/telemetry"
 )
 
 // BwrapSandboxManager wraps command execution using bubblewrap (bwrap)
 type BwrapSandboxManager struct {
-	policy      SandboxPolicy
-	proxyBridge *network.NetworkBridgeProxy
+	policy SandboxPolicy
 }
 
 // NewBwrapSandboxManager creates a new BwrapSandboxManager
 func NewBwrapSandboxManager() *BwrapSandboxManager {
-	proxyBridge := network.NewNetworkBridgeProxy("/tmp/ohc-agent-http.sock", []string{})
-	proxyBridge.Start()
-
 	return &BwrapSandboxManager{
-		policy:      SandboxPolicy{},
-		proxyBridge: proxyBridge,
+		policy: SandboxPolicy{},
 	}
 }
 
@@ -45,14 +39,6 @@ func (m *BwrapSandboxManager) WrapCommand(cmd string) (string, error) {
 		telemetry.RecordHarnessToolInvocation(context.Background(), cmdParts[0])
 	}
 
-	// Wait for the unix socket to be ready
-	for i := 0; i < 10; i++ {
-		if m.proxyBridge != nil && m.proxyBridge.IsReady() {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-
 	// Basic bwrap args: unshare all namespaces, bind root
 	bwrapArgs := []string{
 		"--unshare-all",
@@ -62,15 +48,8 @@ func (m *BwrapSandboxManager) WrapCommand(cmd string) (string, error) {
 		"--tmpfs", "/tmp",
 	}
 
-	if m.proxyBridge != nil {
-		bwrapArgs = append(bwrapArgs, "--bind", m.proxyBridge.SocketPath, m.proxyBridge.SocketPath)
-	}
-
-	// Wrap the inner command to inject socat proxy and environment variables
-	innerCmd := fmt.Sprintf(`socat TCP-LISTEN:8080,fork UNIX-CLIENT:%s & SOCAT_PID=$!; sleep 0.1; HTTP_PROXY=http://127.0.0.1:8080 HTTPS_PROXY=http://127.0.0.1:8080 ALL_PROXY=http://127.0.0.1:8080 %s; EXIT_CODE=$?; kill -9 $SOCAT_PID 2>/dev/null; exit $EXIT_CODE`, m.proxyBridge.SocketPath, cmd)
-
 	// Safely quote the command for bash.
-	safeCmd := "'" + strings.ReplaceAll(innerCmd, "'", "'\\''") + "'"
+	safeCmd := "'" + strings.ReplaceAll(cmd, "'", "'\\''") + "'"
 
 	// Construct final command
 	fullCmd := fmt.Sprintf("bwrap %s -- bash -c %s", strings.Join(bwrapArgs, " "), safeCmd)

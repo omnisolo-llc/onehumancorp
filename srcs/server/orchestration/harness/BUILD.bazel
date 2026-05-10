@@ -10,7 +10,6 @@ go_library(
     importpath = "onehumancorp/srcs/server/orchestration/harness",
     visibility = ["//visibility:public"],
     deps = [
-        "//srcs/server/harness/network",
         "//srcs/server/telemetry",
     ],
 )
