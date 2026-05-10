@@ -112,23 +112,36 @@ impl Provider for LocalProvider {
             tokio::fs::create_dir_all(parent).await?;
         }
 
-        let final_data = data.to_vec();
+        let mut final_data = data.to_vec();
 
-        // Auto-compression to WebP mock for images
-        let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") || key.ends_with(".webp");
-        let reported_size = if is_image && data.len() > 100 {
+        // Auto-optimization for images: Resize and convert to WebP
+        let is_optimizable_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg");
+        let reported_size = if is_optimizable_image && data.len() > 1024 {
             let original_size = data.len();
-            // Mock compression: simulate 80% reduction for quota reporting
-            let compressed_size = original_size / 5;
-            let saved = original_size - compressed_size;
-            tracing::info!(
-                key = %key,
-                original = original_size,
-                simulated_compressed = compressed_size,
-                saved = saved,
-                "Auto-optimized image to WebP (simulated for quota)"
-            );
-            compressed_size
+            if let Ok(img) = image::load_from_memory(data) {
+                let resized = img.thumbnail(1024, 1024);
+                let mut webp_data = Vec::new();
+                // Using Cursor for WebP encoding
+                let mut cursor = std::io::Cursor::new(&mut webp_data);
+                if resized.write_to(&mut cursor, image::ImageFormat::WebP).is_ok() {
+                    final_data = webp_data;
+                    // Note: We currently keep the original extension for compatibility with existing links
+                    // but we should ideally update the key to .webp in a future iteration.
+                    let compressed_size = final_data.len();
+                    tracing::info!(
+                        key = %key,
+                        original = original_size,
+                        actual_compressed = compressed_size,
+                        saved = original_size - compressed_size,
+                        "Auto-optimized image to WebP"
+                    );
+                    compressed_size
+                } else {
+                    original_size
+                }
+            } else {
+                original_size
+            }
         } else {
             data.len()
         };
