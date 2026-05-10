@@ -2428,6 +2428,60 @@ mod e2e_consolidation_tests {
     }
 
     #[tokio::test]
+    async fn test_e2e_tenant_isolation_comprehensive() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+
+        let record_maya = EmbeddingRecord {
+            id: "maya_1".to_string(),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "sales".to_string(),
+            content: "Maya's confidential sales data".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let record_bob = EmbeddingRecord {
+            id: "bob_1".to_string(),
+            tenant_id: "org_bob".to_string(),
+            agent_id: "sales".to_string(),
+            content: "Bob's confidential sales data".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record_maya).await.unwrap();
+        repo.upsert(&record_bob).await.unwrap();
+
+        let maya_results = repo.cross_department_search("org_maya", &v1, 10).await.unwrap();
+        assert_eq!(maya_results.len(), 1);
+        assert_eq!(maya_results[0].tenant_id, "org_maya");
+        assert_eq!(maya_results[0].id, "maya_1");
+
+        let bob_results = repo.cross_department_search("org_bob", &v1, 10).await.unwrap();
+        assert_eq!(bob_results.len(), 1);
+        assert_eq!(bob_results[0].tenant_id, "org_bob");
+        assert_eq!(bob_results[0].id, "bob_1");
+
+        let unknown_results = repo.cross_department_search("org_unknown", &v1, 10).await.unwrap();
+        assert_eq!(unknown_results.len(), 0);
+    }
+
+    #[tokio::test]
     async fn test_e2e_stale_context_pruning() {
         let repo = setup_sqlite_repo().await;
 
