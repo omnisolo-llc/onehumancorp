@@ -42,7 +42,7 @@ impl VectorRepository {
     }
 
     pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
-        let emb_str = serde_json::to_string(&record.embedding).map_err(|e| e.to_string())?;
+        let emb_str = serde_json::to_string(&record.embedding).map_err(|e| format!("DB Error: {}", e))?;
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
