@@ -19,8 +19,8 @@ fn create() -> app::Referrals { crate::ui_tests::init(); app::Referrals::new().u
 
 #[test] fn ref_max_coefficient() {
     let ui = create();
-    ui.set_viral_coefficient(f32::MAX);
-    assert_eq!(ui.get_viral_coefficient(), f32::MAX);
+    ui.set_referral_score(f32::MAX);
+    assert_eq!(ui.get_referral_score(), f32::MAX);
 }
 
 #[test] fn ref_xss_link() {
@@ -113,14 +113,14 @@ fn create_verify_download_count() {
 }
 
 #[test]
-fn create_verify_viral_coefficient() {
+fn create_verify_referral_score() {
     let ui = create();
-    ui.set_viral_coefficient(0.5);
-    assert_eq!(ui.get_viral_coefficient(), 0.5);
-    ui.set_viral_coefficient(46.0);
-    assert_eq!(ui.get_viral_coefficient(), 46.0);
-    ui.set_viral_coefficient(47.0);
-    assert_eq!(ui.get_viral_coefficient(), 47.0);
+    ui.set_referral_score(0.5);
+    assert_eq!(ui.get_referral_score(), 0.5);
+    ui.set_referral_score(46.0);
+    assert_eq!(ui.get_referral_score(), 46.0);
+    ui.set_referral_score(47.0);
+    assert_eq!(ui.get_referral_score(), 47.0);
 }
 
 #[test]
