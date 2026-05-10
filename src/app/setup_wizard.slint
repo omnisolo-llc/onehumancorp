@@ -31,7 +31,6 @@ export component SetupWizard inherits Window {
     in-out property <bool> sell_services: false;
     in-out property <bool> sell_food: false;
     in-out property <bool> sell_subscriptions: false;
-    in-out property <bool> sell_portfolios: false;
 
     // Payments
     in-out property <string> payment_pref: "";
@@ -97,7 +96,6 @@ export component SetupWizard inherits Window {
     callback toggle_sell_services();
     callback toggle_sell_food();
     callback toggle_sell_subscriptions();
-    callback toggle_sell_portfolios();
     callback select_payment_pref(string);
     callback select_template(string);
     callback show_welcome_checklist();
@@ -112,7 +110,6 @@ export component SetupWizard inherits Window {
     toggle_sell_services => { sell_services = !sell_services; save_state(); }
     toggle_sell_food => { sell_food = !sell_food; save_state(); }
     toggle_sell_subscriptions => { sell_subscriptions = !sell_subscriptions; save_state(); }
-    toggle_sell_portfolios => { sell_portfolios = !sell_portfolios; save_state(); }
     select_payment_pref(p) => { payment_pref = p; save_state(); }
     select_template(t) => { website_template = t; save_state(); }
     select_domain(d) => { domain_choice = d; save_state(); }
@@ -793,6 +790,24 @@ export component SetupWizard inherits Window {
 
             // Step 100: Generated Storefront
             if (step == 100) : VerticalBox {
+                // Confetti animation
+                Rectangle {
+                    height: 100px;
+                    width: 100%;
+                    Text {
+                        text: "🎉🎊✨";
+                        font-size: 64px;
+                        horizontal-alignment: center;
+                        y: parent.height / 2 - 32px;
+
+                        states [
+                            active when step == 100 : {
+                                y: parent.height / 2 - 40px;
+                                in { animate y { duration: 1500ms; easing: ease-in-out; iteration-count: -1; } }
+                            }
+                        ]
+                    }
+                }
                 spacing: 16px;
 
                 Text { text: "Your live storefront!"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
