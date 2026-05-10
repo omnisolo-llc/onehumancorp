@@ -567,33 +567,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         let release_notes_ui = app::ReleaseNotes::new().unwrap();
                                         if let Ok(referrals_ui) = app::Referrals::new() {
                                             dashboard.on_action_open_referrals({
-                                                let referrals_ui = referrals_ui.clone_strong();
+                                                let referrals_ui_weak = referrals_ui.as_weak();
                                                 move || {
-                                                    let _ = referrals_ui.show();
+                                                    if let Some(ui) = referrals_ui_weak.upgrade() { let _ = ui.show(); }
                                                 }
                                             });
                                         }
                                         if let Ok(business_share_ui) = app::BusinessShare::new() {
                                             dashboard.on_action_share_store({
-                                                let business_share_ui = business_share_ui.clone_strong();
+                                                let business_share_ui_weak = business_share_ui.as_weak();
                                                 move || {
-                                                    let _ = business_share_ui.show();
+                                                    if let Some(ui) = business_share_ui_weak.upgrade() { let _ = ui.show(); }
                                                 }
                                             });
                                         }
                                         if let Ok(email_marketing_ui) = app::EmailMarketing::new() {
                                             dashboard.on_action_open_email_marketing({
-                                                let email_marketing_ui = email_marketing_ui.clone_strong();
+                                                let email_marketing_ui_weak = email_marketing_ui.as_weak();
                                                 move || {
-                                                    let _ = email_marketing_ui.show();
+                                                    if let Some(ui) = email_marketing_ui_weak.upgrade() { let _ = ui.show(); }
                                                 }
                                             });
                                         }
                                         if let Ok(social_posting_ui) = app::SocialPosting::new() {
                                             dashboard.on_action_open_social_posting({
-                                                let social_posting_ui = social_posting_ui.clone_strong();
+                                                let social_posting_ui_weak = social_posting_ui.as_weak();
                                                 move || {
-                                                    let _ = social_posting_ui.show();
+                                                    if let Some(ui) = social_posting_ui_weak.upgrade() { let _ = ui.show(); }
                                                 }
                                             });
                                         }
@@ -729,33 +729,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         let release_notes_ui = app::ReleaseNotes::new().unwrap();
                                         if let Ok(referrals_ui) = app::Referrals::new() {
                                             dashboard.on_action_open_referrals({
-                                                let referrals_ui = referrals_ui.clone_strong();
+                                                let referrals_ui_weak = referrals_ui.as_weak();
                                                 move || {
-                                                    let _ = referrals_ui.show();
+                                                    if let Some(ui) = referrals_ui_weak.upgrade() { let _ = ui.show(); }
                                                 }
                                             });
                                         }
                                         if let Ok(business_share_ui) = app::BusinessShare::new() {
                                             dashboard.on_action_share_store({
-                                                let business_share_ui = business_share_ui.clone_strong();
+                                                let business_share_ui_weak = business_share_ui.as_weak();
                                                 move || {
-                                                    let _ = business_share_ui.show();
+                                                    if let Some(ui) = business_share_ui_weak.upgrade() { let _ = ui.show(); }
                                                 }
                                             });
                                         }
                                         if let Ok(email_marketing_ui) = app::EmailMarketing::new() {
                                             dashboard.on_action_open_email_marketing({
-                                                let email_marketing_ui = email_marketing_ui.clone_strong();
+                                                let email_marketing_ui_weak = email_marketing_ui.as_weak();
                                                 move || {
-                                                    let _ = email_marketing_ui.show();
+                                                    if let Some(ui) = email_marketing_ui_weak.upgrade() { let _ = ui.show(); }
                                                 }
                                             });
                                         }
                                         if let Ok(social_posting_ui) = app::SocialPosting::new() {
                                             dashboard.on_action_open_social_posting({
-                                                let social_posting_ui = social_posting_ui.clone_strong();
+                                                let social_posting_ui_weak = social_posting_ui.as_weak();
                                                 move || {
-                                                    let _ = social_posting_ui.show();
+                                                    if let Some(ui) = social_posting_ui_weak.upgrade() { let _ = ui.show(); }
                                                 }
                                             });
                                         }
@@ -1494,7 +1494,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Box::leak(Box::new(business_manager_ui));
 
     let em_handle_for_gb = email_marketing_handle.clone();
-    let dashboard_handle_for_gb = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
+    let dashboard_handle_for_gb = GLOBAL_DASHBOARD.with(|g| g.borrow().clone());
     let business_manager_handle_for_gb = business_manager_handle.clone();
     let sp_handle_for_gb = social_posting_handle.clone();
     grow_business_ui.on_execute({
@@ -1507,7 +1507,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(ui) = sp_handle_for_gb.upgrade() {
                     let _ = ui.show();
                 }
-                if let Some(dash) = dashboard_handle_for_gb.upgrade() {
+                if let Some(dash) = dashboard_handle_for_gb.as_ref().and_then(|h| h.upgrade()) {
                     let mut current_tasks = Vec::new();
                     let current = dash.get_pending_approvals();
                     for i in 0..current.row_count() {
@@ -1536,14 +1536,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let business_share_ui = app::BusinessShare::new()?;
     let business_share_handle = business_share_ui.as_weak();
 
-    let dashboard_ref_for_bs = GLOBAL_DASHBOARD.with(|g| g.borrow().clone().unwrap());
+    let dashboard_ref_for_bs = GLOBAL_DASHBOARD.with(|g| g.borrow().clone());
 
     let bs_handle_clone_for_dash = business_share_handle.clone();
-    dashboard_ref_for_bs.upgrade().unwrap().on_action_share_store(move || {
+    if let Some(dash) = dashboard_ref_for_bs.as_ref().and_then(|h| h.upgrade()) { dash.on_action_share_store(move || {
         if let Some(ui) = bs_handle_clone_for_dash.upgrade() {
             let _ = ui.show();
         }
-    });
+    }); }
 
     let bs_close_handle = business_share_handle.clone();
     business_share_ui.on_close(move || {
@@ -1553,18 +1553,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let gb_handle_for_dash = grow_business_handle.clone();
-    dashboard_ref_for_bs.upgrade().unwrap().on_action_grow_business(move || {
+    if let Some(dash) = dashboard_ref_for_bs.as_ref().and_then(|h| h.upgrade()) { dash.on_action_grow_business(move || {
         if let Some(ui) = gb_handle_for_dash.upgrade() {
             let _ = ui.show();
         }
-    });
+    }); }
 
     let em_handle_for_dash = email_marketing_handle.clone();
-    dashboard_ref_for_bs.upgrade().unwrap().on_action_open_email_marketing(move || {
+    if let Some(dash) = dashboard_ref_for_bs.as_ref().and_then(|h| h.upgrade()) { dash.on_action_open_email_marketing(move || {
         if let Some(ui) = em_handle_for_dash.upgrade() {
             let _ = ui.show();
         }
-    });
+    }); }
 
     let bs_copy_handle = business_share_handle.clone();
     business_share_ui.on_copy_link(move || {
@@ -2534,33 +2534,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let release_notes_ui = app::ReleaseNotes::new().unwrap();
                                         if let Ok(referrals_ui) = app::Referrals::new() {
                                             dashboard.on_action_open_referrals({
-                                                let referrals_ui = referrals_ui.clone_strong();
+                                                let referrals_ui_weak = referrals_ui.as_weak();
                                                 move || {
-                                                    let _ = referrals_ui.show();
+                                                    if let Some(ui) = referrals_ui_weak.upgrade() { let _ = ui.show(); }
                                                 }
                                             });
                                         }
                                         if let Ok(business_share_ui) = app::BusinessShare::new() {
                                             dashboard.on_action_share_store({
-                                                let business_share_ui = business_share_ui.clone_strong();
+                                                let business_share_ui_weak = business_share_ui.as_weak();
                                                 move || {
-                                                    let _ = business_share_ui.show();
+                                                    if let Some(ui) = business_share_ui_weak.upgrade() { let _ = ui.show(); }
                                                 }
                                             });
                                         }
                                         if let Ok(email_marketing_ui) = app::EmailMarketing::new() {
                                             dashboard.on_action_open_email_marketing({
-                                                let email_marketing_ui = email_marketing_ui.clone_strong();
+                                                let email_marketing_ui_weak = email_marketing_ui.as_weak();
                                                 move || {
-                                                    let _ = email_marketing_ui.show();
+                                                    if let Some(ui) = email_marketing_ui_weak.upgrade() { let _ = ui.show(); }
                                                 }
                                             });
                                         }
                                         if let Ok(social_posting_ui) = app::SocialPosting::new() {
                                             dashboard.on_action_open_social_posting({
-                                                let social_posting_ui = social_posting_ui.clone_strong();
+                                                let social_posting_ui_weak = social_posting_ui.as_weak();
                                                 move || {
-                                                    let _ = social_posting_ui.show();
+                                                    if let Some(ui) = social_posting_ui_weak.upgrade() { let _ = ui.show(); }
                                                 }
                                             });
                                         }
