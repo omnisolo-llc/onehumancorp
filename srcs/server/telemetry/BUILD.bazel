@@ -6,7 +6,6 @@ go_library(
         "buffer_integration.go",
         "harness_metrics.go",
         "local_buffer.go",
-        "compliance.go",
     ],
     importpath = "onehumancorp/srcs/server/telemetry",
     visibility = ["//visibility:public"],
@@ -22,11 +21,9 @@ go_test(
     srcs = [
         "harness_metrics_test.go",
         "local_buffer_test.go",
-        "compliance_test.go",
     ],
     embed = [":telemetry"],
-    data = ["//deploy/scripts:ohc-standalone.sh"],
     deps = [
-
+        "@com_github_mattn_go_sqlite3//:go_sqlite3",
     ],
 )

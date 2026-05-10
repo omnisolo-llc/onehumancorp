@@ -15,11 +15,6 @@ func InitGlobalSyncEngine(engine *TelemetrySyncEngine) {
 
 // bufferMetricHelper is an internal helper to buffer if the engine is initialized and standalone is active
 func bufferMetricHelper(ctx context.Context, name string, value float64, attrs map[string]interface{}) {
-	if tenantID, ok := attrs["tenant_id"].(string); ok {
-		if err := CheckMultiTenantContext(ctx, tenantID); err != nil {
-			return
-		}
-	}
 	if globalSyncEngine != nil && isTelemetryEnabled() {
 		// Only buffer if it's explicitly enabled for standalone mode
 		isStandalone := os.Getenv("OHC_STANDALONE") == "true" || os.Getenv("STANDALONE_MODE") == "true"
