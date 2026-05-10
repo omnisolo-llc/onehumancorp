@@ -646,6 +646,11 @@ export component SetupWizard inherits Window {
                             clicked => { copy_link(shareable_link); }
                         }
                         Button {
+                            text: "View Welcome Checklist →";
+                            height: 44px;
+                            clicked => { root.show_welcome_checklist(); }
+                        }
+                        Button {
                             text: "Continue to Dashboard →";
                             height: 44px;
                             clicked => { root.go_to_dashboard(); }
