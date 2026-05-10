@@ -18,6 +18,8 @@ export component CostDashboard inherits Window {
 
     in-out property <string> total_spend: "$0.00";
     in-out property <string> total_tokens: "0";
+    in-out property <string> storage_used: "0 MB / 500 MB";
+    in-out property <string> projected_monthly: "$0.00";
     in-out property <[UiAgentCost]> agent_costs;
 
     callback refresh_data();
@@ -61,6 +63,28 @@ export component CostDashboard inherits Window {
                     Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                 }
             }
+            GlassCard {
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Storage"; color: #94a3b8; }
+                    Text { text: storage_used; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
+                }
+            }
+            GlassCard {
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Estimated Next Bill"; color: #94a3b8; }
+                    Text { text: projected_monthly; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
+                }
+            }
         }
 
         HorizontalBox {
@@ -89,6 +113,30 @@ export component CostDashboard inherits Window {
                     padding: 16px;
                     Text { text: "Total AI Usage"; color: #94a3b8; }
                     Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                }
+            }
+            GlassCard {
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                horizontal-stretch: 1;
+
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Storage"; color: #94a3b8; }
+                    Text { text: storage_used; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #10b981; }
+                }
+            }
+            GlassCard {
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                horizontal-stretch: 1;
+
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Estimated Next Bill"; color: #94a3b8; }
+                    Text { text: projected_monthly; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #f59e0b; }
                 }
             }
         }

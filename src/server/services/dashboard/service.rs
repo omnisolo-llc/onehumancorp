@@ -381,6 +381,8 @@ impl DashboardService for MyDashboardService {
             total_tokens: optimized_total_tokens,
             projected_monthly_usd: 0.0,
             agents: agent_summaries,
+            storage_used_bytes: self.hub.tracker().get_tenant_storage_used(&req.organization_id).await.unwrap_or(0),
+            storage_limit_bytes: self.hub.tracker().get_tenant_tier(&req.organization_id).await.unwrap_or(crate::pricing::rate_limit::PlanTier::Free).storage_limit_mb().map(|mb| (mb as i64) * 1024 * 1024),
         };
 
         let mut final_agents = _filtered_agents

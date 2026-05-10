@@ -21,6 +21,8 @@ message CostSummary {
   int64 total_tokens = 3;
   double projected_monthly_usd = 4;
   repeated AgentCostSummary agents = 5;
+  int64 storage_used_bytes = 6;
+  optional int64 storage_limit_bytes = 7;
 }
 
 message AgentCostSummary {

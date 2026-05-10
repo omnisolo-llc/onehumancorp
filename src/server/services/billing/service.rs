@@ -64,6 +64,8 @@ impl BillingService for MyBillingService {
             total_tokens: total_tokens,
             projected_monthly_usd: total_cost * 30.0, // Rough estimate
             agents,
+            storage_used_bytes: 0,
+            storage_limit_bytes: None,
         }))
     }
 }

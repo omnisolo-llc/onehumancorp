@@ -16,6 +16,8 @@ export component MyPlan inherits Window {
     in-out property <string> renewal_date: "Oct 25, 2025";
     in-out property <string> plan_status: "Active Status";
     in-out property <string> upgrade_prompt_message: "";
+    in-out property <string> storage_used: "0 MB / 500 MB";
+    in-out property <string> projected_monthly: "$0.00";
 
     callback upgrade();
     callback view_details();

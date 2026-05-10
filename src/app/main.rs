@@ -2243,6 +2243,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
 
                     ui.set_estimated_bill(format!("${}.00", plan.next_bill_estimated).into());
+                    ui.set_projected_monthly(format!("${:.2}", plan.next_bill_estimated as f64).into());
+                    let storage_used_mb = plan.storage_used_bytes as f64 / 1024.0 / 1024.0;
+                    let storage_limit_mb = plan.storage_limit_bytes.unwrap_or(500 * 1024 * 1024) as f64 / 1024.0 / 1024.0;
+                    ui.set_storage_used(format!("{:.1} MB / {:.0} MB", storage_used_mb, storage_limit_mb).into());
                 }
             }
         }
