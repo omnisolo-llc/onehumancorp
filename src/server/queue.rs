@@ -842,12 +842,10 @@ impl TaskQueue for SqliteTaskQueue {
         if roles.is_empty() { return Ok(None); }
 
         // SQLite doesn't support SELECT ... FOR UPDATE SKIP LOCKED.
-        // We will do a simple select and update approach in a transaction.
-        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-
+        // To avoid SQLITE_BUSY lock-upgrade errors when claiming tasks in SQLite, execute an atomic UPDATE ... RETURNING query
         let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query_str = format!(
-            "SELECT id, tenant_id, task_id, role, payload, status FROM local_queue_jobs WHERE status = 'PENDING' AND role IN ({}) LIMIT 1",
+            "UPDATE local_queue_jobs SET status = 'RUNNING' WHERE id = (SELECT id FROM local_queue_jobs WHERE status = 'PENDING' AND role IN ({}) LIMIT 1) RETURNING id, tenant_id, task_id, role, payload, status",
             role_placeholders
         );
 
@@ -856,7 +854,7 @@ impl TaskQueue for SqliteTaskQueue {
             query = query.bind(role);
         }
 
-        let row = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = query.fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
 
         if let Some(row) = row {
             use sqlx::Row;
@@ -867,15 +865,6 @@ use crate::utils::auth_utils::set_org_context;
             let role: String = row.get("role");
             let payload: Vec<u8> = row.get("payload");
             
-            sqlx::query("UPDATE local_queue_jobs SET status = 'RUNNING' WHERE id = ? AND tenant_id = ?")
-                .bind(&id)
-                .bind(&tenant_id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-            tx.commit().await.map_err(|e| e.to_string())?;
-
             Ok(Some(Job {
                 id,
                 tenant_id,
