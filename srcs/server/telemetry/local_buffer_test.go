@@ -248,7 +248,7 @@ func TestBufferMetricHelper_MaliciousPayloads(t *testing.T) {
 	ctx := context.Background()
 
 	attrs := map[string]interface{}{
-		"payload": map[string]interface{}{
+		"data": map[string]interface{}{
 			"credit_card":     "4111-1111-1111-1111",
 			"cvv":             "123",
 			"dob":             "1990-01-01",
@@ -300,8 +300,21 @@ func TestBufferMetricHelper_MaliciousPayloads(t *testing.T) {
 	if storedAttrs["safe_field"] != "This should not be redacted" {
 		t.Errorf("Expected safe_field to not be redacted, got %v", storedAttrs["safe_field"])
 	}
-	if storedAttrs["payload"] != "[REDACTED]" {
-		t.Errorf("Expected payload to be redacted, got %v", storedAttrs["payload"])
+	dataPayload, ok := storedAttrs["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected data to be a map")
+	}
+	if dataPayload["credit_card"] != "[REDACTED]" {
+		t.Errorf("Expected data credit_card to be redacted, got %v", dataPayload["credit_card"])
+	}
+	if dataPayload["ip_address"] != "[REDACTED]" {
+		t.Errorf("Expected data ip_address to be redacted, got %v", dataPayload["ip_address"])
+	}
+	if dataPayload["mac_address"] != "[REDACTED]" {
+		t.Errorf("Expected data mac_address to be redacted, got %v", dataPayload["mac_address"])
+	}
+	if dataPayload["geolocation"] != "[REDACTED]" {
+		t.Errorf("Expected data geolocation to be redacted, got %v", dataPayload["geolocation"])
 	}
 	nestedMalicious, ok := storedAttrs["nested"].(map[string]interface{})
 	if !ok {
