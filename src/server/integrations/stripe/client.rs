@@ -48,7 +48,7 @@ impl StripeClient {
         }
     }
 
-    pub async fn get_subscription(&self, subscription_id: &str) -> Result<StripeSubscription, String> {
+    pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
         let _ = crate::telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             "unknown",
