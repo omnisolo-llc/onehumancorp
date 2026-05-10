@@ -561,6 +561,28 @@ export component Dashboard inherits Window { // milestones
         HorizontalBox {
             spacing: 12px;
 
+            // Global Ask AI Button
+            TooltipElement {
+                tooltip_id: "ask_ai";
+                Rectangle {
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 25px;
+                    background: #0ea5e9;
+
+                    Text {
+                        text: "Ask anything";
+                        color: white;
+                        font-size: 14px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                    TouchArea {
+                        clicked => { open_ai_chat(); }
+                    }
+                }
+            }
             // In-App Help Center '?' Button
             TooltipElement {
                 tooltip_id: "help_center";
@@ -587,29 +609,6 @@ export component Dashboard inherits Window { // milestones
                 }
             }
 
-            // AI-Powered Help Chat Button
-            TooltipElement {
-                tooltip_id: "ask_ai";
-                Rectangle {
-                    width: 50px;
-                    height: 50px;
-                    border-radius: 25px;
-                    background: #8b5cf6; // Purple
-
-                    TouchArea {
-                        clicked => { open_ai_chat(); }
-                    }
-
-                    Text {
-                        text: "Ask anything";
-                        color: white;
-                        font-size: 14px;
-                        font-weight: 700;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                    }
-                }
-            }
         }
     }
 
