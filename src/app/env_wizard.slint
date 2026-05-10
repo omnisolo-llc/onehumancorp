@@ -124,20 +124,20 @@ export component EnvWizard inherits Window {
                         color: white;
                     }
                     Text {
-                        text: "Provide your API keys to enable AI agent features.";
+                        text: "Connect your external services to enable AI agent features.";
                         font-family: "Inter";
                         font-size: 16px;
                         color: #94A3B8;
                         wrap: word-wrap;
                     }
 
-                    Text { text: "OpenAI API Key (Optional)"; color: white; font-family: "Inter"; }
+                    Text { text: "Connect ChatGPT/OpenAI Account"; color: white; font-family: "Inter"; }
                     PasswordInput {
                         text <=> openai_key;
                         placeholder-text: "sk-...";
                     }
 
-                    Text { text: "Anthropic API Key (Optional)"; color: white; font-family: "Inter"; }
+                    Text { text: "Connect Anthropic Account"; color: white; font-family: "Inter"; }
                     PasswordInput {
                         text <=> anthropic_key;
                         placeholder-text: "sk-ant-...";
