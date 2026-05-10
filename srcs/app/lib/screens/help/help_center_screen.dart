@@ -1,43 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../main.dart'; // For GlassContainer
 import 'release_notes_screen.dart';
 import 'api_reference_screen.dart';
-import 'video_tutorial_screen.dart';
 
-class HelpCenterScreen extends StatefulWidget {
+class HelpCenterScreen extends StatelessWidget {
   const HelpCenterScreen({super.key});
-
-  @override
-  State<HelpCenterScreen> createState() => _HelpCenterScreenState();
-}
-
-class _HelpCenterScreenState extends State<HelpCenterScreen> {
-  late Future<List<dynamic>> _videosFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _videosFuture = _fetchVideos();
-  }
-
-  Future<List<dynamic>> _fetchVideos() async {
-    try {
-      const String baseUrl = String.fromEnvironment('API_URL', defaultValue: 'http://127.0.0.1:8080');
-      final response = await http.get(Uri.parse('$baseUrl/api/help/videos'));
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      }
-    } catch (e) {
-      debugPrint('Error fetching videos: $e');
-    }
-    // Fallback static data if backend is unreachable
-    return [
-      {'id': '1', 'title': 'How to add your first product', 'duration': '1:20', 'description': 'Learn the basics of setting up your store.'},
-      {'id': '2', 'title': 'Setting up automated support', 'duration': '0:55', 'description': 'Configure AI to answer common questions.'},
-    ];
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,22 +61,8 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
                 const SizedBox(height: 30),
                 const Text('Video Tutorials', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 10),
-                FutureBuilder<List<dynamic>>(
-                  future: _videosFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const Text('No tutorials available.', style: TextStyle(color: Colors.white70));
-                    }
-                    return Column(
-                      children: snapshot.data!.map((video) {
-                        return _buildVideoCard(context, video);
-                      }).toList(),
-                    );
-                  },
-                ),
+                _buildVideoCard('How to add your first product', '1:20'),
+                _buildVideoCard('Setting up automated support', '0:55'),
                 const SizedBox(height: 30),
                 const Text('Updates & Advanced', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 10),
@@ -151,21 +104,16 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
     );
   }
 
-  Widget _buildVideoCard(BuildContext context, dynamic videoData) {
+  Widget _buildVideoCard(String title, String duration) {
     return Card(
       color: Colors.white.withAlpha(15),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: const Icon(Icons.play_circle_fill, color: const Color(0xFF6B4EFF), size: 40),
-        title: Text(videoData['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        subtitle: Text(videoData['duration'] ?? '', style: const TextStyle(color: Colors.white70)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        subtitle: Text(duration, style: const TextStyle(color: Colors.white70)),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => VideoTutorialScreen(videoData: videoData),
-            ),
-          );
+          // Stub for video player
         },
       ),
     );

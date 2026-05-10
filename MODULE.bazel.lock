@@ -1010,7 +1010,7 @@
           "REPO_MAPPING:rules_rust+,bazel_tools bazel_tools",
           "REPO_MAPPING:rules_rust+,rules_cc rules_cc+",
           "REPO_MAPPING:rules_rust+,rules_rust rules_rust+",
-          "FILE:@@//Cargo.lock ac1590c0e308194b275694990f0d24119cabd621fbd4ea1a82c376c801ee7b0b",
+          "FILE:@@//Cargo.lock 19055437ef0378654103151ebcb470e55d7569a1eff5d46be8a67e7b314c0bbc",
           "FILE:@@//Cargo.toml f9e68c21e8b9aebd8087d5b8fbdb5a63c612d9e8282b92fcdaac1f1c203db356",
           "FILE:@@//src/app/Cargo.toml e0bf8cdebd65ee2cdd7973ffa303444aa5e5e2aea8c65e0d610959f545a44c07"
         ],

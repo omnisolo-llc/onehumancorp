@@ -2,7 +2,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "dashboard",
-    srcs = ["handlers_growth.go", "server.go", "help_videos.go"],
+    srcs = ["handlers_growth.go", "server.go"],
     importpath = "onehumancorp/srcs/server/dashboard",
     visibility = ["//visibility:public"],
     deps = [
