@@ -3055,6 +3055,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+                let ai_chat_handle_for_open = ai_chat_handle.clone();
+                dashboard.on_open_ai_chat(move || {
+                    if let Some(ui) = ai_chat_handle_for_open.upgrade() {
+                        let _ = ui.show();
+                    }
+                });
+
 
                 dashboard.on_open_kairos_orchestration_walkthrough(move || {
                     if let Some(ui) = kairos_orchestration_walkthrough_handle.upgrade() {
@@ -3062,11 +3069,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                dashboard.on_open_ai_chat(move || {
-                    if let Some(ui) = ai_chat_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
 
                 dashboard.on_open_interactive_walkthrough(move || {
                     if let Some(ui) = interactive_walkthrough_handle.upgrade() {

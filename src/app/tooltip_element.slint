@@ -6,9 +6,26 @@ export component TooltipElement inherits Rectangle {
     ta := TouchArea {
         width: 100%;
         height: 100%;
+
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.left && event.kind == PointerEventKind.down) {
+                long-press-timer.running = true;
+            } else if (event.button == PointerEventButton.left && event.kind == PointerEventKind.up) {
+                long-press-timer.running = false;
+            }
+        }
     }
 
     @children
+
+    long-press-timer := Timer {
+        interval: 500ms;
+        running: false;
+        triggered => {
+            TooltipRegistry.show_tooltip(tooltip_id, root.absolute-position.x, root.absolute-position.y + root.height);
+            self.running = false;
+        }
+    }
 
     property <bool> is_hovered: ta.has-hover;
     changed is_hovered => {
@@ -16,6 +33,7 @@ export component TooltipElement inherits Rectangle {
             TooltipRegistry.show_tooltip(tooltip_id, self.absolute-position.x, self.absolute-position.y + self.height);
         } else {
             TooltipRegistry.hide_tooltip();
+            long-press-timer.running = false;
         }
     }
 }
