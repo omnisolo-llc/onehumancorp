@@ -1,11 +1,5 @@
-issue_category: feature
-triage_results: |
-  The AI Agent Memory Consolidation system was examined. It was found that the
-  functionality is already fully implemented, including vector operations,
-  conflict resolution logic, and pruning in both PostgreSQL and SQLite.
-  Unit test coverage for these modules is at 100% and tests pass.
-  A compilation fix in msgbus.rs was applied.
-debt_report: |
-  No significant technical debt found in the memory consolidation layer.
-  The fallback logic for SQLite without vec extensions works correctly via an
-  in-memory cosine distance implementation.
+issue_category: cleanup
+debt_report:
+  description: "Bump version to v0.4.40"
+  impact: "low"
+  mitigation: "Version bumped correctly across Cargo, npm, Helm, and Bazel"
