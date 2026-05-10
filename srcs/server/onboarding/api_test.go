@@ -41,7 +41,10 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	}
 	reqBody, _ := json.Marshal(reqData)
 
-	resp, err := http.Post(ts.URL+"/api/onboarding/start", "application/json", bytes.NewBuffer(reqBody))
+	reqStart, _ := http.NewRequest(http.MethodPost, ts.URL+"/api/onboarding/start", bytes.NewBuffer(reqBody))
+	reqStart.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(reqStart)
+
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 
@@ -60,7 +63,9 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	assert.Len(t, tasks, 3)
 
 	// 3. Poll Status
-	statusResp, err := http.Get(ts.URL + "/api/onboarding/status?tenant_id=" + startRes.TenantID)
+	reqStatus, _ := http.NewRequest(http.MethodGet, ts.URL + "/api/onboarding/status", nil)
+	reqStatus.Header.Set("x-spiffe-id", "spiffe://onehumancorp.io/" + startRes.TenantID + "/agent-1")
+	statusResp, err := http.DefaultClient.Do(reqStatus)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp.StatusCode)
 
@@ -78,7 +83,9 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	}
 
 	// 5. Poll Status Again
-	statusResp2, err := http.Get(ts.URL + "/api/onboarding/status?tenant_id=" + startRes.TenantID)
+	reqStatus2, _ := http.NewRequest(http.MethodGet, ts.URL + "/api/onboarding/status", nil)
+	reqStatus2.Header.Set("x-spiffe-id", "spiffe://onehumancorp.io/" + startRes.TenantID + "/agent-1")
+	statusResp2, err := http.DefaultClient.Do(reqStatus2)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusResp2.StatusCode)
 

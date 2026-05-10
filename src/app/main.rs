@@ -189,7 +189,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         tokio::spawn(async move {
             if let Err(e) = server_lib::run_server().await {
-                eprintln!("Bundled server error: {}", e);
+                tracing::error!("Bundled server error: {}", e);
             }
         });
         // Give the server a moment to start its listeners
@@ -811,7 +811,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Log the advanced properties to satisfy the transmission/usage requirement
                 let _ = raw_activation_payload;
                 let redacted_payload = server_lib::telemetry::redact_interface_pii(serde_json::from_str(&raw_activation_payload).unwrap_or(serde_json::Value::String(raw_activation_payload.to_string())));
-                println!("Advanced mode parameters: api_scope='{}', cron='{}', payload='{}'", api_scope_override, cron_override, redacted_payload);
+                tracing::info!("Advanced mode parameters: api_scope='{}', cron='{}', payload='{}'", api_scope_override, cron_override, redacted_payload);
 
                 let url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
                 match connect_with_interceptor(url).await {
@@ -837,7 +837,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             work_hours,
                         });
                         if let Err(e) = client.handle_config_wizard(req).await {
-                            eprintln!("Failed to handle config wizard: {}", e);
+                            tracing::error!("Failed to handle config wizard: {}", e);
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = ui_handle_err.upgrade() {
                                     ui.set_show_toast(false);
@@ -846,7 +846,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                     Err(e) => {
-                        eprintln!("Failed to connect to HubServiceClient: {}", e);
+                        tracing::error!("Failed to connect to HubServiceClient: {}", e);
                         slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_handle_err.upgrade() {
                                 ui.set_show_toast(false);
@@ -920,7 +920,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(mut client) => {
                         let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
                         if let Err(e) = client.save_wizard_state(request).await {
-                            eprintln!("Failed to save wizard state: {}", e);
+                            tracing::error!("Failed to save wizard state: {}", e);
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = ui_handle_err.upgrade() {
                                     ui.set_show_toast(false); // rollback optimistic UI
@@ -940,7 +940,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             domain_focus,
                         });
                         if let Err(e) = client.handle_prompt_tuning(prompt_request).await {
-                            eprintln!("Failed to handle prompt tuning: {}", e);
+                            tracing::error!("Failed to handle prompt tuning: {}", e);
                             let ui_err_clone = ui_handle_err.clone();
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = ui_err_clone.upgrade() {
@@ -950,7 +950,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                     Err(e) => {
-                        eprintln!("Failed to connect to HubServiceClient: {}", e);
+                        tracing::error!("Failed to connect to HubServiceClient: {}", e);
                         slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_handle_err.upgrade() {
                                 ui.set_show_toast(false); // rollback optimistic UI

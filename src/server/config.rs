@@ -82,12 +82,14 @@ pub(crate) fn load() -> Result<AppConfig, config::ConfigError> {
     let mut cfg: AppConfig = s.try_deserialize()?;
 
     // Standalone enforcement
-    cfg = standalone_enforce(cfg);
+    let is_standalone = std::env::var("OHC_SOURCE_MODE").unwrap_or_default() == "standalone" || cfg.standalone;
+    if is_standalone {
+        cfg = standalone_enforce(cfg);
+    }
 
     Ok(cfg)
 }
 
-#[cfg(feature = "standalone")]
 fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
     if let Some(db_url) = &cfg.database_url {
         if db_url != "sqlite://ohc-standalone.db" {
@@ -149,11 +151,6 @@ fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
     cfg.redis_url = None;
     cfg.multitenant = false;
     cfg.telemetry_enabled = std::env::var("OHC_TELEMETRY_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
-    cfg
-}
-
-#[cfg(not(feature = "standalone"))]
-fn standalone_enforce(cfg: AppConfig) -> AppConfig {
     cfg
 }
 
