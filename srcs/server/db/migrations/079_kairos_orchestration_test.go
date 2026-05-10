@@ -11,7 +11,6 @@ import (
 // A dummy test to ensure schema logic executes cleanly against SQLite in tests
 func TestKairosOrchestrationSchema(t *testing.T) {
 	db, err := sql.Open("sqlite3", ":memory:")
-	db.SetMaxOpenConns(1)
 	require.NoError(t, err)
 	defer db.Close()
 

@@ -90,10 +90,6 @@ func TestNoPIILoggingStatements(t *testing.T) {
 								val := strings.ToLower(basicLit.Value)
 								for _, key := range sensitiveKeys {
 									if strings.Contains(val, key) {
-										// Ignore if the sensitive value is explicitly redacted.
-										if strings.Contains(val, "[redacted]") {
-											continue
-										}
 										pos := fset.Position(call.Pos())
 										// Adjust the filename relative to the workspace to match standard Bazel expectation or keep absolute
 										relPath := pos.Filename
