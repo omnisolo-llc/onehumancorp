@@ -19,9 +19,6 @@ pub struct AuthConfig {
 #[allow(dead_code)]
 impl AuthConfig {
     pub fn from_env() -> Self {
-        if std::env::var("OHC_AGENT_AUTH_DISABLED").unwrap_or_default() == "true" {
-            return AuthConfig { mode: AuthMode::Disabled };
-        }
         if let Ok(tok) = std::env::var("OHC_AGENT_TOKEN") {
             let h = hmac_token(&tok);
             return AuthConfig { mode: AuthMode::Token(h) };

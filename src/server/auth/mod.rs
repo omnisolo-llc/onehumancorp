@@ -452,6 +452,17 @@ impl Store {
                     Ok(data.claims)
                 }
                 Err(_) => {
+                    let oidc_cfg = {
+                        let c = self.oidc_cfg.read().unwrap();
+                        crate::oidc::OIDCConfig {
+                            issuer_url: c.issuer_url.clone(),
+                            client_id: c.client_id.clone(),
+                            enabled: c.enabled,
+                        }
+                    };
+                    if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
+                        return Ok(claims);
+                    }
                     Err("Invalid token".to_string())
                 }
         }

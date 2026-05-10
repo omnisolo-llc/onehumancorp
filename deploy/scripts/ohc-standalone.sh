@@ -35,7 +35,8 @@ if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
 fi
 
 echo -e "${DIM}[1/2] Provisioning local standalone state boundaries...${RESET}"
-mkdir -p "${OHC_MEMORY_DIR}/auto/" "${OHC_MEMORY_DIR}/team/" "${OHC_STATUS_DIR}"
+mkdir -p "${OHC_MEMORY_DIR}/auto/" "${OHC_MEMORY_DIR}/team/" "${OHC_STATUS_DIR}" "${OHC_RUNTIME_DIR}/tmp/" "${OHC_RUNTIME_DIR}/.cache/" "${OHC_RUNTIME_DIR}/downloads/"
+chmod 700 "${OHC_RUNTIME_DIR}/tmp/" "${OHC_RUNTIME_DIR}/.cache/" "${OHC_RUNTIME_DIR}/downloads/"
 chmod 700 "${OHC_RUNTIME_DIR}" "${OHC_MEMORY_DIR}" "${OHC_STATUS_DIR}" "${OHC_MEMORY_DIR}/auto/" "${OHC_MEMORY_DIR}/team/"
 find "${OHC_RUNTIME_DIR}" -type f -exec chmod 600 {} \+
 find "${OHC_RUNTIME_DIR}" -type d -exec chmod 700 {} \+
@@ -55,9 +56,9 @@ echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 (while true; do
   find "${OHC_MEMORY_DIR}" -type f -mmin +60 -delete > /dev/null 2>&1
   # Resource Cleanup: Also clean unbounded tmp, cache, and download directories
-  find "tmp/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
-  find ".cache/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
-  find "downloads/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/tmp/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/.cache/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/downloads/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
   sleep 3600
 done) &
 PRUNE_PID=$!
@@ -97,8 +98,8 @@ function cleanup {
   # Resource Cleanup: Clean additional temporary artifact directories
   echo -e "${DIM}  Cleaning temporary artifacts...${RESET}"
   rm -rf "${OHC_STATUS_DIR}"/* 2>/dev/null || true
-  find "tmp/" -type f -delete > /dev/null 2>&1 || true
-  find ".cache/" -type f -delete > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/tmp/" -type f -delete > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/.cache/" -type f -delete > /dev/null 2>&1 || true
 
   docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
   docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
