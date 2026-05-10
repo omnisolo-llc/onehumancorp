@@ -20,5 +20,13 @@
   "social_posting": "Post updates to your social media.",
   "kairos_orchestration": "Let AI run complex tasks in the background. This saves you time on daily operations.",
   "video_tutorials": "Watch short videos to learn how to use the app. They are all under 90 seconds.",
-  "release_notes": "See what new features we just added to the app."
+  "release_notes": "See what new features we just added to the app.",
+  "settings_offline": "Turn this on if you want the app to work without internet.",
+  "settings_sync": "Send your offline work to the cloud so it is saved safely.",
+  "settings_advanced": "Show extra technical options for developers.",
+  "pricing_select": "Choose this subscription plan for your store.",
+  "skills_install": "Add this new ability to your AI helpers.",
+  "agents_tune": "Teach this agent exactly how you want it to work.",
+  "help_floating_button": "Open the Help Center to find guides and answers.",
+  "ask_ai_floating": "Chat with your AI helper to ask questions or get tasks done."
 }

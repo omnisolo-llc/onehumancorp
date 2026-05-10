@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
+import { TooltipElement } from "tooltip_element.slint";
 
 export component Settings inherits Window {
     width: 500px;
@@ -77,7 +78,7 @@ export component Settings inherits Window {
         }
 
         HorizontalBox {
-            Text { text: "Work Offline"; color: #1e293b; }
+            HorizontalBox { alignment: start; Text { text: "Work Offline"; color: #1e293b; vertical-alignment: center; } TooltipElement { tooltip_id: "settings_offline"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } }
             CheckBox {
                 checked: standalone_mode;
                 toggled => { standalone_mode = !standalone_mode; }
@@ -98,21 +99,21 @@ export component Settings inherits Window {
                 HorizontalBox {
                     padding: 16px;
                     Text { text: "App Status: " + (local_service_running ? "Running" : "Stopped"); color: #1e293b; horizontal-alignment: center; }
-                    Button { 
+                    HorizontalBox { spacing: 8px; alignment: center; TooltipElement { tooltip_id: "settings_sync"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button {
                         text: local_service_running ? "Stop" : "Start";
-                        clicked => { start_stop_service(); }
+                        clicked => { start_stop_service(); } }
                     }
                 }
             }
-            Button { 
+            HorizontalBox { spacing: 8px; alignment: center; TooltipElement { tooltip_id: "settings_sync"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button {
                 text: "Fix App Issues";
-                clicked => { run_doctor(); }
+                clicked => { run_doctor(); } }
             }
         }
 
         // Other Settings
         HorizontalBox {
-            Text { text: "Advanced mode"; color: #1e293b; }
+            HorizontalBox { alignment: start; Text { text: "Advanced mode"; color: #1e293b; vertical-alignment: center; } TooltipElement { tooltip_id: "settings_advanced"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } }
             CheckBox {
                 checked: is_advanced;
                 toggled => { is_advanced = !is_advanced; save_state(); }
@@ -140,14 +141,14 @@ export component Settings inherits Window {
             }
         }
 
-        Button {
+        HorizontalBox { spacing: 8px; alignment: center; TooltipElement { tooltip_id: "settings_sync"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button {
             text: "Sync with Cloud";
-            clicked => { trigger_hybrid_sync(); }
+            clicked => { trigger_hybrid_sync(); } }
         }
 
-        Button {
+        HorizontalBox { spacing: 8px; alignment: center; TooltipElement { tooltip_id: "settings_sync"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button {
             text: "Sign Out";
-            clicked => { sign_out(); }
+            clicked => { sign_out(); } }
         }
     }
 }
