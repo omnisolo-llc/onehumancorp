@@ -3,8 +3,6 @@ package telemetry
 import (
 	"context"
 	"testing"
-	"fmt"
-	"time"
 
 	"onehumancorp/srcs/server/db"
 )
