@@ -35,7 +35,7 @@ func NewUniversalBridge(stdin io.Reader, stdout io.Writer, channelID string) Tra
 		return NewCloudTransport(client, channelID)
 	}
 	if stdin == nil || stdout == nil {
-				return nil
-			}
-			return NewLocalTransport(stdin, stdout)
+		return nil
+	}
+	return NewLocalTransport(stdin, stdout)
 }

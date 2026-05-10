@@ -8,11 +8,11 @@ import (
 )
 
 type MockStorageProvider struct {
-	isLocal          bool
-	blobs            map[string]BlobMetadata
-	listErr          error
-	readMetadataErr  error
-	getURLErr        error
+	isLocal         bool
+	blobs           map[string]BlobMetadata
+	listErr         error
+	readMetadataErr error
+	getURLErr       error
 }
 
 func (m *MockStorageProvider) IsLocal() bool {
@@ -358,7 +358,7 @@ func TestBlobInspector_CallTool_ListBlobs_Cloud_TrailingSlash(t *testing.T) {
 	storage := &MockStorageProvider{
 		isLocal: false,
 		blobs: map[string]BlobMetadata{
-			"org-123/images/logo.png": {Key: "org-123/images/logo.png", Size: 100, LastModified: time.Now(), ContentType: "image/png"},
+			"org-123/images/logo.png":        {Key: "org-123/images/logo.png", Size: 100, LastModified: time.Now(), ContentType: "image/png"},
 			"org-123/images_backup/logo.png": {Key: "org-123/images_backup/logo.png", Size: 100, LastModified: time.Now(), ContentType: "image/png"},
 		},
 	}
@@ -385,7 +385,7 @@ func TestBlobInspector_CallTool_ListBlobs_Cloud_NoTrailingSlash(t *testing.T) {
 	storage := &MockStorageProvider{
 		isLocal: false,
 		blobs: map[string]BlobMetadata{
-			"org-123/images/logo.png": {Key: "org-123/images/logo.png", Size: 100, LastModified: time.Now(), ContentType: "image/png"},
+			"org-123/images/logo.png":        {Key: "org-123/images/logo.png", Size: 100, LastModified: time.Now(), ContentType: "image/png"},
 			"org-123/images_backup/logo.png": {Key: "org-123/images_backup/logo.png", Size: 100, LastModified: time.Now(), ContentType: "image/png"},
 		},
 	}

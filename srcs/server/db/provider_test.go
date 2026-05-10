@@ -205,7 +205,7 @@ func TestProvider_ClaimTask_SQLite_Errors(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "already claimed")
 
-    // exec error
+	// exec error
 	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
 	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING'`).WillReturnError(errors.New("exec error"))
 	err = provider.ClaimTask(context.Background(), "task-1")
@@ -314,15 +314,15 @@ func TestProvider_ClaimTask_SQLite_RowsAffectedError(t *testing.T) {
 }
 
 func TestProvider_CreateTask_NilDB(t *testing.T) {
-    provider := &Provider{}
-    err := provider.CreateTask(context.Background(), &Task{})
-    assert.Error(t, err)
-    assert.Contains(t, err.Error(), "nil")
+	provider := &Provider{}
+	err := provider.CreateTask(context.Background(), &Task{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "nil")
 }
 
 func TestProvider_ClaimTask_NilDB(t *testing.T) {
-    provider := &Provider{}
-    err := provider.ClaimTask(context.Background(), "task-1")
-    assert.Error(t, err)
-    assert.Contains(t, err.Error(), "nil")
+	provider := &Provider{}
+	err := provider.ClaimTask(context.Background(), "task-1")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "nil")
 }

@@ -2,10 +2,10 @@ package kairos
 
 import (
 	"context"
-	"os"
-	"testing"
-	"sync"
 	"github.com/stretchr/testify/assert"
+	"os"
+	"sync"
+	"testing"
 )
 
 func TestDeploymentMode(t *testing.T) {
@@ -58,19 +58,19 @@ func TestGetDeploymentMode_Coverage(t *testing.T) {
 
 // Add coverage for initMetrics mode branch
 func TestInitMetrics_StandaloneBranch(t *testing.T) {
-    // Save current values
-    oldMode := deploymentMode
-    oldMultitenant := os.Getenv("OHC_MULTITENANT")
+	// Save current values
+	oldMode := deploymentMode
+	oldMultitenant := os.Getenv("OHC_MULTITENANT")
 
-    // Reset global initOnce to force initMetrics to run again
-    initOnce = sync.Once{}
-    os.Setenv("OHC_MULTITENANT", "false")
+	// Reset global initOnce to force initMetrics to run again
+	initOnce = sync.Once{}
+	os.Setenv("OHC_MULTITENANT", "false")
 
-    initMetrics()
-    assert.Equal(t, "Standalone", deploymentMode)
+	initMetrics()
+	assert.Equal(t, "Standalone", deploymentMode)
 
-    // Restore
-    initOnce = sync.Once{}
-    os.Setenv("OHC_MULTITENANT", oldMultitenant)
-    deploymentMode = oldMode
+	// Restore
+	initOnce = sync.Once{}
+	os.Setenv("OHC_MULTITENANT", oldMultitenant)
+	deploymentMode = oldMode
 }

@@ -43,11 +43,9 @@ func (m *mockLocalDB) UpdateTaskStatus(ctx context.Context, id string, status st
 	return m.updateErr
 }
 
-
 func (m *mockLocalDB) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*orchestration.SharedTask, error) {
 	return m.tasks, m.getErr
 }
-
 
 func TestDefaultProvider_SyncUp(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

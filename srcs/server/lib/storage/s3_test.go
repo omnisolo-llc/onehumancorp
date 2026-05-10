@@ -14,8 +14,8 @@ import (
 )
 
 type mockS3Client struct {
-	putErr error
-	getErr error
+	putErr  error
+	getErr  error
 	getData []byte
 	readErr error
 }

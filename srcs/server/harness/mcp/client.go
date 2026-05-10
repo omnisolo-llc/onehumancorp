@@ -9,8 +9,8 @@ import (
 	"os/exec"
 	"sync"
 
-	"onehumancorp/srcs/server/telemetry"
 	"onehumancorp/srcs/server/integrations/mcp/harness"
+	"onehumancorp/srcs/server/telemetry"
 )
 
 // InternalTool is the internal representation of an OHC tool.

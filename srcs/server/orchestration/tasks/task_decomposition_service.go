@@ -13,7 +13,7 @@ import (
 
 type SharedTaskDecomposition struct {
 	ID              string
-	OrganizationID       string
+	OrganizationID  string
 	Priority        string
 	ParentPlanID    *string
 	Dependencies    json.RawMessage
@@ -23,17 +23,6 @@ type SharedTaskDecomposition struct {
 	Payload         *json.RawMessage
 	LockedUntil     *time.Time
 	CreatedAt       time.Time
-}
-
-type StateMachineTransition struct {
-	ID         string
-	EntityID   string
-	EntityType string
-	FromState  string
-	ToState    string
-	AgentID    *string
-	Reason     *string
-	OccurredAt time.Time
 }
 
 type TaskDecompositionService interface {

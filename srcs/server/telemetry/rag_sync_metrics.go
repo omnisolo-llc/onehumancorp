@@ -43,7 +43,7 @@ func RecordRAGRecordsSynced(ctx context.Context, count int, status string) error
 	}
 
 	bufferMetricHelper(ctx, "rag_records_synced_total", float64(count), map[string]interface{}{
-		"status": status,
+		"status":          status,
 		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
 	})
 
@@ -61,7 +61,7 @@ func RecordRAGSyncError(ctx context.Context, errorType string) error {
 	}
 
 	bufferMetricHelper(ctx, "rag_sync_errors_total", 1, map[string]interface{}{
-		"error_type": errorType,
+		"error_type":      errorType,
 		"deployment_mode": getDeploymentModeAttribute().Value.AsString(),
 	})
 

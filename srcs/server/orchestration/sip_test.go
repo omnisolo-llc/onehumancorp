@@ -166,9 +166,9 @@ func TestDelegateMission_DatabaseError(t *testing.T) {
 	db, cleanup := setupSIPDB(t)
 	defer cleanup()
 
-    // Drop the table to simulate a database error
-    _, err := db.Exec("DROP TABLE agent_missions")
-    require.NoError(t, err)
+	// Drop the table to simulate a database error
+	_, err := db.Exec("DROP TABLE agent_missions")
+	require.NoError(t, err)
 
 	sipdb := NewSIPDB(db)
 	sipdb.ContextRoot = ""

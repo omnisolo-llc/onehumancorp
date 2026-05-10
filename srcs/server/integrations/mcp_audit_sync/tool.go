@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 
-
 	"time"
 )
 
@@ -21,11 +20,19 @@ type AuditSyncPayload struct {
 }
 
 type AuditSyncTool struct {
-	DB        interface{ Exec(context.Context, string, ...interface{}) (interface{}, error) }
-	Telemetry interface{ IncrementCounter(string, int64, map[string]string) }
+	DB interface {
+		Exec(context.Context, string, ...interface{}) (interface{}, error)
+	}
+	Telemetry interface {
+		IncrementCounter(string, int64, map[string]string)
+	}
 }
 
-func NewAuditSyncTool(db interface{ Exec(context.Context, string, ...interface{}) (interface{}, error) }, tele interface{ IncrementCounter(string, int64, map[string]string) }) *AuditSyncTool {
+func NewAuditSyncTool(db interface {
+	Exec(context.Context, string, ...interface{}) (interface{}, error)
+}, tele interface {
+	IncrementCounter(string, int64, map[string]string)
+}) *AuditSyncTool {
 	return &AuditSyncTool{
 		DB:        db,
 		Telemetry: tele,

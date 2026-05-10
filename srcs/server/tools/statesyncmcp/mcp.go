@@ -112,4 +112,3 @@ func (s *StateSyncMCP) ListTools() []map[string]interface{} {
 		},
 	}
 }
-

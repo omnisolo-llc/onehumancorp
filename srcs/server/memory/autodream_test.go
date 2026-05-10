@@ -115,7 +115,8 @@ func TestAutoDreamDaemon_UpsertErrors(t *testing.T) {
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-type FailingMockLLMClient struct {}
+type FailingMockLLMClient struct{}
+
 func (m *FailingMockLLMClient) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
 	return nil, assert.AnError
 }

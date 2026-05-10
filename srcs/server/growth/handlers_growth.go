@@ -3,8 +3,8 @@ package growth
 import (
 	"database/sql"
 	"encoding/json"
-	"net/http"
 	"log"
+	"net/http"
 )
 
 type Referral struct {

@@ -60,13 +60,13 @@ type Order struct {
 
 // OrderLineItem represents an individual line item within an Order.
 type OrderLineItem struct {
-	ID         string    `json:"id" db:"id"`
-	TenantID   string    `json:"tenant_id" db:"tenant_id"`
-	OrderID    string    `json:"order_id" db:"order_id"`
-	VariantID  string    `json:"variant_id" db:"variant_id"`
-	Quantity   int       `json:"quantity" db:"quantity"`
-	UnitPrice  float64   `json:"unit_price" db:"unit_price"`
-	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+	ID        string    `json:"id" db:"id"`
+	TenantID  string    `json:"tenant_id" db:"tenant_id"`
+	OrderID   string    `json:"order_id" db:"order_id"`
+	VariantID string    `json:"variant_id" db:"variant_id"`
+	Quantity  int       `json:"quantity" db:"quantity"`
+	UnitPrice float64   `json:"unit_price" db:"unit_price"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
 // AgentMemory represents an embedded agent memory associated with a tenant and optionally a customer.
@@ -79,6 +79,7 @@ type AgentMemory struct {
 	RawContext json.RawMessage `json:"raw_context" db:"raw_context"`
 	CreatedAt  time.Time       `json:"created_at" db:"created_at"`
 }
+
 // Task represents a task in the Shared Task List State Machine.
 type Task struct {
 	ID        string    `json:"id" db:"id"`

@@ -9,9 +9,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
-	"regexp"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
