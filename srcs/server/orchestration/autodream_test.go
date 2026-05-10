@@ -200,3 +200,33 @@ func TestAutoDreamWorker_StartDaemon_Error(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	cancel()
 }
+
+func TestAutoDreamWorker_SQLiteFallback(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	worker := NewAutoDreamWorker(db)
+
+	memDir := t.TempDir()
+
+	testFile := filepath.Join(memDir, "memory_sqlite.yml")
+	content := `organization_id: "org-sqlite"
+task_id: "22222222-2222-2222-2222-222222222222"
+content: "sqlite fallback memory"`
+	err = os.WriteFile(testFile, []byte(content), 0644)
+	assert.NoError(t, err)
+
+	mock.ExpectExec(`INSERT INTO autodream_memories`).
+		WithArgs("org-sqlite", "22222222-2222-2222-2222-222222222222", "sqlite fallback memory", sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = worker.ScanAndProcessMemories(context.Background(), memDir)
+	assert.NoError(t, err)
+
+	err = mock.ExpectationsWereMet()
+	assert.NoError(t, err)
+}
