@@ -16,25 +16,29 @@ export component GrowthReferralWidget inherits GlassCard {
 
     background: ta.has-hover ? rgba(255, 255, 255, 0.05) : rgba(255, 255, 255, 0.03);
     drop-shadow-blur: ta.has-hover ? 25px : 20px;
+    width: ta.has-hover ? 102% : 100%;
+    height: ta.has-hover ? 102% : 100%;
 
     animate background { duration: 200ms; easing: ease-in-out; }
     animate drop-shadow-blur { duration: 200ms; easing: ease-in-out; }
+    animate width { duration: 200ms; easing: ease-in-out; }
+    animate height { duration: 200ms; easing: ease-in-out; }
 
     ta := TouchArea {}
 
     VerticalBox {
         padding: 16px;
         spacing: 10px;
-        Text { text: "Referral Program"; font-family: "Outfit"; font-weight: 700; color: #1e293b; }
+        Text { text: "Invite a Friend"; font-family: "Outfit"; font-weight: 700; color: #1e293b; accessible-role: heading; accessible-label: "Invite a Friend"; }
         Text { text: "Share OHC with a friend, both get 1 month free Pro."; font-family: "Inter"; color: #64748b; font-size: 14px; }
-        Button { text: "Invite User"; clicked => { root.invite_user(); } }
+        Button { text: "Invite a Friend"; accessible-label: "Invite a Friend"; clicked => { root.invite_user(); } }
     }
 }
 
 export component UserManagement inherits Window {
     width: 500px;
     height: 600px;
-    title: "User Management";
+    title: "Team Members";
 
     in property <[UiUser]> users;
     callback delete_user(string);
@@ -47,7 +51,7 @@ export component UserManagement inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "User Management"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Team Members"; font-size: 20px; font-weight: 700; color: #1e293b; accessible-role: heading; accessible-label: "Team Members"; }
             Rectangle {}
             GrowthReferralWidget {
                 invite_user => { root.invite_user(); }
@@ -88,7 +92,7 @@ export component UserManagement inherits Window {
                         Text { text: "Joined: " + u.joined_at; color: #9ca3af; font-size: 12px; }
                     }
                     Rectangle {} 
-                    Button { text: "Delete"; clicked => { delete_user(u.id); } }
+                    Button { text: "Delete Member"; accessible-label: "Delete Member"; clicked => { delete_user(u.id); } }
                 }
             }
         }
