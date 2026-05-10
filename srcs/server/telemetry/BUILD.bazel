@@ -27,5 +27,6 @@ go_test(
     embed = [":telemetry"],
     data = ["//deploy/scripts:ohc-standalone.sh"],
     deps = [
+
     ],
 )
