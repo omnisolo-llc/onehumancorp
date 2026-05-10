@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"database/sql"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -224,4 +225,13 @@ func (m *LocalTeammateMesh) GetActiveAgents(ctx context.Context) ([]AgentPresenc
 
 func (m *LocalTeammateMesh) Acknowledge(ctx context.Context, messageID string) error {
 	return m.Publish(ctx, "mesh:ack:"+messageID, []byte("ack"))
+}
+
+func NewHybridTeammateMesh(redisClient redis.UniversalClient, sqliteDB *sql.DB) TeammateMesh {
+	if redisClient != nil {
+		return NewRedisTeammateMesh(redisClient)
+	}
+	// For standalone SQLite, LocalTeammateMesh provides in-memory functionality
+	// which is suitable for single-process Standalone mode.
+	return NewLocalTeammateMesh()
 }
