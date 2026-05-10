@@ -3924,6 +3924,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
         }
     });
+    setup_wizard_ui.on_go_to_dashboard({
+        let handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.hide().unwrap();
+            }
+            GLOBAL_DASHBOARD.with(|g| {
+                if let Some(weak) = g.borrow().as_ref() {
+                    if let Some(dashboard) = weak.upgrade() {
+                        dashboard.show().unwrap();
+                    }
+                }
+            });
+        }
+    });
+
 
     login_ui.run()?;
 
@@ -4207,6 +4223,22 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
 
 
     let setup_wizard_ui_from_login = setup_wizard_handle.clone();
+    setup_wizard_ui.on_go_to_dashboard({
+        let handle = setup_wizard_handle.clone();
+        move || {
+            if let Some(ui) = handle.upgrade() {
+                ui.hide().unwrap();
+            }
+            GLOBAL_DASHBOARD.with(|g| {
+                if let Some(weak) = g.borrow().as_ref() {
+                    if let Some(dashboard) = weak.upgrade() {
+                        dashboard.show().unwrap();
+                    }
+                }
+            });
+        }
+    });
+
     login_ui.on_start_setup_wizard({
         let login_handle = login_ui_handle.clone();
         let wizard_handle = setup_wizard_ui_from_login.clone();
