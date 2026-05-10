@@ -15,6 +15,9 @@ import (
 
 func setupSIPDB(t *testing.T) (*sql.DB, func()) {
 	db, err := sql.Open("sqlite3", ":memory:")
+	if err == nil {
+		db.SetMaxOpenConns(1)
+	}
 	require.NoError(t, err)
 
 	_, err = db.Exec(`CREATE TABLE agent_missions (

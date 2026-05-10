@@ -42,6 +42,9 @@ func (m *mockMeshTransport) Subscribe(ctx context.Context, channel string, handl
 
 func setupTestDBForSubAgent(t *testing.T) *sql.DB {
 	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	if err == nil {
+		db.SetMaxOpenConns(1)
+	}
 	require.NoError(t, err)
 
 	query := `

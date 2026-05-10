@@ -222,6 +222,13 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 	return nil
 }
 
+// Add an InitTokenBudgets function for test isolation
+func InitTokenBudgetsForTest() {
+	tokenMu.Lock()
+	defer tokenMu.Unlock()
+	tokenBudgets = make(map[string]int)
+}
+
 // Simulated server-side token budget tracking
 var tokenBudgets = map[string]int{
 	"org-1":      1000,

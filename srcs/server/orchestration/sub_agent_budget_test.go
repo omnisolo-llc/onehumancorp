@@ -9,6 +9,11 @@ import (
 )
 
 func TestSubAgentSpawner_TokenBudget(t *testing.T) {
+	InitTokenBudgetsForTest()
+	tokenMu.Lock()
+	tokenBudgets["org-budget-fail"] = 0
+	tokenMu.Unlock()
+
 	mesh := &mockMeshTransport{}
 	spawner := NewDefaultSubAgentSpawner(mesh, false, 0)
 

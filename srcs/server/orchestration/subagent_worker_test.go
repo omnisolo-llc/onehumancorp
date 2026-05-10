@@ -13,6 +13,9 @@ import (
 
 func setupTestDBForSubAgentWorker(t *testing.T) *sql.DB {
 	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	if err == nil {
+		db.SetMaxOpenConns(1)
+	}
 	require.NoError(t, err)
 
 	query := `

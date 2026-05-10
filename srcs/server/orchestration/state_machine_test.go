@@ -15,6 +15,9 @@ import (
 func setupSMTestDB(t *testing.T) *sql.DB {
 	// Need a persistent file or shared cache for concurrent sqlite memory tests
 	db, err := sql.Open("sqlite3", "file:memdb1?mode=memory&cache=shared")
+	if err == nil {
+		db.SetMaxOpenConns(1)
+	}
 	require.NoError(t, err)
 
 	_, err = db.Exec(`

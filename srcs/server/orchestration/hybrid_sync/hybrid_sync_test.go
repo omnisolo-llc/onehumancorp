@@ -17,6 +17,9 @@ import (
 
 func setupTestDB(t *testing.T) *sql.DB {
 	db, err := sql.Open("sqlite3", ":memory:")
+	if err == nil {
+		db.SetMaxOpenConns(1)
+	}
 	require.NoError(t, err)
 
 	_, err = db.Exec(`

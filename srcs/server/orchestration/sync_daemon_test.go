@@ -15,6 +15,9 @@ import (
 
 func setupSyncTestDB(t *testing.T) *sql.DB {
 	db, err := sql.Open("sqlite3", ":memory:")
+	if err == nil {
+		db.SetMaxOpenConns(1)
+	}
 	require.NoError(t, err)
 
 	_, err = db.Exec(`
@@ -271,6 +274,9 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 	defer ClearSemaphore()
 
 	db, err := sql.Open("sqlite3", ":memory:")
+	if err == nil {
+		db.SetMaxOpenConns(1)
+	}
 	require.NoError(t, err)
 	defer db.Close()
 
