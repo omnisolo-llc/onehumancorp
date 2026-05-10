@@ -33,7 +33,6 @@ pub mod provider;
 pub mod registry;
 pub mod plane;
 pub mod checkpointer;
-pub mod harness;
 pub mod legacy_mesh;
 pub mod langgraph;
 pub mod masking_tests;

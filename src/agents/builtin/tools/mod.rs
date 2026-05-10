@@ -88,8 +88,9 @@ pub fn all_tools(
     observation_store: Arc<dashmap::DashMap<String, String>>,
 ) -> Vec<Tool> {
     let runner = Arc::new(runner::RealCommandRunner);
+    let manager = Arc::new(ohc_builtin_agent_core::harness::Manager::new(ohc_builtin_agent_core::harness::Config::default()));
     let mut tools = vec![
-        bash::bash_tool(working_dir.clone(), runner.clone()),
+        bash::bash_tool(working_dir.clone(), manager.clone()),
         read::read_tool(working_dir.clone()),
         head::head_tool(working_dir.clone()),
         tail::tail_tool(working_dir.clone()),

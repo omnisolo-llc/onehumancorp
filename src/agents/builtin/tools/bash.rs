@@ -7,7 +7,7 @@ use super::{Tool, ToolExecutor};
 
 struct BashExecutor {
     working_dir: Option<std::path::PathBuf>,
-    runner: Arc<dyn crate::runner::CommandRunner>,
+    manager: Arc<ohc_builtin_agent_core::harness::Manager>,
 }
 
 #[async_trait::async_trait]
@@ -23,15 +23,25 @@ impl ToolExecutor for BashExecutor {
         let timeout_secs = args["timeout"].as_f64().unwrap_or(120.0);
         let timeout = Duration::from_secs_f64(timeout_secs.max(1.0).min(600.0));
 
-        let wd_ref = self.working_dir.as_deref();
-        let output_res = tokio::time::timeout(timeout, self.runner.run("bash", &["-c", &command], wd_ref, vec![])).await;
-        
+        let mut policy = ohc_builtin_agent_core::harness::Config::default().default_policy;
+        if let Some(wd) = &self.working_dir {
+            policy.allowed_paths.push(wd.to_string_lossy().to_string());
+            policy.working_dir = Some(wd.to_string_lossy().to_string());
+            policy.allow_read.push(wd.to_string_lossy().to_string());
+        }
+
+        // Use harness manager with LocalBackend for sandboxed execution
+        let output_res = tokio::time::timeout(
+            timeout,
+            self.manager.execute_with_policy(&command, Some(&policy), ohc_builtin_agent_core::harness::BackendType::Local)
+        ).await;
+
         let output = output_res
             .map_err(|_| ToolError::LlmRecoverable(format!("bash: command timed out after {}s", timeout_secs)))?
-            .map_err(|e| format!("bash: failed to execute: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| ToolError::LlmRecoverable(format!("bash: failed to execute in harness: {}", e)))?;
 
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let stdout = output.stdout;
+        let stderr = output.stderr;
 
         let mut result = String::new();
         if !stdout.is_empty() {
@@ -44,10 +54,10 @@ impl ToolExecutor for BashExecutor {
             result.push_str(&format!("STDERR:\n{}", stderr));
         }
 
-        if !output.status.success() && result.is_empty() {
+        if output.exit_code != 0 && result.is_empty() {
             result = format!(
                 "Command failed with exit code {}",
-                output.status.code().unwrap_or(-1)
+                output.exit_code
             );
         }
 
@@ -55,7 +65,7 @@ impl ToolExecutor for BashExecutor {
     }
 }
 
-pub fn bash_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
+pub fn bash_tool(working_dir: Option<std::path::PathBuf>, manager: Arc<ohc_builtin_agent_core::harness::Manager>) -> Tool {
     Tool {
         name: "Bash".to_string(),
         description: "Execute a bash command and return its output. \
@@ -77,6 +87,6 @@ pub fn bash_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate:
             },
             "required": ["command"]
         }),
-        execute: Arc::new(BashExecutor { working_dir, runner }),
+        execute: Arc::new(BashExecutor { working_dir, manager }),
     }
 }

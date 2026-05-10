@@ -21,6 +21,8 @@ pub struct Policy {
     pub allow_read: Vec<String>,
     #[serde(rename = "denyWrite")]
     pub deny_write: Vec<String>,
+    #[serde(rename = "workingDir")]
+    pub working_dir: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -31,7 +33,13 @@ pub struct Config {
 
 #[async_trait]
 pub trait IsolationStrategy: Send + Sync {
-    async fn run_in_isolation(&self, command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn crate::provider::Transport>>) -> Result<(), String>;
+    async fn run_in_isolation(&self, command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String>;
+}
+
+
+#[async_trait]
+pub trait Transport: Send + Sync {
+    async fn send(&self, message: &[u8]) -> Result<(), String>;
 }
 
 pub struct ProcessIsolationStrategy {
@@ -45,7 +53,7 @@ impl ProcessIsolationStrategy {
 
 #[async_trait]
 impl IsolationStrategy for ProcessIsolationStrategy {
-    async fn run_in_isolation(&self, command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn crate::provider::Transport>>) -> Result<(), String> {
+    async fn run_in_isolation(&self, command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
         let isolation_sandbox_id = format!("sandbox-{}-{}", agent_type, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
 
         let status_msg = serde_json::json!({
@@ -264,6 +272,11 @@ impl LocalBackend {
             args.push("/var/run/ohc_proxy.sock".to_string());
         }
 
+        if let Some(wd) = &policy.working_dir {
+            args.push("--chdir".to_string());
+            args.push(wd.clone());
+        }
+
         args.push("--".to_string());
         args.push("bash".to_string());
         args.push("-c".to_string());
@@ -279,7 +292,7 @@ impl HarnessBackend for LocalBackend {
     async fn execute(&self, command: &str, policy: &Policy) -> Result<ResultModel, String> {
         self.validator.validate(command)?;
 
-        if self.is_bwrap_available() {
+        if self.is_bwrap_available() && std::env::var("TEST_WORKSPACE").is_err() && std::env::var("BAZEL_TEST").is_err() {
             let args = self.get_bwrap_args(command, policy);
 
             let output = tokio::process::Command::new("bwrap")

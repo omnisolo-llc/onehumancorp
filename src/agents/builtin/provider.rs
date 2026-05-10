@@ -4,10 +4,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::collections::HashMap;
-#[async_trait]
-pub trait Transport: Send + Sync {
-    async fn send(&self, message: &[u8]) -> Result<(), String>;
-}
+pub use ohc_builtin_agent_core::harness::Transport;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash)]
 pub enum ProviderType {
@@ -84,9 +81,9 @@ impl BaseProvider {
 }
 
 async fn execute_in_isolation(command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-    use crate::harness::IsolationStrategy;
+    use ohc_builtin_agent_core::harness::IsolationStrategy;
 
-    let strategy = crate::harness::ProcessIsolationStrategy::new();
+    let strategy = ohc_builtin_agent_core::harness::ProcessIsolationStrategy::new();
     // Use the passed command directly
 
     strategy.run_in_isolation(&command, agent_type, worktree, transport).await
