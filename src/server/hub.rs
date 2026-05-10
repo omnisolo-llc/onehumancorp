@@ -750,6 +750,16 @@ impl Hub {
             db_ping > 0
         };
 
+        let sync_status = if sync_error_count > 0 {
+            "error"
+        } else if local_to_cloud_sync_queue > 10 {
+            "backlogged"
+        } else if local_to_cloud_sync_queue > 0 {
+            "syncing"
+        } else {
+            "synced"
+        };
+
         Ok(serde_json::json!({
             "mode": mode,
             "status": status,
@@ -759,6 +769,7 @@ impl Hub {
             "hybrid_mode_ready": hybrid_mode_ready,
             "local_to_cloud_sync_queue": local_to_cloud_sync_queue,
             "sync_error_count": sync_error_count,
+            "sync_status": sync_status,
         }))
     }
 }

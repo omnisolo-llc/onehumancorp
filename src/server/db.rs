@@ -822,23 +822,42 @@ pub async fn insert_autodream_memory(
     }
 
     pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
-        let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
+        let stuck_threshold = Utc::now() - chrono::Duration::seconds(timeout_secs / 2);
+        let fail_threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
+
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
-                    .bind(threshold.to_rfc3339())
+                let mut total = 0;
+                // Step 1: Mark PENDING/RUNNING missions as STUCK if they pass stuck_threshold
+                total += sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
+                    .bind(stuck_threshold.to_rfc3339())
                     .execute(sqlite_pool)
-                    .await?.rows_affected()
+                    .await?.rows_affected();
+
+                // Step 2: Transition STUCK to FAILED if they pass fail_threshold
+                total += sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' AND updated_at < ?")
+                    .bind(fail_threshold.to_rfc3339())
+                    .execute(sqlite_pool)
+                    .await?.rows_affected();
+
+                total
             },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 set_org_context(&mut *tx, "system").await?;
-                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
-                    .bind(threshold)
+
+                let stuck = sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
+                    .bind(stuck_threshold)
                     .execute(&mut *tx)
                     .await?.rows_affected();
+
+                let failed = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' AND updated_at < $1")
+                    .bind(fail_threshold)
+                    .execute(&mut *tx)
+                    .await?.rows_affected();
+
                 tx.commit().await?;
-                affected
+                stuck + failed
             }
         };
         if affected > 0 {

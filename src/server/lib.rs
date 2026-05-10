@@ -35,6 +35,8 @@ pub mod benchmarks;
 
 pub mod config;
 pub mod builder;
+#[cfg(test)]
+pub mod backlog_tests;
 use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
@@ -111,7 +113,7 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
 
     match crate::auth::parse_spiffe_id(spiffe_id_str) {
         Ok((_org_id, _agent_id)) => {
-            tracing::info!("Authenticated SPIFFE ID successfully.");
+            tracing::debug!("Authenticated SPIFFE ID successfully.");
         }
         Err(e) => return Err(tonic::Status::permission_denied(e)),
     }
