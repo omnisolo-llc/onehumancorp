@@ -1,4 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit } from "std-widgets.slint";
+import { TooltipElement } from "tooltip_element.slint";
+import { TooltipElement } from "tooltip_element.slint";
 import { GlassCard } from "glass_card.slint";
 import { AdvancedToggle } from "advanced_toggle.slint";
 
@@ -306,6 +308,8 @@ export component Pricing inherits Window {
                                     }
                                 }
                                 TouchArea { clicked => { select_plan(tier.name); } }
+                                TooltipElement { tooltip_id: "pricing_select"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } }
+                                TooltipElement { tooltip_id: "pricing_select"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } }
                             }
                         }
                     }

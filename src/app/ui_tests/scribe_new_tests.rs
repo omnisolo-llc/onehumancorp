@@ -16,15 +16,15 @@ fn test_scribe_tooltip_missing_id() {
 
     // Test a valid tooltip
     tr.invoke_show_tooltip("help_center".into(), 0.0, 0.0);
-    // assert!(tr.get_is_visible());
-    // assert_eq!(tr.get_active_text(), SharedString::from("Find answers and how-to guides."));
+    assert!(tr.get_is_visible());
+    assert_eq!(tr.get_active_text(), SharedString::from("Find answers and how-to guides."));
 
     // Test a missing ID, expecting it to clear or hide text, or text will be empty and is_visible remains true/false based on implementation.
     // Based on implementation: if (active_text != "") { ... is_visible = true }
     // which means if active_text == "", it shouldn't be set to true if it was false.
     tr.invoke_hide_tooltip();
     tr.invoke_show_tooltip("unknown_id".into(), 0.0, 0.0);
-    // assert_eq!(tr.get_active_text(), SharedString::from(""));
+    assert_eq!(tr.get_active_text(), SharedString::from(""));
     assert!(!tr.get_is_visible());
 }
 

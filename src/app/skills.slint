@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+import { TooltipElement } from "tooltip_element.slint";
 
 export struct UiSkill {
     name: string,
@@ -31,9 +32,9 @@ export component Skills inherits Window {
 
         HorizontalBox {
             spacing: 10px;
-            Button { text: "All"; clicked => { selected_category = "all"; } }
-            Button { text: "Builtin"; clicked => { selected_category = "builtin"; } }
-            Button { text: "Official"; clicked => { selected_category = "official"; } }
+            HorizontalBox { TooltipElement { tooltip_id: "skills_btn_all"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button { text: "All"; clicked => { selected_category = "all"; } } }
+            HorizontalBox { TooltipElement { tooltip_id: "skills_btn_builtin"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button { text: "Builtin"; clicked => { selected_category = "builtin"; } } }
+            HorizontalBox { TooltipElement { tooltip_id: "skills_btn_official"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button { text: "Official"; clicked => { selected_category = "official"; } } }
         }
 
         VerticalBox {
@@ -56,13 +57,13 @@ export component Skills inherits Window {
                             checked: s.enabled; 
                             toggled => { set_skill_enabled(s.name, !s.enabled); }
                         }
-                        if (s.installed) : Button { 
+                        if (s.installed) : HorizontalBox { TooltipElement { tooltip_id: "skills_btn_uninstall"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button {
                             text: "Remove"; 
-                            clicked => { uninstall_skill(s.name); }
+                            clicked => { uninstall_skill(s.name); } }
                         }
-                        if (!s.installed) : Button { 
+                        if (!s.installed) : HorizontalBox { TooltipElement { tooltip_id: "skills_btn_install"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button {
                             text: "Install"; 
-                            clicked => { install_skill(s.name); }
+                            clicked => { install_skill(s.name); } }
                         }
                     }
                     Text { text: s.description; color: #64748b; wrap: word-wrap; }

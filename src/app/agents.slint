@@ -1,5 +1,6 @@
 import { AdvancedToggle } from "advanced_toggle.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { TooltipElement } from "tooltip_element.slint";
 import { GlassCard } from "glass_card.slint";
 import { UpgradePrompt } from "./upgrade_prompt.slint";
 
@@ -49,7 +50,7 @@ export component Agents inherits Window {
                 is_advanced <=> root.is_advanced;
                 toggled => { toggle_advanced(); }
             }
-            Button { text: "Hire Agent"; clicked => { hire_agent(); } }
+            HorizontalBox { TooltipElement { tooltip_id: "agents_btn_hire"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button { text: "Hire Agent"; clicked => { hire_agent(); } } }
         }
 
         VerticalBox {
@@ -90,8 +91,8 @@ export component Agents inherits Window {
                             color: agent.is_running ? #10b981 : #ef4444; 
                             horizontal-alignment: center; 
                         }
-                        if (!agent.is_running) : Button { text: "Help me fix this"; clicked => { fix_agent(agent.id); } }
-                        Button { text: "Tune this agent"; clicked => { tune_agent(agent.id); } }
+                        if (!agent.is_running) : HorizontalBox { TooltipElement { tooltip_id: "agents_btn_fix"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button { text: "Help me fix this"; clicked => { fix_agent(agent.id); } } }
+                        HorizontalBox { TooltipElement { tooltip_id: "agents_btn_tune"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button { text: "Tune this agent"; clicked => { tune_agent(agent.id); } } }
                     }
                 }
             }

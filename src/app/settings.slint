@@ -99,13 +99,13 @@ export component Settings inherits Window {
                 HorizontalBox {
                     padding: 16px;
                     Text { text: "App Status: " + (local_service_running ? "Running" : "Stopped"); color: #1e293b; horizontal-alignment: center; }
-                    HorizontalBox { spacing: 8px; alignment: center; TooltipElement { tooltip_id: "settings_sync"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button {
+                    HorizontalBox { spacing: 8px; alignment: center; TooltipElement { tooltip_id: "settings_start_stop"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button {
                         text: local_service_running ? "Stop" : "Start";
                         clicked => { start_stop_service(); } }
                     }
                 }
             }
-            HorizontalBox { spacing: 8px; alignment: center; TooltipElement { tooltip_id: "settings_sync"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button {
+            HorizontalBox { spacing: 8px; alignment: center; TooltipElement { tooltip_id: "settings_fix_app"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button {
                 text: "Fix App Issues";
                 clicked => { run_doctor(); } }
             }
@@ -146,7 +146,7 @@ export component Settings inherits Window {
             clicked => { trigger_hybrid_sync(); } }
         }
 
-        HorizontalBox { spacing: 8px; alignment: center; TooltipElement { tooltip_id: "settings_sync"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button {
+        HorizontalBox { spacing: 8px; alignment: center; TooltipElement { tooltip_id: "settings_sign_out"; width: 20px; height: 20px; Text { text: "ℹ️"; color: #94a3b8; } } Button {
             text: "Sign Out";
             clicked => { sign_out(); } }
         }
