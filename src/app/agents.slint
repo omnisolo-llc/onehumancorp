@@ -63,7 +63,7 @@ export component Agents inherits Window {
             for agent in agents : GlassCard {
                 if (is_advanced) : VerticalBox {
                     padding: 8px;
-                    Text { text: "Raw Configuration JSON"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                    Text { text: "Advanced: Technical Details"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                     Text { text: "{ \"id\": \"" + agent.id + "\", \"role\": \"" + agent.role + "\" }"; font-family: "Inter"; font-size: 12px; color: #10b981; }
                 }
                 if (agent.is_new) : Rectangle {
