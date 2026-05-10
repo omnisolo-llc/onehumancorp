@@ -49,6 +49,7 @@ pub mod agent_config;
 pub mod daily_briefing;
 pub mod business_manager_ux;
 pub mod analytics_charts;
+pub mod in_person_pos_test;
 
 pub fn init() {
     #[cfg(not(target_arch = "wasm32"))]

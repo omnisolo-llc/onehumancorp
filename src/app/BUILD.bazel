@@ -34,6 +34,7 @@ rust_binary(
     data = [
         "advanced_toggle.slint",
         "agent_config.slint",
+        "in_person_pos.slint",
         "walkthrough.slint",
         "experiments.slint",
         "wizard.slint",
@@ -138,6 +139,7 @@ rust_test(
     data = [
         "advanced_toggle.slint",
         "agent_config.slint",
+        "in_person_pos.slint",
         "walkthrough.slint",
         "experiments.slint",
         "wizard.slint",

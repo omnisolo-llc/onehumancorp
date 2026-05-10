@@ -97,6 +97,7 @@ thread_local! {
     static GLOBAL_ANALYTICS_CHARTS: RefCell<Option<slint::Weak<app::AnalyticsCharts>>> = RefCell::new(None);
     static GLOBAL_BUSINESS_SHARE: RefCell<Option<slint::Weak<app::BusinessShare>>> = RefCell::new(None);
     static GLOBAL_BUSINESS_MANAGER: RefCell<Option<slint::Weak<app::BusinessManager>>> = RefCell::new(None);
+    static GLOBAL_IN_PERSON_POS: RefCell<Option<slint::Weak<app::InPersonPos>>> = RefCell::new(None);
     static GLOBAL_ORDERS_COMPLETED: RefCell<i32> = RefCell::new(0);
     static GLOBAL_VISITORS_COUNT: RefCell<i32> = RefCell::new(0);
     static GLOBAL_DIAGNOSTICS: RefCell<Option<slint::Weak<app::Diagnostics>>> = RefCell::new(None);
@@ -1715,6 +1716,60 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let in_person_pos_ui = app::InPersonPos::new().unwrap();
+    GLOBAL_IN_PERSON_POS.with(|g| *g.borrow_mut() = Some(in_person_pos_ui.as_weak()));
+
+    let in_person_pos_handle = in_person_pos_ui.as_weak();
+    in_person_pos_ui.on_action_close(move || {
+        if let Some(ui) = in_person_pos_handle.upgrade() {
+            let _ = ui.hide();
+        }
+    });
+
+    let in_person_pos_handle_checkout = in_person_pos_ui.as_weak();
+    in_person_pos_ui.on_action_proceed_to_checkout(move || {
+        if let Some(ui) = in_person_pos_handle_checkout.upgrade() {
+            ui.set_current_view("checkout".into());
+        }
+    });
+
+    let in_person_pos_handle_tap = in_person_pos_ui.as_weak();
+    in_person_pos_ui.on_action_tap_to_pay(move || {
+        if let Some(ui) = in_person_pos_handle_tap.upgrade() {
+            ui.set_current_view("processing".into());
+
+            // Simulate Stripe Terminal SDK payment processing
+            let ui_weak = ui.as_weak();
+            slint::Timer::single_shot(std::time::Duration::from_millis(2000), move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    ui.set_current_view("success".into());
+                }
+            });
+        }
+    });
+
+    let in_person_pos_handle_receipt = in_person_pos_ui.as_weak();
+    in_person_pos_ui.on_action_send_receipt(move |method| {
+        println!("Sent receipt via: {}", method);
+        if let Some(ui) = in_person_pos_handle_receipt.upgrade() {
+            let _ = ui.hide();
+            ui.set_current_view("cart".into());
+            ui.set_total_amount("$0.00".into());
+        }
+    });
+
+    let in_person_pos_handle_custom = in_person_pos_ui.as_weak();
+    in_person_pos_ui.on_action_add_custom_amount(move |amount_str| {
+        if let Some(ui) = in_person_pos_handle_custom.upgrade() {
+            if let Ok(amount) = amount_str.parse::<f64>() {
+                // Keep it simple for simulation
+                let current_total = ui.get_total_amount().replace("$", "").parse::<f64>().unwrap_or(0.0);
+                let new_total = current_total + amount;
+                ui.set_total_amount(format!("${:.2}", new_total).into());
+            }
+        }
+    });
+
     let business_manager_ui = app::BusinessManager::new().unwrap();
     GLOBAL_BUSINESS_MANAGER.with(|g| *g.borrow_mut() = Some(business_manager_ui.as_weak()));
 
@@ -2584,6 +2639,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let dashboard_handle = dashboard.as_weak();
                 let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
                 let add_product_called_clone = add_product_called.clone();
+
+                let dashboard_handle_clone_in_person_sale = dashboard_handle.clone();
+                dashboard.on_action_in_person_sale(move || {
+                    GLOBAL_IN_PERSON_POS.with(|pos| {
+                        if let Some(weak_pos) = pos.borrow().clone() {
+                            if let Some(pos_ui) = weak_pos.upgrade() {
+                                pos_ui.set_current_view("cart".into());
+                                pos_ui.set_total_amount("$0.00".into());
+                                pos_ui.set_custom_amount("".into());
+                                let _ = pos_ui.show();
+                            }
+                        }
+                    });
+                });
 
                 let dashboard_handle_clone_add_product = dashboard_handle.clone();
                 dashboard.on_action_add_product(move || {

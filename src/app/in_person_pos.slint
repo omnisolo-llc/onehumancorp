@@ -1,0 +1,185 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+import { Shimmer } from "shimmer.slint";
+
+export struct UiCartItem {
+    id: string,
+    name: string,
+    price: string,
+}
+
+export component InPersonPos inherits Window {
+    width: 375px;
+    height: 700px;
+    title: "In-Person Sale";
+    out property <string> test_title: root.title;
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    // Views: "cart", "checkout", "processing", "success"
+    in-out property <string> current_view: "cart";
+
+    in property <[UiCartItem]> cart_items;
+    in-out property <string> custom_amount: "";
+    in property <string> total_amount: "$0.00";
+
+    callback action_add_custom_amount(string);
+    callback action_clear_cart();
+    callback action_proceed_to_checkout();
+    callback action_tap_to_pay();
+    callback action_send_receipt(string);
+    callback action_close();
+
+    VerticalBox {
+        padding: 24px;
+        spacing: 20px;
+
+        HorizontalBox {
+            Text { text: "In-Person Sale"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            GlassCard {}
+            Button { text: "Close"; width: 60px; height: 36px; clicked => { action_close(); } }
+        }
+
+        // --- CART VIEW ---
+        if (current_view == "cart") : VerticalBox {
+            spacing: 20px;
+
+            // Custom Amount Entry
+            GlassCard {
+                border-color: rgba(255, 255, 255, 0.1);
+                border-width: 1px;
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+                    Text { text: "Custom Amount"; font-size: 16px; color: #94a3b8; font-family: "Inter"; }
+                    LineEdit {
+                        text <=> custom_amount;
+                        placeholder-text: "0.00";
+                        input-type: decimal;
+                        height: 60px;
+                        font-size: 24px;
+                    }
+                    Button {
+                        text: "Add to Cart";
+                        height: 44px;
+                        clicked => {
+                            action_add_custom_amount(custom_amount);
+                            custom_amount = "";
+                        }
+                    }
+                }
+            }
+
+            Text { text: "Current Cart"; font-size: 18px; font-weight: 700; color: white; font-family: "Outfit"; }
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 8px;
+                    for item in cart_items : GlassCard {
+                        background: rgba(255, 255, 255, 0.05);
+                        padding: 12px;
+                        HorizontalBox {
+                            Text { text: item.name; font-size: 16px; color: white; font-family: "Inter"; }
+                            GlassCard {}
+                            Text { text: item.price; font-size: 16px; font-weight: 700; color: #10b981; font-family: "Inter"; }
+                        }
+                    }
+                    if (cart_items.length == 0) : Text {
+                        text: "Cart is empty.";
+                        color: #94a3b8;
+                        font-size: 14px;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
+
+            GlassCard {
+                background: rgba(168, 85, 247, 0.2);
+                border-color: #a855f7;
+                border-width: 1px;
+                padding: 16px;
+                HorizontalBox {
+                    Text { text: "Total"; font-size: 20px; font-weight: 700; color: white; font-family: "Outfit"; }
+                    GlassCard {}
+                    Text { text: total_amount; font-size: 20px; font-weight: 700; color: #10b981; font-family: "Inter"; }
+                }
+            }
+
+            HorizontalBox {
+                spacing: 12px;
+                Button { text: "Clear"; height: 50px; width: 80px; clicked => { action_clear_cart(); } }
+                Button {
+                    text: "Charge " + total_amount;
+                    height: 50px;
+                    primary: true;
+                    clicked => { action_proceed_to_checkout(); }
+                }
+            }
+        }
+
+        // --- CHECKOUT VIEW ---
+        if (current_view == "checkout") : VerticalBox {
+            spacing: 32px;
+            alignment: center;
+
+            Text {
+                text: "Total: " + total_amount;
+                font-size: 32px;
+                font-weight: 700;
+                color: white;
+                font-family: "Outfit";
+                horizontal-alignment: center;
+            }
+
+            GlassCard {
+                background: rgba(59, 130, 246, 0.2);
+                border-radius: 100px;
+                width: 200px;
+                height: 200px;
+                HorizontalBox { alignment: center; VerticalBox { alignment: center;
+                    Text { text: "📱"; font-size: 64px; horizontal-alignment: center; }
+                    Text { text: "Present to Customer"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; }
+                    Text { text: "Tap to Pay on iPhone/Android"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; }
+                }}
+
+                TouchArea {
+                    clicked => { action_tap_to_pay(); }
+                }
+            }
+
+            Button { text: "Cancel"; height: 44px; clicked => { current_view = "cart"; } }
+        }
+
+        // --- PROCESSING VIEW ---
+        if (current_view == "processing") : VerticalBox {
+            spacing: 24px;
+            alignment: center;
+
+            Shimmer {
+                width: 100px;
+                height: 100px;
+                border-radius: 50px;
+            }
+            Text { text: "Processing Payment..."; font-size: 20px; color: white; font-weight: 700; horizontal-alignment: center; font-family: "Outfit"; }
+            Text { text: "Please wait."; font-size: 14px; color: #94a3b8; horizontal-alignment: center; }
+        }
+
+        // --- SUCCESS VIEW ---
+        if (current_view == "success") : VerticalBox {
+            spacing: 24px;
+            alignment: center;
+
+            Text { text: "✅"; font-size: 80px; horizontal-alignment: center; }
+            Text { text: "Payment Successful!"; font-size: 24px; font-weight: 700; color: white; horizontal-alignment: center; font-family: "Outfit"; }
+            Text { text: total_amount + " has been added to your ledger."; font-size: 16px; color: #10b981; horizontal-alignment: center; }
+
+            VerticalBox {
+                spacing: 12px;
+                Text { text: "Send Receipt"; font-size: 16px; color: white; font-weight: 700; font-family: "Outfit"; }
+                Button { text: "Email Receipt"; height: 44px; clicked => { action_send_receipt("email"); } }
+                Button { text: "SMS Receipt"; height: 44px; clicked => { action_send_receipt("sms"); } }
+                Button { text: "No Receipt"; height: 44px; clicked => { action_close(); } }
+            }
+        }
+    }
+}
