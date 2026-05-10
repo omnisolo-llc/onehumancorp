@@ -44,8 +44,10 @@ impl MemoryBus {
 impl Bus for MemoryBus {
     async fn publish(&self, msg: Message) -> Result<(), String> {
         let subs = self.subs.lock().await;
-        if let Some(tx) = subs.get(&msg.topic) {
-            let _ = tx.send(msg);
+        for (topic, tx) in subs.iter() {
+            if msg.topic == *topic || (topic.ends_with(':') && msg.topic.starts_with(topic)) {
+                let _ = tx.send(msg.clone());
+            }
         }
         Ok(())
     }
@@ -162,14 +164,19 @@ impl Bus for RedisBus {
         use futures_util::StreamExt;
 
         let mut pubsub = self.client.get_async_pubsub().await.map_err(|e| e.to_string())?;
-        pubsub.subscribe(&topic).await.map_err(|e| e.to_string())?;
+        if topic.ends_with(':') {
+            pubsub.psubscribe(format!("{}*", topic)).await.map_err(|e| e.to_string())?;
+        } else {
+            pubsub.subscribe(&topic).await.map_err(|e| e.to_string())?;
+        }
         let mut stream = pubsub.into_on_message();
 
         let worker = tokio::spawn(async move {
             while let Some(msg) = stream.next().await {
                 if let Ok(buf) = msg.get_payload::<Vec<u8>>() {
                     use prost::Message as ProstMessage;
-                    let m = Message::decode(&buf[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![] });
+                    let topic_name = msg.get_channel_name().to_string();
+                    let m = Message::decode(&buf[..]).unwrap_or_else(|_| Message { topic: topic_name, payload: vec![] });
                     handler(m);
                 }
             }
@@ -276,10 +283,12 @@ impl IpcBus {
                     let s = subs.lock().await;
                     for (id, topic, payload_buf) in &results {
                         last_id = *id;
-                        if let Some(tx) = s.get(topic) {
-                            use prost::Message as ProstMessage;
-                            let m = Message::decode(&payload_buf[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![] });
-                            let _ = tx.send(m);
+                        for (sub_topic, tx) in s.iter() {
+                            if topic == sub_topic || (sub_topic.ends_with(':') && topic.starts_with(sub_topic)) {
+                                use prost::Message as ProstMessage;
+                                let m = Message::decode(&payload_buf[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![] });
+                                let _ = tx.send(m);
+                            }
                         }
                     }
                     if !results.is_empty() {
@@ -380,9 +389,11 @@ impl Bus for NatsBus {
         let mut buf = Vec::new();
         msg.encode(&mut buf).unwrap();
 
+        let nats_topic = msg.topic.replace(":", ".");
+
         let mut retries = 0;
         loop {
-            match self.client.publish(msg.topic.clone(), buf.clone().into()).await {
+            match self.client.publish(nats_topic.clone(), buf.clone().into()).await {
                 Ok(_) => return Ok(()),
                 Err(e) => {
                     if retries >= 3 {
@@ -398,12 +409,17 @@ impl Bus for NatsBus {
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         use futures_util::StreamExt;
 
-        let mut subscriber = self.client.subscribe(topic.clone()).await.map_err(|e| e.to_string())?;
+        let subscribe_topic = if topic.ends_with(':') {
+            format!("{}>", topic.replace(":", "."))
+        } else {
+            topic.replace(":", ".")
+        };
+        let mut subscriber = self.client.subscribe(subscribe_topic).await.map_err(|e| e.to_string())?;
 
         let worker = tokio::spawn(async move {
             while let Some(msg) = subscriber.next().await {
                 use prost::Message as ProstMessage;
-                let m = Message::decode(&msg.payload[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![] });
+                let m = Message::decode(&msg.payload[..]).unwrap_or_else(|_| Message { topic: msg.subject.to_string().replace(".", ":"), payload: vec![] });
                 handler(m);
             }
         });
