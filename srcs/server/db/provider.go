@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Provider struct {
@@ -118,3 +119,22 @@ func (p *Provider) ClaimTask(ctx context.Context, taskID string) error {
 }
 
 var GlobalProvider = &Provider{}
+
+func NewSqliteProvider(db *sql.DB) *Provider {
+	os.Setenv("OHC_STANDALONE", "true")
+	return &Provider{
+		DB: db,
+	}
+}
+
+func NewTestProvider(t interface{}) *Provider {
+	os.Setenv("OHC_STANDALONE", "true")
+	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	if err != nil {
+		panic(err)
+	}
+	// For testing, we also might need to create tables, but let the tests handle that.
+	return &Provider{
+		DB: db,
+	}
+}
