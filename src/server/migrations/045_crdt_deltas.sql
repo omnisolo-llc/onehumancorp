@@ -15,3 +15,6 @@ CREATE TABLE IF NOT EXISTS local_mcp_rag_tasks (
     payload TEXT NOT NULL,
     escalation_status TEXT NOT NULL
 );
+
+ALTER TABLE crdt_deltas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE local_mcp_rag_tasks ENABLE ROW LEVEL SECURITY;
