@@ -592,6 +592,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
                                         let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                let scribe_iw_handle = interactive_walkthrough_handle.clone();
                                         dashboard.on_open_interactive_walkthrough(move || {
                                             if let Some(ui) = interactive_walkthrough_handle.upgrade() {
                                                 let _ = ui.show();
@@ -600,6 +601,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                                         let video_tutorials_handle = video_tutorials_ui.as_weak();
+                let scribe_vt_handle = video_tutorials_handle.clone();
                                         dashboard.on_open_video_tutorials(move || {
                                             if let Some(ui) = video_tutorials_handle.upgrade() {
                                                 // Ideally, we'd fetch these from the backend here. For now, since Slint UI tests run without backend, we populate it synchronously if empty or we could make a gRPC call.
@@ -654,6 +656,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         ];
                                         api_docs_ui.set_endpoints(slint::ModelRc::new(slint::VecModel::from(models)));
                                         let api_docs_handle = api_docs_ui.as_weak();
+                let scribe_ad_handle = api_docs_handle.clone();
 
                                         api_docs_ui.on_test_endpoint({
                                             let docs_handle = api_docs_ui.as_weak();
@@ -709,6 +712,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             });
                                         }
                                         let release_notes_handle = release_notes_ui.as_weak();
+                let scribe_rn_handle = release_notes_handle.clone();
                                         dashboard.on_open_release_notes(move || {
                                             if let Some(ui) = release_notes_handle.upgrade() {
                                                 let _ = ui.show();
@@ -853,6 +857,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
                                         let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                let scribe_iw_handle = interactive_walkthrough_handle.clone();
                                         dashboard.on_open_interactive_walkthrough(move || {
                                             if let Some(ui) = interactive_walkthrough_handle.upgrade() {
                                                 let _ = ui.show();
@@ -861,6 +866,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                                         let video_tutorials_handle = video_tutorials_ui.as_weak();
+                let scribe_vt_handle = video_tutorials_handle.clone();
                                         dashboard.on_open_video_tutorials(move || {
                                             if let Some(ui) = video_tutorials_handle.upgrade() {
                                                 let _ = ui.show();
@@ -869,6 +875,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let api_docs_ui = app::ApiDocs::new().unwrap();
                                         let api_docs_handle = api_docs_ui.as_weak();
+                let scribe_ad_handle = api_docs_handle.clone();
                                         dashboard.on_open_api_docs(move || {
                                             if let Some(ui) = api_docs_handle.upgrade() {
                                                 let _ = ui.show();
@@ -909,6 +916,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             });
                                         }
                                         let release_notes_handle = release_notes_ui.as_weak();
+                let scribe_rn_handle = release_notes_handle.clone();
                                         dashboard.on_open_release_notes(move || {
                                             if let Some(ui) = release_notes_handle.upgrade() {
                                                 let _ = ui.show();
@@ -3194,9 +3202,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 let help_center_handle = help_center_ui.as_weak();
+                let scribe_hc_handle = help_center_handle.clone();
 
                 let ai_chat_ui = app::AiHelpChat::new().unwrap();
                 let ai_chat_handle = ai_chat_ui.as_weak();
+                let scribe_ai_handle = ai_chat_handle.clone();
 
 
                 let kairos_orchestration_walkthrough_ui = app::KairosOrchestrationWalkthrough::new().unwrap();
@@ -3219,9 +3229,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let interactive_walkthrough_ui = app::InteractiveWalkthrough::new().unwrap();
                 let interactive_walkthrough_handle = interactive_walkthrough_ui.as_weak();
+                let scribe_iw_handle = interactive_walkthrough_handle.clone();
 
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
+                let scribe_vt_handle = video_tutorials_handle.clone();
 
                 let api_docs_ui = app::ApiDocs::new().unwrap();
                 let models = vec![
@@ -3238,6 +3250,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ];
                 api_docs_ui.set_endpoints(slint::ModelRc::new(slint::VecModel::from(models)));
                 let api_docs_handle = api_docs_ui.as_weak();
+                let scribe_ad_handle = api_docs_handle.clone();
 
                 api_docs_ui.on_test_endpoint({
                     let docs_handle = api_docs_ui.as_weak();
@@ -3287,6 +3300,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             });
                                         }
                 let release_notes_handle = release_notes_ui.as_weak();
+                let scribe_rn_handle = release_notes_handle.clone();
 
                 let scribe_feature_dashboard_ui = app::ScribeFeatureDashboard::new().unwrap();
                 let scribe_dashboard_ui = scribe_feature_dashboard_ui.as_weak();
@@ -3364,11 +3378,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
+                let scribe_dashboard_ui_clone = scribe_dashboard_ui.clone();
                 dashboard.on_open_scribe_feature_dashboard(move || {
-                    if let Some(ui) = scribe_dashboard_ui.upgrade() {
+                    if let Some(ui) = scribe_dashboard_ui_clone.upgrade() {
                         let _ = ui.show();
                     }
                 });
+
+                if let Some(scribe_ui) = scribe_dashboard_ui.upgrade() {
+                    scribe_ui.on_open_help_center(move || {
+                        if let Some(ui) = scribe_hc_handle.upgrade() {
+                            let _ = ui.show();
+                        }
+                    });
+
+                    scribe_ui.on_open_ai_chat(move || {
+                        if let Some(ui) = scribe_ai_handle.upgrade() {
+                            let _ = ui.show();
+                        }
+                    });
+
+                    scribe_ui.on_open_walkthrough(move || {
+                        if let Some(ui) = scribe_iw_handle.upgrade() {
+                            let _ = ui.show();
+                        }
+                    });
+
+                    scribe_ui.on_open_video_tutorials(move || {
+                        if let Some(ui) = scribe_vt_handle.upgrade() {
+                            let _ = ui.show();
+                        }
+                    });
+
+                    scribe_ui.on_open_api_docs(move || {
+                        if let Some(ui) = scribe_ad_handle.upgrade() {
+                            let _ = ui.show();
+                        }
+                    });
+
+                    scribe_ui.on_open_release_notes(move || {
+                        if let Some(ui) = scribe_rn_handle.upgrade() {
+                            let _ = ui.show();
+                        }
+                    });
+                }
 
                 let dashboard_handle_for_visitors = dashboard.as_weak();
                 slint::Timer::single_shot(std::time::Duration::from_secs(5), move || {
