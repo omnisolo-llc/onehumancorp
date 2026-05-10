@@ -7,6 +7,7 @@ pub struct HybridCache<T> {
     local: OnceLock<RwLock<HashMap<String, (T, std::time::Instant)>>>,
     redis_client: Option<redis::Client>,
     redis_conn: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
+    max_local_capacity: usize,
 }
 
 impl<T> HybridCache<T>
@@ -18,6 +19,16 @@ where
             local: OnceLock::new(),
             redis_client,
             redis_conn: tokio::sync::OnceCell::new(),
+            max_local_capacity: 1000,
+        }
+    }
+
+    pub fn with_capacity(redis_client: Option<redis::Client>, capacity: usize) -> Self {
+        Self {
+            local: OnceLock::new(),
+            redis_client,
+            redis_conn: tokio::sync::OnceCell::new(),
+            max_local_capacity: capacity,
         }
     }
 
@@ -78,6 +89,23 @@ where
 
     fn set_local(&self, key: &str, value: T, ttl: Duration) {
         if let Ok(mut guard) = self.get_local().write() {
+            if guard.len() >= self.max_local_capacity && !guard.contains_key(key) {
+                let now = std::time::Instant::now();
+                let keys_to_remove: Vec<String> = guard.iter()
+                    .filter(|(_, (_, expiry))| *expiry <= now)
+                    .map(|(k, _)| k.clone())
+                    .collect();
+
+                for k in keys_to_remove {
+                    guard.remove(&k);
+                }
+
+                if guard.len() >= self.max_local_capacity {
+                    if let Some(k) = guard.keys().next().cloned() {
+                        guard.remove(&k);
+                    }
+                }
+            }
             guard.insert(key.to_string(), (value, std::time::Instant::now() + ttl));
         }
     }
@@ -90,5 +118,21 @@ where
             use redis::AsyncCommands;
             let _: Result<(), _> = conn.del(key).await;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_hybrid_cache_capacity_eviction() {
+        let cache = HybridCache::<String>::with_capacity(None, 2);
+        cache.set("k1", "v1".to_string(), Duration::from_secs(60)).await;
+        cache.set("k2", "v2".to_string(), Duration::from_secs(60)).await;
+        cache.set("k3", "v3".to_string(), Duration::from_secs(60)).await;
+
+        let local = cache.get_local().read().unwrap();
+        assert_eq!(local.len(), 2);
     }
 }
