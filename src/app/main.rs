@@ -2461,13 +2461,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let resp: Result<tonic::Response<_>, tonic::Status> = client.get_quota(tonic::Request::new(ohc::orchestration::GetQuotaRequest { user_id: "current_user".into() })).await;
                             if let Ok(resp) = resp {
                                 let quota: ohc::orchestration::QuotaMetrics = resp.into_inner();
-                                let used = quota.used;
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = dashboard_handle_inner.upgrade() {
-                                        if used >= 10 { // Free tier limit
-                                            ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.".into());
+                                        if quota.soft_limit_reached {
+                                            ui.set_upgrade_prompt_message(quota.upgrade_message.into());
                                             ui.set_show_upgrade_prompt(true);
-                                            ui.invoke_action_failed("Tier limit reached: 10 products".into());
+                                            if !quota.is_allowed {
+                                                ui.invoke_action_failed("Limit reached: action not allowed".into());
+                                            }
                                         } else {
                                             // Handle success case
                                             // We could log or do something else here, but to avoid regressions, we don't block
@@ -3292,11 +3293,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let resp: Result<tonic::Response<_>, tonic::Status> = client.get_analytics(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                 if let Ok(resp) = resp {
                     let analytics: ohc::orchestration::AnalyticsSummaryResponse = resp.into_inner();
-                    let total_agents = analytics.total_agents;
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = agents_ui_handle_inner.upgrade() {
-                            if total_agents >= 1 {
-                                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
+                            if analytics.soft_limit_reached {
+                                ui.set_upgrade_prompt_message(analytics.upgrade_message.into());
                                 ui.set_show_upgrade_prompt(true);
                             } else {
                                 if let Some(config_ui) = agent_config_handle_inner.upgrade() {
@@ -6271,7 +6271,7 @@ dashboard_ui.on_action_grow_business(move || {
         let agents_ui_handle = agents_ui.as_weak();
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
+                ui.set_upgrade_prompt_message("You've reached your Free tier limit of 1 agent. Upgrade to unlock more power!".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
@@ -6613,14 +6613,14 @@ mod remaining_e2e_tests {
         let agents_ui_handle = agents_ui.as_weak();
         agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
-                ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
+                ui.set_upgrade_prompt_message("You've reached your Free tier limit of 1 agent. Upgrade to unlock more power!".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
         agents_ui.invoke_hire_agent();
         assert!(agents_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when hiring agent beyond free tier limit");
-        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.");
+        assert_eq!(agents_ui.get_upgrade_prompt_message(), "You've reached your Free tier limit of 1 agent. Upgrade to unlock more power!");
 
         let wb_ui = app::WebsiteBuilder::new().unwrap();
         wb_ui.set_domain_choice("subdomain".into());
