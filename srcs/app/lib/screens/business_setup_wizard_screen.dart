@@ -33,6 +33,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   late Animation<double> _pulseAnimation;
 
   bool _showWalkthrough = true;
+  bool _isGenerating = false;
 
   @override
   void initState() {
@@ -793,13 +794,23 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 ),
                 const SizedBox(height: 10),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: _isGenerating ? null : () async {
+                    setState(() { _isGenerating = true; });
+                    await ref.read(wizardProvider.notifier).autoGenerateProductDescription();
+                    if (mounted) {
+                      setState(() { _isGenerating = false; });
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white.withOpacity(0.1),
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Center(child: Text('✨ Auto-generate description', style: TextStyle(color: Colors.white))),
+                  child: Center(
+                    child: _isGenerating
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('✨ Auto-generate description', style: TextStyle(color: Colors.white))
+                  ),
                 ),
                 const SizedBox(height: 15),
                 const Text('Price', style: TextStyle(color: Colors.white70, fontSize: 14)),
