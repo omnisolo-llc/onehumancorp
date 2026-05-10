@@ -18,7 +18,7 @@ message StateHandoff {
   DeploymentMode source_mode = 3;
   DeploymentMode target_mode = 4;
   int64 timestamp_ms = 5;
-  bytes state_snapshot_json = 6;
+  bytes state_snapshot = 6;
 }
 
 // HealthPing is broadcasted across the Swarm to check connectivity.
@@ -40,7 +40,7 @@ message JobDispatch {
   string job_id = 1;
   string tenant_id = 2;
   string action_name = 3;
-  bytes payload_json = 4;
+  bytes payload = 4;
   int64 timestamp_ms = 5;
 }
 
