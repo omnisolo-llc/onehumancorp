@@ -5,7 +5,7 @@ use crate::tasks::SharedTask;
 use chrono::Utc;
 
 use opentelemetry::global;
-use opentelemetry::trace::{Tracer, TraceContextExt};
+use opentelemetry::trace::Tracer;
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,
@@ -886,7 +886,7 @@ mod chaos_tests {
         let mut success = 0;
         let mut failed = 0;
         for handle in handles {
-            let (res, elapsed) = handle.await.unwrap();
+            let (res, _elapsed) = handle.await.unwrap();
             match res {
                 Ok(Some(_task)) => success += 1,
                 Ok(None) => success += 1,
@@ -948,7 +948,7 @@ mod chaos_tests {
         let mut success = 0;
         let mut failed = 0;
         for handle in handles {
-            let (res, elapsed) = handle.await.unwrap();
+            let (res, _elapsed) = handle.await.unwrap();
             match res {
                 Ok(Some(_task)) => success += 1,
                 Ok(None) => success += 1,

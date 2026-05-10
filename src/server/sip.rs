@@ -368,6 +368,21 @@ mod tests {
         std::fs::remove_dir_all(&dir_str).unwrap();
     }
 
+
+    #[tokio::test]
+    async fn test_prune_stale_missions_hygiene() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(10))
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
+
+        let sip_db = SipDB::new(pool, "test_org".to_string());
+        let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
+        // Verify it handles the dummy pool without panic
+        assert!(res.is_err());
+    }
+
     #[tokio::test]
     async fn test_prune_stale_missions_marks_stuck_as_failed() {
         // Just verify it doesn't crash on execution with a valid pool.

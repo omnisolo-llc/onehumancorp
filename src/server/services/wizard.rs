@@ -195,6 +195,22 @@ impl WizardService for MyWizardService {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_wizard_health_probe() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if db_url.is_empty() { return; }
+
+        let svc = MyWizardService::new();
+        let req = tonic::Request::new(crate::ohc::orchestration::EmptyRequest {});
+        let resp = svc.verify_onboarding(req).await;
+        assert!(resp.is_ok());
+
+        let diagnostics = resp.unwrap().into_inner().diagnostics;
+        let has_sync_probe = diagnostics.iter().any(|d| d.check == "LOCAL_TO_CLOUD_MISSION_SYNC" || d.check == "LOCAL_TO_CLOUD_SYNC");
+        assert!(has_sync_probe, "Diagnostic health probe for mission sync is missing");
+    }
+
     use tonic::Request;
     use crate::ohc::orchestration::EmptyRequest;
     use std::sync::Mutex;
