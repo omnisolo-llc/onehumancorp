@@ -219,3 +219,38 @@ fn test_landing_title() {
     let ui = crate::app::Landing::new().unwrap();
     assert_eq!(ui.get_test_title(), slint::SharedString::from("OneHumanCorp"));
 }
+
+#[test]
+fn test_billing_wizard_e2e() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    // Simulate opening billing from Dashboard
+    let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let billing_opened_clone = billing_opened.clone();
+
+    let db_ui = crate::app::Dashboard::new().unwrap();
+    db_ui.on_open_billing(move || {
+        *billing_opened_clone.borrow_mut() = true;
+    });
+
+    db_ui.invoke_open_billing();
+    assert!(*billing_opened.borrow(), "Billing should be opened from Dashboard");
+
+    let billing_ui = crate::app::Billing::new().unwrap();
+
+    // Verify initial step (0)
+    assert_eq!(billing_ui.get_step(), 0, "Billing should start at step 0");
+
+    // Move to step 1
+    billing_ui.invoke_next_step();
+    assert_eq!(billing_ui.get_step(), 1, "Billing should move to step 1");
+
+    // Move to step 2
+    billing_ui.invoke_next_step();
+    assert_eq!(billing_ui.get_step(), 2, "Billing should move to step 2");
+
+    // Move back to step 1
+    billing_ui.invoke_prev_step();
+    assert_eq!(billing_ui.get_step(), 1, "Billing should go back to step 1");
+}

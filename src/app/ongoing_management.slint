@@ -196,17 +196,23 @@ export component Billing inherits Window {
     title: "Billing & Credits";
 
     in-out property <bool> is_advanced: false;
+    in-out property <int> step: 0;
+
     callback save_state();
+    callback next_step();
+    callback prev_step();
+
+    next_step => { step = step + 1; }
+    prev_step => { step = step - 1; }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     VerticalBox {
         spacing: 20px;
         padding: 32px;
-        alignment: center;
 
         HorizontalBox {
-            Text { text: "How much does this cost?"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
+            Text { text: "What does this cost?"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
             Rectangle {}
             AdvancedToggle {
                 is_advanced <=> root.is_advanced;
@@ -214,31 +220,102 @@ export component Billing inherits Window {
             }
         }
 
-        GlassCard {
-            VerticalBox {
-                padding: 16px;
-                spacing: 8px;
-                alignment: center;
-                Text { text: "Current Usage"; color: white; font-family: "Inter"; font-size: 14px; }
-                Text { text: "$42.50"; font-size: 32px; font-weight: 700; color: #a855f7; font-family: "Outfit"; }
-                Text { text: "Projected monthly cost: $85.00"; color: #94a3b8; font-size: 12px; font-family: "Inter"; }
+        // Step 0: Current Usage
+        if (step == 0) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Current Usage"; color: white; font-family: "Inter"; font-size: 18px; font-weight: 700; }
 
-                if (is_advanced) : VerticalBox {
-                    Rectangle { height: 16px; }
-                    Text { text: "Word Usage Breakdown:"; color: white; font-family: "Inter"; font-size: 12px; }
-                    Text { text: "• OpenAI Helper: 1,245,000 words processed"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
-                    Text { text: "• Google Helper: 450,000 words processed"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+            GlassCard {
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    alignment: center;
+                    Text { text: "You've used"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    Text { text: "$42.50"; font-size: 32px; font-weight: 700; color: #a855f7; font-family: "Outfit"; }
+                    Text { text: "this month."; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
                 }
+            }
+
+            Text { text: "Your current plan includes 1000 AI tasks per day. You have used 450 today."; color: white; wrap: word-wrap; font-family: "Inter"; font-size: 14px; }
+
+            if (is_advanced) : VerticalBox {
+                Rectangle { height: 16px; }
+                Text { text: "Word Usage Breakdown:"; color: white; font-family: "Inter"; font-size: 12px; }
+                Text { text: "• OpenAI Helper: 1,245,000 words processed"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                Text { text: "• Google Helper: 450,000 words processed"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
             }
         }
 
-        Text { text: "Your current plan includes 1000 AI tasks per day. You have used 450 today."; color: white; wrap: word-wrap; font-family: "Inter"; font-size: 14px; }
+        // Step 1: Projected Cost
+        if (step == 1) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Projected Cost"; color: white; font-family: "Inter"; font-size: 18px; font-weight: 700; }
 
+            GlassCard {
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    alignment: center;
+                    Text { text: "Projected monthly cost:"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    Text { text: "$85.00"; font-size: 32px; font-weight: 700; color: #10b981; font-family: "Outfit"; }
+                }
+            }
+
+            Text { text: "Based on your current activity, we estimate your final bill for the month will be around $85.00."; color: white; wrap: word-wrap; font-family: "Inter"; font-size: 14px; }
+
+            if (is_advanced) : VerticalBox {
+                Rectangle { height: 16px; }
+                Text { text: "Projection Details:"; color: white; font-family: "Inter"; font-size: 12px; }
+                Text { text: "• Daily average: $2.83"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                Text { text: "• Remaining days: 15"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+            }
+        }
+
+        // Step 2: Manage Plan
+        if (step == 2) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Manage Credits"; color: white; font-family: "Inter"; font-size: 18px; font-weight: 700; }
+
+            Text { text: "Need more tasks? You can add credits or upgrade your plan anytime."; color: white; wrap: word-wrap; font-family: "Inter"; font-size: 14px; }
+
+            GlassCard {
+                background: rgba(168, 85, 247, 0.2);
+                VerticalBox {
+                    padding: 16px;
+                    alignment: center;
+                    Text { text: "Current Balance: $10.00"; color: white; font-family: "Inter"; font-size: 16px; font-weight: 700; }
+                }
+            }
+
+            HorizontalBox {
+                spacing: 10px;
+                alignment: center;
+                Button { text: "Add credits"; }
+                Button { text: "Upgrade plan"; }
+            }
+        }
+
+        Rectangle {} // Spacer
+
+        // Navigation
         HorizontalBox {
-            spacing: 10px;
-            alignment: center;
-            Button { text: "Add Credits"; }
-            Button { text: "Switch Plan"; }
+            if (step > 0) : GlassCard {
+                width: 100px;
+                height: 44px;
+                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { prev_step(); } }
+            }
+            if (step == 0) : Rectangle { width: 100px; } // spacer
+
+            Rectangle {} // Center spacer
+
+            if (step < 2) : GlassCard {
+                width: 120px;
+                height: 44px;
+                background: rgba(168, 85, 247, 0.8);
+                VerticalBox { alignment: center; Text { text: "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { next_step(); } }
+            }
         }
     }
 }
