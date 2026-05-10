@@ -40,8 +40,8 @@ fn create() -> app::AgentConfig { crate::ui_tests::init(); app::AgentConfig::new
 
 #[test] fn agentcfg_advanced_state_bindings() {
     let ui = create();
-    ui.set_api_scope_override("test_api".into());
-    assert_eq!(ui.get_api_scope_override(), "test_api");
+    ui.set_capability_permissions("test_api".into());
+    assert_eq!(ui.get_capability_permissions(), "test_api");
 
     ui.set_cron_override("test_cron".into());
     assert_eq!(ui.get_cron_override(), "test_cron");

@@ -117,7 +117,7 @@ fn test_scribe_video_tutorials() {
 #[test]
 fn test_scribe_api_docs() {
     crate::ui_tests::init();
-    let ui = crate::app::ApiDocs::new().unwrap();
+    let ui = crate::app::AppConnectors::new().unwrap();
 
     assert!(!ui.get_is_advanced(), "Advanced docs hidden by default");
     ui.set_is_advanced(true);

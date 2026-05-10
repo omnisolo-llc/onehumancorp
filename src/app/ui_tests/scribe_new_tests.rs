@@ -31,7 +31,7 @@ fn test_scribe_tooltip_missing_id() {
 #[test]
 fn test_scribe_api_docs_test_endpoint_valid() {
     crate::ui_tests::init();
-    let ui = app::ApiDocs::new().unwrap();
+    let ui = app::AppConnectors::new().unwrap();
 
     assert!(!ui.get_is_advanced());
     ui.set_is_advanced(true);

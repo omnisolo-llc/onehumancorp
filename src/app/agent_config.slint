@@ -24,7 +24,7 @@ export component AgentConfig inherits Window {
     in-out property <bool> is_advanced: false;
     callback toggle_advanced();
     in-out property <bool> show_toast: false;
-    in-out property <string> api_scope_override: "";
+    in-out property <string> capability_permissions: "";
     in-out property <string> cron_override: "";
     in-out property <string> raw_activation_payload: "";
 
@@ -139,8 +139,8 @@ export component AgentConfig inherits Window {
         if (step == 1) : VerticalBox {
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Developer: Capability API Scope (JSON)"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                LineEdit { placeholder-text: "[\"read:messages\", \"write:messages\"]"; text <=> api_scope_override; }
+                Text { text: "Advanced: Agent Capability Permissions"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "[\"read:messages\", \"write:messages\"]"; text <=> capability_permissions; }
             }
             spacing: 16px;
             Text { text: "What specific tasks should this helper do?"; color: white; font-family: "Inter"; }
@@ -224,7 +224,7 @@ export component AgentConfig inherits Window {
                         next_step();
                     } else {
                         show_toast = true;
-                        activate_agent(selected_agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency, api_scope_override, cron_override, raw_activation_payload);
+                        activate_agent(selected_agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency, capability_permissions, cron_override, raw_activation_payload);
                     }
                 }
             }

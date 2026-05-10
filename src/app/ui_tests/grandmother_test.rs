@@ -12,7 +12,7 @@ fn test_login_plain_language() {
 fn test_api_docs_plain_language_1() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
-    let ui = crate::app::ApiDocs::new().unwrap();
+    let ui = crate::app::AppConnectors::new().unwrap();
     assert_eq!(ui.get_test_title(), "Connect Custom Software");
 }
 
@@ -402,22 +402,22 @@ fn test_grandmother_e2e_connect_tools_flow() {
 
     // Verify our changes for "Connect tools" are correctly hooked into the docs path
     // which effectively launches the API Docs (now known as "Connect tools" to the user).
-    dashboard_ui.on_open_api_docs(move || {
+    dashboard_ui.on_open_app_connectors(move || {
         *docs_opened_clone.borrow_mut() = true;
     });
 
-    dashboard_ui.invoke_open_api_docs();
+    dashboard_ui.invoke_open_app_connectors();
     assert!(*docs_opened.borrow());
 
     let scribe_ui = crate::app::ScribeFeatureDashboard::new().unwrap();
     let scribe_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
     let scribe_invoked_clone = scribe_invoked.clone();
 
-    scribe_ui.on_open_api_docs(move || {
+    scribe_ui.on_open_app_connectors(move || {
         *scribe_invoked_clone.borrow_mut() = true;
     });
 
-    scribe_ui.invoke_open_api_docs();
+    scribe_ui.invoke_open_app_connectors();
     assert!(*scribe_invoked.borrow());
 
     // Final verification step of advanced AI config toggle

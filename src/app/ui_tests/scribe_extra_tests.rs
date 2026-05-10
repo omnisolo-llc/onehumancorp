@@ -82,15 +82,15 @@ fn test_video_tutorials_metadata() {
 #[test]
 fn test_api_docs_edge_cases() {
     crate::ui_tests::init();
-    let ui = crate::app::ApiDocs::new().unwrap();
+    let ui = crate::app::AppConnectors::new().unwrap();
 
     // Default should be false as verified
     assert!(!ui.get_is_advanced());
     ui.set_is_advanced(true);
     assert!(ui.get_is_advanced());
 
-    ui.set_api_response("{\"status\": \"ok\"}".into());
-    assert_eq!(ui.get_api_response(), SharedString::from("{\"status\": \"ok\"}"));
+    ui.set_system_response("{\"status\": \"ok\"}".into());
+    assert_eq!(ui.get_system_response(), SharedString::from("{\"status\": \"ok\"}"));
 
     ui.set_active_endpoint("/v1/test".into());
     assert_eq!(ui.get_active_endpoint(), SharedString::from("/v1/test"));

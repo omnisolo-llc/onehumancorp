@@ -31,16 +31,16 @@ fn test_e2e_api_docs_navigation_flow() {
     let opened = std::rc::Rc::new(std::cell::RefCell::new(false));
     let opened_clone = opened.clone();
 
-    dashboard_ui.on_open_api_docs(move || { *opened_clone.borrow_mut() = true; });
+    dashboard_ui.on_open_app_connectors(move || { *opened_clone.borrow_mut() = true; });
 
     // User clicks the Connect Apps button on the dashboard menu
-    dashboard_ui.invoke_open_api_docs();
+    dashboard_ui.invoke_open_app_connectors();
 
     // Verify flow reached the target destination
     assert!(*opened.borrow(), "API Docs should be opened from Dashboard");
 
     // Verify the destination component renders correctly
-    let ui = crate::app::ApiDocs::new().unwrap();
+    let ui = crate::app::AppConnectors::new().unwrap();
     assert_eq!(ui.get_test_title(), slint::SharedString::from("Custom Integration"));
 
     let endpoint_tested = std::rc::Rc::new(std::cell::RefCell::new(false));

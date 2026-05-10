@@ -29,7 +29,7 @@ fn test_scribe_feature_dashboard_callbacks() {
 
     let open_api_docs_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let open_api_docs_called_clone = open_api_docs_called.clone();
-    ui.on_open_api_docs(move || {
+    ui.on_open_app_connectors(move || {
         *open_api_docs_called_clone.borrow_mut() = true;
     });
 
@@ -51,7 +51,7 @@ fn test_scribe_feature_dashboard_callbacks() {
     ui.invoke_open_video_tutorials();
     assert!(*open_video_tutorials_called.borrow());
 
-    ui.invoke_open_api_docs();
+    ui.invoke_open_app_connectors();
     assert!(*open_api_docs_called.borrow());
 
     ui.invoke_open_release_notes();

@@ -660,14 +660,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
 
-                                        let api_docs_ui = app::ApiDocs::new().unwrap();
+                                        let api_docs_ui = app::AppConnectors::new().unwrap();
                                         let models = vec![
-                                            app::ApiEndpoint {
+                                            app::AppIntegration {
                                                 method: "GET".into(),
                                                 path: "Read Product List".into(),
                                                 description: "Product Data Access".into(),
                                             },
-                                            app::ApiEndpoint {
+                                            app::AppIntegration {
                                                 method: "POST".into(),
                                                 path: "Create New Order".into(),
                                                 description: "Order Management".into(),
@@ -685,12 +685,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                     } else {
                                                         "{\n  \"status\": \"success\",\n  \"order_id\": \"ord_123\"\n}"
                                                     };
-                                                    ui.set_api_response(resp.into());
+                                                    ui.set_system_response(resp.into());
                                                 }
                                             }
                                         });
 
-                                        dashboard.on_open_api_docs(move || {
+                                        dashboard.on_open_app_connectors(move || {
                                             if let Some(ui) = api_docs_handle.upgrade() {
                                                 let _ = ui.show();
                                             }
@@ -889,9 +889,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
 
-                                        let api_docs_ui = app::ApiDocs::new().unwrap();
+                                        let api_docs_ui = app::AppConnectors::new().unwrap();
                                         let api_docs_handle = api_docs_ui.as_weak();
-                                        dashboard.on_open_api_docs(move || {
+                                        dashboard.on_open_app_connectors(move || {
                                             if let Some(ui) = api_docs_handle.upgrade() {
                                                 let _ = ui.show();
                                             }
@@ -3261,14 +3261,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let video_tutorials_ui = app::VideoTutorials::new().unwrap();
                 let video_tutorials_handle = video_tutorials_ui.as_weak();
 
-                let api_docs_ui = app::ApiDocs::new().unwrap();
+                let api_docs_ui = app::AppConnectors::new().unwrap();
                 let models = vec![
-                    app::ApiEndpoint {
+                    app::AppIntegration {
                         method: "GET".into(),
                         path: "Read Product List".into(),
                         description: "Product Data Access".into(),
                     },
-                    app::ApiEndpoint {
+                    app::AppIntegration {
                         method: "POST".into(),
                         path: "Create New Order".into(),
                         description: "Order Management".into(),
@@ -3286,7 +3286,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             } else {
                                 "{\n  \"status\": \"success\",\n  \"order_id\": \"ord_123\"\n}"
                             };
-                            ui.set_api_response(resp.into());
+                            ui.set_system_response(resp.into());
                         }
                     }
                 });
@@ -3390,7 +3390,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
 
-                dashboard.on_open_api_docs(move || {
+                dashboard.on_open_app_connectors(move || {
                     if let Some(ui) = api_docs_handle.upgrade() {
                         let _ = ui.show();
                     }
@@ -5879,7 +5879,7 @@ mod docs_tests {
 
         let docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let docs_opened_clone = docs_opened.clone();
-        dashboard_ui.on_open_api_docs(move || { *docs_opened_clone.borrow_mut() = true; });
+        dashboard_ui.on_open_app_connectors(move || { *docs_opened_clone.borrow_mut() = true; });
 
         let videos_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let videos_opened_clone = videos_opened.clone();
@@ -5896,7 +5896,7 @@ mod docs_tests {
         // Simulate clicking the buttons on the dashboard
         dashboard_ui.invoke_open_help_center();
         dashboard_ui.invoke_open_ai_chat();
-        dashboard_ui.invoke_open_api_docs();
+        dashboard_ui.invoke_open_app_connectors();
         dashboard_ui.invoke_open_video_tutorials();
         dashboard_ui.invoke_open_interactive_walkthrough();
         dashboard_ui.invoke_open_release_notes();
@@ -6154,7 +6154,7 @@ mod docs_tests {
     #[test]
     fn test_api_docs_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::ApiDocs::new().unwrap();
+        app::AppConnectors::new().unwrap();
     }
     #[test]
     fn test_e2e_agent_config_flow() {
@@ -6217,7 +6217,7 @@ mod docs_tests {
             ui.get_can_write_descriptions(),
             ui.get_can_send_updates(),
             ui.get_frequency(),
-            ui.get_api_scope_override(),
+            ui.get_capability_permissions(),
             ui.get_cron_override(),
             ui.get_raw_activation_payload()
         );
@@ -6977,10 +6977,10 @@ mod dashboard_docs_tests {
         // 8. Test API Docs
         let api_docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let api_docs_opened_clone = api_docs_opened.clone();
-        dashboard_ui.on_open_api_docs(move || {
+        dashboard_ui.on_open_app_connectors(move || {
             *api_docs_opened_clone.borrow_mut() = true;
         });
-        dashboard_ui.invoke_open_api_docs();
+        dashboard_ui.invoke_open_app_connectors();
         assert!(*api_docs_opened.borrow(), "API Docs should be opened from Dashboard");
     }
 }
@@ -8696,15 +8696,15 @@ fn test_business_share_flow() {
 
         let api_docs_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let api_docs_opened_clone = api_docs_opened.clone();
-        dashboard_ui.on_open_api_docs(move || {
+        dashboard_ui.on_open_app_connectors(move || {
             *api_docs_opened_clone.borrow_mut() = true;
         });
 
-        dashboard_ui.invoke_open_api_docs();
+        dashboard_ui.invoke_open_app_connectors();
         assert!(*api_docs_opened.borrow(), "API Docs UI should be opened");
 
-        let ui = app::ApiDocs::new().unwrap();
-        assert_eq!(ui.get_api_key(), "sk_live_...");
+        let ui = app::AppConnectors::new().unwrap();
+        assert_eq!(ui.get_secret_key(), "sk_live_...");
         assert_eq!(ui.get_endpoint_url(), "https://api.ohc.io");
 
         // Advanced Mode Progressive Disclosure Check
@@ -9422,8 +9422,8 @@ fn test_scribe_feature_dashboard_functionality() {
 
     let api_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
     let api_clone = api_opened.clone();
-    dashboard.on_open_api_docs(move || { *api_clone.borrow_mut() = true; });
-    dashboard.invoke_open_api_docs();
+    dashboard.on_open_app_connectors(move || { *api_clone.borrow_mut() = true; });
+    dashboard.invoke_open_app_connectors();
     assert!(*api_opened.borrow());
 }
 

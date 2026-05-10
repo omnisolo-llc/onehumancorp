@@ -113,7 +113,7 @@ fn test_scribe_interactive_walkthrough_visibility() {
 #[test]
 fn test_scribe_api_docs_test_endpoint_empty() {
     crate::ui_tests::init();
-    let ui = app::ApiDocs::new().unwrap();
+    let ui = app::AppConnectors::new().unwrap();
 
     let endpoint_tested = std::rc::Rc::new(std::cell::RefCell::new(false));
     let endpoint_tested_clone = endpoint_tested.clone();

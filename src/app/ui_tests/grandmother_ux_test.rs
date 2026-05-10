@@ -93,7 +93,7 @@ fn test_business_manager_ux_flow() {
 fn test_api_docs_title_plain_language() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
     crate::ui_tests::init();
-    let ui = crate::app::ApiDocs::new().unwrap();
+    let ui = crate::app::AppConnectors::new().unwrap();
     assert_eq!(ui.get_test_title(), slint::SharedString::from("Connect Your Store"));
 }
 
