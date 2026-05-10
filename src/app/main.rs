@@ -3347,7 +3347,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 
-        setup_wizard_ui.on_generate_instant_preview({
+            setup_wizard_ui.on_send_chat_message({
+        let ui_weak = setup_wizard_handle.clone();
+        move |message| {
+            let ui_handle = ui_weak.clone();
+            if let Some(ui) = ui_handle.upgrade() {
+                let msg = message.to_string();
+
+                let mut msgs: Vec<app::UiChatMessage> = ui.get_chat_messages().iter().collect();
+                let user_msg = app::UiChatMessage {
+                    id: uuid::Uuid::new_v4().to_string().into(),
+                    author_name: "You".into(),
+                    body: msg.clone().into(),
+                    is_me: true,
+                };
+                msgs.push(user_msg);
+
+                let model = slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(msgs.clone())));
+                ui.set_chat_messages(model);
+
+                let question_count = msgs.iter().filter(|m| !m.is_me).count();
+
+                if question_count >= 3 {
+                    // Trigger generation
+                    let all_text = msgs.iter().map(|m| format!("{}: {}", m.author_name, m.body)).collect::<Vec<_>>().join("\n");
+                    ui.set_instant_bio(all_text.into());
+                    ui.set_is_generating_instant_preview(true);
+                    ui.invoke_generate_instant_preview();
+                } else {
+                    let history = msgs.iter().map(|m| format!("{}: {}", m.author_name, m.body)).collect::<Vec<_>>().join("\n");
+                    let prompt = format!("You are an AI assistant helping a user set up their business. Here is the conversation so far:\n{}\nBased on this, ask exactly ONE short follow-up question to help them define their business (e.g. name, type, or style). Do not be overly verbose.", history);
+
+                    tokio::spawn(async move {
+                        let mut ai_response = "I see! Could you provide a bit more detail?".to_string();
+                        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                            let request = tonic::Request::new(ohc::orchestration::ReasonRequest {
+                                prompt,
+                                from_agent_id: "setup_wizard".into(),
+                            });
+                            if let Ok(resp) = client.reason(request).await {
+                                ai_response = resp.into_inner().content.trim().to_string();
+                            }
+                        }
+
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle.upgrade() {
+                                let mut msgs: Vec<app::UiChatMessage> = ui.get_chat_messages().iter().collect();
+                                msgs.push(app::UiChatMessage {
+                                    id: uuid::Uuid::new_v4().to_string().into(),
+                                    author_name: "Marketing AI".into(),
+                                    body: ai_response.into(),
+                                    is_me: false,
+                                });
+                                let model = slint::ModelRc::from(std::rc::Rc::new(slint::VecModel::from(msgs)));
+                                ui.set_chat_messages(model);
+                            }
+                        }).unwrap();
+                    });
+                }
+            }
+        }
+    });
+
+    setup_wizard_ui.on_generate_instant_preview({
         let ui_weak = setup_wizard_handle.clone();
         move || {
             let ui_handle = ui_weak.clone();
