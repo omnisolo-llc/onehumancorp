@@ -19,7 +19,7 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
     await page.click('button:has-text("Sign In")');
 
     await page.click('button:has-text("Menu")');
-    await page.click('button:has-text("Connect Apps")');
+    await page.click('button:has-text("Connect Custom Software")');
 
     await expect(page.locator('text=Connect Custom Software')).toBeVisible();
   });
@@ -31,7 +31,7 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
     await page.click('button:has-text("Sign In")');
 
     await page.click('button:has-text("Menu")');
-    await page.click('button:has-text("Connect Apps")');
+    await page.click('button:has-text("Connect Custom Software")');
 
     await expect(page.locator('text=Custom Integration')).toBeVisible();
   });
@@ -43,7 +43,7 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
     await page.click('button:has-text("Sign In")');
 
     await page.click('button:has-text("Menu")');
-    await page.click('button:has-text("Connect Apps")');
+    await page.click('button:has-text("Connect Custom Software")');
 
     await expect(page.locator('text=Product Data Access')).toBeVisible();
     await expect(page.locator('text=Read Product List')).toBeVisible();
