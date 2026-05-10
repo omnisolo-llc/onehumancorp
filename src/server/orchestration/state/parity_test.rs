@@ -153,7 +153,7 @@ mod parity_tests {
 
         let task_id = uuid::Uuid::new_v4().to_string();
         let mission_id = "mission_123";
-        let title = "Test Null Title";
+        let title = "Test Null Title modified";
 
         // SQLite
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
