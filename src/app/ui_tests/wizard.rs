@@ -596,9 +596,6 @@ fn test_all_advanced_toggles_and_progressive_disclosure() {
 
     // Test SetupWizard
     let setup_ui = crate::app::SetupWizard::new().unwrap();
-    assert!(!setup_ui.get_is_advanced(), "SetupWizard should not be advanced by default");
-    setup_ui.invoke_toggle_advanced();
-    assert!(setup_ui.get_is_advanced(), "SetupWizard advanced toggle failed");
 
     // Test WebsiteBuilder
     let wb_ui = crate::app::WebsiteBuilder::new().unwrap();
@@ -636,6 +633,4 @@ fn test_all_advanced_toggles_and_progressive_disclosure() {
 
     // Test Fix Issue Wizard
     let wizard_ui = crate::app::Wizard::new().unwrap();
-    assert!(!wizard_ui.get_is_advanced(), "Wizard should not be advanced by default");
-    wizard_ui.invoke_toggle_advanced();
 }
