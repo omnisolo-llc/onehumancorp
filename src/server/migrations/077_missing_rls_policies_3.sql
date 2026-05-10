@@ -1,4 +1,5 @@
 -- Missing RLS tables fix
+
 ALTER TABLE state_machine_transitions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Tenant isolation for state_machine_transitions" ON state_machine_transitions
     USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
