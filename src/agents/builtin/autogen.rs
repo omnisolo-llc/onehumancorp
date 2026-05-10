@@ -344,6 +344,159 @@ impl MagenticManager {
 }
 
 /// The Orchestrator that manages a concurrent flow of agents (fan-out/fan-in).
+/// The Orchestrator that manages a handoff flow between agents.
+
+pub struct HandoffChatManager {
+
+    pub agents: Vec<ChatAgent>,
+
+    pub max_handoffs: usize,
+
+}
+
+
+
+impl HandoffChatManager {
+
+    pub fn new(agents: Vec<ChatAgent>, max_handoffs: usize) -> Self {
+
+        Self { agents, max_handoffs }
+
+    }
+
+
+
+    pub async fn run_handoff(&self, initial_agent_name: &str, initial_task: &str) -> Result<Vec<Message>, String> {
+
+        let mut transcript = Vec::new();
+
+        transcript.push(Message::user(format!("Admin: {}", initial_task)));
+
+
+
+        let mut current_agent_name = initial_agent_name.to_string();
+
+        let mut handoff_count = 0;
+
+
+
+        loop {
+
+            if handoff_count >= self.max_handoffs {
+
+                tracing::info!("Max handoffs reached.");
+
+                break;
+
+            }
+
+
+
+            let agent = match self.agents.iter().find(|a| a.name == current_agent_name) {
+
+                Some(a) => a,
+
+                None => return Err(format!("Agent {} not found", current_agent_name)),
+
+            };
+
+
+
+            tracing::info!("Handoff Step: {} is running...", agent.name);
+
+
+
+            let prompt_context = format!(
+
+                "You are participating in a handoff workflow as {}.
+
+
+
+Your input task/context is:
+
+{}
+
+
+
+The conversation so far:
+
+{}
+
+
+
+Perform your work. If you need another agent to take over, use the handoff tool.",
+
+                agent.name,
+
+                initial_task,
+
+                transcript.iter().map(|m| format!("{}: {}", m.role, m.content)).collect::<Vec<_>>().join("\n")
+
+            );
+
+
+
+            let mut run_cfg = agent.run_config.clone();
+
+            run_cfg.server_system_message = format!("You are {}. {}", agent.name, agent.description);
+
+
+
+            let mut on_event = |_| {};
+
+            let response = agent.agent.run(&run_cfg, &prompt_context, &mut on_event).await;
+
+
+
+            match response {
+
+                Ok(response_text) => {
+
+                    let formatted_response = format!("{}: {}", agent.name, response_text);
+
+                    transcript.push(Message::assistant(formatted_response.clone()));
+
+
+
+                    if response_text.starts_with("Handoff requested to ") {
+
+                        let target = response_text.replace("Handoff requested to ", "").trim().to_string();
+
+                        tracing::info!("{} requested handoff to {}", agent.name, target);
+
+                        current_agent_name = target;
+
+                        handoff_count += 1;
+
+                    } else {
+
+                        break; // No handoff requested, we are done
+
+                    }
+
+                }
+
+                Err(e) => {
+
+                    return Err(format!("Agent {} failed: {}", agent.name, e));
+
+                }
+
+            }
+
+        }
+
+
+
+        Ok(transcript)
+
+    }
+
+}
+
+
+
+
 pub struct ConcurrentChatManager {
     pub agents: Vec<ChatAgent>,
     pub synthesizer: Option<ChatAgent>,
@@ -568,6 +721,87 @@ mod tests {
             .content
             .contains("Agent2: I am Agent2. Everything looks good. TERMINATE"));
     }
+
+    #[tokio::test]
+
+    async fn test_autogen_handoff_chat() {
+
+        let agent1_llm = Arc::new(AutoGenMockLlmClient {
+
+            responses: tokio::sync::Mutex::new(vec!["Handoff requested to Agent2".to_string()]),
+
+        });
+
+        let agent1 = Arc::new(Agent::new(agent1_llm, vec![]));
+
+
+
+        let agent2_llm = Arc::new(AutoGenMockLlmClient {
+
+            responses: tokio::sync::Mutex::new(vec!["I finished the task".to_string()]),
+
+        });
+
+        let agent2 = Arc::new(Agent::new(agent2_llm, vec![]));
+
+
+
+        let cfg = AgentRunConfig::default();
+
+
+
+        let chat_agent1 = ChatAgent {
+
+            name: "Agent1".to_string(),
+
+            description: "Agent 1".to_string(),
+
+            agent: agent1,
+
+            run_config: cfg.clone(),
+
+        };
+
+
+
+        let chat_agent2 = ChatAgent {
+
+            name: "Agent2".to_string(),
+
+            description: "Agent 2".to_string(),
+
+            agent: agent2,
+
+            run_config: cfg.clone(),
+
+        };
+
+
+
+        let manager = HandoffChatManager::new(vec![chat_agent1, chat_agent2], 5);
+
+        let result = manager.run_handoff("Agent1", "Please do the task").await;
+
+
+
+        assert!(result.is_ok());
+
+        let transcript = result.unwrap();
+
+
+
+        assert_eq!(transcript.len(), 3);
+
+        assert!(transcript[0].content.contains("Please do the task"));
+
+        assert!(transcript[1].content.contains("Agent1: Handoff requested to Agent2"));
+
+        assert!(transcript[2].content.contains("Agent2: I finished the task"));
+
+    }
+
+
+
 
     #[tokio::test]
     async fn test_autogen_concurrent_chat() {
