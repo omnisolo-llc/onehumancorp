@@ -83,9 +83,7 @@ fn test_optimistic_ui_mark_order_ready() {
 
 #[test]
 fn test_optimistic_ui_approve_task() {
-    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-    crate::ui_tests::init();
-    let ui = app::UnifiedInbox::new().unwrap();
+    let ui = create();
     let pending_tasks = vec![
         app::UiPendingApproval {
             helper_name: "The Helper".into(),
@@ -215,6 +213,17 @@ fn dashboard_simplification_jargon_test() {
     ui.set_show_telemetry_visualization(true);
     assert!(ui.get_show_telemetry_visualization());
 
+    let pending_tasks = vec![
+        app::UiPendingApproval {
+            helper_name: "The Helper".into(),
+            task_id: "t1".into(),
+            title: "Task".into(),
+            proposed_content: "Content".into(),
+        }
+    ];
+    let pending_model = slint::ModelRc::new(slint::VecModel::from(pending_tasks));
+    ui.set_pending_approvals(pending_model.into());
+    assert_eq!(ui.get_pending_approvals().row_count(), 1);
 }
 
 #[test]

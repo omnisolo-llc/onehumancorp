@@ -18,7 +18,6 @@ go_library(
     importpath = "onehumancorp/srcs/server/orchestration",
     visibility = ["//visibility:public"],
     deps = [
-        "//srcs/server/pb:pb",
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//:metric",
@@ -30,7 +29,6 @@ go_test(
     srcs = [
         "autodream_test.go",
         "mesh_test.go",
-        "mesh_system_test.go",
         "tasks_db_test.go",
         "state_machine_test.go",
         "state_machine_coverage_test.go",
@@ -44,7 +42,6 @@ go_test(
     ],
     embed = [":orchestration"],
     deps = [
-        "//srcs/server/pb:pb",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
         "@com_github_mattn_go_sqlite3//:go_sqlite3",

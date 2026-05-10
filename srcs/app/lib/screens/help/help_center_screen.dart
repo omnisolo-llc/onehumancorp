@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../main.dart'; // For GlassContainer
 import 'release_notes_screen.dart';
-import 'video_tutorials_screen.dart';
 import 'api_reference_screen.dart';
-
 
 class HelpCenterScreen extends StatelessWidget {
   const HelpCenterScreen({super.key});
@@ -60,14 +58,10 @@ class HelpCenterScreen extends StatelessWidget {
                 _buildTopicCard(context, 'My Store', 'Manage products, inventory, and storefront.', Icons.storefront),
                 _buildTopicCard(context, 'Payments', 'Connect Stripe, get paid, and manage billing.', Icons.payment),
                 _buildTopicCard(context, 'AI Agents', 'Configure your AI team to work for you.', Icons.smart_toy),
-                _buildTopicCard(context, 'Marketing', 'Grow your audience and drive sales.', Icons.campaign),
                 const SizedBox(height: 30),
                 const Text('Video Tutorials', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 10),
-                InkWell(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const VideoTutorialsScreen())),
-                  child: _buildVideoCard('How to add your first product', '1:20'),
-                ),
+                _buildVideoCard('How to add your first product', '1:20'),
                 _buildVideoCard('Setting up automated support', '0:55'),
                 const SizedBox(height: 30),
                 const Text('Updates & Advanced', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),

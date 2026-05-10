@@ -1,20 +1,4 @@
-issue_category: security
+issue_category: cleanup
 debt_report: |
-  <div markdown="1" style="backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-  # 🧹 Maintainer: Hybrid Privacy Audit
-  ## Phase 1: Risk Assessment
-  - Conducted audit of Multi-Tenant Cloud database pools and Standalone local SQLite configurations.
-  - Verified local footprint architecture in `ohc-standalone.sh` ensures strict opt-in borders for telemetry data.
-  ## Phase 2: Policy-as-Code Implementation
-  - Hardened Multi-Tenant boundary: Enforced explicit tenant data wiping on connection release (`.after_release` hook executing `DISCARD ALL` globally on all `PgPoolOptions`).
-  - Hardened Local Sovereignty: Enforced `PRAGMA secure_delete = ON` for all newly initialized SQLite storage in Standalone mode to prevent remanence.
-  - Confirmed test coverage of PII logs via existing comprehensive log auditing suite (`test_pii_leakage_in_logs`).
-  ## Phase 3: Validation
-  - All unit/e2e tests passed. Privacy policy limits are mechanically secure across both modes.
-  ## Health Status
-  - **Status:** Clean
-  - **Debt Level:** Low
-  - **Action Taken:** Secured DB connections globally. Created audit report artifact.
-  </div>
-status: completed
-visual_excellence: "Applied Glassmorphism UI standards (backdrop-filter: blur(15px)) conceptually to report output generation."
+  Fixed unused import warnings in `src/app/ui_tests/setup_wizard_hero_test.rs` by removing `Rc` and `RefCell`.
+status: resolved

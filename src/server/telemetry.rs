@@ -85,7 +85,7 @@ pub async fn record_queue_length(pool: &PgPool, delta: i32) -> Result<(), Box<dy
 }
 
 pub async fn record_token_usage_forecast(pool: &PgPool, org_id: &str, forecast: f32) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, "ohc_token_burn_rate_forecast", "gauge", forecast, serde_json::json!({ "organization_id": org_id })).await
+    buffer_metric(pool, "ohc_token_usage_forecast", "gauge", forecast, serde_json::json!({ "organization_id": org_id })).await
 }
 
 pub async fn record_agent_cost(pool: &PgPool, agent_id: &str, organization_id: &str, role: &str, model: &str, entity: &str, cost: f64) -> Result<(), Box<dyn std::error::Error>> {

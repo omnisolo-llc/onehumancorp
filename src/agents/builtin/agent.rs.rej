@@ -1,0 +1,10 @@
+--- src/agents/builtin/agent.rs
++++ src/agents/builtin/agent.rs
+@@ -4140,6 +4140,7 @@
+                     message: Message::assistant("Task done."),
+                     usage: Usage::default(),
+                     stop_reason: "stop".to_string(),
++                    response_id: Some("2".to_string()),
+                 }
+             ]),
+         });

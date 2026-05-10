@@ -16,7 +16,6 @@ export component MyPlan inherits Window {
     in-out property <string> renewal_date: "Oct 25, 2025";
     in-out property <string> plan_status: "Active Status";
     in-out property <string> upgrade_prompt_message: "";
-    in-out property <bool> show_hint: false;
 
     callback upgrade();
     callback view_details();
@@ -31,14 +30,7 @@ export component MyPlan inherits Window {
         spacing: 20px;
         padding: 24px;
 
-        HorizontalBox {
-            alignment: start;
-            spacing: 8px;
-            Text { text: "My Plan"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
-            Button { text: "?"; width: 44px; height: 44px; clicked => { show_hint = !show_hint; } }
-        }
-
-        if (show_hint) : Text { text: "Manage your subscription, check your AI usage limits, and update your payment details here."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+        Text { text: "My Plan"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
 
         if upgrade_prompt_message != "" : GlassCard {
             border-color: #ef4444;

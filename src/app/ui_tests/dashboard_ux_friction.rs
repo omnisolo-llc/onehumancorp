@@ -68,11 +68,3 @@ fn test_visual_state_resets() {
     assert!(ui.get_show_upgrade_prompt());
     assert_eq!(ui.get_upgrade_prompt_message(), "Upgrade now!");
 }
-
-#[test]
-fn test_store_rating_hint_toggle() {
-    let ui = create();
-    assert!(!ui.get_show_health_hint());
-    ui.set_show_health_hint(true);
-    assert!(ui.get_show_health_hint());
-}

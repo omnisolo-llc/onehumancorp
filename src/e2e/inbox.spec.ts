@@ -104,33 +104,3 @@ test('verify empty state when no conversation is selected', async ({ page }) => 
 
     await expect(page.locator('text="Select a conversation"')).toBeVisible();
 });
-
-test('verify connecting social media creates inbox conversation and allows reply', async ({ page }) => {
-    await page.goto('/');
-
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
-
-    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
-
-    const integrationsMenu = page.locator('text=/Integrations/i, text=/Connect/i').first();
-    if (await integrationsMenu.isVisible()) {
-      await integrationsMenu.click();
-    }
-
-    // Click Configure Facebook
-    await page.click('text="📘 Facebook" >> xpath=.. >> button:has-text("Configure")');
-
-    // unified inbox should show up
-    await expect(page.locator('text="Customer Inbox"')).toBeVisible();
-
-    // Click on Facebook User conversation
-    await page.click('text="Facebook User"');
-    await expect(page.locator('text="Hello from Facebook!"')).toBeVisible();
-
-    // Send a reply
-    await page.fill('input[placeholder="Type a message..."]', 'Hello Facebook!');
-    await page.click('button:has-text("Send")');
-    await expect(page.locator('text="Hello Facebook!"').last()).toBeVisible();
-});

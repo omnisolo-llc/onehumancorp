@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"onehumancorp/srcs/server/pb"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -16,27 +15,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockMeshTransport struct {
+type mockMeshHub struct {
 	published []string
 }
 
-func (m *mockMeshTransport) Publish(ctx context.Context, channel string, data []byte) error {
+func (m *mockMeshHub) Publish(ctx context.Context, channel string, data []byte) error {
 	m.published = append(m.published, string(data))
 	return nil
 }
 
-
-func (m *mockMeshTransport) AdvertiseCapabilities(ctx context.Context, agent pb.Agent) error {
-    return nil
-}
-
-func (m *mockMeshTransport) DiscoverAgents(ctx context.Context, skill string) ([]pb.Agent, error) {
-    return nil, nil
-}
-
-func (m *mockMeshTransport) StartHeartbeat(ctx context.Context, agent pb.Agent) {
-}
-func (m *mockMeshTransport) Subscribe(ctx context.Context, channel string, handler func(data []byte)) error {
+func (m *mockMeshHub) Subscribe(ctx context.Context, channel string, handler func(data []byte)) error {
 	return nil
 }
 
@@ -67,7 +55,7 @@ func setupTestDBForSubAgent(t *testing.T) *sql.DB {
 }
 
 func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
-	mesh := &mockMeshTransport{}
+	mesh := &mockMeshHub{}
 	spawner := NewDefaultSubAgentSpawner(mesh, true, 2)
 
 	task := &SharedTask{
@@ -78,10 +66,10 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Allow time for the goroutine to run (transient failures may take time to retry)
-	time.Sleep(7 * time.Second)
-	time.Sleep(7 * time.Second)
+	time.Sleep(6 * time.Second)
+	time.Sleep(6 * time.Second)
 
-	// Check MeshTransport events
+	// Check MeshHub events
 	foundSpawned := false
 	foundCompleted := false
 	for _, msg := range mesh.published {
@@ -109,7 +97,7 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 }
 
 func TestSubAgentSpawner_SpawnCloud(t *testing.T) {
-	mesh := &mockMeshTransport{}
+	mesh := &mockMeshHub{}
 	spawner := NewDefaultSubAgentSpawner(mesh, false, 0)
 
 	task := &SharedTask{
@@ -120,9 +108,9 @@ func TestSubAgentSpawner_SpawnCloud(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Allow time for the goroutine to run
-	time.Sleep(7 * time.Second)
+	time.Sleep(6 * time.Second)
 
-	// Check MeshTransport events
+	// Check MeshHub events
 	foundSpawned := false
 	foundCompleted := false
 	for _, msg := range mesh.published {
@@ -156,7 +144,7 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 	err := store.CreateTask(context.Background(), task)
 	require.NoError(t, err)
 
-	mesh := &mockMeshTransport{}
+	mesh := &mockMeshHub{}
 	spawner := NewDefaultSubAgentSpawner(mesh, true, 2)
 	orchestrator := NewDefaultTaskOrchestrator(store, spawner)
 
@@ -169,7 +157,7 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 	assert.Equal(t, "ASSIGNED", fetchedTask.Status)
 
 	// Give spawner time
-	time.Sleep(7 * time.Second)
+	time.Sleep(6 * time.Second)
 
 	foundCompleted := false
 	for _, msg := range mesh.published {
@@ -183,7 +171,7 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 }
 
 func TestSubAgentTimeout(t *testing.T) {
-	mesh := &mockMeshTransport{}
+	mesh := &mockMeshHub{}
 	spawner := NewDefaultSubAgentSpawner(mesh, false, 5)
 
 	task := &SharedTask{
@@ -200,7 +188,7 @@ func TestSubAgentTimeout(t *testing.T) {
 }
 
 func TestSubAgentSpawner_CircuitBreaker(t *testing.T) {
-	mesh := &mockMeshTransport{}
+	mesh := &mockMeshHub{}
 	spawner := NewDefaultSubAgentSpawner(mesh, false, 0)
 	spawner.cb.threshold = 1 // Trip after 1 failure
 
@@ -233,7 +221,7 @@ func TestSubAgentSpawner_CircuitBreaker(t *testing.T) {
 	assert.True(t, foundPaused)
 }
 func TestSubAgentSpawner_Monitor(t *testing.T) {
-	spawner := NewDefaultSubAgentSpawner(&mockMeshTransport{}, false, 0)
+	spawner := NewDefaultSubAgentSpawner(&mockMeshHub{}, false, 0)
 	err := spawner.Monitor(context.Background())
 	assert.NoError(t, err)
 }
@@ -257,7 +245,7 @@ func TestSubAgentSpawner_NilMesh(t *testing.T) {
 }
 
 func TestSubAgentSpawner_MaxConcurrencyFallback(t *testing.T) {
-	spawner := NewDefaultSubAgentSpawner(&mockMeshTransport{}, true, -1)
+	spawner := NewDefaultSubAgentSpawner(&mockMeshHub{}, true, -1)
 	assert.NotNil(t, spawner.semaphore)
 	assert.Equal(t, 5, cap(spawner.semaphore)) // Default maxConcurrency is 5
 }
@@ -276,7 +264,7 @@ func TestTaskOrchestrator_StartBackgroundWorker(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	spawner := NewDefaultSubAgentSpawner(&mockMeshTransport{}, true, 2)
+	spawner := NewDefaultSubAgentSpawner(&mockMeshHub{}, true, 2)
 	orchestrator := NewDefaultTaskOrchestrator(store, spawner)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -307,7 +295,7 @@ func TestTaskOrchestrator_PollTasks_Error(t *testing.T) {
 	baseStore := NewSqliteTaskStore(db)
 	store := &errorMockTaskStore{SqliteTaskStore: baseStore}
 
-	spawner := NewDefaultSubAgentSpawner(&mockMeshTransport{}, true, 2)
+	spawner := NewDefaultSubAgentSpawner(&mockMeshHub{}, true, 2)
 	orchestrator := NewDefaultTaskOrchestrator(store, spawner)
 
 	err := orchestrator.PollTasks(context.Background())

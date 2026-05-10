@@ -82,21 +82,13 @@ pub(crate) fn load() -> Result<AppConfig, config::ConfigError> {
     let mut cfg: AppConfig = s.try_deserialize()?;
 
     // Standalone enforcement
-    cfg = StandaloneModeEnforcer.enforce(cfg);
+    cfg = standalone_enforce(cfg);
 
     Ok(cfg)
 }
 
-
-pub trait ModeEnforcer {
-    fn enforce(&self, cfg: AppConfig) -> AppConfig;
-}
-
-pub struct StandaloneModeEnforcer;
-
 #[cfg(feature = "standalone")]
-impl ModeEnforcer for StandaloneModeEnforcer {
-    fn enforce(&self, mut cfg: AppConfig) -> AppConfig {
+fn standalone_enforce(mut cfg: AppConfig) -> AppConfig {
     if let Some(db_url) = &cfg.database_url {
         if db_url != "sqlite://ohc-standalone.db" {
             tracing::info!("standalone: DATABASE_URL is ignored in standalone desktop builds; using SQLite");
@@ -143,7 +135,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                         perms.set_mode(0o600);
                         if let Err(e) = file.set_permissions(perms) {
                             tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
-                            panic!("Failed to securely update existing standalone database file permissions: {}", e); // Fail-closed gracefully
+                            std::process::exit(1); // Fail-closed
                         }
                     }
                 }
@@ -166,17 +158,12 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         cfg.telemetry_enabled = false;
     }
     cfg
-    }
 }
-
 
 #[cfg(not(feature = "standalone"))]
-impl ModeEnforcer for StandaloneModeEnforcer {
-    fn enforce(&self, cfg: AppConfig) -> AppConfig {
-        cfg
-    }
+fn standalone_enforce(cfg: AppConfig) -> AppConfig {
+    cfg
 }
-
 
 #[cfg(test)]
 mod tests {

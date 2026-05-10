@@ -7,7 +7,7 @@ export component ReleaseNotes inherits Window {
     min-width: 375px;
     title: "What's New";
     background: #0f172a;
-    in-out property <string> current_version: "v0.4.39";
+    in-out property <string> current_version: "v0.4.33";
     in-out property <bool> show_latest_only: false;
 
     HorizontalBox {
@@ -28,28 +28,15 @@ export component ReleaseNotes inherits Window {
             ScrollView {
                 VerticalBox {
                     spacing: 24px;
-                    VerticalBox {
-                        spacing: 8px;
-                        Text { text: "Version 0.4.39 (Cloud) / v0.4.39+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
-                        GlassCard {
-                            VerticalBox {
-                                padding: 16px; spacing: 12px;
-                                Text { text: "Faster Cloud Performance"; color: #38bdf8; font-weight: 600; }
-                                Text { text: "- We made behind-the-scenes improvements so your app runs smoothly, even as more businesses join OHC."; color: #94a3b8; wrap: word-wrap; }
-                                Text { text: "Better Offline Privacy"; color: #34d399; font-weight: 600; }
-                                Text { text: "- The app is now more reliable when you lose internet connection, and your private data stays on your device."; color: #94a3b8; wrap: word-wrap; }
-                            }
-                        }
-                    }
 
                     VerticalBox {
                         spacing: 8px;
-                        Text { text: "Version 0.4.32 (Cloud) / v0.4.33+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
+                        Text { text: "Version 0.4.32 (Cloud) / v0.4.32+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
                         GlassCard {
                             VerticalBox {
                                 padding: 16px; spacing: 12px;
-                                Text { text: "⚡ Faster and More Private"; font-weight: 700; font-size: 18px; color: white; }
-                                Text { text: "We have made the app much faster for everyone while making sure your business data stays completely private, especially when you use the app offline."; color: white; wrap: word-wrap; }
+                                Text { text: "⚡ Scale to the Moon & Protect Your Data"; font-weight: 700; font-size: 18px; color: white; }
+                                Text { text: "We have upgraded the backend architecture to support massive scaling for multi-tenant cloud deployments while continuing to guarantee your privacy and local capability in standalone mode."; color: white; wrap: word-wrap; }
                             }
                         }
                     }

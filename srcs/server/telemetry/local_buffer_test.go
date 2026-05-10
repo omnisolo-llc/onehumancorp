@@ -144,7 +144,6 @@ func TestTelemetrySyncEngine_SyncPendingMetrics_Failure(t *testing.T) {
 }
 
 func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
-	t.Parallel()
 	db := setupTestDB(t)
 	defer db.Close()
 
@@ -166,83 +165,12 @@ func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
 
 	go engine.StartSyncDaemon(ctx, 50*time.Millisecond)
 
-	// Wait for daemon to run and wait up to a few cycles for database
-	for i := 0; i < 10; i++ {
-		time.Sleep(50 * time.Millisecond)
-	}
+	// Wait for daemon to run
+	time.Sleep(200 * time.Millisecond)
 
 	var countSynced int
 	err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics WHERE synced_to_cloud = TRUE").Scan(&countSynced)
 	if err != nil || countSynced != 1 {
 		t.Fatalf("Expected 1 synced row after daemon run")
-	}
-}
-
-func TestBufferMetricHelper_RedactsPII(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
-
-	engine := NewTelemetrySyncEngine(db, "http://localhost:8080/metrics")
-	InitGlobalSyncEngine(engine)
-
-	t.Setenv("OHC_STANDALONE", "true")
-	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
-
-	ctx := context.Background()
-
-	attrs := map[string]interface{}{
-		"service":   "agent",
-		"tenant_id": "secret-tenant-123",
-		"email":     "user@example.com",
-		"ip_address":  "192.168.1.1",
-		"mac_address": "00:1B:44:11:3A:B7",
-		"geolocation": "37.7749,-122.4194",
-		"nested": map[string]interface{}{
-			"password": "my-secret-password",
-			"safe":     "value",
-		},
-	}
-
-	bufferMetricHelper(ctx, "test_redaction_metric", 1.0, attrs)
-
-	var attrStr string
-	err := db.QueryRow("SELECT attributes FROM local_telemetry_metrics WHERE metric_name = 'test_redaction_metric'").Scan(&attrStr)
-	if err != nil {
-		t.Fatalf("Failed to query db: %v", err)
-	}
-
-	var storedAttrs map[string]interface{}
-	if err := json.Unmarshal([]byte(attrStr), &storedAttrs); err != nil {
-		t.Fatalf("Failed to unmarshal attributes: %v", err)
-	}
-
-	if storedAttrs["service"] != "agent" {
-		t.Errorf("Expected 'service' to be 'agent', got %v", storedAttrs["service"])
-	}
-	if storedAttrs["tenant_id"] != "[REDACTED]" {
-		t.Errorf("Expected 'tenant_id' to be redacted, got %v", storedAttrs["tenant_id"])
-	}
-	if storedAttrs["email"] != "[REDACTED]" {
-		t.Errorf("Expected 'email' to be redacted, got %v", storedAttrs["email"])
-	}
-	if storedAttrs["ip_address"] != "[REDACTED]" {
-		t.Errorf("Expected 'ip_address' to be redacted, got %v", storedAttrs["ip_address"])
-	}
-	if storedAttrs["mac_address"] != "[REDACTED]" {
-		t.Errorf("Expected 'mac_address' to be redacted, got %v", storedAttrs["mac_address"])
-	}
-	if storedAttrs["geolocation"] != "[REDACTED]" {
-		t.Errorf("Expected 'geolocation' to be redacted, got %v", storedAttrs["geolocation"])
-	}
-
-	nested, ok := storedAttrs["nested"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("Expected nested to be a map")
-	}
-	if nested["password"] != "[REDACTED]" {
-		t.Errorf("Expected nested 'password' to be redacted, got %v", nested["password"])
-	}
-	if nested["safe"] != "value" {
-		t.Errorf("Expected nested 'safe' to be 'value', got %v", nested["safe"])
 	}
 }

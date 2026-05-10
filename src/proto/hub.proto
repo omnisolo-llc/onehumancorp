@@ -118,10 +118,6 @@ message MeshEvent {
   int64 timestamp = 4;
 }
 
-message PublishMeshEventRequest {
-  MeshEvent event = 1;
-}
-
 // TeammateMeshEvent for rich payload task broadcasting
 message TeammateMeshEvent {
   string agent_id = 1;
@@ -249,7 +245,6 @@ service HubService {
   rpc AdvertiseCapabilities(AgentCapabilities) returns (PublishMessageResponse);
   rpc DiscoverAgents(Query) returns (stream AgentCapabilities);
   rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
-  rpc PublishMeshEvent(PublishMeshEventRequest) returns (PublishMessageResponse);
   rpc PublishTeammateMeshEvent(PublishTeammateMeshEventRequest) returns (PublishMessageResponse);
   rpc StreamTeammateMesh(EventStreamRequest) returns (stream TeammateMeshEvent);
   
@@ -693,8 +688,6 @@ message ReferralStatsResponse {
   int32 bonus_credit = 5;
   int32 download_count = 6;
   int32 waitlist_position = 7;
-  string business_share_url = 8;
-  string business_name = 9;
 }
 
 message GrowthIdRequest {
@@ -778,9 +771,6 @@ message GetQuotaRequest {
 message QuotaMetrics {
   int32 used = 1;
   int32 max = 2;
-  bool soft_limit_reached = 3;
-  string upgrade_message = 4;
-  bool is_allowed = 5;
 }
 
 message WaitlistEntry {
@@ -1127,9 +1117,6 @@ message AnalyticsSummaryResponse {
   int32 pending_approvals = 6;
   int32 active_handoffs = 7;
   int64 token_velocity = 8;
-  bool soft_limit_reached = 9;
-  string upgrade_message = 10;
-  bool is_allowed = 11;
 }
 
 service OrgService {

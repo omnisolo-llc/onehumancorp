@@ -78,4 +78,3 @@ impl MeshTransport for MemoryMeshTransport {
         self.inner.get_active_agents().await
     }
 }
-// dummy validation comment

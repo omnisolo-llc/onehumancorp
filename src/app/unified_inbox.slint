@@ -1,14 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
 
-
-export struct UiPendingApproval {
-    task_id: string,
-    title: string,
-    proposed_content: string,
-    helper_name: string,
-}
-
 export struct UiConversation {
     id: string,
     customer_name: string,
@@ -24,9 +16,6 @@ export struct UiInboxMessage {
     body: string,
     is_me: bool,
     time: string,
-    is_quote: bool,
-    quote_amount: string,
-    quote_status: string,
 }
 
 export struct UiQuickReply {
@@ -43,30 +32,17 @@ export component UnifiedInbox inherits Window {
 
     in property <[UiConversation]> conversations;
     in property <[UiInboxMessage]> current_messages;
-
     in property <[UiQuickReply]> suggested_replies;
-    in property <[UiPendingApproval]> pending_approvals;
     in property <string> active_conversation_id: "";
-    in-out property <string> active_tab: "inbox"; // "inbox" or "action_center"
-
 
     in-out property <string> new_message: "";
-    in property <bool> is_meta_connected: false;
-    in-out property <bool> show_meta_banner: true;
-
-    callback action_connect_meta();
-    callback dismiss_meta_banner();
     in-out property <bool> show_mobile_list: true;
 
     callback select_conversation(string);
     callback send_message(string);
     callback use_quick_reply(string);
     callback request_ai_draft();
-    callback approve_task(string);
-
     callback back_to_list();
-    callback approve_quote(string, string);
-
 
     HorizontalBox {
         // Conversation List (Left side on desktop, full screen conditionally on mobile)
@@ -80,23 +56,9 @@ export component UnifiedInbox inherits Window {
                 padding: 16px;
                 spacing: 16px;
 
+                Text { text: "Inbox"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
 
-                HorizontalBox {
-                    spacing: 8px;
-                    Button {
-                        text: "Messages";
-                        primary: active_tab == "inbox";
-                        clicked => { active_tab = "inbox"; }
-                    }
-                    Button {
-                        text: "Action Center";
-                        primary: active_tab == "action_center";
-                        clicked => { active_tab = "action_center"; }
-                    }
-                }
-
-                if (active_tab == "inbox") : ScrollView {
-
+                ScrollView {
                     VerticalBox {
                         spacing: 8px;
                         for conv in conversations : Rectangle {
@@ -129,59 +91,6 @@ export component UnifiedInbox inherits Window {
                                     Text { text: conv.last_message; font-size: 14px; color: conv.unread ? #1e293b : #64748b; overflow: elide; }
                                 }
                             }
-
-                        }
-                    }
-                }
-
-                if (active_tab == "action_center") : ScrollView {
-                    VerticalBox {
-                        spacing: 16px;
-                        if (pending_approvals.length == 0) : Text {
-                            text: "No pending tasks to approve.";
-                            color: #64748b;
-                        }
-                        for approval in pending_approvals : Rectangle {
-                            background: white;
-                            border-radius: 8px;
-                            border-color: #e2e8f0;
-                            border-width: 1px;
-
-                            VerticalBox {
-                                padding: 16px;
-                                spacing: 12px;
-
-                                HorizontalBox {
-                                    spacing: 8px;
-                                    alignment: start;
-                                    Rectangle {
-                                        width: 24px;
-                                        height: 24px;
-                                        background: #8b5cf6;
-                                        border-radius: 12px;
-                                        Text { text: "✨"; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
-                                    }
-                                    Text { text: approval.helper_name; color: #a855f7; font-weight: 700; font-size: 12px; vertical-alignment: center; }
-                                }
-
-                                VerticalBox {
-                                    spacing: 4px;
-                                    Text { text: approval.title; font-weight: 700; color: #1e293b; font-size: 16px; }
-                                    Text { text: approval.proposed_content; color: #64748b; wrap: word-wrap; font-size: 14px; }
-                                }
-
-                                HorizontalBox {
-                                    alignment: end;
-                                    spacing: 10px;
-                                    Button { text: "Edit"; height: 44px; }
-                                    Button {
-                                        text: "Approve & Send";
-                                        primary: true;
-                                        height: 44px;
-                                        clicked => { root.approve_task(approval.task_id); }
-                                    }
-                                }
-                            }
                         }
                     }
                 }
@@ -192,37 +101,7 @@ export component UnifiedInbox inherits Window {
         if (root.width > 768px || !show_mobile_list) : Rectangle {
             background: #f8fafc;
 
-
-            if (!is_meta_connected && show_meta_banner) : GlassCard {
-                height: 90px;
-                background: rgba(168, 85, 247, 0.15);
-                border-color: #8b5cf6;
-                border-width: 1px;
-                VerticalBox {
-                    padding: 12px;
-                    spacing: 8px;
-                    HorizontalBox {
-                        alignment: space-between;
-                        Text { text: "Connect Meta Accounts"; font-weight: 700; color: #1e293b; font-size: 14px; font-family: "Inter"; }
-                        TouchArea {
-                            width: 20px;
-                            height: 20px;
-                            Text { text: "X"; color: #64748b; horizontal-alignment: center; vertical-alignment: center; }
-                            clicked => { show_meta_banner = false; dismiss_meta_banner(); }
-                        }
-                    }
-                    HorizontalBox {
-                        alignment: space-between;
-                        Text { text: "Link Instagram, FB & WhatsApp."; color: #64748b; font-size: 12px; font-family: "Inter"; vertical-alignment: center; }
-                        Button {
-                            text: "Connect";
-                            primary: true;
-                            clicked => { action_connect_meta(); }
-                        }
-                    }
-                }
-            }
-        VerticalBox {
+            VerticalBox {
                 // Header
                 Rectangle {
                     height: 64px;
@@ -270,47 +149,6 @@ export component UnifiedInbox inherits Window {
                                         spacing: 4px;
                                         Text { text: msg.body; color: msg.is_me ? white : #1e293b; wrap: word-wrap; font-family: "Inter"; }
                                         Text { text: msg.time; font-size: 11px; color: msg.is_me ? #ddd6fe : #94a3b8; horizontal-alignment: right; }
-
-                                        if (msg.is_quote) : VerticalBox {
-                                            padding-top: 8px;
-                                            spacing: 8px;
-
-                                            Rectangle {
-                                                background: rgba(255, 255, 255, 0.2);
-                                                border-radius: 8px;
-                                                padding: 12px;
-
-                                                VerticalBox {
-                                                    spacing: 8px;
-                                                    Text { text: "Service Quote"; font-weight: 700; color: msg.is_me ? white : #1e293b; }
-
-                                                    if (msg.quote_status == "draft") : HorizontalBox {
-                                                        spacing: 8px;
-                                                        Text { text: "Suggested Price:"; color: msg.is_me ? white : #1e293b; vertical-alignment: center; }
-                                                        LineEdit {
-                                                            text: msg.quote_amount;
-                                                            // Width set to allow comfortable touch on mobile
-                                                            width: 100px;
-                                                        }
-                                                    }
-                                                    if (msg.quote_status == "approved") : Text {
-                                                        text: "Quote Approved: " + msg.quote_amount;
-                                                        color: msg.is_me ? white : #10b981; // green color for success
-                                                        font-weight: 700;
-                                                    }
-
-                                                    if (msg.quote_status == "draft") : Button {
-                                                        text: "Approve & Send";
-                                                        primary: true;
-                                                        height: 44px; // 44x44px touch target requirement
-                                                        clicked => {
-                                                            // We are using the original amount for simplicity as LineEdit doesn't have a direct output mapping without state
-                                                            approve_quote(msg.id, msg.quote_amount);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
                                     }
                                 }
                                 if (!msg.is_me) : Rectangle {} // Spacer

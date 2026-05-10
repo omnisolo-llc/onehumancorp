@@ -8,25 +8,16 @@ use opentelemetry::KeyValue;
 pub struct ViolationStore {
     pool: Option<PgPool>,
     violation_counter: Counter<u64>,
-    pub token_usage_counter: Counter<u64>,
-    pub llm_cost_counter: Counter<u64>,
-    pub storage_bytes_counter: Counter<u64>,
 }
 
 impl ViolationStore {
     pub fn new(pool: Option<PgPool>) -> Self {
         let meter = global::meter("ohc.harness.telemetry");
         let violation_counter = meter.u64_counter("ohc_agent_violations_total").build();
-        let token_usage_counter = meter.u64_counter("ohc_tenant_token_usage_total").build();
-        let llm_cost_counter = meter.u64_counter("ohc_tenant_llm_cost_cents").build();
-        let storage_bytes_counter = meter.u64_counter("ohc_storage_bytes_total").build();
 
         Self {
             pool,
             violation_counter,
-            token_usage_counter,
-            llm_cost_counter,
-            storage_bytes_counter,
         }
     }
 

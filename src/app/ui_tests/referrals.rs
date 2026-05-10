@@ -154,3 +154,68 @@ fn share_flow_send_invite_callback() {
     ui.invoke_send_invite_message("test_link".into());
     assert!(*called.borrow());
 }
+
+#[test]
+fn e2e_referrals_dashboard_flow() {
+    let ui = create();
+
+    ui.set_total_referrals(5);
+    ui.set_click_count(15);
+    ui.set_reward_balance("$50.00".into());
+
+    let c = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c_clone = c.clone();
+    ui.on_copy_link(move || {
+        *c_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_copy_link();
+    assert!(*c.borrow(), "Copy link was not triggered");
+
+    let c3 = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c3_clone = c3.clone();
+    ui.on_refresh(move || {
+        *c3_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_refresh();
+    assert!(*c3.borrow(), "Refresh was not triggered");
+}
+
+#[test]
+fn e2e_referrals_stats_render() {
+    let ui = create();
+    ui.set_total_referrals(10);
+    ui.set_click_count(50);
+    ui.set_reward_balance("$100.00".into());
+
+    assert_eq!(ui.get_total_referrals(), 10);
+    assert_eq!(ui.get_click_count(), 50);
+    assert_eq!(ui.get_reward_balance(), "$100.00");
+}
+
+#[test]
+fn e2e_referrals_invite_copy_status() {
+    let ui = create();
+    ui.set_invite_copy_status("Copied!".into());
+    assert_eq!(ui.get_invite_copy_status(), "Copied!");
+}
+
+#[test]
+fn e2e_referrals_link_copy_status() {
+    let ui = create();
+    ui.set_link_copy_status("Link copied!".into());
+    assert_eq!(ui.get_link_copy_status(), "Link copied!");
+}
+
+#[test]
+fn e2e_referrals_share_link() {
+    let ui = create();
+    let c = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c_clone = c.clone();
+    ui.on_share_link(move |_link| {
+        *c_clone.borrow_mut() = true;
+    });
+    ui.invoke_share_link("ohc://join?ref=TEST".into());
+    assert!(*c.borrow(), "Share link was not triggered");
+}

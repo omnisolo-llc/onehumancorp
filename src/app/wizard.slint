@@ -13,6 +13,7 @@ export component Wizard inherits Window {
     in property <string> issue_title: "Helper Needs Connection";
     in-out property <bool> is_advanced: false;
     callback toggle_advanced();
+    toggle_advanced => { is_advanced = !is_advanced; }
 
     in property <string> issue_description: "Your Customer Support helper is having trouble connecting to the email service. Let's get this fixed so they can get back to work.";
 
@@ -34,7 +35,7 @@ export component Wizard inherits Window {
             Rectangle {}
             AdvancedToggle {
                 is_advanced <=> root.is_advanced;
-                toggled => { is_advanced = !is_advanced; toggle_advanced(); }
+                toggled => { toggle_advanced(); }
             }
         }
 
@@ -48,8 +49,6 @@ export component Wizard inherits Window {
                 border-radius: 12px; 
                 width: 24px; 
                 height: 24px; 
-                drop-shadow-blur: 20px;
-                drop-shadow-color: rgba(0,0,0,0.5);
                 HorizontalBox {
                     padding: 2px;
                     Text { text: "1"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: white; horizontal-alignment: center; }
@@ -62,8 +61,6 @@ export component Wizard inherits Window {
                 border-radius: 12px; 
                 width: 24px; 
                 height: 24px; 
-                drop-shadow-blur: 20px;
-                drop-shadow-color: rgba(0,0,0,0.5);
                 HorizontalBox {
                     padding: 2px;
                     Text { text: "2"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: white; horizontal-alignment: center; }
@@ -76,8 +73,6 @@ export component Wizard inherits Window {
                 border-radius: 12px; 
                 width: 24px; 
                 height: 24px; 
-                drop-shadow-blur: 20px;
-                drop-shadow-color: rgba(0,0,0,0.5);
                 HorizontalBox {
                     padding: 2px;
                     Text { text: "3"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: white; horizontal-alignment: center; }

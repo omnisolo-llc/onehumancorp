@@ -1,10 +1,9 @@
 import { GlassCard } from "glass_card.slint";
 import { HeroBlock, ProductGridBlock, CalendarBlock, TestimonialsBlock, ContactFormBlock } from "smart_blocks.slint";
-import { AdvancedToggle } from "advanced_toggle.slint";
 import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit, CheckBox } from "std-widgets.slint";
 
 export component WebsiteBuilder inherits Window { // storefront
-    min-width: 375px;
+    width: 600px;
     height: 600px;
     title: "Build My Website";
 
@@ -21,16 +20,13 @@ export component WebsiteBuilder inherits Window { // storefront
 
     in-out property <int> step: 0;
     in-out property <string> selected_template: "";
-    in-out property <string> plan_tier: "Free";
-    callback show_upgrade_prompt(string);
     in-out property <string> primary_color: "#FF3B30";
     in-out property <string> product_name: "";
     in-out property <string> product_price: "";
     in-out property <string> product_description: "";
     in-out property <string> domain_choice: "subdomain";
-    in-out property <bool> is_publishing: false;
     in-out property <bool> is_advanced: false;
-    callback toggle_advanced();
+    in-out property <bool> is_publishing: false;
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -41,11 +37,25 @@ export component WebsiteBuilder inherits Window { // storefront
         HorizontalBox {
             Text { text: "Website Builder"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
-            AdvancedToggle {
-                is_advanced <=> root.is_advanced;
-                toggled => { is_advanced = !is_advanced; toggle_advanced(); }
+            HorizontalBox {
+                spacing: 8px;
+                alignment: end;
+                Text { text: "Advanced"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                TouchArea {
+                    width: 20px;
+                    height: 20px;
+                    clicked => { is_advanced = !is_advanced; save_state(); }
+                    Rectangle {
+                        width: 100%;
+                        height: 100%;
+                        border-radius: 4px;
+                        border-color: #a855f7;
+                        border-width: 1px;
+                        background: is_advanced ? #a855f7 : transparent;
+                        Text { text: is_advanced ? "✓" : ""; color: white; horizontal-alignment: center; }
+                    }
+                }
             }
-
         }
 
         // Step 0: Template
@@ -59,63 +69,50 @@ export component WebsiteBuilder inherits Window { // storefront
             Text { text: "Choose a template"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
             Text { text: "Optimized for your business"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
             
-            ScrollView {
-                VerticalBox {
-                    spacing: 24px;
-
-                    Text { text: "E-Commerce"; font-family: "Outfit"; font-size: 18px; font-weight: 700; color: white; }
-                    HorizontalBox {
-                        spacing: 12px;
-                        GlassCard {
-                            width: 250px; height: 180px;
-                            background: selected_template == "Modern" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                            VerticalBox { alignment: center; padding: 12px; spacing: 12px;
-                                Rectangle { height: 60px; background: white; border-radius: 4px; VerticalBox { alignment: center; Text { text: "Live Mini-Preview"; color: #a855f7; font-size: 12px; horizontal-alignment: center; } } }
-                                Text { text: "✨ Modern"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
-                                Text { text: "Clean & Glassy"; font-family: "Inter"; font-size: 10px; color: #94a3b8; horizontal-alignment: center; }
-                                if (selected_template == "Modern") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use this template →"; color: white; font-family: "Inter"; font-size: 10px; font-weight: 700; horizontal-alignment: center; } }
-                            }
-                            TouchArea { clicked => { selected_template = "Modern"; } }
+            HorizontalBox {
+                spacing: 12px;
+                alignment: center;
+                GlassCard {
+                    width: 140px;
+                    height: 180px;
+                    background: selected_template == "Modern" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; spacing: 12px;
+                        Rectangle { height: 60px; background: white; border-radius: 4px;
+                            VerticalBox { alignment: center; Text { text: "✦"; color: #a855f7; font-size: 24px; horizontal-alignment: center; } }
                         }
+                        Text { text: "✨ Modern"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "Clean & Glassy"; font-family: "Inter"; font-size: 10px; color: #94a3b8; horizontal-alignment: center; }
+                        if (selected_template == "Modern") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use this template →"; color: white; font-family: "Inter"; font-size: 10px; font-weight: 700; horizontal-alignment: center; } }
                     }
-
-                    Text { text: "Services"; font-family: "Outfit"; font-size: 18px; font-weight: 700; color: white; }
-                    HorizontalBox {
-                        spacing: 12px;
-                        GlassCard {
-                            width: 250px; height: 180px;
-                            background: selected_template == "Classic" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                            VerticalBox { alignment: center; padding: 12px; spacing: 12px;
-                                Rectangle { height: 60px; background: #f1f5f9; border-radius: 4px; VerticalBox { alignment: center; Text { text: "Live Mini-Preview"; color: #475569; font-size: 12px; horizontal-alignment: center; } } }
-                                Text { text: "🏛️ Classic"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
-                                Text { text: "Elegant & Solid"; font-family: "Inter"; font-size: 10px; color: #94a3b8; horizontal-alignment: center; }
-                                if (selected_template == "Classic") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use this template →"; color: white; font-family: "Inter"; font-size: 10px; font-weight: 700; horizontal-alignment: center; } }
-                            }
-                            TouchArea { clicked => { selected_template = "Classic"; } }
+                    TouchArea { clicked => { selected_template = "Modern"; } }
+                }
+                GlassCard {
+                    width: 140px;
+                    height: 180px;
+                    background: selected_template == "Classic" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; spacing: 12px;
+                        Rectangle { height: 60px; background: #f1f5f9; border-radius: 4px;
+                            VerticalBox { alignment: center; Text { text: "🏛️"; color: #475569; font-size: 24px; horizontal-alignment: center; } }
                         }
+                        Text { text: "🏛️ Classic"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "Elegant & Solid"; font-family: "Inter"; font-size: 10px; color: #94a3b8; horizontal-alignment: center; }
+                        if (selected_template == "Classic") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use this template →"; color: white; font-family: "Inter"; font-size: 10px; font-weight: 700; horizontal-alignment: center; } }
                     }
-
-                    Text { text: "Creative"; font-family: "Outfit"; font-size: 18px; font-weight: 700; color: white; }
-                    HorizontalBox {
-                        spacing: 12px;
-                        GlassCard {
-                            width: 250px; height: 180px;
-                            background: selected_template == "Bold" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                            VerticalBox { alignment: center; padding: 12px; spacing: 12px;
-                                Rectangle { height: 60px; background: #7e22ce; border-radius: 4px; VerticalBox { alignment: center; Text { text: "Live Mini-Preview"; color: white; font-size: 12px; horizontal-alignment: center; } } }
-                                Text { text: "🔥 Bold"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
-                                Text { text: "High Impact"; font-family: "Inter"; font-size: 10px; color: #94a3b8; horizontal-alignment: center; }
-                                if (selected_template == "Bold") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use this template →"; color: white; font-family: "Inter"; font-size: 10px; font-weight: 700; horizontal-alignment: center; } }
-                            }
-                            TouchArea { clicked => {
-                                if (plan_tier == "Free" || plan_tier == "Starter") {
-                                    show_upgrade_prompt("The 'Bold' template is a Pro feature. Upgrade to stand out with high-impact design.");
-                                } else {
-                                    selected_template = "Bold";
-                                }
-                            } }
+                    TouchArea { clicked => { selected_template = "Classic"; } }
+                }
+                GlassCard {
+                    width: 140px;
+                    height: 180px;
+                    background: selected_template == "Bold" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; spacing: 12px;
+                        Rectangle { height: 60px; background: #7e22ce; border-radius: 4px;
+                            VerticalBox { alignment: center; Text { text: "🔥"; color: white; font-size: 24px; horizontal-alignment: center; } }
                         }
+                        Text { text: "🔥 Bold"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; }
+                        Text { text: "High Impact"; font-family: "Inter"; font-size: 10px; color: #94a3b8; horizontal-alignment: center; }
+                        if (selected_template == "Bold") : Rectangle { background: #10b981; border-radius: 4px; padding: 4px; Text { text: "Use this template →"; color: white; font-family: "Inter"; font-size: 10px; font-weight: 700; horizontal-alignment: center; } }
                     }
+                    TouchArea { clicked => { selected_template = "Bold"; } }
                 }
             }
         }
@@ -162,26 +159,14 @@ export component WebsiteBuilder inherits Window { // storefront
                 }
                 TouchArea { clicked => { generate_logo(); } }
             }
-            HorizontalBox {
-                spacing: 12px;
-                GlassCard {
-                    height: 60px;
-                    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "📷 Upload Logo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
-                        Text { text: "Background will be removed (AI)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
-                    }
-                    TouchArea { clicked => { upload_logo(); } }
+            GlassCard {
+                height: 60px;
+                background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                VerticalBox { alignment: center; padding: 12px;
+                    Text { text: "📷 Upload Logo"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
+                    Text { text: "Background will be removed"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
                 }
-                GlassCard {
-                    height: 60px;
-                    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "✨ Generate a logo for me"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center;}
-                        Text { text: "AI generates 3 options"; font-family: "Inter"; font-size: 12px; color: #94a3b8; horizontal-alignment: center;}
-                    }
-                    TouchArea { clicked => { generate_logo(); } }
-                }
+                TouchArea { clicked => { upload_logo(); } }
             }
         }
 
@@ -227,15 +212,9 @@ export component WebsiteBuilder inherits Window { // storefront
             }
         }
 
-
         // Step 3: Domain
         if (step == 3) : VerticalBox {
             spacing: 16px;
-            if (is_advanced) : VerticalBox {
-                spacing: 8px;
-                Text { text: "Developer: DNS Records Override"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                LineEdit { placeholder-text: "CNAME mybusiness.ohc.app"; }
-            }
             Text { text: "Choose a Domain"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
             Text { text: "Where will customers find you?"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
@@ -255,13 +234,7 @@ export component WebsiteBuilder inherits Window { // storefront
                     Text { text: "🌍 Use my own domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                     Text { text: "e.g. www.mybusiness.com"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                 }
-                TouchArea { clicked => {
-                    if (plan_tier == "Free" || plan_tier == "Starter") {
-                        show_upgrade_prompt("Custom domains are a Pro feature. Upgrade to use your own professional web address.");
-                    } else {
-                        domain_choice = "custom";
-                    }
-                } }
+                TouchArea { clicked => { domain_choice = "custom"; } }
             }
             GlassCard {
                 height: 80px;
@@ -270,26 +243,14 @@ export component WebsiteBuilder inherits Window { // storefront
                     Text { text: "🛒 Buy a domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                     Text { text: "Search and buy a new domain"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                 }
-                TouchArea { clicked => {
-                    if (plan_tier == "Free") {
-                        show_upgrade_prompt("Buying domains is available for Pro and Business tiers. Upgrade to get started.");
-                    } else {
-                        domain_choice = "buy";
-                    }
-                } }
+                TouchArea { clicked => { domain_choice = "buy"; } }
             }
 
         }
 
-
         // Step 4: Review
         if (step == 4) : VerticalBox {
             spacing: 24px;
-            if (is_advanced) : VerticalBox {
-                spacing: 8px;
-                Text { text: "Developer: Raw Output Export"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                LineEdit { placeholder-text: "<html><head></head><body>...</body></html>"; height: 80px; }
-            }
             Text { text: "Go Live: Review your site"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
 
             ScrollView {
@@ -322,7 +283,6 @@ export component WebsiteBuilder inherits Window { // storefront
                         background: rgba(255, 255, 255, 0.05);
                         border-color: rgba(255, 255, 255, 0.1);
                         border-radius: 12px;
-                        drop-shadow-blur: 20px;
                         VerticalBox { alignment: center; padding: 12px;
                             Text { text: "Built with OHC — Start your free business →"; font-family: "Inter"; font-size: 12px; color: #a855f7; horizontal-alignment: center;}
                         }

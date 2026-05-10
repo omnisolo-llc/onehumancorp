@@ -59,17 +59,6 @@ impl Message {
             previous_response_id: None,
         }
     }
-
-    pub fn system(content: impl Into<String>) -> Self {
-        Self {
-            role: Role::System,
-            content: content.into(),
-            tool_calls: vec![],
-            tool_results: vec![],
-            response_id: None,
-            previous_response_id: None,
-        }
-    }
 }
 
 /// A tool call requested by the assistant.

@@ -1,10 +1,8 @@
-import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component KairosOrchestrationWalkthrough inherits Window {
-    preferred-width: 600px;
-    preferred-height: 600px;
-    min-width: 375px;
+    width: 600px;
+    height: 600px;
     title: "How Your Helpers Work Together";
     out property <string> test_title: root.title;
 
@@ -14,7 +12,7 @@ export component KairosOrchestrationWalkthrough inherits Window {
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
     always-on-top: true;
 
-    GlassCard {
+    Rectangle {
         background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
         opacity: 0.5;
         width: parent.width;
@@ -28,14 +26,13 @@ export component KairosOrchestrationWalkthrough inherits Window {
 
         Text { text: "How Your Helpers Work Together"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
 
-                GlassCard {
+                Rectangle {
             // Glassmorphism card
             background: rgba(255, 255, 255, 0.03);
             border-color: rgba(255, 255, 255, 0.1);
             border-width: 1px;
             border-radius: 12px;
-            max-width: 500px;
-            width: 100%;
+            width: 500px;
 
             VerticalBox {
                 padding: 32px;

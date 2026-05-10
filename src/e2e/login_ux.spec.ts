@@ -12,7 +12,7 @@ test.describe('Login Screen Visual Audit', () => {
     const startBusinessBtn = page.locator('button:has-text("🚀 Start Business Setup")').first();
     await expect(startBusinessBtn).toBeVisible();
 
-    const settingsBtn = page.locator('button:has-text("Fix App Issues")').first();
+    const settingsBtn = page.locator('button:has-text("⚙ App Settings")').first();
     await expect(settingsBtn).toBeVisible();
 
     const oauthBtn = page.locator('button:has-text("Continue with Google/Apple")').first();

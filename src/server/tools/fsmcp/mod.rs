@@ -74,44 +74,11 @@ impl FsMcpTool {
             PathBuf::from("/tmp/.ohc-local-data/fs")
         };
 
-        let local_dir_clone = local_base_dir.clone();
-        if is_standalone {
-            tokio::spawn(async move {
-                let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
-                loop {
-                    interval.tick().await;
-                    Self::cleanup_old_files(local_dir_clone.clone(), std::time::Duration::from_secs(86400 * 7)).await; // 7 days
-                }
-            });
-        }
-
         Self {
             is_standalone,
             local_base_dir,
             storage_provider,
         }
-    }
-
-    pub fn cleanup_old_files(dir: std::path::PathBuf, max_age: std::time::Duration) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        Box::pin(async move {
-            if let Ok(mut entries) = tokio::fs::read_dir(&dir).await {
-                while let Ok(Some(entry)) = entries.next_entry().await {
-                    if let Ok(metadata) = entry.metadata().await {
-                        if metadata.is_file() {
-                            if let Ok(modified) = metadata.modified() {
-                                if let Ok(elapsed) = modified.elapsed() {
-                                    if elapsed > max_age {
-                                        let _ = tokio::fs::remove_file(entry.path()).await;
-                                    }
-                                }
-                            }
-                        } else if metadata.is_dir() {
-                            Self::cleanup_old_files(entry.path(), max_age).await;
-                        }
-                    }
-                }
-            }
-        })
     }
 
     pub async fn read(&self, claims: &Claims, path: &str) -> Result<String, String> {
@@ -255,7 +222,7 @@ mod additional_tests {
             local_base_dir: PathBuf::from("/tmp"),
             storage_provider: Some(Arc::new(MockProvider)),
         };
-        let claims = Claims {
+        let mut claims = Claims {
             sub: "".to_string(),
             username: "".to_string(),
             email: "".to_string(),

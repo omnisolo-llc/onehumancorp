@@ -2,16 +2,13 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "dashboard",
-    srcs = ["handlers_growth.go", "server.go"],
+    srcs = ["handlers_growth.go"],
     importpath = "onehumancorp/srcs/server/dashboard",
     visibility = ["//visibility:public"],
-    deps = [
-        "//srcs/server/telemetry",
-    ],
 )
 
 go_test(
     name = "dashboard_test",
-    srcs = ["handlers_growth_test.go", "server_test.go"],
+    srcs = ["handlers_growth_test.go"],
     embed = [":dashboard"],
 )

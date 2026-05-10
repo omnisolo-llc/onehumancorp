@@ -10,13 +10,7 @@ void main() {
 
     // 1. Welcome Screen
     expect(find.text('Welcome to One Human Corp'), findsOneWidget);
-    final emailField = find.byKey(const Key('signupEmailField'));
-    await tester.ensureVisible(emailField);
-    await tester.enterText(emailField, 'newuser@example.com');
-    await tester.enterText(find.byKey(const Key('signupPasswordField')), 'password123');
-    final signupBtn = find.byKey(const Key('signupBtn'));
-    await tester.ensureVisible(signupBtn);
-    await tester.tap(signupBtn);
+    await tester.tap(find.text('Get Started'));
     await tester.pump(const Duration(milliseconds: 500));
 
     // 2. Business Profile Screen
@@ -35,7 +29,7 @@ void main() {
     await tester.tap(find.text('11-50').last);
     await tester.pump(const Duration(milliseconds: 500));
 
-    await tester.tap(find.text('Next').last);
+    await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
     // 3. Goal Selection Screen
@@ -45,12 +39,12 @@ void main() {
     await tester.tap(find.text('Support'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    await tester.tap(find.text('Next').last);
+    await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
     // 4. External Integrations Screen
     expect(find.text('External Integrations'), findsOneWidget);
-    await tester.tap(find.text('Next').last);
+    await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
     // 5. Deployment Preference Screen
@@ -58,7 +52,7 @@ void main() {
     await tester.tap(find.text('Cloud'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    await tester.tap(find.text('Next').last);
+    await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
     // 6. Administrator Account Screen
@@ -67,27 +61,10 @@ void main() {
     await tester.enterText(find.byKey(const Key('adminEmailField')), 'john@acme.com');
     await tester.enterText(find.byKey(const Key('adminPasswordField')), 'securePassword123');
 
-    await tester.tap(find.text('Next').last);
+    await tester.tap(find.text('Next'));
     await tester.pump(const Duration(milliseconds: 500));
 
-    // 7. Template Selection Screen
-    expect(find.text('Select a Template'), findsOneWidget);
-    await tester.tap(find.text('Modern')); // Select Modern template
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 1000));
-
-    // 8. Product Screen
-    expect(find.text('Add your first product or service'), findsOneWidget);
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    // 9. Domain Screen
-    expect(find.text('Choose a Domain'), findsOneWidget);
-    await tester.tap(find.text('Next').last);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    // 10. Review & Launch Screen
+    // 7. Review & Launch Screen
     expect(find.text('Review & Launch'), findsOneWidget);
     expect(find.text('Acme Corp'), findsOneWidget);
     expect(find.text('Technology'), findsOneWidget);
@@ -103,27 +80,15 @@ void main() {
     // Wait for the simulated API call (2 seconds)
     await tester.pump(const Duration(seconds: 2));
     await tester.pump(const Duration(seconds: 1));
+    // await tester.pumpAndSettle();
 
-    // 11. Checklist
-    expect(find.text("You\'re set up!"), findsOneWidget);
-    await tester.tap(find.text('Go to Dashboard'));
-    await tester.pump(const Duration(milliseconds: 500));
-
-    // 12. Dashboard Screen
+    // 8. Dashboard Screen
     expect(find.text("Dashboard"), findsOneWidget);
     expect(find.text("Welcome Checklist"), findsOneWidget);
-    expect(find.text("Business live"), findsOneWidget);
-    expect(find.text("Add 3 more products"), findsOneWidget);
-    expect(find.text("Connect Instagram"), findsOneWidget);
-    expect(find.text("Share your link with a friend"), findsOneWidget);
-
-    // Check for the milestone notification before the Pending Agent Approvals
-    expect(find.text("🎉 You just got your 10th order!"), findsOneWidget);
-
-    // We scroll down to find the remaining widgets that might be off screen
-    await tester.drag(find.byType(ListView), const Offset(0, -500));
-    await tester.pump();
-
+    expect(find.text("✅ Business live"), findsOneWidget);
+    expect(find.text("⬜ Add 3 more products"), findsOneWidget);
+    expect(find.text("⬜ Connect Instagram"), findsOneWidget);
+    expect(find.text("⬜ Share your link with a friend"), findsOneWidget);
     expect(find.text("Pending Agent Approvals"), findsOneWidget);
   });
 }

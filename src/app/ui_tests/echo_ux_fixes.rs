@@ -63,7 +63,6 @@ fn e2e_flow_ux_fixes() {
     // Verify our single-step contextual hint logic
     assert_eq!(biz_manager.get_show_offering_hint(), false);
     biz_manager.set_show_offering_hint(true);
-    // We verified the property changes which controls rendering the hint box.
     assert_eq!(biz_manager.get_show_offering_hint(), true);
 
     // Complete the flow

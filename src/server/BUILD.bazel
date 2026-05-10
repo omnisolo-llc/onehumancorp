@@ -61,8 +61,6 @@ rust_library(
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
         "@crates//:uuid",
-        "@crates//:tree-sitter",
-        "@crates//:tree-sitter-bash",
         "@crates//:walkdir",
     ],
 )
@@ -145,8 +143,6 @@ rust_test(
         "@crates//:uuid",
         "@crates//:axum",
         "@crates//:async-nats",
-        "@crates//:tree-sitter",
-        "@crates//:tree-sitter-bash",
         "@crates//:walkdir",
     ],
 )

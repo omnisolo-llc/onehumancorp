@@ -1,4 +1,3 @@
-use super::ast::ASTParser;
 use super::permissions::PermissionEvaluator;
 use super::wrapper::BashWrapper;
 use crate::harness::telemetry::ViolationStore;
@@ -59,20 +58,6 @@ impl SandboxAdapter for SandboxManager {
                 1.0,
                 labels,
             ).await;
-        }
-
-        // need mutable for parse_for_security
-        let mut ast_parser = ASTParser::new();
-        if let Err(reason) = ast_parser.parse_for_security(cmd) {
-            let details = json!({ "command": cmd, "reason": reason });
-            let _ = self.violation_store.record_violation(
-                "system",
-                "unknown_agent",
-                "unknown_session",
-                "ast_security_violation",
-                details
-            ).await;
-            return Err(reason);
         }
 
         if !self.evaluator.evaluate(cmd) {

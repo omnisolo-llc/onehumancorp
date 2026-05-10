@@ -224,24 +224,17 @@ impl TaskDecompositionService {
 
                 let row_opt = sqlx::query(
                     r#"
-                    UPDATE shared_tasks_decomposition
-                    SET status = 'EXECUTING', assigned_agent_id = ?, updated_at = ?
-                    WHERE id = (
-                        SELECT st.id FROM shared_tasks_decomposition st
-                        WHERE st.status = 'PENDING'
-                        AND NOT EXISTS (
-                            SELECT 1
-                            FROM json_each(st.dependencies) AS dep_id
-                            JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
-                            WHERE parent.status != 'COMPLETED'
-                        )
-                        LIMIT 1
+                    SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
+                    WHERE st.status = 'PENDING'
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM json_each(st.dependencies) AS dep_id
+                        JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
+                        WHERE parent.status != 'COMPLETED'
                     )
-                    RETURNING id
+                    LIMIT 1
                     "#
                 )
-                .bind(agent_id)
-                .bind(now)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -255,6 +248,44 @@ impl TaskDecompositionService {
                 };
 
                 let id: String = row.get("id");
+                let deps_str: String = row.get("dependencies");
+                let deps: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
+
+                if !deps.is_empty() {
+                    let mut is_ready = true;
+                    for dep in deps {
+                        let dep_status: Option<String> = sqlx::query_scalar(
+                            "SELECT status FROM shared_tasks_decomposition WHERE id = ?"
+                        )
+                        .bind(&dep)
+                        .fetch_optional(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                        if dep_status != Some("COMPLETED".to_string()) {
+                            is_ready = false;
+                            break;
+                        }
+                    }
+                    if !is_ready {
+                        tx.commit().await.map_err(|e| e.to_string())?;
+                        return Ok(None);
+                    }
+                }
+
+                sqlx::query(
+                    r#"
+                    UPDATE shared_tasks_decomposition
+                    SET status = 'EXECUTING', assigned_agent_id = ?, updated_at = ?
+                    WHERE id = ?
+                    "#
+                )
+                .bind(agent_id)
+                .bind(now)
+                .bind(&id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
                 let trans_id = uuid::Uuid::new_v4().to_string();
                 sqlx::query(
@@ -730,7 +761,7 @@ mod tests {
     #[tokio::test]
     async fn test_tasks_dual_deployment() {
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(500))
             .max_connections(1)
             .connect_lazy(database_url)
@@ -826,7 +857,7 @@ mod chaos_tests {
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
         let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
@@ -895,7 +926,7 @@ mod chaos_tests {
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
         let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });

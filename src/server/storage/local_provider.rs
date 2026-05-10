@@ -86,17 +86,14 @@ impl Provider for LocalProvider {
     }
 
     async fn get_blob_url(&self, key: &str) -> io::Result<String> {
-        if let Ok(cdn) = std::env::var("OHC_CDN_URL") {
-            if !cdn.is_empty() {
-                let cdn = cdn.trim_end_matches('/');
-                let key = key.trim_start_matches('/');
-                return Ok(format!("{}/{}", cdn, key));
-            }
-        }
-
         let path = self.get_local_path(key)?;
         if !path.exists() {
             return Err(io::Error::new(io::ErrorKind::NotFound, "Blob does not exist"));
+        }
+        if let Ok(cdn) = std::env::var("OHC_CDN_URL") {
+            if !cdn.is_empty() {
+                return Ok(format!("{}/{}", cdn, key));
+            }
         }
         Ok(format!("file://{}", path.to_string_lossy()))
     }
@@ -112,30 +109,18 @@ impl Provider for LocalProvider {
             tokio::fs::create_dir_all(parent).await?;
         }
 
-        let final_data = data.to_vec();
+        let mut final_data = data.to_vec();
 
         // Auto-compression to WebP mock for images
         let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") || key.ends_with(".webp");
-        let reported_size = if is_image && data.len() > 100 {
-            let original_size = data.len();
-            // Mock compression: simulate 80% reduction for quota reporting
-            let compressed_size = original_size / 5;
-            let saved = original_size - compressed_size;
-            tracing::info!(
-                key = %key,
-                original = original_size,
-                simulated_compressed = compressed_size,
-                saved = saved,
-                "Auto-optimized image to WebP (simulated for quota)"
-            );
-            compressed_size
-        } else {
-            data.len()
-        };
+        if is_image && data.len() > 100 {
+            // Mock compression: reduce size by 80% (truncate to 20%) to simulate WebP conversion
+            final_data.truncate(data.len() / 5);
+        }
 
         // Quota Enforcement
         let t_id = key.split('/').next().unwrap_or("default");
-        if let Ok(status) = self.tracker.track_storage_usage(t_id, reported_size as i64).await {
+        if let Ok(status) = self.tracker.track_storage_usage(t_id, final_data.len() as i64).await {
             if status.soft_limit_reached {
                 if let Some(msg) = status.user_message {
                     tracing::warn!(tid = %t_id, "Storage quota warning: {}", msg);
@@ -143,16 +128,7 @@ impl Provider for LocalProvider {
             }
         }
 
-        let res = tokio::fs::write(path, &final_data).await;
-        if res.is_ok() {
-            let _ = crate::telemetry::record_storage_rw_cost(
-                &crate::db::get_pool(),
-                t_id,
-                "write",
-                final_data.len() as i64
-            ).await;
-        }
-        res
+        tokio::fs::write(path, &final_data).await
     }
 }
 

@@ -19,8 +19,8 @@ export component WelcomeChecklist inherits Window {
     property <bool> task3_done: false;
     property <bool> task4_done: false;
 
-    in-out property <int> progress: 25;
-    in-out property <bool> is_completed: task1_done && task2_done && task3_done && task4_done;
+    in-out property <int> progress: 0;
+    in-out property <bool> is_completed: false;
 
     VerticalBox {
         alignment: center;

@@ -81,7 +81,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind(tier_string)
                             .bind(tenant_id)
-                            .execute(&*pool)
+                            .execute(pool)
                             .await
                             .map(|_| ())
                     }
@@ -124,7 +124,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind("Free")
                             .bind(tenant_id)
-                            .execute(&*pool)
+                            .execute(pool)
                             .await
                             .map(|_| ())
                     }

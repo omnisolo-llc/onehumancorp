@@ -4,12 +4,11 @@ use crate::ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse}
 #[derive(Clone)]
 pub struct OnboardingAgent {
     db: std::sync::Arc<crate::db::DB>,
-    hub: std::sync::Arc<crate::hub::Hub>,
 }
 
 impl OnboardingAgent {
-    pub fn new(db: std::sync::Arc<crate::db::DB>, hub: std::sync::Arc<crate::hub::Hub>) -> Self {
-        OnboardingAgent { db, hub }
+    pub fn new(db: std::sync::Arc<crate::db::DB>) -> Self {
+        OnboardingAgent { db }
     }
 
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
@@ -161,7 +160,7 @@ impl OnboardingAgent {
 
         let id = format!("prod-{}", uuid::Uuid::new_v4());
         sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
-            .bind(&id)
+            .bind(id)
             .bind(org_id)
             .bind(name)
             .bind("Added during onboarding")
@@ -171,22 +170,6 @@ impl OnboardingAgent {
             .execute(&self.db.pool)
             .await
             .map_err(|e| e.to_string())?;
-
-        let event_payload = json!({
-            "product_id": id,
-            "name": name,
-            "organization_id": org_id,
-        });
-
-        let event = crate::ohc::orchestration::TeammateMeshEvent {
-            agent_id: "system".to_string(),
-            action: "ProductCreated".to_string(),
-            status: "success".to_string(),
-            payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
-
-        let _ = self.hub.publish_teammate_event("products_inbox".to_string(), event);
 
         Ok(())
     }
@@ -219,35 +202,17 @@ impl OnboardingAgent {
             let strategy = strategy.to_string();
             let pool = self.db.pool.clone();
 
-            let hub = self.hub.clone();
             futures.push(tokio::spawn(async move {
                 sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
-                    .bind(&id)
-                    .bind(&org_id)
-                    .bind(&name)
-                    .bind(&desc)
+                    .bind(id)
+                    .bind(org_id)
+                    .bind(name)
+                    .bind(desc)
                     .bind(price)
-                    .bind(&strategy)
+                    .bind(strategy)
                     .bind(json!({}))
                     .execute(&pool)
-                    .await?;
-
-                let event_payload = json!({
-                    "product_id": id,
-                    "name": name,
-                    "organization_id": org_id,
-                });
-
-                let event = crate::ohc::orchestration::TeammateMeshEvent {
-                    agent_id: "system".to_string(),
-                    action: "ProductCreated".to_string(),
-                    status: "success".to_string(),
-                    payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
-                    msg_id: uuid::Uuid::new_v4().to_string(),
-                };
-
-                let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
-                Ok::<_, sqlx::Error>(())
+                    .await
             }));
         }
 
@@ -310,9 +275,7 @@ mod tests {
             Some(db) => db,
             None => return,
         };
-        let (tx, _) = tokio::sync::mpsc::channel(10);
-        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
-        let agent = OnboardingAgent::new(db, hub);
+        let agent = OnboardingAgent::new(db);
 
         let req = StartOnboardingRequest {
             business_type: "Online Store".to_string(),
@@ -368,14 +331,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_start_onboarding_service_and_food_cart() {
+    async fn test_start_onboarding_feature_flags_service_and_food_cart() {
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
         };
-        let (tx, _) = tokio::sync::mpsc::channel(10);
-        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
-        let agent = OnboardingAgent::new(db.clone(), hub);
+        let agent = OnboardingAgent::new(db.clone());
 
         // Test Service Business
         let req_service = StartOnboardingRequest {

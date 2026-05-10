@@ -127,8 +127,6 @@ func (e *TelemetrySyncEngine) StartSyncDaemon(ctx context.Context, interval time
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	e.SyncPendingMetrics(ctx)
-
 	for {
 		select {
 		case <-ctx.Done():
