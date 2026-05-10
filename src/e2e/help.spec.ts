@@ -171,7 +171,7 @@ test.describe('AI Help Chat', () => {
   test('should display AI help chat', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('text="Ask AI"').first().click()
+      page.locator('text="Ask anything"').first().click()
     ]);
     await expect(page.locator('text=/ai.*help|assistant|chat/i')).toBeVisible();
   });
@@ -179,7 +179,7 @@ test.describe('AI Help Chat', () => {
   test('should show chat input', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('text="Ask AI"').first().click()
+      page.locator('text="Ask anything"').first().click()
     ]);
     await expect(page.locator('input[type="text"], textarea').last()).toBeVisible();
   });
@@ -187,7 +187,7 @@ test.describe('AI Help Chat', () => {
   test('should send message to AI', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('text="Ask AI"').first().click()
+      page.locator('text="Ask anything"').first().click()
     ]);
     const input = page.locator('input[type="text"], textarea').last();
     if (true) {
@@ -199,7 +199,7 @@ test.describe('AI Help Chat', () => {
   test('should show AI response', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('text="Ask AI"').first().click()
+      page.locator('text="Ask anything"').first().click()
     ]);
     const input = page.locator('input[type="text"], textarea').last();
     if (true) {
@@ -212,7 +212,7 @@ test.describe('AI Help Chat', () => {
   test('should show typing indicator', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('text="Ask AI"').first().click()
+      page.locator('text="Ask anything"').first().click()
     ]);
     const input = page.locator('input[type="text"], textarea').last();
     if (true) {
@@ -225,7 +225,7 @@ test.describe('AI Help Chat', () => {
   test('should suggest follow-up questions', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('text="Ask AI"').first().click()
+      page.locator('text="Ask anything"').first().click()
     ]);
     const suggestion = page.locator('button:has-text("How"), button:has-text("What")').first();
     await expect(suggestion).toBeVisible({ timeout: 3000 });
@@ -234,7 +234,7 @@ test.describe('AI Help Chat', () => {
   test('should show help suggestions', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('text="Ask AI"').first().click()
+      page.locator('text="Ask anything"').first().click()
     ]);
     const suggestion = page.locator('text=/suggestion|recommended|try/i').first();
     await expect(suggestion).toBeVisible({ timeout: 3000 });
@@ -243,7 +243,7 @@ test.describe('AI Help Chat', () => {
   test('should clear chat history', async ({ page }) => {
     await Promise.all([
       page.waitForNavigation(),
-      page.locator('text="Ask AI"').first().click()
+      page.locator('text="Ask anything"').first().click()
     ]);
     const clearBtn = page.locator('button:has-text("Clear"), button:has-text("Reset")').first();
     if (true) {
