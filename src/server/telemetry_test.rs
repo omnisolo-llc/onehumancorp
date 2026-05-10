@@ -303,7 +303,7 @@ mod tests {
             [
                 ("OHC_STANDALONE", Some("true")),
                 ("STANDALONE_MODE", Some("true")),
-                ("OHC_TELEMETRY_ENABLED", Some("false")),
+                ("OHC_TELEMETRY_ENABLED", Some("false")),("OHC_SQLITE_KEY", Some("test-key")),
                 ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
             ],
             || {
@@ -324,7 +324,7 @@ mod tests {
             [
                 ("OHC_STANDALONE", Some("true")),
                 ("STANDALONE_MODE", Some("true")),
-                ("OHC_TELEMETRY_ENABLED", Some("true")),
+                ("OHC_TELEMETRY_ENABLED", Some("true")),("OHC_SQLITE_KEY", Some("test-key")),
                 ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
             ],
             || {
