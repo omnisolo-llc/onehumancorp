@@ -128,7 +128,7 @@ export component Pricing inherits Window {
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
                 Text { text: "Current Setup"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                LineEdit { placeholder-text: "{\"current_usage\": \"" + current_usage + "\"}"; }
+                LineEdit { placeholder-text: "Current usage: " + current_usage; }
             }
             spacing: 16px;
             Text { text: "Your Current Usage"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
@@ -210,7 +210,7 @@ export component Pricing inherits Window {
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
                 Text { text: "Custom Tier Rules"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                LineEdit { placeholder-text: "[\"allow_custom_domains\"]"; }
+                LineEdit { placeholder-text: "Allow custom domains"; }
             }
             spacing: 16px;
             Text { text: "Upgrade Plan"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
