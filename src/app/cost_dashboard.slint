@@ -14,10 +14,10 @@ export component CostDashboard inherits Window {
     preferred-width: 500px;
     min-width: 375px;
     height: 800px;
-    title: "Cost & AI Usage";
+    title: "Cost & Actions";
 
     in-out property <string> total_spend: "$0.00";
-    in-out property <string> total_tokens: "0";
+    in-out property <string> total_actions: "0";
     in-out property <[UiAgentCost]> agent_costs;
 
     callback refresh_data();
@@ -29,7 +29,7 @@ export component CostDashboard inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Cost & AI Usage"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Text { text: "Cost & Actions"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
             Button { text: "Refresh"; height: 44px; clicked => { refresh_data(); } }
         }
@@ -46,7 +46,7 @@ export component CostDashboard inherits Window {
 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Total Spend"; color: #94a3b8; }
+                    Text { text: "Total Cost"; color: #94a3b8; }
                     Text { text: total_spend; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
                 }
             }
@@ -57,8 +57,8 @@ export component CostDashboard inherits Window {
 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Total AI Usage"; color: #94a3b8; }
-                    Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                    Text { text: "Total Actions"; color: #94a3b8; }
+                    Text { text: total_actions; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                 }
             }
         }
@@ -75,7 +75,7 @@ export component CostDashboard inherits Window {
                 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Total Spend"; color: #94a3b8; }
+                    Text { text: "Total Cost"; color: #94a3b8; }
                     Text { text: total_spend; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #a855f7; }
                 }
             }
@@ -87,8 +87,8 @@ export component CostDashboard inherits Window {
 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Total AI Usage"; color: #94a3b8; }
-                    Text { text: total_tokens; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
+                    Text { text: "Total Actions"; color: #94a3b8; }
+                    Text { text: total_actions; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: #06b6d4; }
                 }
             }
         }
@@ -114,13 +114,13 @@ export component CostDashboard inherits Window {
                     HorizontalBox {
                         Text { text: "ROI: " + ac.roi; color: #64748b; font-size: 12px; }
                         Rectangle {}
-                        Text { text: "Token Efficiency: " + ac.efficiency; color: #64748b; font-size: 12px; }
+                        Text { text: "Efficiency: " + ac.efficiency; color: #64748b; font-size: 12px; }
                     }
                     HorizontalBox {
                         Text { text: "Storage Usage: " + ac.storage_usage; color: #64748b; font-size: 12px; }
                     }
                     HorizontalBox {
-                        Text { text: "Token Efficiency: " + ac.efficiency; color: #64748b; font-size: 12px; }
+                        Text { text: "Efficiency: " + ac.efficiency; color: #64748b; font-size: 12px; }
                     }
                     Rectangle {
                         height: 8px;

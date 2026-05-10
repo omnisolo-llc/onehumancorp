@@ -245,7 +245,7 @@ impl CostAuditor {
             let roi = self.calculate_roi(*cost, *revenue);
             let efficiency = self.calculate_efficiency(*cost, *output_tokens);
 
-            let metrics_str = format!(" [ROI: {:.2}%, Efficiency: {:.2} tok/$]", roi, efficiency);
+            let metrics_str = format!(" [ROI: {:.2}%, Efficiency: {:.2} actions/$]", roi, efficiency);
 
             let budget = agent_budgets.get(agent_id);
             if let Some(budget) = budget {

@@ -16,8 +16,8 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
 #[test] fn cost_injection_tokens() {
     let ui = create();
     let inj = "1000000'); DROP TABLE tokens; --";
-    ui.set_total_tokens(inj.into());
-    assert_eq!(ui.get_total_tokens(), inj);
+    ui.set_total_actions(inj.into());
+    assert_eq!(ui.get_total_actions(), inj);
 }
 
 #[test] fn cost_massive_list() {
@@ -42,7 +42,7 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
         name: "Local Ollama Agent".into(),
         cost: "$0.00".into(),
         roi: "0.00%".into(),
-        efficiency: "0.00 tok/$".into(),
+        efficiency: "0.00 actions/$".into(),
         storage_usage: "0MB".into(),
         pct: 0.0,
     }];
@@ -53,7 +53,7 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
     assert_eq!(agent.name, "Local Ollama Agent");
     assert_eq!(agent.cost, "$0.00");
     assert_eq!(agent.roi, "0.00%");
-    assert_eq!(agent.efficiency, "0.00 tok/$");
+    assert_eq!(agent.efficiency, "0.00 actions/$");
     assert_eq!(agent.pct, 0.0);
 }
 
@@ -64,7 +64,7 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
             name: "Cloud GPT-4 Agent".into(),
             cost: "$15.50".into(),
             roi: "150.00%".into(),
-            efficiency: "32.50 tok/$".into(),
+            efficiency: "32.50 actions/$".into(),
             storage_usage: "0MB".into(),
             pct: 1.0,
         },
@@ -72,7 +72,7 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
             name: "Local Llama 3 Agent".into(),
             cost: "$0.00".into(),
             roi: "0.00%".into(),
-            efficiency: "0.00 tok/$".into(),
+            efficiency: "0.00 actions/$".into(),
             storage_usage: "0MB".into(),
             pct: 0.0,
         }
@@ -84,7 +84,7 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
     assert_eq!(zero_agent.name, "Local Llama 3 Agent");
     assert_eq!(zero_agent.cost, "$0.00");
     assert_eq!(zero_agent.roi, "0.00%");
-    assert_eq!(zero_agent.efficiency, "0.00 tok/$");
+    assert_eq!(zero_agent.efficiency, "0.00 actions/$");
     assert_eq!(zero_agent.pct, 0.0);
 }
 
@@ -153,7 +153,7 @@ fn cost_dashboard_comprehensive_flow_scenario() {
     ];
     ui.set_agent_costs(Rc::new(slint::VecModel::from(v)).into());
     ui.set_total_spend("$25.00".into());
-    ui.set_total_tokens("500000".into());
+    ui.set_total_actions("500000".into());
 
     assert_eq!(ui.get_total_spend(), "$25.00");
     assert_eq!(ui.get_agent_costs().row_count(), 2);

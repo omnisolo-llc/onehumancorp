@@ -40,7 +40,7 @@ fn test_miser_cost_cuj_full_flow() {
 
     let cost_ui = app::CostDashboard::new().unwrap();
     cost_ui.set_total_spend("$0.00".into());
-    cost_ui.set_total_tokens("0".into());
+    cost_ui.set_total_actions("0".into());
 
     let agent_costs = vec![
         app::UiAgentCost {
@@ -55,7 +55,7 @@ fn test_miser_cost_cuj_full_flow() {
     cost_ui.set_agent_costs(Rc::new(slint::VecModel::from(agent_costs)).into());
 
     assert_eq!(cost_ui.get_total_spend(), "$0.00");
-    assert_eq!(cost_ui.get_total_tokens(), "0");
+    assert_eq!(cost_ui.get_total_actions(), "0");
     assert_eq!(cost_ui.get_agent_costs().row_data(0).unwrap().name, "AutoDream");
 
     // 3. User views Pricing plans and upgrades to Starter to resolve limits

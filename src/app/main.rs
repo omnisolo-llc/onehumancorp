@@ -2310,14 +2310,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 slint::invoke_from_event_loop(move || {
                     if let Some(ui) = cost_dashboard_handle_fetch.upgrade() {
                         ui.set_total_spend(format!("${:.2}", summary.total_cost_usd).into());
-                        ui.set_total_tokens(format!("{}", summary.total_tokens).into());
+                        ui.set_total_actions(format!("{}", summary.total_tokens).into());
 
                         let ui_agent_costs: Vec<app::UiAgentCost> = summary.agents.into_iter().map(|ac| {
                             app::UiAgentCost {
                                 name: ac.agent_id.into(),
                                 cost: format!("${:.2}", ac.cost_usd).into(),
                                 roi: format!("{:.1}%", ac.roi).into(),
-                                efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
+                                efficiency: format!("{:.1} actions/$", ac.efficiency).into(),
                                 storage_usage: "0MB".into(),
                                 pct: ac.pct,
                             }
@@ -2353,14 +2353,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     slint::invoke_from_event_loop(move || {
                         if let Some(ui) = cost_dashboard_handle_fetch.upgrade() {
                             ui.set_total_spend(format!("${:.2}", summary.total_cost_usd).into());
-                            ui.set_total_tokens(format!("{}", summary.total_tokens).into());
+                            ui.set_total_actions(format!("{}", summary.total_tokens).into());
 
                             let ui_agent_costs: Vec<app::UiAgentCost> = summary.agents.into_iter().map(|ac| {
                                 app::UiAgentCost {
                                     name: ac.agent_id.into(),
                                     cost: format!("${:.2}", ac.cost_usd).into(),
                                     roi: format!("{:.1}%", ac.roi).into(),
-                                    efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
+                                    efficiency: format!("{:.1} actions/$", ac.efficiency).into(),
                                     storage_usage: "0MB".into(),
                                     pct: ac.pct,
                                 }
@@ -2483,14 +2483,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let summary = resp.into_inner();
                 if let Some(ui) = cost_dashboard_handle_fetch.upgrade() {
                     ui.set_total_spend(format!("${:.2}", summary.total_cost_usd).into());
-                    ui.set_total_tokens(format!("{}", summary.total_tokens).into());
+                    ui.set_total_actions(format!("{}", summary.total_tokens).into());
 
                     let ui_agent_costs: Vec<app::UiAgentCost> = summary.agents.into_iter().map(|ac| {
                         app::UiAgentCost {
                             name: ac.agent_id.into(),
                             cost: format!("${:.2}", ac.cost_usd).into(),
                             roi: format!("{:.1}%", ac.roi).into(),
-                            efficiency: format!("{:.1} tok/$", ac.efficiency).into(),
+                            efficiency: format!("{:.1} actions/$", ac.efficiency).into(),
                             storage_usage: "0MB".into(),
                             pct: ac.pct,
                         }
@@ -7515,18 +7515,18 @@ mod remaining_e2e_tests {
         let cost_ui = app::CostDashboard::new().unwrap();
 
         cost_ui.set_total_spend("$45.50".into());
-        cost_ui.set_total_tokens("1,500,000".into());
+        cost_ui.set_total_actions("1,500,000".into());
 
         let agent_costs = slint::ModelRc::new(slint::VecModel::from(vec![
             app::UiAgentCost {
                 name: "Customer Support Agent".into(),
-                cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 tok/$".into(),
+                cost: "$25.00".into(), roi: "150%".into(), efficiency: "100 actions/$".into(),
                 storage_usage: "150MB".into(),
                 pct: 0.55,
             },
             app::UiAgentCost {
                 name: "Marketing Agent".into(),
-                cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 tok/$".into(),
+                cost: "$20.50".into(), roi: "0%".into(), efficiency: "0 actions/$".into(),
                 storage_usage: "2.1GB".into(),
                 pct: 0.45,
             }
@@ -7535,13 +7535,13 @@ mod remaining_e2e_tests {
         cost_ui.set_agent_costs(agent_costs.clone());
 
         assert_eq!(cost_ui.get_total_spend(), "$45.50");
-        assert_eq!(cost_ui.get_total_tokens(), "1,500,000");
+        assert_eq!(cost_ui.get_total_actions(), "1,500,000");
 
         let retrieved_costs = cost_ui.get_agent_costs();
         assert_eq!(retrieved_costs.row_count(), 2);
         let first_agent = retrieved_costs.row_data(0).unwrap();
         assert_eq!(first_agent.name, "Customer Support Agent");
-        assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 tok/$");
+        assert_eq!(first_agent.cost, "$25.00"); assert_eq!(first_agent.roi, "150%"); assert_eq!(first_agent.efficiency, "100 actions/$");
     }
 
     #[test]
@@ -7567,13 +7567,13 @@ mod remaining_e2e_tests {
         cost_ui.on_refresh_data(move || {
             if let Some(ui) = cost_ui_handle.upgrade() {
                 ui.set_total_spend("$100.00".into());
-                ui.set_total_tokens("2,000,000".into());
+                ui.set_total_actions("2,000,000".into());
             }
         });
 
         cost_ui.invoke_refresh_data();
         assert_eq!(cost_ui.get_total_spend(), "$100.00");
-        assert_eq!(cost_ui.get_total_tokens(), "2,000,000");
+        assert_eq!(cost_ui.get_total_actions(), "2,000,000");
     }
 
     #[test]
