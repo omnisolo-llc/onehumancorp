@@ -1028,7 +1028,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
-                  key: const Key('launchAIBtn'), child: const Text('Publish my business →', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                  key: const Key('launchAIBtn'), child: const Text('Launch My Business →', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ),
