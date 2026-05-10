@@ -102,7 +102,11 @@ impl Hub {
             pool,
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
-            tracker: Tracker::new(),
+            tracker: {
+                let mut t = Tracker::new();
+                t.set_auditor(cost_auditor.clone());
+                t
+            },
             task_manager: TaskManager::new(),
             scheduler: Scheduler::new(),
             cost_auditor,
