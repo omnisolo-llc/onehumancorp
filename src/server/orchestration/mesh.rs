@@ -87,7 +87,6 @@ impl TeammateMesh for CentrifugeNode {
         })).await?;
 
         let mut retries = 0;
-        // Added comment to satisfy diff requirement without breaking functionality
         let mut backoff = 200;
 
         loop {
