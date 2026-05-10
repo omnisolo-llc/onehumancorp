@@ -1,23 +1,43 @@
 package telemetry
 
-// RedactInterfacePII redacts PII from an interface map.
+// RedactInterfacePII redacts PII from an interface map recursively.
 func RedactInterfacePII(attrs map[string]interface{}) map[string]interface{} {
 	if attrs == nil {
 		return nil
 	}
-	redacted := make(map[string]interface{}, len(attrs))
-	for k, v := range attrs {
-		// Basic PII redaction logic
-		if k == "email" || k == "phone" || k == "name" || k == "password" || k == "token" || k == "ssn" {
-			redacted[k] = "[REDACTED]"
-		} else {
-			// For nested maps, we could recurse, but for now just copy
-			if nestedMap, ok := v.(map[string]interface{}); ok {
-				redacted[k] = RedactInterfacePII(nestedMap)
-			} else {
-				redacted[k] = v
-			}
-		}
+
+	redacted, ok := redactInterfacePIIHelper(attrs).(map[string]interface{})
+	if !ok {
+		return attrs
 	}
 	return redacted
+}
+
+// redactInterfacePIIHelper is a helper function to redact sensitive information recursively.
+func redactInterfacePIIHelper(val interface{}) interface{} {
+	switch v := val.(type) {
+	case map[string]interface{}:
+		newMap := make(map[string]interface{})
+		for k, innerV := range v {
+			if isSensitiveKey(k) {
+				newMap[k] = "[REDACTED]"
+			} else {
+				newMap[k] = redactInterfacePIIHelper(innerV)
+			}
+		}
+		return newMap
+	case []interface{}:
+		newArr := make([]interface{}, len(v))
+		for i, innerV := range v {
+			newArr[i] = redactInterfacePIIHelper(innerV)
+		}
+		return newArr
+	case string:
+		if isEmail(v) {
+			return "[EMAIL_REDACTED]"
+		}
+		return v
+	default:
+		return v
+	}
 }
