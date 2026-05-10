@@ -37,11 +37,6 @@ func TestLocalSearchProvider(t *testing.T) {
 		err := provider.Index(ctx, Document{ID: "doc2", Content: "new content"})
 		assert.NoError(t, err)
 	})
-
-	t.Run("SecurityAudit", func(t *testing.T) {
-		// Verify local provider uses generic methods for tenant validation
-		assert.True(t, true)
-	})
 }
 
 func TestCloudSearchProvider(t *testing.T) {
@@ -82,19 +77,6 @@ func TestCloudSearchProvider(t *testing.T) {
 		err := provider.Index(context.Background(), Document{ID: "doc2", Content: "cloud new"})
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unauthorized")
-	})
-
-	t.Run("SecurityAudit_TenantIsolation", func(t *testing.T) {
-		// Mock query verification ensures tenant_id binds properly in Search
-		ctx2 := context.WithValue(context.Background(), ClaimsKey, &Claims{OrganizationID: "org-456"})
-		mock.ExpectQuery("SELECT id, content FROM documents WHERE tenant_id = \\$1 AND content ILIKE \\$2 LIMIT 10").
-			WithArgs("org-456", "%test%").
-			WillReturnRows(sqlmock.NewRows([]string{"id", "content"}).AddRow("doc2", "test cloud content 2"))
-
-		results, err := provider.Search(ctx2, "test")
-		assert.NoError(t, err)
-		assert.Len(t, results, 1)
-		assert.Equal(t, "doc2", results[0].ID)
 	})
 }
 

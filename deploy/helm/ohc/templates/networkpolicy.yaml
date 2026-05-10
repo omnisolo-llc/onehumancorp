@@ -1,46 +1,23 @@
-{{- if .Values.backend.networkPolicy.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "ohc.fullname" . }}-backend-network-policy
+  name: {{ include "ohc.fullname" . }}-backend
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: backend
+      {{- include "ohc.selectorLabels" . | nindent 6 }}
   policyTypes:
-  - Ingress
-  - Egress
+    - Ingress
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: {{ .Release.Namespace }}
-      podSelector:
-        matchLabels:
-          app: {{ .Release.Name }}-ohc-core
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: {{ .Release.Namespace }}
-      podSelector:
-        matchLabels:
-          app: {{ .Release.Name }}-ingress
-  egress:
-  - to:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: {{ .Release.Namespace }}
-  - to:
-      - namespaceSelector:
-          matchLabels:
-            kubernetes.io/metadata.name: kube-system
-        podSelector:
-          matchLabels:
-            k8s-app: kube-dns
-    ports:
-      - protocol: UDP
-        port: 53
-      - protocol: TCP
-        port: 53
-{{- end }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-ohc-core
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.port }}
