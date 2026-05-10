@@ -1,0 +1,118 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export struct UiAgentActivity {
+    agent_name: string,
+    agent_role: string,
+    activity_message: string,
+    status_icon: string,
+    time_ago: string,
+}
+
+export struct UiAgentStatusCard {
+    agent_name: string,
+    agent_role: string,
+    status: string,
+    status_color: string,
+    current_task: string,
+}
+
+export component SwarmObservability inherits Window {
+    preferred-width: 500px;
+    min-width: 375px;
+    height: 800px;
+    title: "Swarm Observability";
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    in property <[UiAgentStatusCard]> agent_status_cards;
+    in property <[UiAgentActivity]> activity_feed;
+
+    callback close();
+    callback refresh_data();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Swarm Observability"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Rectangle {}
+            Button { text: "Refresh"; height: 44px; clicked => { refresh_data(); } }
+            Button { text: "Close"; height: 44px; clicked => { close(); } }
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 24px;
+
+                VerticalBox {
+                    spacing: 16px;
+                    Text { text: "Realtime Agent Status"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+
+                    for card in agent_status_cards : GlassCard {
+                        border-color: rgba(255, 255, 255, 0.1);
+                        border-width: 1px;
+                        border-radius: 8px;
+                        background: rgba(255, 255, 255, 0.05);
+
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 12px;
+
+                            HorizontalBox {
+                                Text { text: card.agent_name; font-size: 18px; font-weight: 700; color: white; font-family: "Outfit"; }
+                                Rectangle {}
+                                Rectangle {
+                                    background: card.status_color == "green" ? rgba(16, 185, 129, 0.2) : (card.status_color == "yellow" ? rgba(234, 179, 8, 0.2) : rgba(100, 116, 139, 0.2));
+                                    border-radius: 4px;
+                                    padding: 4px;
+                                    Text {
+                                        text: card.status;
+                                        font-size: 12px;
+                                        color: card.status_color == "green" ? #10b981 : (card.status_color == "yellow" ? #eab308 : #94a3b8);
+                                        font-weight: 700;
+                                        font-family: "Inter";
+                                    }
+                                }
+                            }
+                            Text { text: card.agent_role; font-size: 14px; color: #94a3b8; font-family: "Inter"; }
+                            Text { text: card.current_task; font-size: 14px; color: #cbd5e1; font-family: "Inter"; wrap: word-wrap; }
+                        }
+                    }
+                }
+
+                VerticalBox {
+                    spacing: 16px;
+                    Text { text: "Activity Feed"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+
+                    GlassCard {
+                        border-color: rgba(255, 255, 255, 0.1);
+                        border-width: 1px;
+                        border-radius: 8px;
+                        background: rgba(255, 255, 255, 0.05);
+
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 16px;
+
+                            for activity in activity_feed : HorizontalBox {
+                                spacing: 12px;
+                                Text { text: activity.status_icon; font-size: 18px; vertical-alignment: top; }
+                                VerticalBox {
+                                    spacing: 4px;
+                                    Text { text: activity.activity_message; font-size: 14px; color: white; font-family: "Inter"; wrap: word-wrap; }
+                                    HorizontalBox {
+                                        Text { text: activity.agent_name + " • " + activity.agent_role; font-size: 12px; color: #94a3b8; font-family: "Inter"; }
+                                        Rectangle {}
+                                        Text { text: activity.time_ago; font-size: 12px; color: #64748b; font-family: "Inter"; }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

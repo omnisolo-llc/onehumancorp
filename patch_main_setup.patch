@@ -1,0 +1,59 @@
+--- src/app/main.rs
++++ src/app/main.rs
+@@ -453,6 +453,13 @@
+                                             }
+                                         });
+
++                                        let swarm_observability_ui = app::SwarmObservability::new().unwrap();
++                                        let swarm_observability_handle_clone = swarm_observability_ui.as_weak();
++                                        dashboard.on_action_view_observability(move || {
++                                            if let Some(ui) = swarm_observability_handle_clone.upgrade() {
++                                                let _ = ui.show();
++                                            }
++                                        });
++
+                                         dashboard.global::<app::TooltipRegistry>().on_request_tooltip_text(|id| { crate::get_tooltip_text(id.as_str()) });
+                                         let ai_help_chat_ui = app::AiHelpChat::new().unwrap();
+                                         let ai_help_chat_handle = ai_help_chat_ui.as_weak();
+@@ -628,6 +635,13 @@
+                         });
+                         Box::leak(Box::new(billing_ui));
+
++                        let swarm_observability_ui = app::SwarmObservability::new().unwrap();
++                        let swarm_observability_handle_clone = swarm_observability_ui.as_weak();
++                        dashboard.on_action_view_observability(move || {
++                            if let Some(ui) = swarm_observability_handle_clone.upgrade() {
++                                let _ = ui.show();
++                            }
++                        });
++
+                         let cost_dashboard_handle_clone = cost_dashboard_ui.as_weak();
+                         my_plan_ui.on_view_details(move || {
+                             if let Some(ui) = cost_dashboard_handle_clone.upgrade() {
+@@ -1746,6 +1760,18 @@
+     let cost_dashboard_ui = app::CostDashboard::new().unwrap();
+
++    let swarm_observability_ui = app::SwarmObservability::new().unwrap();
++    let swarm_observability_handle_clone = swarm_observability_ui.as_weak();
++    let dashboard_clone = dashboard.clone_strong();
++    dashboard_clone.on_action_view_observability(move || {
++        if let Some(ui) = swarm_observability_handle_clone.upgrade() {
++            let _ = ui.show();
++        }
++    });
++    let swarm_observability_handle_clone2 = swarm_observability_ui.as_weak();
++    swarm_observability_ui.on_close(move || {
++        if let Some(ui) = swarm_observability_handle_clone2.upgrade() {
++            let _ = ui.hide();
++        }
++    });
++
+     let cost_dashboard_handle_fetch = cost_dashboard_ui.as_weak();
+     let my_plan_handle_fetch = my_plan_handle.clone();
+     tokio::spawn(async move {
+@@ -2562,6 +2588,7 @@
+                 Box::leak(Box::new(pricing_ui));
++                Box::leak(Box::new(swarm_observability_ui));
+                 Box::leak(Box::new(welcome_checklist_ui.clone_strong()));
+             }
+         }
