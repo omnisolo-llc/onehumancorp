@@ -1,7 +1,0 @@
--- +goose Up
-ALTER TABLE tenants ADD COLUMN IF NOT EXISTS owner_email VARCHAR;
-ALTER TABLE tenants ADD COLUMN IF NOT EXISTS state VARCHAR;
-
--- +goose Down
-ALTER TABLE tenants DROP COLUMN IF EXISTS owner_email;
-ALTER TABLE tenants DROP COLUMN IF EXISTS state;
