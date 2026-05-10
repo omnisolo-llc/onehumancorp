@@ -53,13 +53,25 @@ export component VideoTutorials inherits Window {
                         VerticalBox {
                             padding: 16px; spacing: 12px;
                             Rectangle {
-                                height: 200px;
-                                background: #0f172a;
+                                // Dynamic height optimized for portrait mobile screens
+                                height: parent.width * 16 / 9;
+                                background: #000000;
                                 border-radius: 8px;
-                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; }
+                                clip: true;
+
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: white; font-size: 24px; }
+
+                                // Progress bar simulation
+                                Rectangle {
+                                    y: parent.height - 4px;
+                                    height: 4px;
+                                    width: 30%;
+                                    background: #ef4444;
+                                }
                             }
                             Text { text: video.title; font-weight: 700; font-size: 18px; color: white; }
-                            Text { text: video.description; color: white; wrap: word-wrap; }
+                            Text { text: video.description; color: #94a3b8; wrap: word-wrap; }
+                            Text { text: video.duration_sec + " seconds"; color: #64748b; font-size: 12px; }
                         }
                     }
                 }
