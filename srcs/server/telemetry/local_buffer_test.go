@@ -179,14 +179,14 @@ func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
 }
 
 func TestBufferMetricHelper_RedactsPII(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
-	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
-
 	db := setupTestDB(t)
 	defer db.Close()
 
 	engine := NewTelemetrySyncEngine(db, "http://localhost:8080/metrics")
 	InitGlobalSyncEngine(engine)
+
+	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
 
 	ctx := context.Background()
 

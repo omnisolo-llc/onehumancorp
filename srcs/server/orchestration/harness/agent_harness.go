@@ -9,5 +9,6 @@ type AttemptResult struct {
 
 type AgentHarness interface {
     RunAttempt(cmd string) (*AttemptResult, error)
+    Compact() error
     Reset() error
 }

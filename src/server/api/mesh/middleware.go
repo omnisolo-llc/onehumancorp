@@ -30,6 +30,16 @@ func ValidationMiddleware(next http.Handler) http.Handler {
 				return
 			}
 
+			// Reject deprecated keys
+			if _, hasAction := payload["action"]; hasAction {
+				http.Error(w, "Deprecated key 'action' found in payload", http.StatusBadRequest)
+				return
+			}
+			if _, hasStatus := payload["status"]; hasStatus {
+				http.Error(w, "Deprecated key 'status' found in payload", http.StatusBadRequest)
+				return
+			}
+
 			// Enforce strict quad-key requirement
 			requiredKeys := []string{"agent_id", "channel", "event_type", "data"}
 			for _, key := range requiredKeys {

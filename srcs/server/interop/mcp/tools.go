@@ -91,7 +91,7 @@ func (t *WorkspaceSyncTool) Execute(ctx context.Context, path string, strategy s
 
 	payloadBytes, err := jsonMarshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal struct: %w", err)
+		return fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
 	if err := t.Proxy.BufferIntegrationState(ctx, "hybrid_workspace_sync", payloadBytes); err != nil {
