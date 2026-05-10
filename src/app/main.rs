@@ -2156,13 +2156,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }).unwrap();
                         }
 
-                        let vc_response: Result<tonic::Response<_>, tonic::Status> = client.get_viral_coefficient(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
+                        let vc_response: Result<tonic::Response<_>, tonic::Status> = client.get_referral_score(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(vc_resp) = vc_response {
-                            let vc: ohc::orchestration::ViralCoefficientResponse = vc_resp.into_inner();
+                            let vc: ohc::orchestration::ReferralScoreResponse = vc_resp.into_inner();
                             let handle_clone = handle.clone();
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = handle_clone.upgrade() {
-                                    ui.set_viral_coefficient(vc.k_factor as f32);
+                                    ui.set_referral_score(vc.score as f32);
                                 }
                             }).unwrap();
                         }
