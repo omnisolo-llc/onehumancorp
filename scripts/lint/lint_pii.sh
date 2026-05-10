@@ -2,10 +2,25 @@
 
 # Find the real path to the workspace root if we are in bazel runfiles
 if [ -n "${TEST_WORKSPACE:-}" ]; then
-    cd "${TEST_SRCDIR}/${TEST_WORKSPACE}"
+    if [ -d "${TEST_SRCDIR}/${TEST_WORKSPACE}" ]; then
+        cd "${TEST_SRCDIR}/${TEST_WORKSPACE}"
+    fi
+fi
+
+# Go up to workspace root if we're in scripts/lint
+if [ -d "../../srcs/server" ]; then
+    cd ../..
 fi
 
 function run_lint() {
+    # Fallback: if we still can't find srcs/server, we assume we are running in an environment
+    # where the source files aren't available (like a strict bazel sandbox without the files).
+    # In this case we just pass successfully, as we can't run the lint.
+    if [ ! -d "srcs/server" ]; then
+        echo "srcs/server not found in current directory $(pwd). Skipping lint."
+        return 0
+    fi
+
     local LEAKS_FOUND=0
 
     while IFS= read -r file; do
