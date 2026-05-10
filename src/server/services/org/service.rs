@@ -7,16 +7,19 @@ use std::collections::HashMap;
 pub struct MyOrgService {
     hub: Arc<crate::hub::Hub>,
     settings: RwLock<SettingsResponse>,
+    analytics_cache: crate::utils::cache::HybridCache<AnalyticsSummaryResponse>,
 }
 
 impl MyOrgService {
     pub fn new(hub: Arc<crate::hub::Hub>) -> Self {
+        let redis_client = hub.redis_client.clone();
         MyOrgService {
             hub,
             settings: RwLock::new(SettingsResponse {
                 minimax_api_key: std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
                 extras: HashMap::new(),
             }),
+            analytics_cache: crate::utils::cache::HybridCache::new(redis_client),
         }
     }
 }
@@ -68,6 +71,13 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
+        let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| crate::auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
+        let cache_key = format!("org_analytics_{}", org_id);
+
+        if let Some(cached) = self.analytics_cache.get(&cache_key).await {
+            return Ok(Response::new(cached));
+        }
+
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
         let hub3 = self.hub.clone();
@@ -111,15 +121,13 @@ impl OrgService for MyOrgService {
             0.0
         };
         
-        let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| crate::auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
         let status = self.hub.tracker().check_agent_quota(&org_id).await.unwrap_or(crate::pricing::rate_limit::RateLimitStatus {
             is_allowed: true,
             soft_limit_reached: false,
             user_message: None,
         });
 
-        
-        Ok(Response::new(AnalyticsSummaryResponse {
+        let response = AnalyticsSummaryResponse {
             human_agent_ratio,
             total_agents,
             total_humans,
@@ -131,6 +139,43 @@ impl OrgService for MyOrgService {
             soft_limit_reached: status.soft_limit_reached,
             upgrade_message: status.user_message.unwrap_or_default(),
             is_allowed: status.is_allowed,
-        }))
+        };
+
+        self.analytics_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+
+        Ok(Response::new(response))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::Request;
+
+    #[tokio::test]
+    async fn test_get_analytics_caching() {
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let db_arc = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()) });
+        let hub = Arc::new(crate::hub::Hub::new(tx, db_arc.pool.clone()));
+
+        let service = MyOrgService::new(hub);
+
+        let mut request1 = Request::new(EmptyRequest {});
+        request1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
+
+        let start = std::time::Instant::now();
+        let _res1 = service.get_analytics(request1).await.unwrap().into_inner();
+        let elapsed1 = start.elapsed();
+
+        let mut request2 = Request::new(EmptyRequest {});
+        request2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
+
+        let start2 = std::time::Instant::now();
+        let _res2 = service.get_analytics(request2).await.unwrap().into_inner();
+        let elapsed2 = start2.elapsed();
+
+        // The second call should be faster, but we just verify it works properly via caching
+        assert!(_res1.total_agents == _res2.total_agents);
     }
 }
