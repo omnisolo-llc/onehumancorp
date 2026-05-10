@@ -1,1 +1,1 @@
-🎥 Lens Audit: Zero WIP exit
+Zero WIP exit
