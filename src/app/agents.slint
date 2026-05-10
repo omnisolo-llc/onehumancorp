@@ -10,11 +10,12 @@ export struct UiAgent {
     is_running: bool,
     svid_verified: bool,
     is_new: bool,
+    autonomy_level: int,
 }
 
 export component Agents inherits Window {
-    width: 500px;
-    height: 600px;
+    width: 600px;
+    height: 700px;
     title: "Helpers";
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
@@ -27,6 +28,7 @@ export component Agents inherits Window {
     callback hire_agent();
     callback fix_agent(string);
     callback tune_agent(string);
+    callback change_autonomy_level(string, int);
 
     if (show_upgrade_prompt) : UpgradePrompt {
         message: root.upgrade_prompt_message;
@@ -62,23 +64,63 @@ export component Agents inherits Window {
                         triggered => { is_bright = !is_bright; }
                     }
                 }
-                HorizontalBox {
+                VerticalBox {
                     padding: 16px;
-                    Text { text: "🤖"; font-size: 32px; horizontal-alignment: center; }
-                    VerticalBox {
-                        Text { text: agent.name; font-family: "Inter"; font-weight: 700; color: white; }
-                        Text { text: agent.role; font-family: "Inter"; color: #94a3b8; }
-                    }
-                    Rectangle {} 
-                    VerticalBox {
-                        Text { 
-                            text: agent.status; 
-                            font-family: "Inter";
-                            color: agent.is_running ? #10b981 : #ef4444; 
-                            horizontal-alignment: center; 
+                    spacing: 12px;
+                    HorizontalBox {
+                        Text { text: "🤖"; font-size: 32px; horizontal-alignment: center; vertical-alignment: center; }
+                        VerticalBox {
+                            Text { text: agent.name; font-family: "Inter"; font-weight: 700; color: white; }
+                            Text { text: agent.role; font-family: "Inter"; color: #94a3b8; }
                         }
-                        if (!agent.is_running) : Button { text: "Help me fix this"; clicked => { fix_agent(agent.id); } }
-                        Button { text: "Tune this agent"; clicked => { tune_agent(agent.id); } }
+                        Rectangle {}
+                        VerticalBox {
+                            Text {
+                                text: agent.status;
+                                font-family: "Inter";
+                                color: agent.is_running ? #10b981 : #ef4444;
+                                horizontal-alignment: center;
+                            }
+                            if (!agent.is_running) : Button { text: "Help me fix this"; clicked => { fix_agent(agent.id); } }
+                            Button { text: "Tune this agent"; clicked => { tune_agent(agent.id); } }
+                        }
+                    }
+                    Rectangle {
+                        height: 1px;
+                        background: rgba(255, 255, 255, 0.1);
+                    }
+                    VerticalBox {
+                        spacing: 8px;
+                        Text { text: "Autonomy Level"; font-weight: 700; color: white; font-family: "Outfit"; }
+                        Text { 
+                            text: agent.autonomy_level == 0 ? "Level 1: Draft Only (I review everything)" :
+                                  agent.autonomy_level == 1 ? "Level 2: Standard (Auto-execute routine tasks, draft complex ones)" :
+                                  "Level 3: Full Autopilot (Just give me a summary)";
+                            color: #94a3b8;
+                            font-family: "Inter";
+                            font-size: 12px;
+                        }
+                        HorizontalBox {
+                            spacing: 10px;
+                            Button {
+                                height: 44px;
+                                text: "Draft Only";
+                                enabled: agent.autonomy_level != 0;
+                                clicked => { change_autonomy_level(agent.id, 0); }
+                            }
+                            Button {
+                                height: 44px;
+                                text: "Standard";
+                                enabled: agent.autonomy_level != 1;
+                                clicked => { change_autonomy_level(agent.id, 1); }
+                            }
+                            Button {
+                                height: 44px;
+                                text: "Full Autopilot";
+                                enabled: agent.autonomy_level != 2;
+                                clicked => { change_autonomy_level(agent.id, 2); }
+                            }
+                        }
                     }
                 }
             }

@@ -2772,6 +2772,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 let dashboard_approve_handle = dashboard.as_weak();
+
+                dashboard.on_edit_task(move |_task_id| {});
+                dashboard.on_regenerate_task(move |_task_id| {});
+
+                dashboard.on_edit_task(move |_task_id| {});
+                dashboard.on_regenerate_task(move |_task_id| {});
+
+                dashboard.on_edit_task(move |_task_id: slint::SharedString| {});
+                dashboard.on_regenerate_task(move |_task_id: slint::SharedString| {});
     dashboard.on_approve_task({
         let dashboard_approve_handle = dashboard_approve_handle.clone();
         move |task_id| {
@@ -3066,6 +3075,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
 
                     let dashboard_handle_for_approve = dashboard_handle.clone();
+
+                    dashboard.on_edit_task(move |_task_id| {});
+                    dashboard.on_regenerate_task(move |_task_id| {});
+
+                    dashboard.on_edit_task(move |_task_id| {});
+                    dashboard.on_regenerate_task(move |_task_id| {});
+
+                    dashboard.on_edit_task(move |_task_id: slint::SharedString| {});
+                    dashboard.on_regenerate_task(move |_task_id: slint::SharedString| {});
                     dashboard.on_approve_task(move |task_id| {
                         if let Some(ui) = dashboard_handle_for_approve.upgrade() {
                             let current_approvals = ui.get_pending_approvals();
@@ -3200,7 +3218,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    agents_ui.on_hire_agent(move || {
+
+    agents_ui.on_change_autonomy_level(move |_id: slint::SharedString, _level: i32| {});
+agents_ui.on_change_autonomy_level(move |id, level| {
+            println!("Change autonomy level for {}: {}", id, level);
+        });
+
+
+    agents_ui.on_change_autonomy_level(move |_id, _level| {});
+
+
+    agents_ui.on_change_autonomy_level(move |_id, _level| {});
+agents_ui.on_hire_agent(move || {
         let agents_ui_handle_inner = agents_ui_handle.clone();
         let agent_config_handle_inner = init_agent_config_handle_for_hire.clone();
 
@@ -6103,7 +6132,14 @@ dashboard_ui.on_action_grow_business(move || {
         let agent_config_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let agent_config_opened_clone = agent_config_opened.clone();
 
-        agents_ui.on_hire_agent(move || {
+
+    agents_ui.on_change_autonomy_level(move |_id: slint::SharedString, _level: i32| {});
+
+    agents_ui.on_change_autonomy_level(move |_id, _level| {});
+
+
+    agents_ui.on_change_autonomy_level(move |_id, _level| {});
+agents_ui.on_hire_agent(move || {
             *agent_config_opened_clone.borrow_mut() = true;
         });
 
@@ -6150,7 +6186,14 @@ dashboard_ui.on_action_grow_business(move || {
         // Test agents limit soft paywall
         let agents_ui = app::Agents::new().unwrap();
         let agents_ui_handle = agents_ui.as_weak();
-        agents_ui.on_hire_agent(move || {
+
+    agents_ui.on_change_autonomy_level(move |_id: slint::SharedString, _level: i32| {});
+
+    agents_ui.on_change_autonomy_level(move |_id, _level| {});
+
+
+    agents_ui.on_change_autonomy_level(move |_id, _level| {});
+agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
                 ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
                 ui.set_show_upgrade_prompt(true);
@@ -6492,7 +6535,14 @@ mod remaining_e2e_tests {
 
         let agents_ui = app::Agents::new().unwrap();
         let agents_ui_handle = agents_ui.as_weak();
-        agents_ui.on_hire_agent(move || {
+
+    agents_ui.on_change_autonomy_level(move |_id: slint::SharedString, _level: i32| {});
+
+    agents_ui.on_change_autonomy_level(move |_id, _level| {});
+
+
+    agents_ui.on_change_autonomy_level(move |_id, _level| {});
+agents_ui.on_hire_agent(move || {
             if let Some(ui) = agents_ui_handle.upgrade() {
                 ui.set_upgrade_prompt_message("You've reached your free tier limit of 1 AI agent. Upgrade to unlock unlimited agents.".into());
                 ui.set_show_upgrade_prompt(true);

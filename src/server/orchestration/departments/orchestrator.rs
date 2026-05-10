@@ -5,7 +5,7 @@ use uuid::Uuid;
 use chrono::Utc;
 use std::str::FromStr;
 
-use crate::orchestration::departments::types::{DepartmentType, DepartmentConfig, DepartmentEvent, ApprovalRequest, ApprovalStatus};
+use crate::orchestration::departments::types::{DepartmentType, DepartmentConfig, DepartmentEvent, ApprovalRequest, ApprovalStatus, AutonomyLevel};
 use crate::db::DbStore;
 use ohc_builtin_agent::memory_store::VectorRepository;
 use opentelemetry::global;
@@ -187,8 +187,22 @@ impl DepartmentOrchestrator {
         Ok(())
     }
 
-        pub async fn execute_action(&self, department: DepartmentType, description: String, tenant_id: String, risk: ActionRisk, _action_payload: serde_json::Value) -> Result<(), String> {
-        match risk {
+    pub async fn execute_action(&self, department: DepartmentType, description: String, tenant_id: String, risk: ActionRisk, _action_payload: serde_json::Value) -> Result<(), String> {
+        let deps = self.departments.read().await;
+        let mut final_risk = risk;
+
+        if let Some(dep_rw) = deps.get(&department) {
+            let dep = dep_rw.read().await;
+            if let Some(config) = dep.get_config(&tenant_id) {
+                match config.autonomy_level {
+                    AutonomyLevel::DraftOnly => final_risk = ActionRisk::DraftForReview,
+                    AutonomyLevel::AutoPilot => final_risk = ActionRisk::AutoExecute,
+                    AutonomyLevel::Standard => {} // Respect initial risk
+                }
+            }
+        }
+
+        match final_risk {
             ActionRisk::AutoExecute => {
                 let req = ApprovalRequest {
                     id: Uuid::new_v4().to_string(),

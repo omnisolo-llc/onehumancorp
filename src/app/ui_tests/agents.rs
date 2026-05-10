@@ -115,6 +115,7 @@ fn test_agents_ui_agent_list_population() {
             is_running: true,
             svid_verified: true,
             is_new: false,
+            autonomy_level: 1,
         }
     ]));
 

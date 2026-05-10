@@ -43,10 +43,25 @@ impl std::fmt::Display for DepartmentType {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AutonomyLevel {
+    DraftOnly,
+    Standard,
+    AutoPilot,
+}
+
+impl Default for AutonomyLevel {
+    fn default() -> Self {
+        AutonomyLevel::Standard
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DepartmentConfig {
     pub tone_of_voice: String,
     pub auto_approve_limits: f64,
+    #[serde(default)]
+    pub autonomy_level: AutonomyLevel,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
