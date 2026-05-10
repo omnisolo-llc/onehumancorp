@@ -305,31 +305,20 @@ void main() {
 
       await tester.pump(const Duration(milliseconds: 500));
 
-      // 8. Product Screen
-
-      await tester.tap(find.text('Next'));
-
-      await tester.pump(const Duration(milliseconds: 500));
-
-      // 9. Domain Screen
-
-      await tester.tap(find.text('Next'));
-
-      await tester.pump(const Duration(milliseconds: 500));
-
-      // 10. Review & Launch -> Launch My AI Team
+      // 8. Review & Launch -> Launch My AI Team
       final launchBtn = find.text('Launch My AI Team');
       await tester.ensureVisible(launchBtn);
       await tester.tap(launchBtn);
       await tester.pump(const Duration(milliseconds: 500));
 
-      // After launch, step goes to 10, rendering Welcome Checklist
+      // After launch, step goes to 8, rendering DashboardScreen
       await tester.pump(const Duration(seconds: 2));
-      expect(find.text('You\'re set up!'), findsOneWidget);
-      expect(find.text('✅ Business live'), findsOneWidget);
-      expect(find.text('⬜ Add 3 more products'), findsOneWidget);
-      expect(find.text('⬜ Connect Instagram'), findsOneWidget);
-      expect(find.text('⬜ Share your link with a friend'), findsOneWidget);
+      expect(find.text('Dashboard'), findsOneWidget);
+      expect(find.text('Welcome Checklist'), findsOneWidget);
+      expect(find.text('Business live'), findsOneWidget);
+      expect(find.text('Add 3 more products'), findsOneWidget);
+      expect(find.text('Connect Instagram'), findsOneWidget);
+      expect(find.text('Share your link with a friend'), findsOneWidget);
     });
   });
 }
