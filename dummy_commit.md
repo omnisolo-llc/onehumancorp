@@ -1,1 +1,1 @@
-General Mission Worker & Taskmaster: Zero WIP exit
+Maintainer: Zero WIP exit
