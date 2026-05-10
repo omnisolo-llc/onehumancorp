@@ -41,6 +41,9 @@ func NewTelemetrySyncEngine(db *sql.DB, remoteURL string) *TelemetrySyncEngine {
 
 // BufferMetric stores a metric locally in SQLite
 func (e *TelemetrySyncEngine) BufferMetric(ctx context.Context, name string, value float64, attrs map[string]interface{}) error {
+	if err := CheckForPIILock(attrs); err != nil {
+		return err
+	}
 	id := uuid.New().String()
 	attrBytes, err := json.Marshal(attrs)
 	if err != nil {

@@ -170,7 +170,7 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 		default:
 		}
 
-		statusFile := filepath.Join(statusDir, fmt.Sprintf("%d.yml", time.Now().Unix()))
+		statusFile := filepath.Join(statusDir, task.ID+".json")
 
 		statusData := map[string]interface{}{
 			"task_id":   task.ID,
@@ -202,8 +202,8 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 		"status":    "COMPLETED",
 		"timestamp": time.Now().Unix(),
 	}
-	finalBytes, _ := yaml.Marshal(finalData)
-	statusFile := filepath.Join(statusDir, fmt.Sprintf("%d.yml", time.Now().Unix()))
+	finalBytes, _ := json.Marshal(finalData)
+	statusFile := filepath.Join(statusDir, task.ID+".json")
 	tempFile := statusFile + ".tmp"
 	_ = os.WriteFile(tempFile, finalBytes, 0644)
 	_ = os.Rename(tempFile, statusFile)

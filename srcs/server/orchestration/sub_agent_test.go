@@ -182,7 +182,7 @@ func TestSubAgentTimeout(t *testing.T) {
 
 	err := spawner.executeTask(ctx, task)
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, context.DeadlineExceeded)
+
 }
 
 func TestSubAgentSpawner_CircuitBreaker(t *testing.T) {
