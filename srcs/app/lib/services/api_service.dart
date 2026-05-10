@@ -2,25 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  Future<Map<String, dynamic>?> sendChatPrompt(String message) async {
-    final url = Uri.parse('https://api.onehumancorp.com/api/onboarding/chat');
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'message': message}),
-      );
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        print('Failed to send chat prompt: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error sending chat prompt: $e');
-    }
-    return null;
-  }
-
   Future<void> submitBusinessData(Map<String, dynamic> data) async {
     final url = Uri.parse('https://api.onehumancorp.com/api/onboarding/start');
     try {

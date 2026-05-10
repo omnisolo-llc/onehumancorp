@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/main.dart';
-import 'package:app/screens/business_setup_wizard_screen.dart';
 
 void main() {
   testWidgets('Business Setup Wizard E2E test', (WidgetTester tester) async {
-    // Build our app and trigger a frame. Use BusinessSetupWizardScreen directly to skip conversational flow
-    await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: BusinessSetupWizardScreen())));
+    // Build our app and trigger a frame.
+    await tester.pumpWidget(const ProviderScope(child: OHCApp()));
 
     // 1. Welcome Screen
     expect(find.text('Welcome to One Human Corp'), findsOneWidget);

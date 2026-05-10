@@ -4,23 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 
 	"onehumancorp/srcs/server/orchestration"
 )
 
 type OnboardingRequest struct {
-	Name        string `json:"name"`
-	Category    string `json:"category"`
-	Description string `json:"description"`
-}
-
-type ChatOnboardingRequest struct {
-	Message string `json:"message"`
-}
-
-type ChatOnboardingResponse struct {
 	Name        string `json:"name"`
 	Category    string `json:"category"`
 	Description string `json:"description"`
@@ -50,46 +39,6 @@ func NewService(tenantStore TenantStore, taskStore orchestration.TaskStore) *Ser
 		taskStore:   taskStore,
 	}
 }
-func (s *Service) ChatOnboarding(ctx context.Context, req ChatOnboardingRequest) (*ChatOnboardingResponse, error) {
-	// A mock implementation of AI processing the user's business description.
-	// In production, this would call out to Gemini/GPT.
-
-	// Default extraction
-	name := "My New Business"
-	category := "Other"
-	description := "A business starting out on OHC."
-
-	// Simple keyword extraction for the sake of the E2E simulation
-	if req.Message != "" {
-		description = req.Message
-
-		// Very basic heuristics for demo purposes
-		if len(req.Message) > 10 {
-			name = "Auto-Generated Shop"
-		}
-
-		if strings.Contains(strings.ToLower(req.Message), "bake") || strings.Contains(strings.ToLower(req.Message), "cake") {
-			category = "Food & Beverage"
-			name = "Custom Bakery"
-		} else if strings.Contains(strings.ToLower(req.Message), "handyman") || strings.Contains(strings.ToLower(req.Message), "plumb") {
-			category = "Service"
-			name = "Handyman Services"
-		} else if strings.Contains(strings.ToLower(req.Message), "boutique") || strings.Contains(strings.ToLower(req.Message), "clothes") {
-			category = "Retail"
-			name = "Fashion Boutique"
-		} else if strings.Contains(strings.ToLower(req.Message), "tutor") || strings.Contains(strings.ToLower(req.Message), "music") {
-			category = "Service"
-			name = "Music Lessons"
-		}
-	}
-
-	return &ChatOnboardingResponse{
-		Name:        name,
-		Category:    category,
-		Description: description,
-	}, nil
-}
-
 
 func (s *Service) StartOnboarding(ctx context.Context, req OnboardingRequest) (*OnboardingResponse, error) {
 	tenant := &Tenant{
