@@ -8,7 +8,34 @@ use crate::auth::AuthMode;
 use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
 };
-use crate::memory::inject_memories_into_prompt;
+use chrono::{DateTime, Utc};
+
+#[derive(Debug, Clone)]
+pub struct MemoryEntry {
+    pub memory_id: String,
+    pub context: String,
+    pub embedding: Option<Vec<u8>>,
+    pub source_plugin: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub organization_id: String,
+}
+
+pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str) -> String {
+    if memories.is_empty() {
+        return system_prompt.to_string();
+    }
+    let mut s = String::new();
+    s.push_str("## Relevant past experience\n");
+    for m in memories {
+        s.push_str("- ");
+        s.push_str(&m.context);
+        s.push('\n');
+    }
+    s.push_str("\n---\n\n");
+    s.push_str(system_prompt);
+    s
+}
+
 use crate::memory_store::{VectorRepository, EmbeddingRecord};
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
@@ -279,7 +306,7 @@ impl AgentServiceImpl {
                 vec![]
             };
             store.semantic_search(&org_id, &embedding, 5).await.map(|records| {
-                records.into_iter().map(|r| crate::memory::MemoryEntry {
+                records.into_iter().map(|r| MemoryEntry {
                     memory_id: r.id,
                     context: r.content,
                     embedding: None,
