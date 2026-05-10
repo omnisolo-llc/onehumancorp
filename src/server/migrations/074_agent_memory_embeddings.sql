@@ -11,3 +11,5 @@ CREATE TABLE IF NOT EXISTS agent_memory_embeddings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_memory_embeddings ON agent_memory_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+ALTER TABLE agent_memory_embeddings ENABLE ROW LEVEL SECURITY;
