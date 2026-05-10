@@ -53,6 +53,13 @@ func (m *MacOSSandboxManager) WrapCommand(cmd string) (string, error) {
 		telemetry.RecordHarnessToolInvocation(context.Background(), cmdParts[0])
 	}
 
+	// Simulate DB IO check for wrapped sandbox execution
+	startDb := time.Now()
+	defer func() {
+		duration := time.Since(startDb).Seconds()
+		telemetry.RecordHarnessDbIOLatency(context.Background(), duration, "macos_setup")
+	}()
+
 	profile := "(version 1)\n(allow default)\n"
 
 	for _, path := range m.policy.ReadOnlyPaths {

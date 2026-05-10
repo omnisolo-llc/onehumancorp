@@ -130,3 +130,44 @@ func init() {
 	// Initialize a dummy sync engine for tests to avoid nil issues
 	// when bufferMetricHelper is called.
 }
+
+// Add comprehensive unit tests for telemetry emission that verify metrics don't error under different environments
+func TestRecordHarnessInitLatency_Detailed(t *testing.T) {
+	ctx := context.Background()
+	os.Setenv("OHC_STANDALONE", "false")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	err := RecordHarnessInitLatency(ctx, 2.5)
+	if err != nil {
+		t.Fatalf("Expected no error when recording init latency, got: %v", err)
+	}
+}
+
+func TestRecordHarnessDbIOLatency_Detailed(t *testing.T) {
+	ctx := context.Background()
+	os.Setenv("OHC_STANDALONE", "true")
+	os.Setenv("OHC_TELEMETRY_ENABLED", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+	defer os.Unsetenv("OHC_TELEMETRY_ENABLED")
+
+	err := RecordHarnessDbIOLatency(ctx, 3.14, "READ")
+	if err != nil {
+		t.Fatalf("Expected no error when recording DB IO latency, got: %v", err)
+	}
+
+	err = RecordHarnessDbIOLatency(ctx, 1.23, "WRITE")
+	if err != nil {
+		t.Fatalf("Expected no error when recording DB IO latency, got: %v", err)
+	}
+}
+
+func TestGetDeploymentModeAttribute_Fallback(t *testing.T) {
+	// Without any standalone environment variable set, it should default to cloud
+	os.Unsetenv("OHC_STANDALONE")
+	os.Unsetenv("STANDALONE_MODE")
+
+	attr := getDeploymentModeAttribute()
+	if attr.Value.AsString() != "cloud" {
+		t.Errorf("Expected cloud mode attribute by default, got %v", attr.Value.AsString())
+	}
+}
