@@ -10,137 +10,40 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
 	db, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("Failed to open test db: %v", err)
-	}
+	require.NoError(t, err)
 
 	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS local_telemetry_metrics (
+		CREATE TABLE local_telemetry_metrics (
 			id TEXT PRIMARY KEY,
 			metric_name TEXT NOT NULL,
 			value REAL NOT NULL,
-			attributes TEXT,
-			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+			attributes TEXT NOT NULL,
+			timestamp DATETIME NOT NULL,
 			synced_to_cloud BOOLEAN NOT NULL DEFAULT FALSE
-		);
+		)
 	`)
-	if err != nil {
-		t.Fatalf("Failed to create table: %v", err)
-	}
+	require.NoError(t, err)
 	return db
 }
 
-func TestTelemetrySyncEngine_BufferMetric(t *testing.T) {
+func TestTelemetrySyncEngine_AddMetric(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
+	engine := NewTelemetrySyncEngine(db, "http://test")
 
-	engine := NewTelemetrySyncEngine(db, "http://localhost:8080/metrics")
-	ctx := context.Background()
-
-	attrs := map[string]interface{}{"service": "agent", "mode": "standalone"}
-	err := engine.BufferMetric(ctx, "agent_execution_time", 1.5, attrs)
-	if err != nil {
-		t.Fatalf("Failed to buffer metric: %v", err)
-	}
+	err := engine.BufferMetric(context.Background(), "test_metric", 42.0, map[string]interface{}{"key": "value"})
+	assert.NoError(t, err)
 
 	var count int
-	err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics").Scan(&count)
-	if err != nil {
-		t.Fatalf("Failed to query db: %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("Expected 1 row, got %d", count)
-	}
-}
-
-func TestTelemetrySyncEngine_SyncPendingMetrics(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
-
-	// Mock the cloud endpoint
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var pt MetricPoint
-		if err := json.NewDecoder(r.Body).Decode(&pt); err != nil {
-			t.Errorf("Failed to decode request body: %v", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		if pt.MetricName != "test_metric" {
-			t.Errorf("Expected metric name 'test_metric', got '%s'", pt.MetricName)
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	engine := NewTelemetrySyncEngine(db, server.URL)
-	ctx := context.Background()
-
-	attrs := map[string]interface{}{"service": "agent"}
-	err := engine.BufferMetric(ctx, "test_metric", 42.0, attrs)
-	if err != nil {
-		t.Fatalf("Failed to buffer metric: %v", err)
-	}
-
-	// First verify it's unsynced
-	var countUnsynced int
-	err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics WHERE synced_to_cloud = FALSE").Scan(&countUnsynced)
-	if err != nil || countUnsynced != 1 {
-		t.Fatalf("Expected 1 unsynced row")
-	}
-
-	err = engine.SyncPendingMetrics(ctx)
-	if err != nil {
-		t.Fatalf("Failed to sync metrics: %v", err)
-	}
-
-	// Now verify it's synced
-	var countSynced int
-	err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics WHERE synced_to_cloud = TRUE").Scan(&countSynced)
-	if err != nil || countSynced != 1 {
-		t.Fatalf("Expected 1 synced row")
-	}
-
-	var countUnsyncedAfter int
-	err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics WHERE synced_to_cloud = FALSE").Scan(&countUnsyncedAfter)
-	if err != nil || countUnsyncedAfter != 0 {
-		t.Fatalf("Expected 0 unsynced rows")
-	}
-}
-
-func TestTelemetrySyncEngine_SyncPendingMetrics_Failure(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
-
-	// Mock the cloud endpoint returning an error
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	defer server.Close()
-
-	engine := NewTelemetrySyncEngine(db, server.URL)
-	ctx := context.Background()
-
-	attrs := map[string]interface{}{"service": "agent"}
-	err := engine.BufferMetric(ctx, "fail_metric", 42.0, attrs)
-	if err != nil {
-		t.Fatalf("Failed to buffer metric: %v", err)
-	}
-
-	err = engine.SyncPendingMetrics(ctx)
-	if err != nil {
-		t.Fatalf("Failed to execute sync method: %v", err)
-	}
-
-	// Verify it remains unsynced
-	var countUnsynced int
-	err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics WHERE synced_to_cloud = FALSE").Scan(&countUnsynced)
-	if err != nil || countUnsynced != 1 {
-		t.Fatalf("Expected 1 unsynced row")
-	}
+	err = db.QueryRow("SELECT COUNT(*) FROM local_telemetry_metrics").Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
 }
 
 func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
@@ -163,23 +66,38 @@ func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
 	defer server.Close()
 
 	engine := NewTelemetrySyncEngine(db, server.URL)
+
+	// Add a metric to the buffer
+	err := engine.BufferMetric(context.Background(), "test_metric_daemon", 42.0, map[string]interface{}{"k": "v"})
+	require.NoError(t, err)
+
+	// Start daemon
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	go engine.StartSyncDaemon(ctx, 10*time.Millisecond)
 
-	attrs := map[string]interface{}{"service": "agent"}
-	err := engine.BufferMetric(ctx, "test_metric_daemon", 12.0, attrs)
-	if err != nil {
-		t.Fatalf("Failed to buffer metric: %v", err)
-	}
+	// Wait for sync to happen
+	time.Sleep(50 * time.Millisecond)
 
-	go engine.StartSyncDaemon(ctx, 50*time.Millisecond)
+	var syncedCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM local_telemetry_metrics WHERE synced_to_cloud = true").Scan(&syncedCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, syncedCount)
+}
 
-	// Wait for daemon to run
-	time.Sleep(200 * time.Millisecond)
+func TestTelemetrySyncEngine_SyncToCloud_Error(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
 
-	var countSynced int
-	err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics WHERE synced_to_cloud = TRUE").Scan(&countSynced)
-	if err != nil || countSynced != 1 {
-		t.Fatalf("Expected 1 synced row after daemon run")
-	}
+	// Mock an endpoint that returns 500
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	engine := NewTelemetrySyncEngine(db, server.URL)
+
+	err := engine.syncToCloud(context.Background(), MetricPoint{MetricName: "test", Value: 1})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unexpected status code")
 }

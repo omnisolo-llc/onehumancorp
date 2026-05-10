@@ -9,33 +9,22 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestUnifiedDataModelRLSIntegration(t *testing.T) {
 	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" && os.Getenv("CI") != "" {
-        t.Log("Falling back to SQLite mock to prevent skip in environment without Docker testcontainers support.")
-        mockUnifiedDataModelRLSIntegration(t)
-        return
-    }
-
 	if dbURL == "" {
 		dbURL = "postgres://postgres:postgres@localhost:5432/test?sslmode=disable"
 	}
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		t.Logf("Skipping real connection, mocking due to: %v", err)
-        mockUnifiedDataModelRLSIntegration(t)
-        return
+		t.Skipf("Skipping integration test: %v", err)
 	}
 	defer db.Close()
 
 	if err := db.Ping(); err != nil {
-		t.Logf("Skipping real connection, mocking due to ping failure: %v", err)
-        mockUnifiedDataModelRLSIntegration(t)
-        return
+		t.Skipf("Skipping integration test due to ping failure: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -236,60 +225,4 @@ func TestUnifiedDataModelRLSIntegration(t *testing.T) {
 		DROP TABLE IF EXISTS test_tenant CASCADE;
 	`)
 	assert.NoError(t, err)
-}
-
-func mockUnifiedDataModelRLSIntegration(t *testing.T) {
-	db, err := sql.Open("sqlite3", ":memory:")
-	require.NoError(t, err)
-	defer db.Close()
-
-	setupSQL := `
-		CREATE TABLE test_order (
-			id TEXT PRIMARY KEY,
-			tenant_id TEXT NOT NULL,
-			status TEXT NOT NULL
-		);
-
-		INSERT INTO test_order (id, tenant_id, status) VALUES
-		('o1', '11111111-1111-1111-1111-111111111111', 'confirmed'),
-		('o2', '22222222-2222-2222-2222-222222222222', 'confirmed');
-	`
-	_, err = db.Exec(setupSQL)
-	require.NoError(t, err)
-
-	ctx := context.Background()
-	// simulateRLSQuery expects SELECT id, name FROM ... so we need to mock it properly
-
-	// Helper internal func to mock RLS
-	mockRLS := func(tenantID string) (*sql.Rows, error) {
-	    finalQuery := "SELECT id FROM (SELECT id, tenant_id FROM test_order) WHERE tenant_id = ?"
-	    return db.QueryContext(ctx, finalQuery, tenantID)
-	}
-
-	// 1. Test Tenant A
-	rowsA, err := mockRLS("11111111-1111-1111-1111-111111111111")
-	require.NoError(t, err)
-	defer rowsA.Close()
-
-	var countA int
-	for rowsA.Next() { countA++ }
-	assert.Equal(t, 1, countA)
-
-	// 2. Test Tenant B
-	rowsB, err := mockRLS("22222222-2222-2222-2222-222222222222")
-	require.NoError(t, err)
-	defer rowsB.Close()
-
-	var countB int
-	for rowsB.Next() { countB++ }
-	assert.Equal(t, 1, countB)
-
-	// 3. Test empty tenant context
-	rowsEmpty, err := mockRLS("00000000-0000-0000-0000-000000000000")
-	require.NoError(t, err)
-	defer rowsEmpty.Close()
-
-	var countEmpty int
-	for rowsEmpty.Next() { countEmpty++ }
-	assert.Equal(t, 0, countEmpty)
 }
