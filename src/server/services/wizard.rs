@@ -102,7 +102,7 @@ impl WizardService for MyWizardService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<OnboardingVerifyResponse>, Status> {
-        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_else(|_| "true".to_string()) == "true";
 
         
         let mut health_checks = Vec::new();
@@ -215,7 +215,7 @@ mod tests {
     #[test]
     fn test_verify_onboarding_standalone_sqlite_ok() {
         let _guard = env_lock();
-        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+        temp_env::with_vars(vec![("OHC_STANDALONE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
                 let service = MyWizardService::new();
                 let request = Request::new(EmptyRequest {});
@@ -237,7 +237,7 @@ mod tests {
     #[test]
     fn test_verify_onboarding_standalone_sqlite_missing() {
         let _guard = env_lock();
-        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", None::<&str>)], || {
+        temp_env::with_vars(vec![("OHC_STANDALONE", Some("true")), ("DATABASE_URL", None::<&str>)], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
                 let service = MyWizardService::new();
                 let request = Request::new(EmptyRequest {});
@@ -255,7 +255,7 @@ mod tests {
     #[test]
     fn test_verify_onboarding_standalone_sqlite_invalid() {
         let _guard = env_lock();
-        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("postgres://localhost/db"))], || {
+        temp_env::with_vars(vec![("OHC_STANDALONE", Some("true")), ("DATABASE_URL", Some("postgres://localhost/db"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
                 let service = MyWizardService::new();
                 let request = Request::new(EmptyRequest {});
@@ -271,7 +271,7 @@ mod tests {
     #[test]
     fn test_verify_onboarding_hybrid_mode_probes() {
         let _guard = env_lock();
-        temp_env::with_vars(vec![("STANDALONE_MODE", Some("false")), ("DATABASE_URL", Some("postgres://db")), ("REDIS_URL", Some("redis://cache"))], || {
+        temp_env::with_vars(vec![("OHC_STANDALONE", Some("false")), ("DATABASE_URL", Some("postgres://db")), ("REDIS_URL", Some("redis://cache"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
                 let service = MyWizardService::new();
                 let request = Request::new(EmptyRequest {});

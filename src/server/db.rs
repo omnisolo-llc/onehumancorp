@@ -120,7 +120,7 @@ impl DB {
                 .extension("sqlite_vec");
 
             // Enforce SQLCipher for Standalone mode
-            if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+            if std::env::var("OHC_STANDALONE").unwrap_or_else(|_| "true".to_string()) == "true" {
                 let key = if let Some(k) = database_url.split("key=").nth(1) {
                     k.split('&').next().unwrap_or("").to_string()
                 } else {

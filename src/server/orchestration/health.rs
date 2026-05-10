@@ -46,7 +46,7 @@ pub async fn run_health_monitor(
         let mut to_fire_now: Vec<String> = Vec::new();
         match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.get_active_agents()).await {
             Ok(Ok(agents)) => {
-                let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
+                let is_cloud = std::env::var("OHC_STANDALONE").unwrap_or_else(|_| "true".to_string()) != "true";
 
                 if agents.is_empty() {
                     tracing::trace!("HEALTH MONITOR: No active agents found."); // Reduced noise
