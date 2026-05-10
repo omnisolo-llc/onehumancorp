@@ -190,8 +190,8 @@ test('verify login form error message UX wrap behavior', async ({ page }) => {
 test('verify app settings toggle', async ({ page }) => {
     await page.goto('/');
 
-    // We changed 'App Settings' to 'App Settings'
-    await page.click('button:has-text("App Settings")');
+    // We changed 'Fix App Issues' to 'Fix App Issues'
+    await page.click('button:has-text("Fix App Issues")');
 
     // Expect the settings to be shown
     await expect(page.locator('text="Settings"')).toBeVisible();

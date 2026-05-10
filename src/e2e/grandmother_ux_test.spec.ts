@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Grandmother UX Fixes E2E tests', () => {
-  test('Login screen shows plain language App Settings button', async ({ page }) => {
+  test('Login screen shows plain language Fix App Issues button', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('text=Sign in to manage your business')).toBeVisible();
-    await expect(page.locator('button:has-text("⚙ App Settings")')).toBeVisible();
+    await expect(page.locator('button:has-text("Fix App Issues")')).toBeVisible();
   });
 
   test('Login screen shows plain language brand name', async ({ page }) => {
