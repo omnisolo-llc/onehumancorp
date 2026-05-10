@@ -130,3 +130,56 @@ fn test_referrals_dashboard_lens_audit() {
     ui.invoke_generate_new_link();
     assert!(*generate_new_link_called.borrow(), "Generate new link callback must be triggered");
 }
+
+#[test]
+fn test_welcome_checklist_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let ui = app::WelcomeChecklist::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Welcome Checklist"));
+
+    let dash_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let dash_clone = dash_called.clone();
+    ui.on_go_to_dashboard(move || {
+        *dash_clone.borrow_mut() = true;
+    });
+    ui.invoke_go_to_dashboard();
+    assert!(*dash_called.borrow(), "Dashboard callback must be triggered");
+}
+
+#[test]
+fn test_setup_wizard_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let ui = app::SetupWizard::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Setup Wizard"));
+}
+
+#[test]
+fn test_settings_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let ui = app::Settings::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Settings"));
+}
+
+#[test]
+fn test_agents_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let ui = app::Agents::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Helpers"));
+}
+
+#[test]
+fn test_skills_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let ui = app::Skills::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("Skills & Plugins"));
+}
