@@ -7,9 +7,13 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/alicebob/miniredis/v2"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/redis/rueidis"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"onehumancorp/srcs/server/pb"
 )
 
 func setupSMTestDB(t *testing.T) *sql.DB {
@@ -34,11 +38,31 @@ func setupSMTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
+// mockMeshTransport for testing transition broadcasting
+type mockMeshTransportSM struct {
+	published []struct {
+		channel string
+		data    []byte
+	}
+}
+
+func (m *mockMeshTransportSM) Publish(ctx context.Context, channel string, data []byte) error {
+	m.published = append(m.published, struct {
+		channel string
+		data    []byte
+	}{channel: channel, data: data})
+	return nil
+}
+func (m *mockMeshTransportSM) Subscribe(ctx context.Context, channel string, handler func(data []byte)) error { return nil }
+func (m *mockMeshTransportSM) AdvertiseCapabilities(ctx context.Context, agent pb.Agent) error { return nil }
+func (m *mockMeshTransportSM) DiscoverAgents(ctx context.Context, skill string) ([]pb.Agent, error) { return nil, nil }
+func (m *mockMeshTransportSM) StartHeartbeat(ctx context.Context, agent pb.Agent) {}
+
 func TestTaskStateMachine_ProcessEvent(t *testing.T) {
 	db := setupSMTestDB(t)
 	defer db.Close()
 
-	sm := NewTaskStateMachine(db)
+	sm := NewTaskStateMachine(db, nil, nil)
 	ctx := context.Background()
 
 	// Insert parent task
@@ -106,4 +130,59 @@ func TestTaskStateMachine_ProcessEvent(t *testing.T) {
 	err = db.QueryRowContext(ctx, "SELECT status FROM ohc_tasks WHERE id = 'parent-2'").Scan(&status)
 	require.NoError(t, err)
 	assert.Equal(t, "VERIFYING", status)
+}
+
+func TestTaskStateMachine_Transition(t *testing.T) {
+	db := setupSMTestDB(t)
+	defer db.Close()
+
+	mr, err := miniredis.Run()
+	require.NoError(t, err)
+	defer mr.Close()
+
+	client, err := rueidis.NewClient(rueidis.ClientOption{
+		InitAddress:  []string{mr.Addr()},
+		DisableCache: true,
+	})
+	require.NoError(t, err)
+	defer client.Close()
+
+	mockMesh := &mockMeshTransportSM{}
+	sm := NewTaskStateMachine(db, client, mockMesh)
+	ctx := context.Background()
+
+	// 1. Setup a task
+	_, err = db.ExecContext(ctx, "INSERT INTO ohc_tasks (id, tenant_id, status) VALUES ('task-trans-1', 'tenant-1', 'PENDING')")
+	require.NoError(t, err)
+
+	// 2. Successful transition
+	err = sm.Transition(ctx, "task-trans-1", "PENDING", "EXECUTING")
+	require.NoError(t, err)
+
+	var status string
+	err = db.QueryRowContext(ctx, "SELECT status FROM ohc_tasks WHERE id = 'task-trans-1'").Scan(&status)
+	require.NoError(t, err)
+	assert.Equal(t, "EXECUTING", status)
+
+	// Verify event broadcast
+	assert.Len(t, mockMesh.published, 1)
+	assert.Equal(t, "orchestration", mockMesh.published[0].channel)
+	assert.Contains(t, string(mockMesh.published[0].data), "StateTransition")
+	assert.Contains(t, string(mockMesh.published[0].data), "task-trans-1")
+
+	// 3. Invalid fromState transition
+	// Wait a bit to let the lock expire, miniredis supports TTL but we can manually del it
+	client.Do(ctx, client.B().Del().Key("mesh:lock:task-trans-1").Build())
+
+	err = sm.Transition(ctx, "task-trans-1", "PENDING", "DONE")
+	assert.ErrorContains(t, err, "invalid state transition")
+
+	// 4. Lock contention simulation
+	// Manually set a conflicting lock
+	lockCmd := client.B().Set().Key("mesh:lock:task-trans-1").Value("other_agent").Ex(10 * 1000 * 1000 * 1000).Build()
+	err = client.Do(ctx, lockCmd).Error()
+	require.NoError(t, err)
+
+	err = sm.Transition(ctx, "task-trans-1", "EXECUTING", "DONE")
+	assert.ErrorContains(t, err, "could not acquire lock")
 }
