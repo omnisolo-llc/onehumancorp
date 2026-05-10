@@ -234,3 +234,96 @@ func TestBufferMetricHelper_RedactsPII(t *testing.T) {
 		t.Errorf("Expected nested 'safe' to be 'value', got %v", nested["safe"])
 	}
 }
+
+func TestBufferMetricHelper_MaliciousPayloads(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	engine := NewTelemetrySyncEngine(db, "http://localhost:8080/metrics")
+	InitGlobalSyncEngine(engine)
+
+	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
+
+	ctx := context.Background()
+
+	attrs := map[string]interface{}{
+		"payload": map[string]interface{}{
+			"credit_card":     "4111-1111-1111-1111",
+			"cvv":             "123",
+			"dob":             "1990-01-01",
+			"passport_number": "A1234567",
+			"bank_account":    "123456789",
+			"stripe_token":    "tok_123456789",
+			"billing_address": "123 Main St, Anytown USA",
+			"ssn":             "123-45-6789",
+			"phone_number":    "555-123-4567",
+			"email_address":   "malicious@example.com",
+			"tenant_id":       "tenant-123",
+			"organization_id": "org-456",
+			"session_id":      "session-789",
+			"ip_address":      "192.168.1.1",
+			"mac_address":     "00:1B:44:11:3A:B7",
+			"geolocation":     "37.7749,-122.4194",
+		},
+		"nested": map[string]interface{}{
+			"deep": map[string]interface{}{
+				"secret_key":    "sk-1234567890",
+				"api_key":       "ak-0987654321",
+				"auth_token":    "Bearer token",
+				"password_hash": "hash",
+				"cookie_session": "cookie",
+				"credential_id": "cred-1",
+			},
+		},
+		"array_of_evil": []interface{}{
+			map[string]interface{}{"name": "John Doe", "email": "john@doe.com"},
+			map[string]interface{}{"address": "456 Elm St", "phone": "555-987-6543"},
+		},
+		"safe_field":   "This should not be redacted",
+		"another_safe": 123.0,
+	}
+
+	bufferMetricHelper(ctx, "test_malicious_redaction_metric", 1.0, attrs)
+
+	var attrStr string
+	err := db.QueryRow("SELECT attributes FROM local_telemetry_metrics WHERE metric_name = 'test_malicious_redaction_metric'").Scan(&attrStr)
+	if err != nil {
+		t.Fatalf("Failed to query db: %v", err)
+	}
+
+	var storedAttrs map[string]interface{}
+	if err := json.Unmarshal([]byte(attrStr), &storedAttrs); err != nil {
+		t.Fatalf("Failed to unmarshal attributes: %v", err)
+	}
+
+	if storedAttrs["safe_field"] != "This should not be redacted" {
+		t.Errorf("Expected safe_field to not be redacted, got %v", storedAttrs["safe_field"])
+	}
+	if storedAttrs["payload"] != "[REDACTED]" {
+		t.Errorf("Expected payload to be redacted, got %v", storedAttrs["payload"])
+	}
+	nestedMalicious, ok := storedAttrs["nested"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected nested to be a map")
+	}
+	deep, ok := nestedMalicious["deep"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected deep to be a map")
+	}
+	if deep["api_key"] != "[REDACTED]" {
+		t.Errorf("Expected nested api_key to be redacted, got %v", deep["api_key"])
+	}
+
+	arrayOfEvil, ok := storedAttrs["array_of_evil"].([]interface{})
+	if !ok {
+		t.Fatalf("Expected array_of_evil to be an array")
+	}
+	item0, ok := arrayOfEvil[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected item0 to be a map")
+	}
+	if item0["email"] != "[REDACTED]" {
+		t.Errorf("Expected array_of_evil[0].email to be redacted, got %v", item0["email"])
+	}
+}
