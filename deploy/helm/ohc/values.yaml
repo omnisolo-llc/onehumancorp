@@ -10,8 +10,8 @@ backend:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 2
-    maxReplicas: 20
+    minReplicas: 3
+    maxReplicas: 50
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 85
   resources:
@@ -32,8 +32,8 @@ backend:
 resourceQuota:
   enabled: true
   requests:
-    cpu: "10"
-    memory: "10Gi"
+    cpu: "20"
+    memory: "20Gi"
     ephemeralStorage: "50Gi"
   limits:
     cpu: "40"
@@ -55,8 +55,8 @@ ohcCore:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 2
-    maxReplicas: 20
+    minReplicas: 3
+    maxReplicas: 50
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 85
   resources:
