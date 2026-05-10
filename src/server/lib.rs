@@ -830,8 +830,14 @@ impl HubService for MyHubService {
         &self,
         request: Request<ApproveTaskRequest>,
     ) -> Result<Response<ApproveTaskResponse>, Status> {
+        let org_id = request.extensions().get::<crate::auth::Claims>()
+            .ok_or_else(|| Status::unauthenticated("Missing claims"))?
+            .organization_id.as_ref()
+            .ok_or_else(|| Status::unauthenticated("Missing org_id"))?
+            .clone();
+
         let req = request.into_inner();
-        self.hub.task_manager().approve_task(&req.task_id, req.is_approved)
+        self.hub.task_manager().approve_task(&req.task_id, req.is_approved, &org_id).await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(ApproveTaskResponse {
@@ -1231,6 +1237,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::1]:18789".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+    hub.set_db(db.clone());
     
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
