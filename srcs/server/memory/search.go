@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"os"
+	"onehumancorp/srcs/server/db"
 )
 
 type Memory struct {
@@ -31,7 +31,7 @@ func (d *AutoDreamDaemon) SearchSimilarMemories(ctx context.Context, query strin
 	var queryStr string
 	var args []interface{}
 
-	if os.Getenv("OHC_STANDALONE") == "true" {
+	if db.GlobalProvider.IsSQLite() {
 		// Fallback to text-based recency logic in SQLite Standalone mode
 		queryStr = `
 			SELECT id, organization_id, task_id, content

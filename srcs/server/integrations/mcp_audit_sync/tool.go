@@ -32,13 +32,13 @@ func NewAuditSyncTool(db interface{ Exec(context.Context, string, ...interface{}
 	}
 }
 
-func (t *AuditSyncTool) SyncAuditLogsToCloud(ctx context.Context, tenantID string, payloadStr string) error {
+func (t *AuditSyncTool) SyncAuditLogsToCloud(ctx context.Context, payloadStr string) error {
 	var payload AuditSyncPayload
 	if err := json.Unmarshal([]byte(payloadStr), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal data: %w", err)
 	}
 
-	if tenantID == "" || payload.AgentID == "" || payload.Action == "" || payload.Resource == "" || payload.Status == "" {
+	if payload.TenantID == "" || payload.AgentID == "" || payload.Action == "" || payload.Resource == "" || payload.Status == "" {
 		return fmt.Errorf("invalid data: missing required fields")
 	}
 
@@ -48,14 +48,14 @@ func (t *AuditSyncTool) SyncAuditLogsToCloud(ctx context.Context, tenantID strin
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
-	_, err := t.DB.Exec(ctx, query, id, tenantID, payload.AgentID, payload.Action, payload.Resource, payload.Status, payload.Metadata, time.Unix(payload.Timestamp, 0))
+	_, err := t.DB.Exec(ctx, query, id, payload.TenantID, payload.AgentID, payload.Action, payload.Resource, payload.Status, payload.Metadata, time.Unix(payload.Timestamp, 0))
 	if err != nil {
 		return fmt.Errorf("failed to insert audit log: %w", err)
 	}
 
 	if t.Telemetry != nil {
 		t.Telemetry.IncrementCounter("ohc.audit_sync.count", 1, map[string]string{
-			"tenant_id": tenantID,
+			"tenant_id": payload.TenantID,
 			"agent_id":  payload.AgentID,
 			"action":    payload.Action,
 			"status":    payload.Status,

@@ -18,41 +18,40 @@ func setupTestDB(t *testing.T) *sql.DB {
 	}
 
 	_, err = db.Exec(`
-			CREATE TABLE tenants (
-				id TEXT PRIMARY KEY,
-				name TEXT,
-				domain TEXT,
-				tier TEXT,
-				category TEXT,
-				description TEXT,
-				status TEXT,
-				owner_email TEXT,
-				state TEXT,
-				created_at DATETIME,
-				updated_at DATETIME
-			);
-			CREATE TABLE onboarding_state (
-				tenant_id TEXT PRIMARY KEY,
-				state TEXT,
-				created_at DATETIME,
-				updated_at DATETIME
-			);
-			CREATE TABLE shared_tasks (
-				id TEXT PRIMARY KEY,
-				organization_id TEXT,
-				title TEXT,
-				description TEXT,
-				state TEXT,
-				status TEXT,
-				agent_id TEXT,
-				priority TEXT,
-				payload BLOB,
-				parent_plan_id TEXT,
-				dependencies BLOB,
-				created_at DATETIME,
-				updated_at DATETIME
-			);
-		`)
+		CREATE TABLE tenants (
+			id TEXT PRIMARY KEY,
+			owner_email TEXT,
+			tier TEXT,
+			name TEXT,
+			category TEXT,
+			description TEXT,
+			state TEXT,
+			status TEXT,
+			state TEXT,
+			created_at DATETIME,
+			updated_at DATETIME,
+			state TEXT
+
+		);
+		CREATE TABLE shared_tasks (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT,
+			title TEXT,
+			description TEXT,
+			state TEXT,
+			status TEXT,
+			state TEXT,
+			agent_id TEXT,
+			priority TEXT,
+			payload BLOB,
+			parent_plan_id TEXT,
+			dependencies BLOB,
+			created_at DATETIME,
+			updated_at DATETIME,
+			state TEXT
+
+		);
+	`)
 	if err != nil {
 		t.Fatalf("Failed to create tables: %v", err)
 	}
