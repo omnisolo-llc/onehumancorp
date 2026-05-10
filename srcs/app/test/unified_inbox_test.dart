@@ -70,7 +70,7 @@ Future<void> navigateToInbox(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 500));
 
   // 10. Review & Launch Screen
-  final launchBtn = find.text('Launch My AI Team');
+  final launchBtn = find.byKey(const Key('launchAIBtn'));
   await tester.ensureVisible(launchBtn);
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(launchBtn);
