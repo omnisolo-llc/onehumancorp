@@ -178,7 +178,7 @@ func TestSubAgentTimeout(t *testing.T) {
 		ID: "timeout-task-1",
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 0) // Immediate timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
 	defer cancel()
 
 	err := spawner.executeTask(ctx, task)

@@ -88,8 +88,7 @@ func TestLocalTeammateMesh_UnsubscribeOnContextDone(t *testing.T) {
 }
 
 func TestCentrifugeMesh_PublishSubscribe(t *testing.T) {
-	// Simple test to ensure the stub compiles and handles URL errors properly if no server is running
-	mesh := NewCentrifugeMesh("http://127.0.0.1:0")
+	mesh := NewCentrifugeMesh()
 
 	ctx := context.Background()
 	channel := "test_channel"
@@ -98,5 +97,5 @@ func TestCentrifugeMesh_PublishSubscribe(t *testing.T) {
 	require.NoError(t, err)
 
 	err = mesh.Publish(ctx, channel, []byte("hello"))
-	require.Error(t, err) // Expect an error because the port is 0 / nothing is listening
+	require.NoError(t, err)
 }
