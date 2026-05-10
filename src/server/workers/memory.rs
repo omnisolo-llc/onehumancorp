@@ -19,6 +19,7 @@ impl MemoryConsolidationWorker {
         }
     }
 
+    #[tracing::instrument(skip(self))]
     pub fn start(&self) {
         let repository = self.repository.clone();
         let interval_duration = self.poll_interval;

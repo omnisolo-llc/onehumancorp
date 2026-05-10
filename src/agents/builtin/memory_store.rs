@@ -111,6 +111,7 @@ impl VectorRepository {
     }
 
     pub async fn cross_department_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+        tracing::info!("Executing cross-department memory search for tenant: {}", tenant_id);
         self.semantic_search(tenant_id, query_embedding, limit).await
     }
 
@@ -327,6 +328,7 @@ impl VectorRepository {
     /// It deletes records older than `older_than` where `owner_override = FALSE`,
     /// `reference_count < 5`, and `source_type = 'TASK_SUMMARY'`.
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
+        tracing::info!("Pruning stale context older than: {}", older_than);
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
