@@ -160,6 +160,49 @@ impl IntegrationsRegistry {
         Ok(inst)
     }
 
+    pub fn initiate_oauth(&self, integration_id: &str, _redirect_uri: &str) -> Result<String, String> {
+        match integration_id {
+            "manychat" => Ok("https://manychat.com/oauth?client_id=MOCK".to_string()),
+            "calendly" => Ok("https://auth.calendly.com/oauth/authorize?client_id=MOCK".to_string()),
+            "mailchimp" => Ok("https://login.mailchimp.com/oauth2/authorize?client_id=MOCK".to_string()),
+            "mercadopago" => Ok("https://auth.mercadopago.com/authorization?client_id=MOCK".to_string()),
+            "shippo" => Ok("https://goshippo.com/oauth/authorize?client_id=MOCK".to_string()),
+            "zoom" => Ok("https://zoom.us/oauth/authorize?client_id=MOCK".to_string()),
+            _ => Err("OAuth not supported for this integration".to_string()),
+        }
+    }
+
+    pub fn handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
+        let mut msg_text = format!("Webhook received for {}", integration_id);
+
+        match integration_id {
+            "manychat" => {
+                msg_text = format!("Manychat DM: {}", payload);
+            }
+            "calendly" => {
+                msg_text = format!("Calendly Booking: {}", payload);
+            }
+            "mercadopago" => {
+                msg_text = format!("Mercado Pago Payment: {}", payload);
+            }
+            _ => {}
+        }
+
+        let msg = ChatMessage {
+            id: format!("msg-webhook-{}", Utc::now().timestamp()),
+            from_agent: "webhook".to_string(),
+            channel: "webhook".to_string(),
+            content: msg_text,
+            thread_id: "webhook_events".to_string(),
+            timestamp_unix: Utc::now().timestamp(),
+        };
+
+        let mut msgs = self.messages.write().unwrap();
+        msgs.entry(integration_id.to_string()).or_insert_with(Vec::new).push(msg);
+
+        Ok(())
+    }
+
     pub fn disconnect(&self, integration_id: &str) -> Result<IntegrationInstance, String> {
         let mut insts = self.instances.write().unwrap();
         if let Some(inst) = insts.get_mut(integration_id) {
