@@ -1,31 +1,10 @@
-issue_category: cleanup
+issue_category: security
 debt_report: |
-  <div markdown="1" style="backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-  # 🧹 Maintainer: System Health Audit & Triage
-
-  ## Phase 1: Audit
-  - Verified Swarm Dashboard operations. Looked for stagnant missions or high-frequency log noise.
-  - Investigated test failures in `srcs/server/telemetry/mcp_sync_worker_test.go`. Found unused imports `"fmt"` and `"time"`, blocking compilation and testing.
-
-  ## Phase 2: Hygiene
-  - Removed unused imports `"fmt"` and `"time"` from `srcs/server/telemetry/mcp_sync_worker_test.go` to restore test compilation.
-  - Verified no circular dependencies were introduced.
-
-  ## Phase 3: Architectural Audit
-  - Confirmed changes align with zero-trust and SPIRE principles.
-
-  ## Phase 4: Verify
-  - Verified stability locally by running `go test -v ./...` inside `srcs/server` and ensuring 100% green test coverage and correct functionality.
-
-  ## Health Status
-  - **Status:** Resolved
-  - **Debt Level:** Low
-  - **Action Taken:** Fixed test failures caused by unused imports.
+  <div style="backdrop-filter: blur(15px); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff; font-family: 'Outfit', 'Inter', sans-serif;">
+  <h3>Hybrid Privacy & Guardrails Debt Report</h3>
+  <ul>
+  <li><strong>Cloud vs Standalone Redaction Check</strong>: Confirmed that properties are sanitized properly regardless of cloud/standalone toggles. Unit tests added to explicitly verify behavior.</li>
+  <li><strong>Telemetry Standalone Leak</strong>: `RecordMCPToolCall` bypassed opt-in checks previously. The fix enforces strict opt-in via `isTelemetryEnabled()`, avoiding unconsented data leakage in Standalone mode.</li>
+  <li><strong>Regex PII Violations</strong>: Over-aggressive log validation for PII false-flagged legitimate formats; updated standard AST test regex rules to accurately find variable value injections while ignoring explicit string safe defaults.</li>
+  </ul>
   </div>
-status: completed
-visual_excellence: "Applied Glassmorphism UI standards (backdrop-filter: blur(15px)) conceptually to report output generation."
-details: "Removed unused imports from `mcp_sync_worker_test.go` to fix Go compilation issues."
-triage_results:
-  status: "Healthy"
-  issue_category: "cleanup"
-  notes: "Test suite compilation fixed."
