@@ -107,6 +107,10 @@ func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir 
 		embedding := GenerateEmbedding(mem.Content)
 		vecStr := formatVector(embedding)
 
+		query := `
+			INSERT INTO autodream_memories (organization_id, task_id, content, embedding)
+			VALUES ($1, $2, $3, $4)
+		`
 		var taskID interface{}
 		if mem.TaskID != "" {
 			taskID = mem.TaskID
@@ -114,21 +118,7 @@ func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir 
 			taskID = nil
 		}
 
-		var query string
-		if os.Getenv("OHC_STANDALONE") == "true" {
-			query = `
-				INSERT INTO autodream_memories (organization_id, task_id, content, embedding)
-				VALUES (?, ?, ?, ?)
-			`
-			_, err = w.db.ExecContext(ctx, query, mem.OrganizationID, taskID, mem.Content, vecStr)
-		} else {
-			query = `
-				INSERT INTO autodream_memories (organization_id, task_id, content, embedding)
-				VALUES ($1, $2, $3, $4)
-			`
-			_, err = w.db.ExecContext(ctx, query, mem.OrganizationID, taskID, mem.Content, vecStr)
-		}
-
+		_, err = w.db.ExecContext(ctx, query, mem.OrganizationID, taskID, mem.Content, vecStr)
 		if err != nil {
 			autodream.ConsolidationErrorsTotal.WithLabelValues(mode, "db_insert_error").Inc()
 			return fmt.Errorf("failed to insert memory: %w", err)

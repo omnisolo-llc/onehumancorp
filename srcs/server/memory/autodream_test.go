@@ -173,3 +173,40 @@ func TestAutoDreamDaemon_Run(t *testing.T) {
 	// Wait for termination
 	<-done
 }
+
+func TestAutoDreamDaemon_SQLiteFallback(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	memDir := t.TempDir()
+	missDir := t.TempDir()
+
+	doneFile := filepath.Join(memDir, "done.md")
+	doneContent := "memory execution\nstatus: DONE\ntenant_id: org-123\nagent_id: agent-456\ntask_id: task-789\nresults..."
+	err = os.WriteFile(doneFile, []byte(doneContent), 0644)
+	assert.NoError(t, err)
+
+	mockLLM := &MockLLMClient{}
+	daemon, err := NewAutoDreamDaemon(db, mockLLM, memDir, missDir, 10*time.Millisecond)
+	assert.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SELECT set_config").WithArgs("org-123").WillReturnResult(sqlmock.NewResult(0, 0))
+	expectedEmbedding := "[0.1,0.2,0.3]"
+	mock.ExpectExec(`INSERT INTO consolidated_memory`).
+		WithArgs("done.md", "org-123", "agent-456", "task-789", doneContent, expectedEmbedding, "autodream").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	daemon.processDirectories(ctx)
+
+	assert.True(t, mockLLM.called, "expected mock LLM to be called")
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
