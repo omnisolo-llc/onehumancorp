@@ -1,3 +1,4 @@
+import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export struct UiMeeting {
@@ -31,8 +32,7 @@ export component Meetings inherits Window {
         VerticalBox {
             spacing: 12px;
             
-            for m in meetings : Rectangle {
-                background: white;
+            for m in meetings : GlassCard {
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;

@@ -1,3 +1,4 @@
+import { GlassCard } from "glass_card.slint";
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export struct UiHandoff {
@@ -32,8 +33,7 @@ export component Handoffs inherits Window {
         VerticalBox {
             spacing: 16px;
             
-            for h in handoffs : Rectangle {
-                background: white;
+            for h in handoffs : GlassCard {
                 border-color: #e2e8f0;
                 border-width: 1px;
                 border-radius: 8px;
