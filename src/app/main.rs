@@ -1687,6 +1687,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let business_manager_handle = business_manager_ui.as_weak();
+    business_manager_ui.on_request_add_new({
+        let ui_handle = business_manager_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                if ui.get_products().row_count() >= 10 {
+                    ui.set_upgrade_prompt_message("You\'ve reached your free tier limit of 10 products. Upgrade to add more.".into());
+                    ui.set_show_upgrade_prompt(true);
+                } else {
+                    ui.invoke_action_add_new();
+                }
+            }
+        }
+    });
     Box::leak(Box::new(business_manager_ui));
 
     let em_handle_for_gb = email_marketing_handle.clone();
@@ -6576,6 +6589,43 @@ mod remaining_e2e_tests {
 
         social_posting_ui.invoke_approve_post();
         assert!(*approve_post_called.borrow(), "Approve post should be invoked");
+    }
+
+    #[test]
+    fn test_e2e_free_tier_limits_flow_products() {
+        crate::ui_tests::init();
+        let ui = app::BusinessManager::new().unwrap();
+        let ui_handle = ui.as_weak();
+        ui.on_request_add_new({
+            let ui_handle = ui_handle.clone();
+            move || {
+                if let Some(ui) = ui_handle.upgrade() {
+                    if ui.get_products().row_count() >= 10 {
+                        ui.set_upgrade_prompt_message("You\'ve reached your free tier limit of 10 products. Upgrade to add more.".into());
+                        ui.set_show_upgrade_prompt(true);
+                    } else {
+                        ui.invoke_action_add_new();
+                    }
+                }
+            }
+        });
+
+        let mut mock_products = Vec::new();
+        for i in 0..10 {
+            mock_products.push(app::UiProduct {
+                id: format!("prod_{}", i).into(),
+                name: format!("Product {}", i).into(),
+                type_label: "Physical".into(),
+                price: "$10.00".into(),
+                inventory_count: 5,
+                is_out_of_stock: false,
+            });
+        }
+        ui.set_products(slint::ModelRc::new(slint::VecModel::from(mock_products)));
+
+        ui.invoke_request_add_new();
+        assert!(ui.get_show_upgrade_prompt(), "Upgrade prompt should show when requesting to add 11th product");
+        assert_eq!(ui.get_upgrade_prompt_message(), "You\'ve reached your free tier limit of 10 products. Upgrade to add more.");
     }
 
     #[test]

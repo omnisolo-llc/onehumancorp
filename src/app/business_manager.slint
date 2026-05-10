@@ -1,5 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { UpgradePrompt } from "./upgrade_prompt.slint";
 
 export struct UiProduct {
     id: string,
@@ -20,6 +21,9 @@ export component BusinessManager inherits Window {
 
     in property <[UiProduct]> products;
 
+    in-out property <bool> show_upgrade_prompt: false;
+    in-out property <string> upgrade_prompt_message: "";
+
     in-out property <int> step: 0;
     in-out property <string> selected_type: "";
 
@@ -39,6 +43,7 @@ export component BusinessManager inherits Window {
     callback select_type(string);
     callback submit(string, string, string, string, string, string); // type, name, desc, price, duration, schedule
     callback close();
+    callback request_add_new();
     callback action_add_new();
     callback action_edit(string);
     callback action_archive(string);
@@ -49,6 +54,11 @@ export component BusinessManager inherits Window {
     action_add_new => { current_view = "add"; step = 0; selected_type = ""; product_name = ""; product_description = ""; product_price = ""; }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    if (show_upgrade_prompt) : UpgradePrompt {
+        message: root.upgrade_prompt_message;
+        action_dismiss => { root.show_upgrade_prompt = false; }
+    }
 
     VerticalBox {
         spacing: 20px;
@@ -117,7 +127,7 @@ export component BusinessManager inherits Window {
                 height: 52px;
                 background: rgba(168, 85, 247, 0.8);
                 VerticalBox { alignment: center; Text { text: "+ Add New Offering"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { action_add_new(); } }
+                TouchArea { clicked => { request_add_new(); } }
             }
         }
 
