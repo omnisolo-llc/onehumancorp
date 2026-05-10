@@ -10,7 +10,7 @@ fn test_maya_baker_full_flow() {
     wizard_ui.invoke_next_step();
     assert_eq!(wizard_ui.get_step(), 1);
 
-    wizard_ui.invoke_select_business_type("Food".into());
+    wizard_ui.invoke_select_business_type("Restaurant / Food".into());
     assert_eq!(wizard_ui.get_step(), 2);
 
     wizard_ui.set_company_name("Maya's Bakery".into());
@@ -51,7 +51,7 @@ fn test_maya_baker_full_flow() {
     });
 
     wizard_ui.invoke_launch(
-        "Food".into(), "Maya's Bakery".into(), "Fresh breads and pastries".into(), "in_person".into(), "maya@bakery.example.com".into(),
+        "Restaurant / Food".into(), "Maya's Bakery".into(), "Fresh breads and pastries".into(), "in_person".into(), "maya@bakery.example.com".into(),
         "Rustic".into(), "Sourdough Loaf".into(), "8.50".into(), "mayasbakery.ohc.app".into(), "".into(), "".into(), "".into()
     );
     assert!(*launched.borrow(), "Maya baker launch failed");
@@ -68,7 +68,7 @@ fn test_carlos_handyman_full_flow() {
     wizard_ui.invoke_next_step();
     assert_eq!(wizard_ui.get_step(), 1);
 
-    wizard_ui.invoke_select_business_type("Service".into());
+    wizard_ui.invoke_select_business_type("Service Business".into());
     assert_eq!(wizard_ui.get_step(), 2);
 
     wizard_ui.set_company_name("Carlos Fixes It".into());
@@ -108,7 +108,7 @@ fn test_carlos_handyman_full_flow() {
     });
 
     wizard_ui.invoke_launch(
-        "Service".into(), "Carlos Fixes It".into(), "Local handyman services".into(), "in_person".into(), "carlos@fixes.example.com".into(),
+        "Service Business".into(), "Carlos Fixes It".into(), "Local handyman services".into(), "in_person".into(), "carlos@fixes.example.com".into(),
         "Bold".into(), "1 Hour Repair".into(), "60.00".into(), "carlosfixes.ohc.app".into(), "".into(), "".into(), "".into()
     );
     assert!(*launched.borrow(), "Carlos handyman launch failed");
@@ -125,7 +125,7 @@ fn test_jessica_freelance_writer_full_flow() {
     wizard_ui.invoke_next_step();
     assert_eq!(wizard_ui.get_step(), 1);
 
-    wizard_ui.invoke_select_business_type("Digital".into());
+    wizard_ui.invoke_select_business_type("Creative / Portfolio".into());
     assert_eq!(wizard_ui.get_step(), 2);
 
     wizard_ui.set_company_name("Jessica Writes".into());
@@ -165,7 +165,7 @@ fn test_jessica_freelance_writer_full_flow() {
     });
 
     wizard_ui.invoke_launch(
-        "Digital".into(), "Jessica Writes".into(), "Freelance copywriting".into(), "online".into(), "jessica@writes.example.com".into(),
+        "Creative / Portfolio".into(), "Jessica Writes".into(), "Freelance copywriting".into(), "online".into(), "jessica@writes.example.com".into(),
         "Elegant".into(), "Blog Post".into(), "200.00".into(), "jessicawrites.ohc.app".into(), "".into(), "".into(), "".into()
     );
     assert!(*launched.borrow(), "Jessica writer launch failed");
@@ -182,7 +182,7 @@ fn test_david_fitness_coach_full_flow() {
     wizard_ui.invoke_next_step();
     assert_eq!(wizard_ui.get_step(), 1);
 
-    wizard_ui.invoke_select_business_type("Health".into());
+    wizard_ui.invoke_select_business_type("Local Business".into());
     assert_eq!(wizard_ui.get_step(), 2);
 
     wizard_ui.set_company_name("David Fitness".into());
@@ -222,7 +222,7 @@ fn test_david_fitness_coach_full_flow() {
     });
 
     wizard_ui.invoke_launch(
-        "Health".into(), "David Fitness".into(), "Personal fitness coaching".into(), "both".into(), "david@fitness.example.com".into(),
+        "Local Business".into(), "David Fitness".into(), "Personal fitness coaching".into(), "both".into(), "david@fitness.example.com".into(),
         "Dynamic".into(), "Monthly Coaching".into(), "150.00".into(), "davidfitness.ohc.app".into(), "".into(), "".into(), "".into()
     );
     assert!(*launched.borrow(), "David fitness launch failed");
@@ -239,7 +239,7 @@ fn test_emma_clothing_boutique_full_flow() {
     wizard_ui.invoke_next_step();
     assert_eq!(wizard_ui.get_step(), 1);
 
-    wizard_ui.invoke_select_business_type("Retail".into());
+    wizard_ui.invoke_select_business_type("Online Store".into());
     assert_eq!(wizard_ui.get_step(), 2);
 
     wizard_ui.set_company_name("Emma's Boutique".into());
@@ -279,7 +279,7 @@ fn test_emma_clothing_boutique_full_flow() {
     });
 
     wizard_ui.invoke_launch(
-        "Retail".into(), "Emma's Boutique".into(), "Trendy women's clothing".into(), "online".into(), "emma@boutique.example.com".into(),
+        "Online Store".into(), "Emma's Boutique".into(), "Trendy women's clothing".into(), "online".into(), "emma@boutique.example.com".into(),
         "Chic".into(), "Summer Dress".into(), "45.99".into(), "emmasboutique.ohc.app".into(), "".into(), "".into(), "".into()
     );
     assert!(*launched.borrow(), "Emma boutique launch failed");
