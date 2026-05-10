@@ -112,26 +112,33 @@ impl Provider for LocalProvider {
             tokio::fs::create_dir_all(parent).await?;
         }
 
-        let final_data = data.to_vec();
+        let mut final_data = data.to_vec();
 
-        // Auto-compression to WebP mock for images
-        let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") || key.ends_with(".webp");
-        let reported_size = if is_image && data.len() > 100 {
-            let original_size = data.len();
-            // Mock compression: simulate 80% reduction for quota reporting
-            let compressed_size = original_size / 5;
-            let saved = original_size - compressed_size;
-            tracing::info!(
-                key = %key,
-                original = original_size,
-                simulated_compressed = compressed_size,
-                saved = saved,
-                "Auto-optimized image to WebP (simulated for quota)"
-            );
-            compressed_size
-        } else {
-            data.len()
-        };
+        let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg");
+
+        if is_image && data.len() > 100 {
+            if let Ok(img) = image::load_from_memory(data) {
+                if let Ok(encoder) = webp::Encoder::from_image(&img) {
+                    let webp_memory = encoder.encode(80.0);
+                    let original_size = data.len();
+                    let compressed_size = webp_memory.len();
+
+                    if compressed_size < original_size {
+                        final_data = webp_memory.to_vec();
+                        let saved = original_size - compressed_size;
+                        tracing::info!(
+                            key = %key,
+                            original = original_size,
+                            compressed = compressed_size,
+                            saved = saved,
+                            "Auto-optimized image to WebP"
+                        );
+                    }
+                }
+            }
+        }
+
+        let reported_size = final_data.len();
 
         // Quota Enforcement
         let t_id = key.split('/').next().unwrap_or("default");
