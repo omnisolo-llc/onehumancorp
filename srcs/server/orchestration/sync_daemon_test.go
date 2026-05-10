@@ -279,7 +279,9 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		id TEXT PRIMARY KEY,
 		status TEXT NOT NULL,
 		payload BLOB,
-		synced_to_cloud BOOLEAN DEFAULT FALSE
+		synced_to_cloud BOOLEAN DEFAULT FALSE,
+		sync_error TEXT,
+		last_synced_at DATETIME
 	);
 	`
 	_, err = db.Exec(createTableQuery)
