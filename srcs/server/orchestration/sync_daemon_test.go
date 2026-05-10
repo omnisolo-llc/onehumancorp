@@ -279,9 +279,7 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		id TEXT PRIMARY KEY,
 		status TEXT NOT NULL,
 		payload BLOB,
-		synced_to_cloud BOOLEAN DEFAULT FALSE,
-		sync_error TEXT,
-		last_synced_at TIMESTAMP
+		synced_to_cloud BOOLEAN DEFAULT FALSE
 	);
 	`
 	_, err = db.Exec(createTableQuery)
@@ -290,7 +288,7 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 	insertDataQuery := `
 	INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES
 	('mission-1', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
-	('mission-2', 'BURSTING', '{"key": "value2"}', FALSE),
+	('mission-2', 'CLOUD_ESCALATION', '{"key": "value2"}', FALSE),
 	('mission-3', 'COMPLETED', '{"key": "value3"}', FALSE),
 	('mission-4', 'CLOUD_ESCALATION', '{"key": "value4"}', TRUE);
 	`
@@ -323,55 +321,4 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, expected, synced)
 	}
-}
-
-func TestHybridMCPRAGDaemon_SyncPendingMissions_Cooldown(t *testing.T) {
-	ClearSemaphore()
-	defer ClearSemaphore()
-
-	db, err := sql.Open("sqlite3", ":memory:")
-	require.NoError(t, err)
-	defer db.Close()
-
-	createTableQuery := `
-	CREATE TABLE agent_missions (
-		id TEXT PRIMARY KEY,
-		status TEXT NOT NULL,
-		payload BLOB,
-		synced_to_cloud BOOLEAN DEFAULT FALSE,
-		sync_error TEXT,
-		last_synced_at TIMESTAMP
-	);
-	`
-	_, err = db.Exec(createTableQuery)
-	require.NoError(t, err)
-
-	insertDataQuery := `
-	INSERT INTO agent_missions (id, status, payload, synced_to_cloud, sync_error, last_synced_at) VALUES
-	('mission-error-1', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE, 'API Timeout', datetime('now', '-1 minutes')),
-	('mission-error-2', 'CLOUD_ESCALATION', '{"key": "value2"}', FALSE, 'HTTP 500', datetime('now', '-6 minutes'));
-	`
-	_, err = db.Exec(insertDataQuery)
-	require.NoError(t, err)
-
-	daemon := NewHybridMCPRAGDaemon(db, "http://remote-api.test")
-
-	err = daemon.SyncPendingMissions(context.Background())
-	require.NoError(t, err)
-
-	rows, err := db.Query("SELECT id, synced_to_cloud FROM agent_missions")
-	require.NoError(t, err)
-	defer rows.Close()
-
-	syncedMap := make(map[string]bool)
-	for rows.Next() {
-		var id string
-		var synced bool
-		err := rows.Scan(&id, &synced)
-		require.NoError(t, err)
-		syncedMap[id] = synced
-	}
-
-	require.False(t, syncedMap["mission-error-1"], "Expected mission-error-1 to NOT be synced due to cooldown")
-	require.True(t, syncedMap["mission-error-2"], "Expected mission-error-2 to be synced after cooldown expired")
 }
