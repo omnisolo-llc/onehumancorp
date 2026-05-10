@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../providers/wizard_provider.dart';
 import '../main.dart'; // For GlassContainer
 import '../widgets/contextual_tooltip.dart';
 import '../widgets/walkthrough_overlay.dart';
 import 'help/help_center_screen.dart';
-import 'referral_program_screen.dart';
 
 enum EnvironmentMode { cloud, standaloneDesktop }
 
@@ -733,7 +730,6 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   }
 
   Widget _buildProductScreen(WizardState state) {
-    final currencySymbol = NumberFormat.simpleCurrency(locale: Localizations.localeOf(context).toString()).currencySymbol;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -797,10 +793,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 ),
                 const SizedBox(height: 10),
                 ElevatedButton(
-                  onPressed: () {
-                    final productName = state.productName ?? 'your product';
-                    ref.read(wizardProvider.notifier).updateProductDetails(description: "Premium $productName designed for your needs.");
-                  },
+                  onPressed: () {},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white.withOpacity(0.1),
                     padding: const EdgeInsets.symmetric(vertical: 15),
@@ -817,13 +810,13 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     initialValue: state.productPrice,
                     style: const TextStyle(color: Colors.white),
                     keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText: '0.00',
-                      prefixText: '$currencySymbol ',
-                      prefixStyle: const TextStyle(color: Colors.white),
-                      hintStyle: const TextStyle(color: Colors.white24),
+                      prefixText: '\$ ',
+                      prefixStyle: TextStyle(color: Colors.white),
+                      hintStyle: TextStyle(color: Colors.white24),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.all(15),
+                      contentPadding: EdgeInsets.all(15),
                     ),
                     onChanged: (value) {
                       ref.read(wizardProvider.notifier).updateProductDetails(price: value);
@@ -831,29 +824,21 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   ),
                 ),
                 const SizedBox(height: 20),
-                InkWell(
-                  onTap: () {
-                    // Mock photo upload UI logic
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Photo uploaded and cropped successfully!')),
-                    );
-                  },
-                  child: Container(
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: Colors.white.withOpacity(0.1)),
-                    ),
-                    child: const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.camera_alt, color: Colors.white54, size: 40),
-                          SizedBox(height: 10),
-                          Text('Tap to select an image (Edit / Crop)', style: TextStyle(color: Colors.white54)),
-                        ],
-                      ),
+                Container(
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  ),
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.camera_alt, color: Colors.white54, size: 40),
+                        SizedBox(height: 10),
+                        Text('Tap to select an image', style: TextStyle(color: Colors.white54)),
+                      ],
                     ),
                   ),
                 ),
@@ -988,11 +973,6 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 },
                 child: ElevatedButton(
                   onPressed: () async {
-                    final domain = state.domainChoice ?? '${(state.companyName ?? "mybusiness").replaceAll(" ", "").toLowerCase()}.ohc.app';
-                    Clipboard.setData(ClipboardData(text: 'https://$domain'));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('🎉 CONFETTI Success! Your business is live! 🎉\nLink copied to clipboard!')),
-                    );
                     await ref.read(wizardProvider.notifier).submitWizard();
                   },
                   style: ElevatedButton.styleFrom(
@@ -1035,19 +1015,13 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
           child: SingleChildScrollView(
             child: Column(
               children: [
-                _buildChecklistItem('✅ Business live', true, () {}),
+                _buildChecklistItem('✅ Business live', true),
                 const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Add 3 more products', false, () {
-                  ref.read(wizardProvider.notifier).state = state.copyWith(currentStep: 7);
-                }),
+                _buildChecklistItem('⬜ Add 3 more products', false),
                 const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Connect Instagram', false, () {
-                  ref.read(wizardProvider.notifier).state = state.copyWith(currentStep: 3);
-                }),
+                _buildChecklistItem('⬜ Connect Instagram', false),
                 const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Share your link with a friend', false, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const ReferralProgramScreen()));
-                }),
+                _buildChecklistItem('⬜ Share your link with a friend', false),
               ],
             ),
           ),
@@ -1055,7 +1029,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: () {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const DashboardScreen()));
+            ref.read(wizardProvider.notifier).nextStep();
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF6B4EFF),
@@ -1070,30 +1044,27 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
-  Widget _buildChecklistItem(String text, bool isCompleted, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: isCompleted ? Colors.green.withOpacity(0.1) : Colors.white.withOpacity(0.05),
-          border: Border.all(color: isCompleted ? Colors.green : Colors.white24),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                text,
-                style: TextStyle(
-                  color: isCompleted ? Colors.greenAccent : Colors.white,
-                  fontSize: 16,
-                ),
+  Widget _buildChecklistItem(String text, bool isCompleted) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: isCompleted ? Colors.green.withOpacity(0.1) : Colors.white.withOpacity(0.05),
+        border: Border.all(color: isCompleted ? Colors.green : Colors.white24),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: isCompleted ? Colors.greenAccent : Colors.white,
+                fontSize: 16,
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.white54),
-          ],
-        ),
+          ),
+          const Icon(Icons.chevron_right, color: Colors.white54),
+        ],
       ),
     );
   }

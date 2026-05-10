@@ -328,11 +328,10 @@ void main() {
       expect(find.text('⬜ Share your link with a friend'), findsOneWidget);
 
       // 11. Go to Dashboard
-      final gotoDashboardBtn = find.text('Go to Dashboard');
-      await tester.ensureVisible(gotoDashboardBtn);
-      await tester.tap(gotoDashboardBtn, warnIfMissed: false);
+      await tester.tap(find.text('Go to Dashboard'));
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(seconds: 2));
+      expect(find.text('Dashboard'), findsOneWidget);
 
     });
   });

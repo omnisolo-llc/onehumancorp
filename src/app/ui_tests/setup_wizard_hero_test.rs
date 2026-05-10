@@ -233,3 +233,20 @@ fn test_ui_setup_wizard_welcome_checklist_transition() {
     ui.set_step(10);
     assert_eq!(ui.get_step(), 10);
 }
+
+#[test]
+fn test_ui_setup_wizard_dashboard_navigation() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    super::init();
+
+    let ui = app::SetupWizard::new().unwrap();
+    let dashboard_called = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let dashboard_clone = dashboard_called.clone();
+
+    ui.on_go_to_dashboard(move || {
+        *dashboard_clone.lock().unwrap() = true;
+    });
+
+    ui.invoke_go_to_dashboard();
+    assert!(*dashboard_called.lock().unwrap(), "Go to Dashboard callback works");
+}
