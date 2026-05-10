@@ -203,6 +203,79 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
 }
 
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
+
+/// OpenAI Codex & Agents SDK Archetype: Code-first approach natively expressed in code.
+/// Uses an `AgentRunner` class with async, sync, and streamed modes.
+/// It wraps the Agent core and App Server logic to share the exact same harness across client surfaces.
+#[derive(Clone)]
+pub struct AgentRunner {
+    pub agent: Arc<tokio::sync::RwLock<Agent>>,
+}
+
+impl AgentRunner {
+    pub fn new(agent: Agent) -> Self {
+        Self {
+            agent: Arc::new(tokio::sync::RwLock::new(agent)),
+        }
+    }
+
+    /// Async mode: executes the agent loop asynchronously.
+    pub async fn run_async<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        mut on_event: F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        let agent = self.agent.read().await;
+        agent.run(cfg, initial_message, &mut on_event).await
+    }
+
+    /// Sync mode: blocks the current thread until completion.
+    pub fn run_sync<F>(
+        &self,
+        cfg: AgentRunConfig,
+        initial_message: String,
+        mut on_event: F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync + 'static,
+    {
+        let agent_arc = self.agent.clone();
+        let handle = std::thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
+            rt.block_on(async move {
+                let agent = agent_arc.read().await;
+                agent.run(&cfg, &initial_message, &mut on_event).await
+            })
+        });
+
+        handle.join().unwrap()
+    }
+
+    /// Streamed mode: returns an async stream of AgentEvents via an mpsc channel.
+    pub fn run_streamed(
+        &self,
+        cfg: AgentRunConfig,
+        initial_message: String,
+    ) -> tokio::sync::mpsc::UnboundedReceiver<AgentEvent> {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+        let agent_arc = self.agent.clone();
+
+        tokio::spawn(async move {
+            let agent = agent_arc.read().await;
+            let _ = agent.run(&cfg, &initial_message, &mut |event| {
+                let _ = tx.send(event);
+            }).await;
+        });
+
+        rx
+    }
+}
+
+#[derive(Clone)]
 pub struct Agent {
     pub llm: Arc<dyn LlmClient>,
     pub tools: Vec<Tool>,

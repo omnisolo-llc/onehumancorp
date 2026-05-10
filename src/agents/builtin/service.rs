@@ -553,8 +553,9 @@ impl AgentService for AgentServiceImpl {
                 let _ = tx_clone.try_send(Ok(pb));
             };
 
-            let result = agent_clone
-                .run(&run_cfg, &task, &mut on_event)
+            let runner = crate::agent::AgentRunner::new(Arc::try_unwrap(agent_clone).unwrap_or_else(|a| (*a).clone()));
+            let result = runner
+                .run_async(&run_cfg, &task, on_event)
                 .await;
 
             // Record memory entry.
