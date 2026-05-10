@@ -10,6 +10,46 @@ use serde_json::Value;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct BusinessContext {
+    pub name: String,
+    pub business_type: String,
+    pub vibe: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct DraftBlock {
+    pub block_type: String,
+    pub content: Value,
+    pub sort_order: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct DraftPage {
+    pub path: String,
+    pub title: String,
+    pub blocks: Vec<DraftBlock>,
+    pub seo_metadata: Value,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SiteDraft {
+    pub domain: Option<String>,
+    pub pages: Vec<DraftPage>,
+}
+
+#[derive(Deserialize)]
+pub struct GenerateStorefrontRequest {
+    pub description: String,
+}
+
+#[derive(Deserialize)]
+pub struct PublishDraftRequest {
+    pub domain: Option<String>,
+    pub draft: SiteDraft,
+}
+
+
 use super::db;
 use super::jobs;
 
@@ -24,6 +64,8 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
         .route("/blocks/{block_id}", put(update_block))
         .route("/pages/{page_id}/blocks/reorder", post(reorder_blocks))
         .route("/sites/{site_id}/publish", post(publish_site))
+        .route("/generate", post(generate_storefront))
+        .route("/publish_draft", post(publish_draft))
         .with_state(pool)
 }
 
@@ -172,7 +214,7 @@ async fn create_block(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateBlockRequest>,
 ) -> Result<Json<BlockResponse>, axum::http::StatusCode> {
-    if payload.block_type != "HeroBlock" && payload.block_type != "ProductGridBlock" && payload.block_type != "ContactFormBlock" && payload.block_type != "BookingCalendarBlock" { return Err(axum::http::StatusCode::BAD_REQUEST); }
+    if payload.block_type != "HeroBlock" && payload.block_type != "ProductGridBlock" && payload.block_type != "ContactFormBlock" && payload.block_type != "BookingCalendarBlock" && payload.block_type != "ServiceBookingBlock" && payload.block_type != "TestimonialBlock" { return Err(axum::http::StatusCode::BAD_REQUEST); }
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     let block = db::create_block(
         &pool,
@@ -243,4 +285,141 @@ async fn publish_site(
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(axum::http::StatusCode::ACCEPTED)
+}
+
+
+
+
+
+
+
+
+
+
+async fn generate_storefront(
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<GenerateStorefrontRequest>,
+) -> Result<Json<SiteDraft>, axum::http::StatusCode> {
+    let _tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+
+    // Mock Agent generation based on description keywords
+    let desc = payload.description.to_lowercase();
+    let mut pages = Vec::new();
+
+    if desc.contains("baker") || desc.contains("cake") {
+        pages.push(DraftPage {
+            path: "/".to_string(),
+            title: "Home".to_string(),
+            blocks: vec![
+                DraftBlock {
+                    block_type: "HeroBlock".to_string(),
+                    content: serde_json::json!({"headline": "Freshly Baked", "subtitle": "Delicious Cakes"}),
+                    sort_order: 0,
+                },
+                DraftBlock {
+                    block_type: "ProductGridBlock".to_string(),
+                    content: serde_json::json!({"items": ["Custom Cake", "Cupcakes"]}),
+                    sort_order: 1,
+                },
+            ],
+            seo_metadata: serde_json::json!({
+                "@context": "https://schema.org",
+                "@type": "Bakery",
+                "name": "Custom Bakery"
+            }),
+        });
+    } else if desc.contains("handyman") {
+        pages.push(DraftPage {
+            path: "/".to_string(),
+            title: "Home".to_string(),
+            blocks: vec![
+                DraftBlock {
+                    block_type: "HeroBlock".to_string(),
+                    content: serde_json::json!({"headline": "Expert Handyman", "subtitle": "Reliable Service"}),
+                    sort_order: 0,
+                },
+                DraftBlock {
+                    block_type: "ServiceBookingBlock".to_string(),
+                    content: serde_json::json!({"services": ["Plumbing", "Electrical"]}),
+                    sort_order: 1,
+                },
+            ],
+            seo_metadata: serde_json::json!({
+                "@context": "https://schema.org",
+                "@type": "HomeAndConstructionBusiness",
+                "name": "Handyman Services"
+            }),
+        });
+    } else {
+        pages.push(DraftPage {
+            path: "/".to_string(),
+            title: "Home".to_string(),
+            blocks: vec![
+                DraftBlock {
+                    block_type: "HeroBlock".to_string(),
+                    content: serde_json::json!({"headline": "Welcome", "subtitle": "Our Services"}),
+                    sort_order: 0,
+                },
+                DraftBlock {
+                    block_type: "TestimonialBlock".to_string(),
+                    content: serde_json::json!({"testimonials": ["Great service!"]}),
+                    sort_order: 1,
+                },
+            ],
+            seo_metadata: serde_json::json!({
+                "@context": "https://schema.org",
+                "@type": "LocalBusiness",
+                "name": "Local Business"
+            }),
+        });
+    }
+
+    Ok(Json(SiteDraft {
+        domain: None,
+        pages,
+    }))
+}
+
+async fn publish_draft(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<PublishDraftRequest>,
+) -> Result<Json<SiteResponse>, axum::http::StatusCode> {
+    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+
+    // 1. Create Site
+    let site = db::create_site(&pool, tenant_id, payload.domain)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 2. Iterate pages and blocks
+    for draft_page in payload.draft.pages {
+        let page = db::create_page(&pool, tenant_id, site.id, draft_page.path, draft_page.title)
+            .await
+            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        // Update SEO metadata
+        sqlx::query("UPDATE builder_pages SET seo_metadata = $1 WHERE id = $2")
+            .bind(&draft_page.seo_metadata)
+            .bind(page.id)
+            .execute(&pool)
+            .await
+            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        for draft_block in draft_page.blocks {
+            db::create_block(&pool, tenant_id, page.id, draft_block.block_type, draft_block.content, draft_block.sort_order)
+                .await
+                .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+    }
+
+    // 3. Enqueue Job
+    jobs::enqueue_publish_site_job(&pool, tenant_id, site.id)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(SiteResponse {
+        id: site.id,
+        domain: site.domain,
+    }))
 }
