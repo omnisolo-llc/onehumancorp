@@ -4,13 +4,13 @@ version = "0.4.39"
 edition = "2024"
 build = "src/server/build.rs"
 
+[lib]
+name = "server_lib"
+path = "src/server/lib.rs"
+
 [[bin]]
 name = "server"
 path = "src/server/main.rs"
-
-[[bin]]
-name = "ohc-builtin-agent"
-path = "src/agents/builtin/main.rs"
 
 [dependencies]
 tokio = { workspace = true, features = ["full"] }
