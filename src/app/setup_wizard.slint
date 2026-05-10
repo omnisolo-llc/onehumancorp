@@ -413,7 +413,7 @@ export component SetupWizard inherits Window {
                         alignment: center;
                         spacing: 8px;
                         Text {
-                            text: website_template == "" ? "Select a template below" : "Preview: " + website_template;
+                            text: website_template == "" ? "Select a template below" : "Live Preview: " + website_template;
                             color: white;
                             font-family: "Outfit";
                             horizontal-alignment: center;
@@ -471,17 +471,24 @@ export component SetupWizard inherits Window {
                 Text { text: "Add your first product or service"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
                 Text { text: "You can add more later"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
 
-                Text { text: "Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
-                LineEdit {
-                    placeholder-text: "e.g. Custom Birthday Cake";
-                    text <=> product_name;
-                    height: 44px;
-                    edited => { save_state(); }
-                    accepted => {
-                        is_generating_product_description = true;
-                        generate_product_description(product_name);
-                    }
-                }
+                Rectangle {
+                    background: #1e293b;
+                    border-radius: 8px;
+                    width: 100%;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 12px;
+                        Text { text: "Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                        LineEdit {
+                            placeholder-text: "e.g. Custom Birthday Cake";
+                            text <=> product_name;
+                            height: 44px;
+                            edited => { save_state(); }
+                            accepted => {
+                                is_generating_product_description = true;
+                                generate_product_description(product_name);
+                            }
+                        }
 
                 Text { text: "Description (AI will help!)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit {
@@ -562,6 +569,8 @@ export component SetupWizard inherits Window {
                         }
                     }
                 }
+                    } // close inner VerticalBox
+                } // close inner Rectangle
             }
 
             // Step 8: Choose a Domain
@@ -630,7 +639,7 @@ export component SetupWizard inherits Window {
                         alignment: center;
                         spacing: 16px;
                         Text {
-                            text: "🎉 CONFETTI Success! Your business is live! 🎉";
+                            text: "🎉 Success! Your business is live! 🎉";
                             font-size: 24px;
                             font-family: "Outfit";
                             color: #10b981;
