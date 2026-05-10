@@ -507,6 +507,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         let my_plan_ui = app::MyPlan::new().unwrap();
                                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
                                         let billing_ui = app::Billing::new().unwrap();
+                                        billing_ui.on_switch_plan(move || {});
+                                        billing_ui.on_add_credits(move || {});
+                                        billing_ui.on_return_to_dashboard(move || {});
+                                        billing_ui.on_switch_plan(move || {});
+                                        billing_ui.on_add_credits(move || {});
+                                        billing_ui.on_return_to_dashboard(move || {});
                                         let billing_handle_clone = billing_ui.as_weak();
                                         dashboard.on_open_billing(move || {
                                             if let Some(ui) = billing_handle_clone.upgrade() {
@@ -771,6 +777,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let my_plan_ui = app::MyPlan::new().unwrap();
                         let cost_dashboard_ui = app::CostDashboard::new().unwrap();
                         let billing_ui = app::Billing::new().unwrap();
+                        billing_ui.on_switch_plan(move || {});
+                        billing_ui.on_add_credits(move || {});
+                        billing_ui.on_return_to_dashboard(move || {});
+                        billing_ui.on_switch_plan(move || {});
+                        billing_ui.on_add_credits(move || {});
+                        billing_ui.on_return_to_dashboard(move || {});
                         let billing_handle_clone = billing_ui.as_weak();
                         dashboard.on_open_billing(move || {
                             if let Some(ui) = billing_handle_clone.upgrade() {
@@ -2880,6 +2892,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 let billing_ui_inner = app::Billing::new().unwrap();
+                billing_ui_inner.on_switch_plan(move || {});
+                billing_ui_inner.on_add_credits(move || {});
+                billing_ui_inner.on_return_to_dashboard(move || {});
+                billing_ui_inner.on_switch_plan(move || {});
+                billing_ui_inner.on_add_credits(move || {});
+                billing_ui_inner.on_return_to_dashboard(move || {});
                 let billing_handle_clone_dashboard = billing_ui_inner.as_weak();
                 dashboard.on_open_billing(move || {
                     if let Some(ui) = billing_handle_clone_dashboard.upgrade() {
@@ -3183,10 +3201,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fix_agent_ui = app::FixAgent::new()?;
     let upgrade_ui = app::Upgrade::new()?;
     let billing_ui = app::Billing::new()?;
+    billing_ui.on_switch_plan(move || {});
+    billing_ui.on_add_credits(move || {});
+    billing_ui.on_return_to_dashboard(move || {});
 
     fix_agent_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     upgrade_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
     billing_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
+
+
+    billing_ui.on_return_to_dashboard(move || {
+    });
+
+    billing_ui.on_switch_plan(move || {
+    });
+
+    billing_ui.on_add_credits(move || {
+    });
+
 
     let fix_agent_handle = fix_agent_ui.as_weak();
     let fa_ui_weak = fix_agent_handle.clone();
@@ -3328,6 +3360,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }).unwrap();
         });
     });
+
+
+    billing_ui.on_return_to_dashboard(move || {
+    });
+
+    billing_ui.on_switch_plan(move || {
+    });
+
+    billing_ui.on_add_credits(move || {
+    });
+
 
     let fix_agent_handle = fix_agent_ui.as_weak();
     agents_ui.on_fix_agent(move |_id| {
