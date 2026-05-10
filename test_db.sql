@@ -13,3 +13,11 @@ Blockers:
 - The user prompt provides only role and protocol definitions.
 - No specific issue, bug, feature request, or concrete task to implement was described.
 - As an Implementer, I require a defined mission to execute.');
+
+UPDATE agent_missions
+SET status = 'blocked',
+    mission_log = mission_log || '
+- The user prompt provides only role and protocol definitions.
+- No specific issue, bug, feature request, or concrete task to implement was described.
+- As an Implementer, I require a defined mission to execute.'
+WHERE id = 'm_handoff';
