@@ -298,7 +298,7 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+        let _mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
 
         client.cancel_subscription(&req.plan_id).await
             .map_err(|e| tonic::Status::internal(e))?;
