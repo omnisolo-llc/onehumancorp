@@ -1,3 +1,10 @@
+## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement business share embed for viral storefront growth.
+
+### Privacy/Offline Improvements
+- Ensure offline compatibility for new widgets and UI flow.
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.

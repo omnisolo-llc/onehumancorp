@@ -1,3 +1,7 @@
+## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
+- Scaling (Cloud): Implement business share embed for viral storefront growth.
+- Privacy/Offline (Standalone): Ensure offline compatibility for new widgets and UI flow.
+
 ## v0.4.40 (Cloud) / v0.4.40+1 (Standalone)
 
 ### Cloud Scaling Improvements
