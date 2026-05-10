@@ -90,6 +90,10 @@ impl Provider for LocalProvider {
             if !cdn.is_empty() {
                 let cdn = cdn.trim_end_matches('/');
                 let key = key.trim_start_matches('/');
+                let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") || key.ends_with(".webp");
+                if is_image {
+                    return Ok(format!("{}/{}?format=webp", cdn, key));
+                }
                 return Ok(format!("{}/{}", cdn, key));
             }
         }

@@ -10,13 +10,14 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct Tracker {
     rate_limiter: Option<Arc<RedisRateLimiter>>,
+    pub cost_auditor: Option<Arc<CostAuditor>>,
     pub stripe_client: Option<Arc<StripeClient>>,
     pub mercadopago_client: Option<Arc<MercadoPagoClient>>,
 }
 
 impl Tracker {
     pub fn new() -> Self {
-        Tracker { rate_limiter: None, stripe_client: None, mercadopago_client: None }
+        Tracker { rate_limiter: None, cost_auditor: None, stripe_client: None, mercadopago_client: None }
     }
 
     pub fn new_with_redis(redis_url: &str) -> Self {
@@ -27,11 +28,12 @@ impl Tracker {
         if let Ok(client) = Client::open(redis_url) {
             Tracker {
                 rate_limiter: Some(Arc::new(RedisRateLimiter::new(client))),
+                cost_auditor: None,
                 stripe_client,
                 mercadopago_client: mercadopago_client.clone(),
             }
         } else {
-            Tracker { rate_limiter: None, stripe_client, mercadopago_client }
+            Tracker { rate_limiter: None, cost_auditor: None, stripe_client, mercadopago_client }
         }
     }
 
@@ -184,8 +186,24 @@ impl Tracker {
         }
     }
 
-    pub fn summary(&self, _scope: &str) -> TokenSummary {
-        TokenSummary::default()
+    pub fn summary(&self, scope: &str) -> TokenSummary {
+        if let Some(ref auditor) = self.cost_auditor {
+            if scope == "system" {
+                return TokenSummary { total_tokens: auditor.get_total_tokens() };
+            }
+            let mut token_used = 0;
+            for (id, _, tokens, _, _) in auditor.get_agent_costs_snapshot() {
+                // The snapshot returns agent_id, but the tracker maps actions via tenant_id or agent_id.
+                // For a robust implementation we should sum all matching agent usage for a tenant scope or specifically the agent scope.
+                // Assuming scope is the exact match for now, but accumulating to be safe if multiple entries exist.
+                if id == scope || id.starts_with(scope) {
+                    token_used += tokens;
+                }
+            }
+            TokenSummary { total_tokens: token_used }
+        } else {
+            TokenSummary::default()
+        }
     }
 }
 
