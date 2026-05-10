@@ -3,7 +3,6 @@ package onboarding
 import (
 	"bytes"
 	"context"
-
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -29,70 +28,64 @@ func TestAPIEndToEndFlow(t *testing.T) {
 	mux.HandleFunc("/api/onboarding/start", handler.HandleStartOnboarding)
 	mux.HandleFunc("/api/onboarding/status", TenantAuthMiddleware(handler.HandleGetStatus))
 
-	// Create test server
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
 	// 1. Start Onboarding
-	reqData := OnboardingRequest{
-		Name:        "Carlos Repairs",
+	reqPayload := OnboardingRequest{
+		Name:        "Carlos Fixes It",
 		Category:    "Service",
-		Description: "General handyman repairs",
+		Description: "Local handyman services",
 	}
-	reqBody, _ := json.Marshal(reqData)
+	body, _ := json.Marshal(reqPayload)
+	req := httptest.NewRequest(http.MethodPost, "/api/onboarding/start", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
 
-	resp, err := http.Post(ts.URL+"/api/onboarding/start", "application/json", bytes.NewBuffer(reqBody))
+	mux.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusAccepted, rr.Code)
+
+	var res OnboardingResponse
+	err := json.Unmarshal(rr.Body.Bytes(), &res)
 	assert.NoError(t, err)
-	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
+	assert.NotEmpty(t, res.TenantID)
+	assert.Equal(t, "PROVISIONING", res.Status)
 
-	var startRes OnboardingResponse
-	err = json.NewDecoder(resp.Body).Decode(&startRes)
+	tenantID := res.TenantID
+
+	// 2. Check Tasks Dispatched
+	tasks, err := taskStore.GetTasksByOrganization(context.Background(), tenantID)
 	assert.NoError(t, err)
-	resp.Body.Close()
+	assert.Len(t, tasks, 3) // We expect 3 initial onboarding tasks
 
-	assert.NotEmpty(t, startRes.TenantID)
-	assert.Equal(t, "PROVISIONING", startRes.Status)
+	// 3. Check Status (Should still be PROVISIONING)
+	req2 := httptest.NewRequest(http.MethodGet, "/api/onboarding/status", nil)
+	req2.Header.Set("x-tenant-id", tenantID)
+	rr2 := httptest.NewRecorder()
 
-	// 2. Check Tasks Dispatched in DB
-	ctx := context.Background()
-	tasks, err := taskStore.GetTasksByOrganization(ctx, startRes.TenantID)
+	mux.ServeHTTP(rr2, req2)
+	assert.Equal(t, http.StatusOK, rr2.Code)
+
+	var statusRes OnboardingResponse
+	err = json.Unmarshal(rr2.Body.Bytes(), &statusRes)
 	assert.NoError(t, err)
-	assert.Len(t, tasks, 3)
+	assert.Equal(t, "PROVISIONING", statusRes.Status)
 
-	// 3. Poll Status
-	req1, err := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
-	assert.NoError(t, err)
-	req1.Header.Set("X-Tenant-Id", startRes.TenantID)
-	statusResp, err := http.DefaultClient.Do(req1)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, statusResp.StatusCode)
-
-	var pollRes OnboardingResponse
-	err = json.NewDecoder(statusResp.Body).Decode(&pollRes)
-	assert.NoError(t, err)
-	statusResp.Body.Close()
-
-	assert.Equal(t, "PROVISIONING", pollRes.Status)
-
-	// 4. Complete Tasks
+	// 4. Mock Agents Completing Tasks
 	for _, task := range tasks {
-		err := taskStore.UpdateTaskStatus(ctx, task.ID, "COMPLETED")
+		err := taskStore.UpdateTaskStatus(context.Background(), task.ID, "COMPLETED")
 		assert.NoError(t, err)
 	}
 
-	// 5. Poll Status Again
-	req2, _ := http.NewRequest("GET", ts.URL+"/api/onboarding/status", nil)
-	req2.Header.Set("X-Tenant-Id", startRes.TenantID)
-	statusResp2, err := http.DefaultClient.Do(req2)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, statusResp2.StatusCode)
+	// 5. Check Status Again (Should be READY)
+	req3 := httptest.NewRequest(http.MethodGet, "/api/onboarding/status", nil)
+	req3.Header.Set("x-tenant-id", tenantID)
+	rr3 := httptest.NewRecorder()
 
-	var pollRes2 OnboardingResponse
-	err = json.NewDecoder(statusResp2.Body).Decode(&pollRes2)
-	assert.NoError(t, err)
-	statusResp2.Body.Close()
+	mux.ServeHTTP(rr3, req3)
+	assert.Equal(t, http.StatusOK, rr3.Code)
 
-	assert.Equal(t, "READY", pollRes2.Status)
+	var statusRes2 OnboardingResponse
+	err = json.Unmarshal(rr3.Body.Bytes(), &statusRes2)
+	assert.NoError(t, err)
+	assert.Equal(t, "READY", statusRes2.Status)
 }
 
 func TestAPIStateFlow(t *testing.T) {
@@ -104,57 +97,45 @@ func TestAPIStateFlow(t *testing.T) {
 	service := NewService(tenantStore, taskStore)
 	handler := NewAPIHandler(service)
 
-	// Setup mock router/mux
+	// Create dummy tenant to update state on
+	tenantID := "tenant-for-state"
+	_ = tenantStore.CreateTenant(context.Background(), &Tenant{
+		ID:    tenantID,
+		Name:  "Stateful Co",
+		State: "{}",
+	})
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/onboarding/state", TenantAuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			handler.HandleSaveState(w, r)
-		} else if r.Method == http.MethodGet {
-			handler.HandleGetState(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	}))
+	mux.HandleFunc("/api/onboarding/state", TenantAuthMiddleware(handler.HandleSaveState))
+    mux.HandleFunc("/api/onboarding/state/get", TenantAuthMiddleware(handler.HandleGetState))
 
-	// Create test server
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
-    // 1. Create a tenant manually to test state against
-    tenant := &Tenant{
-		Name:        "Test State",
-		Category:    "Tech",
-		Status:      "PROVISIONING",
+	// 1. Update State
+	statePayload := map[string]interface{}{
+		"state": "{\"currentStep\":2}",
 	}
-	err := tenantStore.CreateTenant(context.Background(), tenant)
-    assert.NoError(t, err)
+	body, _ := json.Marshal(statePayload)
+	req := httptest.NewRequest(http.MethodPost, "/api/onboarding/state", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-tenant-id", tenantID)
+	rr := httptest.NewRecorder()
 
-    // 2. Save State
-	reqData := TenantStateRequest{
-		State: "{\"currentStep\":2}",
-	}
-	reqBody, _ := json.Marshal(reqData)
+	mux.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusNoContent, rr.Code)
 
-	req1, err := http.NewRequest("POST", ts.URL+"/api/onboarding/state", bytes.NewBuffer(reqBody))
-	assert.NoError(t, err)
-	req1.Header.Set("X-Tenant-Id", tenant.ID)
-	resp, err := http.DefaultClient.Do(req1)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
-	resp.Body.Close()
+	// 2. Get State
+	req2 := httptest.NewRequest(http.MethodGet, "/api/onboarding/state/get", nil)
+	req2.Header.Set("x-tenant-id", tenantID)
+	rr2 := httptest.NewRecorder()
 
-    // 3. Get State
-	req2, err := http.NewRequest("GET", ts.URL+"/api/onboarding/state", nil)
-	assert.NoError(t, err)
-	req2.Header.Set("X-Tenant-Id", tenant.ID)
-	resp2, err := http.DefaultClient.Do(req2)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp2.StatusCode)
+	mux.ServeHTTP(rr2, req2)
+	assert.Equal(t, http.StatusOK, rr2.Code)
 
-	var stateRes TenantStateResponse
-	err = json.NewDecoder(resp2.Body).Decode(&stateRes)
+	var fetchedState map[string]interface{}
+	err := json.Unmarshal(rr2.Body.Bytes(), &fetchedState)
 	assert.NoError(t, err)
-	resp2.Body.Close()
 
-	assert.Equal(t, "{\"currentStep\":2}", stateRes.State)
+	// In the real DB it might be a JSON string, depending on store implementation,
+	// for our sqlite mock it's a string, so we'll just check raw bytes.
+	assert.Equal(t, `{"state":"{\"currentStep\":2}"}
+`, string(rr2.Body.Bytes()))
 }

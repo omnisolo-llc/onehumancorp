@@ -28,8 +28,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			status TEXT,
 			state TEXT,
 			created_at DATETIME,
-			updated_at DATETIME,
-			state TEXT
+			updated_at DATETIME
 		);
 		CREATE TABLE shared_tasks (
 			id TEXT PRIMARY KEY,
@@ -44,8 +43,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			parent_plan_id TEXT,
 			dependencies BLOB,
 			created_at DATETIME,
-			updated_at DATETIME,
-			state TEXT
+			updated_at DATETIME
 		);
 	`)
 	if err != nil {
@@ -72,14 +70,18 @@ func TestOnboardingFlow(t *testing.T) {
 	}
 
 	res, err := service.StartOnboarding(ctx, req)
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatalf("Failed to start onboarding: %v", err)
+	}
 	assert.NotNil(t, res)
 	assert.NotEmpty(t, res.TenantID)
 	assert.Equal(t, "PROVISIONING", res.Status)
 
 	// 2. Check Tasks Dispatched
 	tasks, err := taskStore.GetTasksByOrganization(ctx, res.TenantID)
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatalf("Failed to get tasks: %v", err)
+	}
 	assert.Len(t, tasks, 3)
 
 	for _, task := range tasks {
