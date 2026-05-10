@@ -32,7 +32,6 @@ func isSensitiveKey(key string) bool {
 		strings.Contains(k, "pii") ||
 		strings.Contains(k, "tenant_id") ||
 		strings.Contains(k, "organization_id") ||
-		strings.Contains(k, "org_id") ||
 		strings.Contains(k, "session_id") ||
 		strings.Contains(k, "payload") ||
 		strings.Contains(k, "credit") ||
