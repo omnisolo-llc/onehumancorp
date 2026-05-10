@@ -43,6 +43,9 @@ func (o *overridingSpawner) Monitor(ctx context.Context) error { return nil }
 
 func TestChaosHostResourceExhaustion_TimeoutAndRetryFallback(t *testing.T) {
 	// Temporarily override the durations for faster testing
+    // Disable global circuit breaker for this specific test so it doesn't fail due to previous failures in the test suite
+    globalCB = NewCircuitBreaker(100, 1*time.Millisecond) // Ensure it never effectively opens here
+
 	oldTimeout := RetryTimeoutDuration
 	oldBackoff := RetryBackoffDuration
 	RetryTimeoutDuration = 10 * time.Millisecond

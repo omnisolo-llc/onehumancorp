@@ -70,6 +70,9 @@ func TestSubAgentWorker_Poll(t *testing.T) {
 	sm := NewTaskStateMachine(db)
 	spawner := &mockSubAgentSpawner{}
 
+    // Ensure circuit breaker is closed and won't block the test
+    globalCB = NewCircuitBreaker(10, 1*time.Second)
+
 	worker := NewSubAgentWorker(db, sm, spawner)
 
 	worker.Poll(context.Background())
@@ -105,6 +108,9 @@ func TestSubAgentWorker_Poll_Failure(t *testing.T) {
 
 	sm := NewTaskStateMachine(db)
 	spawner := &mockSubAgentSpawner{errToReturn: assert.AnError}
+
+    // Ensure circuit breaker is closed initially
+    globalCB = NewCircuitBreaker(10, 1*time.Second)
 
 	worker := NewSubAgentWorker(db, sm, spawner)
 

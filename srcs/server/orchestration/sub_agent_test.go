@@ -202,7 +202,7 @@ func TestSubAgentTimeout(t *testing.T) {
 func TestSubAgentSpawner_CircuitBreaker(t *testing.T) {
 	mesh := &mockMeshTransport{}
 	spawner := NewDefaultSubAgentSpawner(mesh, false, 0)
-	spawner.cb.threshold = 1 // Trip after 1 failure
+	globalCB = NewCircuitBreaker(1, 30*time.Second) // Trip after 1 failure
 
 	task := &SharedTask{
 		ID:             "test-cb",
@@ -240,7 +240,7 @@ func TestSubAgentSpawner_Monitor(t *testing.T) {
 
 func TestSubAgentSpawner_CircuitBreaker_HalfOpen(t *testing.T) {
 	cb := NewCircuitBreaker(1, 10*time.Millisecond)
-	cb.RecordFailure()
+	cb.RecordResult(assert.AnError)
 	assert.False(t, cb.Allow())
 
 	// Wait for timeout
