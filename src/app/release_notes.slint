@@ -7,7 +7,7 @@ export component ReleaseNotes inherits Window {
     min-width: 375px;
     title: "What's New";
     background: #0f172a;
-    in-out property <string> current_version: "v0.4.37";
+    in-out property <string> current_version: "v0.4.39";
     in-out property <bool> show_latest_only: false;
 
     HorizontalBox {
@@ -30,12 +30,14 @@ export component ReleaseNotes inherits Window {
                     spacing: 24px;
                     VerticalBox {
                         spacing: 8px;
-                        Text { text: "Version 0.4.37 (Cloud) / v0.4.37+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
+                        Text { text: "Version 0.4.39 (Cloud) / v0.4.39+1 (Standalone)"; font-weight: 700; font-size: 14px; color: white; }
                         GlassCard {
                             VerticalBox {
                                 padding: 16px; spacing: 12px;
-                                Text { text: "🔗 Link: Interop Mesh Resiliency"; font-weight: 700; font-size: 18px; color: white; }
-                                Text { text: "We have upgraded the backend architecture to improve distributed lock resilience for massive cloud scaling. Additionally, offline mesh protocol handling is more graceful and prevents malformed data issues."; color: white; wrap: word-wrap; }
+                                Text { text: "Cloud Scaling Improvements"; color: #38bdf8; font-weight: 600; }
+                                Text { text: "- Enhance multi-tenant onboarding flow tests for the Welcome Checklist to ensure reliable scaling."; color: #94a3b8; wrap: word-wrap; }
+                                Text { text: "Privacy/Offline Improvements"; color: #34d399; font-weight: 600; }
+                                Text { text: "- Bolster Standalone Wizard state test coverage for improved offline reliability and progressive disclosure validation."; color: #94a3b8; wrap: word-wrap; }
                             }
                         }
                     }

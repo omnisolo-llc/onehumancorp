@@ -323,6 +323,9 @@ impl VectorRepository {
         Ok(results)
     }
 
+    /// Prunes stale context to prevent unbounded memory growth.
+    /// It deletes records older than `older_than` where `owner_override = FALSE`,
+    /// `reference_count < 5`, and `source_type = 'TASK_SUMMARY'`.
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
@@ -372,6 +375,8 @@ impl VectorRepository {
         Ok(())
     }
 
+    /// Automatically detects and resolves conflicts based on semantic similarity.
+    /// It uses explicit owner override, reliability score, and recency to determine the winner.
     pub async fn auto_resolve_conflicts(&self) -> Result<usize, String> {
         let conflicts = self.get_conflicting_pairs().await?;
         let mut resolved_count = 0;
@@ -385,6 +390,7 @@ impl VectorRepository {
         Ok(resolved_count)
     }
 
+    /// Determines the winner of a memory conflict between two embedding records.
     pub fn determine_conflict_winner<'a>(a: &'a EmbeddingRecord, b: &'a EmbeddingRecord) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
         if a.owner_override != b.owner_override {
             if a.owner_override {
@@ -1051,6 +1057,7 @@ impl LongTermMemory for RedisMemoryStore {
 mod get_conflicts_tests {
     #[tokio::test]
     async fn test_auto_resolve_conflicts_with_override_new() {
+        // Migrated override test from standalone conflict.rs {
         use std::str::FromStr;
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
@@ -1204,6 +1211,7 @@ mod get_conflicts_tests {
 
     #[tokio::test]
     async fn test_auto_resolve_conflicts() {
+        // Migrated resolution test from standalone conflict.rs {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
@@ -1352,6 +1360,7 @@ mod get_conflicts_tests {
 
     #[tokio::test]
     async fn test_prune_stale_sqlite() {
+        // Migrated unit test from standalone pruning.rs {
         // Just mock the execution or write a very small unit test using sqlite memory database but to test the prune edge case
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
@@ -1466,6 +1475,7 @@ mod get_conflicts_tests {
 
     #[tokio::test]
     async fn test_auto_resolve_conflicts_fallback() {
+        // Migrated fallback test from standalone conflict.rs {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
@@ -2064,6 +2074,7 @@ mod anthropic_memory_tests {
 
     #[tokio::test]
     async fn test_prune_stale_retention() {
+        // Migrated retention test from standalone pruning.rs {
         use std::str::FromStr;
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
@@ -2140,6 +2151,7 @@ mod anthropic_memory_tests {
 
     #[tokio::test]
     async fn test_prune_stale_owner_override_coverage() {
+        // Migrated override test from standalone pruning.rs {
         use std::str::FromStr;
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
@@ -2227,6 +2239,7 @@ mod determine_conflict_winner_tests {
 
     #[test]
     fn test_winner_owner_override() {
+        // Migrated winner logic test from conflict.rs {
         let a = create_test_record("a", true, 50, 10);
         let b = create_test_record("b", false, 90, 5); // b has better score and is newer, but a has override
         let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
@@ -2240,6 +2253,7 @@ mod determine_conflict_winner_tests {
 
     #[test]
     fn test_winner_reliability_score() {
+        // Migrated score logic test from conflict.rs {
         let a = create_test_record("a", false, 80, 10);
         let b = create_test_record("b", false, 60, 5); // a has better score, b is newer
         let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
@@ -2267,3 +2281,218 @@ mod determine_conflict_winner_tests {
     }
 }
 // Trigger PR for Memory Consolidation Feature
+
+#[cfg(test)]
+mod e2e_consolidation_tests {
+    use super::*;
+    use std::str::FromStr;
+
+    async fn setup_sqlite_repo() -> VectorRepository {
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await.unwrap();
+
+        VectorRepository::new_sqlite(pool)
+    }
+
+    #[tokio::test]
+    async fn test_e2e_persistent_memory_layer_and_search() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0; // Distinct vector 1
+
+        let mut v2 = vec![0.0; 10];
+        v2[1] = 1.0; // Distinct vector 2
+
+        let cs_record = EmbeddingRecord {
+            id: "cs_e2e_1".to_string(),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "customer_success".to_string(),
+            content: "Customer unhappy about vegan cake delivery.".to_string(),
+            embedding: v1.clone(),
+            source_type: "CS_NOTE".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 0,
+            reliability_score: 80,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let advisory_record = EmbeddingRecord {
+            id: "adv_e2e_1".to_string(),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "business_advisory".to_string(),
+            content: "Vegan cakes have high margin.".to_string(),
+            embedding: v2.clone(),
+            source_type: "ADVISORY".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 0,
+            reliability_score: 90,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&cs_record).await.unwrap();
+        repo.upsert(&advisory_record).await.unwrap();
+
+        // Search from Advisory to find CS record
+        let results = repo.cross_department_search("org_maya", &v1, 5).await.unwrap();
+        assert!(!results.is_empty(), "Should find the CS record");
+        assert_eq!(results[0].id, "cs_e2e_1");
+
+        // Ensure isolation
+        let results_other_org = repo.cross_department_search("org_other", &v1, 5).await.unwrap();
+        assert!(results_other_org.is_empty(), "Should not leak memory between tenants");
+    }
+
+    #[tokio::test]
+    async fn test_e2e_conflict_resolution() {
+        let repo = setup_sqlite_repo().await;
+
+        // Two records with almost identical vectors to simulate conflict
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // < 0.05 distance to trigger conflict
+
+        let record_a = EmbeddingRecord {
+            id: "conflict_a".to_string(),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "sales".to_string(),
+            content: "Cake price is 50".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: chrono::Utc::now() - chrono::Duration::days(2),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "conflict_b".to_string(),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "sales".to_string(),
+            content: "Cake price is 55".to_string(), // newer, better score
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: chrono::Utc::now() - chrono::Duration::days(1),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 2,
+            reliability_score: 80,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        // Auto resolve conflicts
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should have resolved 1 conflict pair");
+
+        // Verify winner and loser
+        let results = repo.cross_department_search("org_maya", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+        assert_eq!(results[0].id, "conflict_b", "conflict_b should win due to higher reliability score");
+        assert_eq!(results[0].reference_count, 2 + 1 + 1, "reference count should be sum + 1");
+    }
+
+    #[tokio::test]
+    async fn test_e2e_stale_context_pruning() {
+        let repo = setup_sqlite_repo().await;
+
+        let now = chrono::Utc::now();
+        let old_time = now - chrono::Duration::days(181);
+        let new_time = now - chrono::Duration::days(10);
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[1] = 1.0;
+
+        // Old, no override, low ref count -> Prune
+        let prune_me = EmbeddingRecord {
+            id: "prune_1".to_string(),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "test".to_string(),
+            content: "old stuff".to_string(),
+            embedding: v1.clone(),
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Old, owner override -> Keep
+        let keep_override = EmbeddingRecord {
+            id: "keep_1".to_string(),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "test".to_string(),
+            content: "important rule".to_string(),
+            embedding: v2.clone(),
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        // Newer -> Keep
+        let keep_new = EmbeddingRecord {
+            id: "keep_2".to_string(),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "test".to_string(),
+            content: "new stuff".to_string(),
+            embedding: v1.clone(),
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: new_time,
+            last_referenced_at: new_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&prune_me).await.unwrap();
+        repo.upsert(&keep_override).await.unwrap();
+        repo.upsert(&keep_new).await.unwrap();
+
+        // Run pruning with threshold 180 days ago
+        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+
+        // Verify remaining
+        let results = repo.cross_department_search("org_maya", &v1, 10).await.unwrap();
+        let remaining_ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
+
+        assert_eq!(remaining_ids.len(), 2, "Should keep two records");
+        assert!(!remaining_ids.contains(&"prune_1".to_string()), "Should have pruned old, un-overridden record");
+        assert!(remaining_ids.contains(&"keep_1".to_string()), "Should have kept the one with owner override");
+        assert!(remaining_ids.contains(&"keep_2".to_string()), "Should have kept the recent record");
+    }
+}

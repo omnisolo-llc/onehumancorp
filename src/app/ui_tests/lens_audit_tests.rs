@@ -52,3 +52,81 @@ fn test_business_share_cuj_lens_audit() {
     share_ui.invoke_close();
     assert!(*close_called.borrow(), "Close callback must be triggered");
 }
+
+#[test]
+fn test_kairos_walkthrough_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let ui = app::KairosOrchestrationWalkthrough::new().unwrap();
+    assert_eq!(ui.get_test_title(), slint::SharedString::from("How Your Helpers Work Together"));
+
+    // Simulate clicking through the 4 steps
+    for i in 0..4 {
+        assert_eq!(ui.get_current_step(), i);
+        ui.set_current_step(i + 1);
+    }
+}
+
+#[test]
+fn test_autodream_walkthrough_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let ui = app::AutodreamWalkthrough::new().unwrap();
+    assert_eq!(ui.get_current_step(), 0);
+
+    // Simulate clicking through the 4 steps
+    for i in 0..4 {
+        assert_eq!(ui.get_current_step(), i);
+        ui.set_current_step(i + 1);
+    }
+}
+
+#[test]
+fn test_vector_memory_visualizer_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let ui = app::VectorMemoryVisualizer::new().unwrap();
+    assert_eq!(ui.get_memories_saved(), 0);
+    assert_eq!(ui.get_memories_searched(), 0);
+
+    ui.set_memories_saved(42);
+    ui.set_memories_searched(108);
+
+    assert_eq!(ui.get_memories_saved(), 42);
+    assert_eq!(ui.get_memories_searched(), 108);
+}
+
+#[test]
+fn test_referrals_dashboard_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+    let ui = app::Referrals::new().unwrap();
+
+    let refresh_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let refresh_clone = refresh_called.clone();
+    ui.on_refresh(move || {
+        *refresh_clone.borrow_mut() = true;
+    });
+    ui.invoke_refresh();
+    assert!(*refresh_called.borrow(), "Refresh callback must be triggered");
+
+    let copy_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let copy_clone = copy_called.clone();
+    ui.on_copy_link(move || {
+        *copy_clone.borrow_mut() = true;
+    });
+    ui.invoke_copy_link();
+    assert!(*copy_called.borrow(), "Copy link callback must be triggered");
+
+    let generate_new_link_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let generate_new_link_clone = generate_new_link_called.clone();
+    ui.on_generate_new_link(move || {
+        *generate_new_link_clone.borrow_mut() = true;
+    });
+    ui.invoke_generate_new_link();
+    assert!(*generate_new_link_called.borrow(), "Generate new link callback must be triggered");
+}

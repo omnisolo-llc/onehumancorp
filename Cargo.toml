@@ -1,6 +1,6 @@
 [package]
 name = "ohc-mono"
-version = "0.4.37"
+version = "0.4.39"
 edition = "2024"
 build = "src/server/build.rs"
 
@@ -60,6 +60,8 @@ protoc-gen-prost = { workspace = true }
 protoc-gen-tonic = { workspace = true }
 prost-types = { workspace = true }
 tempfile = "3.27.0"
+tree-sitter = "0.26.8"
+tree-sitter-bash = "0.25.1"
 
 [build-dependencies]
 tonic-build = "0.12"

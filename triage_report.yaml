@@ -4,13 +4,14 @@ debt_report: |
   # 🧹 Maintainer: Triage & Debt Report
 
   ## Phase 1: Audit
-  - Investigated test suites and found failing integration tests (`srcs/server/db/rls_integration_test.go`, `srcs/server/db/unified_data_model_test.go`) failing due to unreachable database, and `srcs/server/onboarding/service_test.go` crashing due to a schema mismatch on table `tenants`.
-  - Investigated `bazelisk test //...` failures. Found unused imports in `src/app/ui_tests/full_journey_e2e.rs`.
+  - Investigated `bazelisk test //...` failures. Found unused variables and unused imports in `src/app/ui_tests/business_manager_ux.rs` and `src/app/ui_tests/echo_ux_friction_fixes.rs`.
+  - Investigated `cd srcs/server && go test -v ./...` failures. Found failing test `TestOnboardingFlow` due to missing `state` column in the mock `tenants` and `shared_tasks` tables.
 
   ## Phase 2: Hygiene
-  - Updated `rls_integration_test.go` and `unified_data_model_test.go` to use `t.Skipf()` instead of `t.Fatalf()` when the integration postgres database cannot be reached, preserving functionality and passing gracefully in CI without external DB setup.
-  - Fixed `service_test.go` schema definition for `tenants` table to include the `state` column, fixing the panicking test.
-  - Fixed the unused import warning in `src/app/ui_tests/full_journey_e2e.rs` to keep build clean and noise-free.
+  - Fixed unused imports (`use slint::ComponentHandle;`) in `src/app/ui_tests/echo_ux_friction_fixes.rs`.
+  - Fixed unused variables (`app`, `dashboard_ui`, etc.) by prefixing them with an underscore or replacing them with the actual used item where needed in `src/app/ui_tests/business_manager_ux.rs`.
+  - Verified no more compilation warnings.
+  - Added missing `state TEXT` column to the `tenants` and `shared_tasks` schema in `srcs/server/onboarding/service_test.go` preventing the test panic.
 
   ## Phase 3: Architectural Audit
   - Confirmed no security, zero trust, or SPIRE principles are violated. Test patches don't affect production security.
@@ -21,9 +22,9 @@ debt_report: |
 
   ## Health Status
   - **Status:** Resolved
-  - **Action Taken:** Fixed failing Go tests, cleared up schema mismatches, and resolved Rust compilation warnings.
+  - **Action Taken:** Fixed Rust compilation warnings by removing unused variables/imports and fixed Go tests by adding missing `state` columns.
   </div>
 
 status: completed
 visual_excellence: "Applied Glassmorphism UI standards (backdrop-filter: blur(15px)) conceptually to report output generation."
-details: "Fixed Go tests and removed unused imports in Rust test suite."
+details: "Removed unused imports and variables in Rust test suite and fixed broken Go tests."

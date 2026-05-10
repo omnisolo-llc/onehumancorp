@@ -20,11 +20,12 @@ export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
 export TOKIO_WORKER_THREADS=1
-export MALLOC_ARENA_MAX=2
+export MALLOC_ARENA_MAX=1
 export RAYON_NUM_THREADS=2
 export OHC_STANDALONE=true
 export LOG_FORMAT="json"
 export LOG_LEVEL="info"
+export RUST_LOG="info"
 export OHC_RUNTIME_DIR=".ohc/runtime"
 export OHC_MEMORY_DIR="${OHC_RUNTIME_DIR}/memory"
 export OHC_STATUS_DIR="${OHC_RUNTIME_DIR}/status"
@@ -39,13 +40,13 @@ chmod 700 "${OHC_RUNTIME_DIR}" "${OHC_MEMORY_DIR}" "${OHC_STATUS_DIR}" "${OHC_ME
 find "${OHC_RUNTIME_DIR}" -type f -exec chmod 600 {} \+
 find "${OHC_RUNTIME_DIR}" -type d -exec chmod 700 {} \+
 
-if [ -z "$OHC_SQLITE_KEY" ]; then
+if [ -z "$OHC_LOCAL_DB_KEY" ]; then
   KEY_FILE="${OHC_RUNTIME_DIR}/.sqlite_key"
   if [ ! -f "$KEY_FILE" ]; then
-    openssl rand -hex 32 > "$KEY_FILE"
+    (umask 077 && openssl rand -hex 32 > "$KEY_FILE")
     chmod 600 "$KEY_FILE"
   fi
-  export OHC_SQLITE_KEY="$(cat "$KEY_FILE")"
+  export OHC_LOCAL_DB_KEY="$(cat "$KEY_FILE")"
 fi
 
 echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
@@ -79,7 +80,7 @@ echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 if [ "$OHC_TELEMETRY_ENABLED" = "true" ]; then
   docker rm -f ohc-prometheus-agent >/dev/null 2>&1 || true
   docker run -d --name ohc-prometheus-agent \
-    --memory="64m" --cpus="0.05" \
+    --memory="32m" --cpus="0.05" \
     --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
     --network host \
     -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml \

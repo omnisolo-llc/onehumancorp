@@ -127,3 +127,40 @@ fn create() -> app::CostDashboard { crate::ui_tests::init(); app::CostDashboard:
 }
 
 // --- Consolidated Verified Tests ---
+
+// --- Integration Tests ---
+
+#[test]
+fn cost_dashboard_comprehensive_flow_scenario() {
+    let ui = create();
+    let v: Vec<app::UiAgentCost> = vec![
+        app::UiAgentCost {
+            name: "Cloud Agent".into(),
+            cost: "$25.00".into(),
+            roi: "110%".into(),
+            efficiency: "5.0".into(),
+            storage_usage: "2.0 GB".into(),
+            pct: 0.8,
+        },
+        app::UiAgentCost {
+            name: "Local Agent".into(),
+            cost: "$0.00".into(),
+            roi: "300%".into(),
+            efficiency: "Infinite".into(),
+            storage_usage: "0.5 GB".into(),
+            pct: 0.0,
+        }
+    ];
+    ui.set_agent_costs(Rc::new(slint::VecModel::from(v)).into());
+    ui.set_total_spend("$25.00".into());
+    ui.set_total_tokens("500000".into());
+
+    assert_eq!(ui.get_total_spend(), "$25.00");
+    assert_eq!(ui.get_agent_costs().row_count(), 2);
+
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_refresh_data(move || { *c.borrow_mut() = true; });
+    ui.invoke_refresh_data();
+    assert!(*called.borrow());
+}

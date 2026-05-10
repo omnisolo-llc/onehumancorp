@@ -87,6 +87,7 @@ export component Dashboard inherits Window { // milestones
     in-out property <bool> show_quick_actions_hint: false;
     in-out property <bool> show_advisory_hint: false;
     in-out property <bool> show_team_hint: false;
+    in-out property <bool> show_health_hint: false;
     in-out property <bool> show_menu: false;
     in-out property <bool> show_swarm_observability: false;
     in property <[SwarmActivity]> swarm_activities;
@@ -108,12 +109,13 @@ export component Dashboard inherits Window { // milestones
             VerticalBox {
                 alignment: center;
                 Text { text: "My Store"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
-                if (is_loading) : Rectangle {
+                if (is_loading) : GlassCard {
                     height: 12px;
                     width: 100px;
-                    background: #334155; // Slate 700
                     border-radius: 6px;
-                    animate background { duration: 1500ms; iteration-count: -1; easing: ease-in-out; }
+                    background: rgba(255, 255, 255, 0.1);
+                    opacity: 0.5;
+                    animate opacity { duration: 1500ms; iteration-count: -1; easing: ease-in-out; }
                 }
             }
             Rectangle {} // Spacer
@@ -160,8 +162,11 @@ export component Dashboard inherits Window { // milestones
                 }
                 HorizontalBox {
                     spacing: 16px;
+                    alignment: start;
                     StatCard { label: "Business Health"; value: generative_score; value_color: #34d399; }
+                    Button { text: "?"; width: 44px; height: 44px; clicked => { show_health_hint = !show_health_hint; } }
                 }
+                if (show_health_hint) : Text { text: "Your Business Health is an AI-calculated score of your business's overall health and performance."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             }
 
             // Small Screen (List)
@@ -178,6 +183,11 @@ export component Dashboard inherits Window { // milestones
                     StatCard { label: "Ongoing Tasks"; value: tasks_in_progress_count; value_color: #f59e0b; }
                     StatCard { label: "Business Health"; value: generative_score; value_color: #34d399; }
                 }
+                HorizontalBox {
+                    alignment: start;
+                    Button { text: "? Learn about Business Health"; height: 44px; clicked => { show_health_hint = !show_health_hint; } }
+                }
+                if (show_health_hint) : Text { text: "Your Business Health is an AI-calculated score of your business's overall health and performance."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
             }
         }
 
@@ -210,7 +220,7 @@ export component Dashboard inherits Window { // milestones
         }
 
         // AI Assistant Health (Telemetry Visualization)
-        if (show_telemetry_visualization && is_advanced) : Rectangle {
+        if (show_telemetry_visualization && is_advanced) : GlassCard {
             background: rgba(255, 255, 255, 0.03);
             border-color: rgba(255, 255, 255, 0.1);
             border-width: 1px;
@@ -239,7 +249,7 @@ export component Dashboard inherits Window { // milestones
                         VerticalBox {
                             padding: 16px;
                             spacing: 8px;
-                            Text { text: "LLM Cache Hits"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
+                            Text { text: "AI Memory Usage"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
                             Text { text: root.telemetry_cache_hits; font-size: 32px; font-weight: 700; font-family: "Inter"; color: white; }
                         }
                     }
@@ -250,7 +260,7 @@ export component Dashboard inherits Window { // milestones
                         VerticalBox {
                             padding: 16px;
                             spacing: 8px;
-                            Text { text: "RAG Latency"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
+                            Text { text: "Intelligence Speed"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
                             Text { text: root.telemetry_rag_latency; font-size: 32px; font-weight: 700; font-family: "Inter"; color: white; }
                         }
                     }
@@ -467,28 +477,55 @@ export component Dashboard inherits Window { // milestones
         }
     }
 
-    // Floating Create Post (Bottom Left for another quick action)
-    Rectangle {
+    // Floating Create Post & Share Store (Bottom Left quick actions)
+    HorizontalBox {
         y: parent.height - 80px;
         x: 20px;
-        width: 60px;
-        height: 60px;
-        background: #3b82f6;
-        border-radius: 30px;
-        drop-shadow-blur: 10px;
-        drop-shadow-color: rgba(0, 0, 0, 0.5);
+        spacing: 16px;
 
-        Text {
-            text: "✍️";
-            color: white;
-            font-size: 24px;
-            horizontal-alignment: center;
-            vertical-alignment: center;
+        Rectangle {
+            width: 60px;
+            height: 60px;
+            background: #3b82f6;
+            border-radius: 30px;
+            drop-shadow-blur: 10px;
+            drop-shadow-color: rgba(0, 0, 0, 0.5);
+
+            Text {
+                text: "✍️";
+                color: white;
+                font-size: 24px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            TouchArea {
+                clicked => {
+                    action_open_social_posting();
+                }
+            }
         }
 
-        TouchArea {
-            clicked => {
-                action_open_social_posting();
+        Rectangle {
+            width: 60px;
+            height: 60px;
+            background: #10b981; // Emerald
+            border-radius: 30px;
+            drop-shadow-blur: 10px;
+            drop-shadow-color: rgba(0, 0, 0, 0.5);
+
+            Text {
+                text: "🔗";
+                color: white;
+                font-size: 24px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            TouchArea {
+                clicked => {
+                    action_share_store();
+                }
             }
         }
     }
