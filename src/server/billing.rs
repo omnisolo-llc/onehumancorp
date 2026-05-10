@@ -1,7 +1,5 @@
 use crate::integrations::mercadopago::client::MercadoPagoClient;
 // Billing module stub - provides Tracker struct used by hub.rs
-#[allow(unused_imports)]
-pub use crate::services::billing::auditor::CostAuditor;
 use crate::pricing::rate_limit::{RedisRateLimiter, RateLimitStatus};
 use crate::integrations::stripe::client::StripeClient;
 use redis::Client;

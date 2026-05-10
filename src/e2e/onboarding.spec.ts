@@ -101,10 +101,10 @@ test.describe('Onboarding Wizard', () => {
     await page.click('text="🌐 Free OHC Domain"');
     await page.click('button:has-text("Next")');
     // Step 8: Review & Launch -> 9
-    await page.click('button:has-text("Launch Your Business")');
+    await page.click('button:has-text("Publish my business")');
 
     // Check Confetti Success
-    await expect(page.locator('text="CONFETTI Success"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text="🎉 Success! Your business is live! 🎉"')).toBeVisible({ timeout: 10000 });
   });
 
   test('Test 5: Welcome Checklist', async ({ page }) => {
@@ -138,9 +138,9 @@ test.describe('Onboarding Wizard', () => {
     await page.click('text="🌐 Free OHC Domain"');
     await page.click('button:has-text("Next")');
     // Step 8: Review & Launch -> 9
-    await page.click('button:has-text("Launch Your Business")');
+    await page.click('button:has-text("Publish my business")');
 
-    await expect(page.locator('text="CONFETTI Success"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text="🎉 Success! Your business is live! 🎉"')).toBeVisible({ timeout: 10000 });
 
     const viewChecklistBtn = page.locator('text="View Welcome Checklist →"');
     await viewChecklistBtn.click();

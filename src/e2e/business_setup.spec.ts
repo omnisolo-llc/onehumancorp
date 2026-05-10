@@ -33,6 +33,21 @@ test.describe('Business Setup Wizard', () => {
     await expect(page.locator('text=/What kind of business are you building/i')).toBeVisible();
   });
 
+  test('should support Instant Build (AI) journey', async ({ page }) => {
+    await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
+    await page.click('text=⚡ Instant Build (AI) →');
+
+    await expect(page.locator('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]')).toBeVisible();
+    await page.fill('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]', 'I run a local tech shop');
+
+    await page.click('text=Generate Storefront →');
+
+    await expect(page.locator('text="Launch My Business →"')).toBeVisible({ timeout: 15000 });
+    await page.click('text="Launch My Business →"');
+
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+  });
+
   test('should show business type options', async ({ page }) => {
     await page.click('text=🚀 Start My Business');
     await expect(page.locator('text=Online Store')).toBeVisible();
@@ -222,7 +237,7 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Next →');
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
   });
 
   test('should show welcome checklist after successful launch', async ({ page }) => {
@@ -247,7 +262,7 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Next →');
 
     // Launch the business
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
 
     // Wait for the success state/confetti
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
@@ -396,8 +411,8 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text=Next →');
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -424,8 +439,8 @@ test.describe('Business Setup Wizard Validation', () => {
 
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -452,8 +467,8 @@ test.describe('Business Setup Wizard Validation', () => {
 
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -482,8 +497,8 @@ test.describe('Business Setup Wizard Validation', () => {
     // Based on the UI, domain_choice is set to "custom"
     await page.click('text=Next →');
 
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -510,8 +525,8 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await expect(page.locator('text="Launch My Business →"')).toBeVisible();
-    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text="Publish my business →"')).toBeVisible();
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -563,7 +578,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.click('text=Next →');
 
     // Review and launch
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -600,7 +615,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -634,7 +649,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.fill('input[placeholder="target.ohc.app"]', "priya.com");
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -668,7 +683,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 
@@ -701,7 +716,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
   });
 });
@@ -736,7 +751,129 @@ test.describe('E2E Onboarding Persona Journeys - Portfolio', () => {
     await page.click('text=🌐 Free OHC Domain');
     await page.click('text=Next →');
 
-    await page.click('text="Launch My Business →"');
+    await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+  });
+});
+
+test.describe('Instant Build (AI) Flow', () => {
+  test('Instant Build Journey - Full Success', async ({ page }) => {
+    await page.goto('/login');
+    await page.click('button:has-text("Don\'t have an account? Sign Up")');
+    await page.fill('input[placeholder="Email or Username"]', 'ai_user@example.com');
+    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.click('button:has-text("Sign Up")');
+
+    await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
+    await page.click('text=⚡ Instant Build (AI) →');
+
+    await expect(page.locator('text=Describe your business in a sentence')).toBeVisible();
+
+    await page.fill('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]', 'I run a custom vegan cake shop in Austin called Austin Vegan Cakes.');
+
+    await expect(page.locator('text=Generate Storefront →')).toBeVisible();
+    await page.click('text=Generate Storefront →');
+
+    // Wait for the generation state
+    await expect(page.locator('text=Designing your storefront...')).toBeVisible();
+
+    // Check we arrive at Step 9
+    await expect(page.locator('text="Launch My Business →"')).toBeVisible({ timeout: 15000 });
+
+    await page.click('text="Launch My Business →"');
+
+    // After launch, step 100 with the preview
+    await expect(page.locator('text=Your live storefront!')).toBeVisible({ timeout: 10000 });
+
+    await expect(page.locator('text="Continue to Dashboard →"')).toBeVisible();
+    await page.click('text="Continue to Dashboard →"');
+
+    await expect(page.locator('text="Dashboard"')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('Instant Build Journey - Verify Pre-filled Preview Details', async ({ page }) => {
+    await page.goto('/login');
+    await page.click('button:has-text("Don\'t have an account? Sign Up")');
+    await page.fill('input[placeholder="Email or Username"]', 'ai_user2@example.com');
+    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.click('button:has-text("Sign Up")');
+
+    await page.click('text=⚡ Instant Build (AI) →');
+    await page.fill('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]', 'I run a plumbing service named Carlos Plumbing');
+    await page.click('text=Generate Storefront →');
+
+    await expect(page.locator('text="Launch My Business →"')).toBeVisible({ timeout: 15000 });
+
+    // We can't verify the exact name because AI generated, but we can launch and see it generated *something*
+    await page.click('text="Launch My Business →"');
+
+    await expect(page.locator('text=Your live storefront!')).toBeVisible({ timeout: 10000 });
+    // Check that we see some generated store name (in the mock it uses "AI Store")
+    await expect(page.locator('text="AI Store"')).toBeVisible();
+
+    await page.click('text="Continue to Dashboard →"');
+  });
+
+  test('Instant Build Journey - Back button behavior', async ({ page }) => {
+    await page.goto('/login');
+    await page.click('button:has-text("Don\'t have an account? Sign Up")');
+    await page.fill('input[placeholder="Email or Username"]', 'ai_user3@example.com');
+    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.click('button:has-text("Sign Up")');
+
+    await page.click('text=⚡ Instant Build (AI) →');
+
+    // Test the back button works from the instant input step
+    await page.click('text=Back');
+    await expect(page.locator('text=🚀 Start My Business')).toBeVisible();
+
+    // Go back in and test back from review step
+    await page.click('text=⚡ Instant Build (AI) →');
+    await page.fill('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]', 'Boutique clothing store');
+    await page.click('text=Generate Storefront →');
+
+    await expect(page.locator('text="Launch My Business →"')).toBeVisible({ timeout: 15000 });
+
+    await page.click('text=Back');
+
+    await expect(page.locator('text=Describe your business in a sentence')).toBeVisible();
+  });
+
+  test('Instant Build Journey - Empty Input Validation', async ({ page }) => {
+    await page.goto('/login');
+    await page.click('button:has-text("Don\'t have an account? Sign Up")');
+    await page.fill('input[placeholder="Email or Username"]', 'ai_user4@example.com');
+    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.click('button:has-text("Sign Up")');
+
+    await page.click('text=⚡ Instant Build (AI) →');
+
+    // Ensure button is disabled if empty or click does nothing.
+    // In slint the button has enabled: instant_bio != "";
+    // We can verify that "Designing your storefront..." never appears if we click it with empty bio.
+    await page.click('text=Generate Storefront →', { force: true });
+
+    await expect(page.locator('text=Designing your storefront...')).not.toBeVisible();
+    await expect(page.locator('text=Generate Storefront →')).toBeVisible();
+  });
+
+  test('Instant Build Journey - Long Bio Input', async ({ page }) => {
+    await page.goto('/login');
+    await page.click('button:has-text("Don\'t have an account? Sign Up")');
+    await page.fill('input[placeholder="Email or Username"]', 'ai_user5@example.com');
+    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.click('button:has-text("Sign Up")');
+
+    await page.click('text=⚡ Instant Build (AI) →');
+
+    const longBio = "I am a photographer who specializes in wedding and event photography in the New York area. I offer various packages including engagement shoots, full day wedding coverage, and photo booth rentals. My style is very candid and natural.";
+    await page.fill('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]', longBio);
+    await page.click('text=Generate Storefront →');
+
+    await expect(page.locator('text=Designing your storefront...')).toBeVisible();
+    await expect(page.locator('text="Launch My Business →"')).toBeVisible({ timeout: 15000 });
+
+    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text=Your live storefront!')).toBeVisible({ timeout: 10000 });
   });
 });

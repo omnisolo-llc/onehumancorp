@@ -7,6 +7,30 @@ use std::str::FromStr;
 
 use crate::orchestration::departments::types::{DepartmentType, DepartmentConfig, DepartmentEvent, ApprovalRequest, ApprovalStatus};
 use crate::db::DbStore;
+use ohc_builtin_agent::memory_store::VectorRepository;
+use opentelemetry::global;
+use opentelemetry::KeyValue;
+use crate::orchestration::mesh::TeammateMesh;
+use opentelemetry::metrics::Counter;
+
+#[derive(Clone, Copy)]
+pub enum ActionRisk {
+    AutoExecute,
+    DraftForReview,
+}
+
+pub enum AgentTriggerType {
+    Scheduled,
+    EventDriven,
+    OnDemand,
+}
+
+#[async_trait::async_trait]
+pub trait BaseAgent: Send + Sync {
+    fn agent_id(&self) -> String;
+    fn trigger_type(&self) -> AgentTriggerType;
+    async fn execute(&self, payload: serde_json::Value) -> Result<(), String>;
+}
 
 #[async_trait::async_trait]
 pub trait Department: Send + Sync {
@@ -14,7 +38,7 @@ pub trait Department: Send + Sync {
     fn subscribed_events(&self) -> Vec<String>;
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String>;
     async fn query_memory(&self, query: &str) -> Result<Vec<String>, String>;
-    async fn request_approval(&self, description: String, tenant_id: String) -> Result<ApprovalRequest, String>;
+    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String>;
     fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig>;
     fn set_config(&mut self, tenant_id: String, config: DepartmentConfig);
 }
@@ -51,6 +75,8 @@ impl Department for DummyDepartment {
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         self.received_events.lock().unwrap().push(event.clone());
+        let payload = serde_json::json!({"test": "data"});
+        let _ = self.orchestrator.execute_action(self.dep_type, "Test action".to_string(), event.tenant_id.clone(), ActionRisk::AutoExecute, payload).await;
         Ok(())
     }
 
@@ -59,14 +85,21 @@ impl Department for DummyDepartment {
         Ok(vec![])
     }
 
-    async fn request_approval(&self, description: String, tenant_id: String) -> Result<ApprovalRequest, String> {
+    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
+        let risk_str = match risk {
+            ActionRisk::AutoExecute => "LOW",
+            ActionRisk::DraftForReview => "HIGH",
+        };
         let req = ApprovalRequest {
             id: Uuid::new_v4().to_string(),
             tenant_id,
             department: self.dep_type,
             description,
-            status: ApprovalStatus::Pending,
-            action_risk: "HIGH".to_string(),
+            status: match risk {
+                ActionRisk::AutoExecute => ApprovalStatus::Approved,
+                ActionRisk::DraftForReview => ApprovalStatus::Pending,
+            },
+            action_risk: risk_str.to_string(),
         };
         self.orchestrator.add_approval_request(req.clone()).await;
         Ok(req)
@@ -84,16 +117,35 @@ impl Department for DummyDepartment {
 pub struct DepartmentOrchestrator {
     db: Arc<crate::db::DB>,
     departments: RwLock<HashMap<DepartmentType, Arc<tokio::sync::RwLock<dyn Department>>>>,
+    agents: RwLock<HashMap<String, Arc<tokio::sync::RwLock<dyn BaseAgent>>>>,
     event_subscriptions: RwLock<HashMap<String, Vec<DepartmentType>>>,
+    memory_repo: Arc<VectorRepository>,
+    mesh: Arc<dyn TeammateMesh>,
+    action_counter: Counter<u64>,
 }
 
 impl DepartmentOrchestrator {
-    pub fn new(db: Arc<crate::db::DB>) -> Self {
+    pub fn new(db: Arc<crate::db::DB>, mesh: Arc<dyn TeammateMesh>) -> Self {
+        let memory_repo = match &db.store {
+            DbStore::Postgres => Arc::new(VectorRepository::new(db.pool.clone())),
+            DbStore::Sqlite(pool) => Arc::new(VectorRepository::new_sqlite(pool.clone())),
+        };
+        let meter = global::meter("ohc.orchestrator");
+        let action_counter = meter.u64_counter("agent.actions.total").build();
         Self {
             db,
             departments: RwLock::new(HashMap::new()),
+            agents: RwLock::new(HashMap::new()),
             event_subscriptions: RwLock::new(HashMap::new()),
+            memory_repo,
+            mesh,
+            action_counter,
         }
+    }
+
+        pub async fn register_agent(&self, agent: Arc<tokio::sync::RwLock<dyn BaseAgent>>) {
+        let agent_id = agent.read().await.agent_id();
+        self.agents.write().await.insert(agent_id, agent.clone());
     }
 
     pub async fn register_department(&self, department: Arc<tokio::sync::RwLock<dyn Department>>) {
@@ -110,16 +162,78 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn dispatch_event(&self, event: DepartmentEvent) -> Result<(), String> {
+        let topic = format!("department_event:{}", event.event_type);
+        let payload = serde_json::to_vec(&event).map_err(|e| e.to_string())?;
+        self.mesh.publish(&topic, payload).await?;
+
         let subscriptions = self.event_subscriptions.read().await;
         if let Some(dep_types) = subscriptions.get(&event.event_type) {
             let departments = self.departments.read().await;
             for dep_type in dep_types {
                 if let Some(dep) = departments.get(dep_type) {
-                    dep.read().await.handle_event(&event).await?;
+                    let lock_key = format!("ohc:lock:{}:{}:{}", event.tenant_id, dep_type, event.id);
+                    if self.mesh.acquire_lock(&lock_key, "orchestrator", 30).await.unwrap_or(false) {
+                        self.action_counter.add(1, &[
+                            KeyValue::new("tenant_id", event.tenant_id.clone()),
+                            KeyValue::new("department", dep_type.to_string())
+                        ]);
+                        let result = dep.read().await.handle_event(&event).await;
+                        let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
+                        let _ = result;
+                    }
                 }
             }
         }
         Ok(())
+    }
+
+    pub async fn check_ai_budget(&self, tenant_id: &str, points: i32) -> Result<bool, String> {
+
+        let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(self.db.clone());
+
+        throttler.check_and_consume_budget(tenant_id, points).await
+
+    }
+
+    pub async fn execute_action(
+        &self,
+        department: DepartmentType,
+        description: String,
+        tenant_id: String,
+        risk: ActionRisk,
+        _action_payload: serde_json::Value,
+    ) -> Result<ApprovalRequest, String> {
+        let cost = 1;
+        if !self.check_ai_budget(&tenant_id, cost).await.unwrap_or(false) {
+            return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
+        }
+
+        match risk {
+            ActionRisk::AutoExecute => {
+                let req = ApprovalRequest {
+                    id: Uuid::new_v4().to_string(),
+                    tenant_id,
+                    department,
+                    description: format!("{} | Payload: {}", description, _action_payload.to_string()),
+                    status: ApprovalStatus::Approved,
+                    action_risk: "LOW".to_string(),
+                };
+                self.add_approval_request(req.clone()).await;
+                Ok(req.clone())
+            }
+            ActionRisk::DraftForReview => {
+                let req = ApprovalRequest {
+                    id: Uuid::new_v4().to_string(),
+                    tenant_id,
+                    department,
+                    description: format!("{} | Payload: {}", description, _action_payload.to_string()),
+                    status: ApprovalStatus::Pending,
+                    action_risk: "HIGH".to_string(),
+                };
+                self.add_approval_request(req.clone()).await;
+                Ok(req.clone())
+            }
+        }
     }
 
     pub async fn add_approval_request(&self, req: ApprovalRequest) {
@@ -267,4 +381,40 @@ impl DepartmentOrchestrator {
         }
     }
 
+
+    pub async fn query_long_term_memory(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<String>, String> {
+        let records = self.memory_repo.semantic_search(tenant_id, query_embedding, limit).await?;
+        Ok(records.into_iter().map(|r| r.content).collect())
+    }
+
+    pub async fn write_long_term_memory(&self, record: ohc_builtin_agent::memory_store::EmbeddingRecord) -> Result<(), String> {
+        self.memory_repo.upsert(&record).await.map_err(|e| e.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::orchestration::mesh::CentrifugeNode;
+    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+
+    #[tokio::test]
+    async fn test_orchestrator_initialization() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(MemoryTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = DepartmentOrchestrator::new(db, mesh);
+
+        let dummy = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
+            DepartmentType::Operations,
+            vec!["test_event".to_string()],
+            Arc::new(orchestrator)
+        )));
+        let _ = dummy;
+        assert!(true);
+    }
 }

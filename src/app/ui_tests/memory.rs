@@ -81,3 +81,79 @@ fn create_verify_velocity_score() {
     ui.set_velocity_score(23);
     assert_eq!(ui.get_velocity_score(), 23);
 }
+
+// --- AutoDream Data Pipeline UI Tests ---
+
+#[test]
+fn autodream_walkthrough_flow() {
+    crate::ui_tests::init();
+    let ui = app::AutodreamWalkthrough::new().unwrap();
+
+    // Check initial state
+    assert_eq!(ui.get_current_step(), 0);
+
+    // Simulate clicking Next
+    ui.set_current_step(1);
+    assert_eq!(ui.get_current_step(), 1);
+
+    ui.set_current_step(2);
+    assert_eq!(ui.get_current_step(), 2);
+
+    ui.set_current_step(3);
+    assert_eq!(ui.get_current_step(), 3);
+
+    // Test close callback
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_close(move || { *c.borrow_mut() = true; });
+    ui.invoke_close();
+    assert!(*called.borrow());
+}
+
+#[test]
+fn vector_memory_visualizer_properties() {
+    crate::ui_tests::init();
+    let ui = app::VectorMemoryVisualizer::new().unwrap();
+
+    ui.set_memories_saved(150);
+    assert_eq!(ui.get_memories_saved(), 150);
+
+    ui.set_memories_searched(42);
+    assert_eq!(ui.get_memories_searched(), 42);
+}
+
+#[test]
+fn vector_memory_visualizer_negative_values() {
+    crate::ui_tests::init();
+    let ui = app::VectorMemoryVisualizer::new().unwrap();
+
+    ui.set_memories_saved(-5);
+    assert_eq!(ui.get_memories_saved(), -5);
+
+    ui.set_memories_searched(-10);
+    assert_eq!(ui.get_memories_searched(), -10);
+}
+
+#[test]
+fn vector_memory_visualizer_large_values() {
+    crate::ui_tests::init();
+    let ui = app::VectorMemoryVisualizer::new().unwrap();
+
+    ui.set_memories_saved(2147483647);
+    assert_eq!(ui.get_memories_saved(), 2147483647);
+
+    ui.set_memories_searched(2147483647);
+    assert_eq!(ui.get_memories_searched(), 2147483647);
+}
+
+#[test]
+fn autodream_walkthrough_navigation_bounds() {
+    crate::ui_tests::init();
+    let ui = app::AutodreamWalkthrough::new().unwrap();
+
+    ui.set_current_step(10);
+    assert_eq!(ui.get_current_step(), 10); // Note: Slint UI tests just test property binding here.
+
+    ui.set_current_step(-1);
+    assert_eq!(ui.get_current_step(), -1);
+}

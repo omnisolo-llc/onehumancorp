@@ -8,6 +8,7 @@ pub mod billing;
 pub mod ultraplan;
 #[path = "../agents/builtin/autodream.rs"]
 pub mod autodream;
+pub mod autodream_pipeline;
 pub mod tasks;
 pub mod settings;
 pub mod scheduler;
@@ -33,7 +34,6 @@ pub mod interop;
 pub mod benchmarks;
 
 pub mod config;
-pub mod http;
 pub mod builder;
 use crate::orchestration::mesh::TeammateMesh;
 
@@ -159,6 +159,8 @@ pub struct MyHubService {
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
     onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
+    publish_counter: opentelemetry::metrics::Counter<u64>,
+    stream_counter: opentelemetry::metrics::Counter<u64>,
 }
 
 impl MyHubService {
@@ -166,8 +168,13 @@ impl MyHubService {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
-        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db);
-        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent }
+        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db, hub.clone());
+
+        let meter = opentelemetry::global::meter("ohc.orchestration.hub");
+        let publish_counter = meter.u64_counter("hub.mesh_events.published").build();
+        let stream_counter = meter.u64_counter("hub.mesh_events.stream_started").build();
+
+        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent, publish_counter, stream_counter }
     }
 }
 
@@ -1071,6 +1078,23 @@ impl HubService for MyHubService {
 
     type StreamMeshEventsStream = Pin<Box<dyn Stream<Item = Result<MeshEvent, Status>> + Send>>;
 
+    async fn publish_mesh_event(
+        &self,
+        request: Request<crate::ohc::orchestration::PublishMeshEventRequest>,
+    ) -> Result<Response<PublishMessageResponse>, Status> {
+        let req = request.into_inner();
+        if let Some(event) = req.event {
+            self.publish_counter.add(1, &[opentelemetry::KeyValue::new("topic", event.topic.clone())]);
+
+            match self.hub.publish_mesh_event(event) {
+                Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
+                Err(e) => Err(Status::internal(e)),
+            }
+        } else {
+            Err(Status::invalid_argument("event is required"))
+        }
+    }
+
     async fn stream_mesh_events(
         &self,
         request: Request<EventStreamRequest>,
@@ -1080,6 +1104,8 @@ impl HubService for MyHubService {
             return Err(Status::invalid_argument("topic is required"));
         }
         
+        self.stream_counter.add(1, &[opentelemetry::KeyValue::new("topic", req.topic.clone())]);
+
         let rx = self.hub.subscribe_mesh_events(req.topic);
         
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
@@ -1185,6 +1211,18 @@ impl HubService for MyHubService {
 }
 
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize logging
+    let use_json = std::env::var("LOG_FORMAT").unwrap_or_default() == "json";
+
+    let subscriber = tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()));
+
+    if use_json {
+        subscriber.json().init();
+    } else {
+        subscriber.init();
+    }
+
     // Initialize database
     let db = Arc::new(db::DB::new().await?);
     db.run_migrations().await?;
@@ -1222,6 +1260,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     maintenance_worker.start();
 
     // Start Agent Memory Pipeline
+    hub.clone().start_token_burn_rate_worker();
     let memory_embedding_api = Arc::new(crate::workers::agent_memory_pipeline::DefaultMemoryEmbeddingApi::new());
     let agent_memory_pipeline = Arc::new(crate::workers::agent_memory_pipeline::AgentMemoryPipeline::new(db.clone(), memory_embedding_api));
     let agent_memory_pipeline_clone = agent_memory_pipeline.clone();
@@ -1305,6 +1344,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
+    let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
+    let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
+    let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));
+    let mkt_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(dept_orchestrator.clone())));
+    dept_orchestrator.register_department(ops_agent).await;
+    dept_orchestrator.register_department(cs_agent).await;
+    dept_orchestrator.register_department(mkt_agent).await;
+
     let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
         handoff_mesh.clone(),
         db.clone(),
@@ -1405,6 +1452,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
+        .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             crate::utils::tier_middleware::tier_middleware,
@@ -1432,7 +1480,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
-    let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
+    let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
@@ -1534,3 +1582,4 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 }
 pub mod tools;
 pub mod workers;
+// Validation dummy comment

@@ -1,8 +1,6 @@
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
 use chrono::Utc;
-use crate::orchestration::departments::memory::pruning::prune_stale;
-use crate::orchestration::departments::memory::conflict::auto_resolve_conflicts;
 
 /// MemoryConsolidationWorker is responsible for periodically pruning stale context
 /// and automatically resolving memory conflicts within the vector repository.
@@ -30,10 +28,10 @@ impl MemoryConsolidationWorker {
             loop {
                 interval.tick().await;
                 let older_than = Utc::now() - chrono::Duration::days(prune_threshold_days);
-                if let Err(e) = prune_stale(repository.clone(), older_than).await {
+                if let Err(e) = repository.prune_stale(older_than).await {
                     tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
                 }
-                if let Err(e) = auto_resolve_conflicts(repository.clone()).await {
+                if let Err(e) = repository.auto_resolve_conflicts().await {
                     tracing::error!("Consolidation Worker: Failed to resolve memory conflicts: {}", e);
                 }
             }
@@ -143,5 +141,110 @@ mod tests {
 
         assert_eq!(row.0, 0, "Stale record should be pruned by worker pipeline");
     }
+
+    #[tokio::test]
+    async fn test_worker_full_pipeline_with_conflict_and_pruning() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        use sqlx::Row;
+
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding VECTOR(1536),
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
+
+        // Insert a stale record
+        let stale_record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+            id: "stale_1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old data".to_string(),
+            embedding: vec![0.5; 1536],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: Utc::now() - chrono::Duration::days(200),
+            last_referenced_at: Utc::now() - chrono::Duration::days(200),
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Insert two conflicting records
+        let conflict_loser = ohc_builtin_agent::memory_store::EmbeddingRecord {
+            id: "conflict_loser".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "price is 50".to_string(),
+            embedding: vec![0.1; 1536],
+            source_type: "NOTES".to_string(),
+            created_at: Utc::now() - chrono::Duration::days(5),
+            last_referenced_at: Utc::now(),
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let conflict_winner = ohc_builtin_agent::memory_store::EmbeddingRecord {
+            id: "conflict_winner".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "price is 55".to_string(),
+            embedding: vec![0.1; 1536], // Same embedding = conflict
+            source_type: "NOTES".to_string(),
+            created_at: Utc::now() - chrono::Duration::days(2), // Newer
+            last_referenced_at: Utc::now(),
+            reference_count: 2,
+            reliability_score: 90, // Higher score = winner
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&stale_record).await.unwrap();
+        repo.upsert(&conflict_loser).await.unwrap();
+        repo.upsert(&conflict_winner).await.unwrap();
+
+        let mut worker = MemoryConsolidationWorker::new(repo.clone());
+        worker.poll_interval = std::time::Duration::from_millis(10);
+        worker.start();
+
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+
+        // Verify the database state
+        let query = "SELECT id, reference_count FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+
+        // Stale should be gone. Loser should be gone. Winner should remain.
+        assert_eq!(rows.len(), 1, "Only the conflict winner should remain");
+
+        let id: String = rows[0].try_get("id").unwrap();
+        let ref_count: i32 = rows[0].try_get("reference_count").unwrap();
+
+        assert_eq!(id, "conflict_winner", "The winner must be preserved");
+        // Loser has 1, winner has 2, logic increments winner by loser + 1 -> 2 + 1 + 1 = 4.
+        assert_eq!(ref_count, 4, "The winner should inherit the loser's reference count");
+    }
 }
-// Touching file to make a commit

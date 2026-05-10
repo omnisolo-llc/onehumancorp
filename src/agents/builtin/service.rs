@@ -8,7 +8,34 @@ use crate::auth::AuthMode;
 use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
 };
-use crate::memory::inject_memories_into_prompt;
+use chrono::{DateTime, Utc};
+
+#[derive(Debug, Clone)]
+pub struct MemoryEntry {
+    pub memory_id: String,
+    pub context: String,
+    pub embedding: Option<Vec<u8>>,
+    pub source_plugin: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub organization_id: String,
+}
+
+pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str) -> String {
+    if memories.is_empty() {
+        return system_prompt.to_string();
+    }
+    let mut s = String::new();
+    s.push_str("## Relevant past experience\n");
+    for m in memories {
+        s.push_str("- ");
+        s.push_str(&m.context);
+        s.push('\n');
+    }
+    s.push_str("\n---\n\n");
+    s.push_str(system_prompt);
+    s
+}
+
 use crate::memory_store::{VectorRepository, EmbeddingRecord};
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
@@ -21,6 +48,8 @@ use ohc_builtin_agent_tools::{
 use crate::departments::{Department, get_department_config};
 use std::str::FromStr;
 use tokio::sync::RwLock;
+use crate::consolidation_worker::ConsolidationWorker;
+use std::time::Duration;
 
 pub const DEFAULT_ADDRESS: &str = "127.0.0.1:50051";
 const AGENT_VERSION: &str = "1.0.0";
@@ -47,6 +76,7 @@ pub struct AgentServiceImpl {
     pub anthropic_memory: Option<Arc<crate::memory_store::Anthropic3TierMemoryStore>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
+    pub worker_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
 
@@ -129,6 +159,7 @@ impl AgentServiceImpl {
             memory: None,
             llm_override: None,
             anthropic_memory: None,
+            worker_handle: None,
         }
     }
 
@@ -147,7 +178,9 @@ impl AgentServiceImpl {
             if db_url.starts_with("sqlite") {
                 match sqlx::SqlitePool::connect_lazy(&db_url) {
                     Ok(pool) => {
-                        self.memory = Some(Arc::new(VectorRepository::new_sqlite(pool)));
+                        let repo = Arc::new(VectorRepository::new_sqlite(pool));
+                        self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_secs(3600), 180)).spawn_background_task());
+                        self.memory = Some(repo);
                     }
                     Err(e) => {
                         tracing::error!("Failed to connect to sqlite for memory store: {}", e);
@@ -156,7 +189,9 @@ impl AgentServiceImpl {
             } else {
                 match sqlx::PgPool::connect_lazy(&db_url) {
                     Ok(pool) => {
-                        self.memory = Some(Arc::new(VectorRepository::new(pool)));
+                        let repo = Arc::new(VectorRepository::new(pool));
+                        self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_secs(3600), 180)).spawn_background_task());
+                        self.memory = Some(repo);
                     }
                     Err(e) => {
                         tracing::error!("Failed to connect to database for memory store: {}", e);
@@ -271,7 +306,7 @@ impl AgentServiceImpl {
                 vec![]
             };
             store.semantic_search(&org_id, &embedding, 5).await.map(|records| {
-                records.into_iter().map(|r| crate::memory::MemoryEntry {
+                records.into_iter().map(|r| MemoryEntry {
                     memory_id: r.id,
                     context: r.content,
                     embedding: None,
@@ -338,6 +373,7 @@ impl AgentServiceImpl {
         AgentRunConfig {
             max_retries: 2,
             enable_single_agent_maximization: false,
+            enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             agent_id: self.agent_id.clone(),
             model,
@@ -376,6 +412,8 @@ impl AgentServiceImpl {
             resume_from_checkpoint_id: None,
             injected_context: None,
             enable_langgraph_mechanic: false,
+            enable_time_travel_rewind: false,
+            max_rewind_attempts: 3,
             // Long-term memory store for cross-department context sharing
             long_term_memory,
         }
@@ -407,6 +445,14 @@ impl AgentServiceImpl {
         let ralph = crate::ralph_loop::RalphLoop::new(agent, run_cfg, &progress_file);
         if let Err(e) = ralph.run(&req.task).await {
             tracing::error!("Ralph Loop error: {}", e);
+        }
+    }
+}
+
+impl Drop for AgentServiceImpl {
+    fn drop(&mut self) {
+        if let Some(handle) = self.worker_handle.take() {
+            handle.abort();
         }
     }
 }
@@ -550,6 +596,11 @@ impl AgentService for AgentServiceImpl {
                         content: format!("HANDOFF REQUESTED TO: {}", target_agent),
                         ..Default::default()
                     },
+                    AgentEvent::RewindOccurred { iteration, checkpoint_id, reason } => RunTaskEvent {
+                        r#type: EventType::TextChunk as i32,
+                        content: format!("[Rewind Occurred at Iteration {}: Checkpoint {}, Reason: {}]\n", iteration, checkpoint_id, reason),
+                        ..Default::default()
+                    },
                 };
                 let _ = tx_clone.try_send(Ok(pb));
             };
@@ -602,6 +653,7 @@ impl AgentService for AgentServiceImpl {
             let run_cfg = AgentRunConfig {
                 max_retries: 2,
                 enable_single_agent_maximization: false,
+            enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
                 agent_id: self.agent_id.clone(),
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
@@ -643,6 +695,8 @@ impl AgentService for AgentServiceImpl {
                 resume_from_checkpoint_id: None,
                 injected_context,
                 enable_langgraph_mechanic: false,
+                enable_time_travel_rewind: false,
+                max_rewind_attempts: 3,
                 long_term_memory: None,
             };
 

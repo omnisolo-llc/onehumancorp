@@ -83,7 +83,9 @@ impl Hub {
 
                 // Blueprint: track cost in cents
                 let cost_cents = (cost * 100.0) as f32;
-                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels).await;
+                let mut labels_cents = labels.clone();
+                labels_cents["cost_cents"] = serde_json::json!(cost_cents);
+                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
             }
         });
 
@@ -795,12 +797,41 @@ mod tests {
 
 
     #[tokio::test]
-    async fn test_sanitize_hub_event_redaction() {
+    async fn test_publish_mesh_event() {
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
         let db_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy(&db_url)
+            .unwrap();
+        let (tx, _) = mpsc::channel(100);
+        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+
+        let mut rx = hub.subscribe_mesh_events("test_topic".to_string());
+
+        let event = MeshEvent {
+            event_id: "test_id".to_string(),
+            topic: "test_topic".to_string(),
+            payload: b"test_payload".to_vec(),
+            timestamp: 0,
+        };
+
+        hub.publish_mesh_event(event.clone()).unwrap();
+
+        let received = rx.recv().await.unwrap();
+        assert_eq!(received.event_id, event.event_id);
+        assert_eq!(received.topic, event.topic);
+        assert_eq!(received.payload, event.payload);
+    }
+
+    #[tokio::test]
+    async fn test_sanitize_hub_event_redaction() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -831,7 +862,7 @@ mod tests {
             return;
         }
         let db_url = std::env::var("DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -898,7 +929,7 @@ mod tests {
         }
 
         let db_url = std::env::var("DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -923,7 +954,7 @@ mod tests {
         }
 
         let db_url = std::env::var("DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -961,7 +992,7 @@ mod tests {
 
         let db_url = std::env::var("DATABASE_URL").unwrap();
         // Since test db is likely unmigrated/empty, we connect lazily
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)

@@ -31,22 +31,23 @@ impl PlanTier {
             PlanTier::Free => Some(500),
             PlanTier::Starter => Some(5000), // 5GB
             PlanTier::Pro => Some(50000),    // 50GB
-            PlanTier::Business => None,      // Custom/Unlimited
+            PlanTier::Business => Some(512000),      // 500GB
         }
     }
 
     pub fn max_agents(&self) -> Option<usize> {
         match self {
             PlanTier::Free => Some(1),
-            PlanTier::Starter => Some(5),
-            PlanTier::Pro | PlanTier::Business => None,
+            PlanTier::Starter => Some(3),
+            PlanTier::Pro => Some(10),
+            PlanTier::Business => None,
         }
     }
 
     pub fn max_products(&self) -> Option<usize> {
         match self {
             PlanTier::Free => Some(10),
-            PlanTier::Starter => Some(50),
+            PlanTier::Starter => Some(100),
             PlanTier::Pro | PlanTier::Business => None,
         }
     }
@@ -62,11 +63,17 @@ pub struct RateLimitStatus {
 pub struct RedisRateLimiter {
     client: Client,
     connection: OnceCell<redis::aio::MultiplexedConnection>,
+    pub telemetry_store: Option<std::sync::Arc<crate::harness::telemetry::ViolationStore>>,
 }
 
 impl RedisRateLimiter {
     pub fn new(client: Client) -> Self {
-        Self { client, connection: OnceCell::new() }
+        Self { client, connection: OnceCell::new(), telemetry_store: None }
+    }
+
+    pub fn with_telemetry(mut self, store: std::sync::Arc<crate::harness::telemetry::ViolationStore>) -> Self {
+        self.telemetry_store = Some(store);
+        self
     }
 
     async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
@@ -264,6 +271,16 @@ impl RedisRateLimiter {
 
         let total_storage: i64 = conn.incr(&storage_key, delta_bytes).await.map_err(|e| e.to_string())?;
 
+        if let Some(store) = &self.telemetry_store {
+            store.storage_bytes_counter.add(
+                delta_bytes as u64,
+                &[
+                    opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+                    opentelemetry::KeyValue::new("tier", format!("{:?}", tier)),
+                ],
+            );
+        }
+
         if let Some(limit_mb) = tier.storage_limit_mb() {
             let limit_bytes = (limit_mb as i64) * 1024 * 1024;
             if total_storage > limit_bytes {
@@ -309,15 +326,15 @@ mod tests {
         assert_eq!(PlanTier::Free.storage_limit_mb(), Some(500));
         assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5000));
         assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(50000));
-        assert_eq!(PlanTier::Business.storage_limit_mb(), None);
+        assert_eq!(PlanTier::Business.storage_limit_mb(), Some(512000));
 
         assert_eq!(PlanTier::Free.max_agents(), Some(1));
-        assert_eq!(PlanTier::Starter.max_agents(), Some(5));
-        assert_eq!(PlanTier::Pro.max_agents(), None);
+        assert_eq!(PlanTier::Starter.max_agents(), Some(3));
+        assert_eq!(PlanTier::Pro.max_agents(), Some(10));
         assert_eq!(PlanTier::Business.max_agents(), None);
 
         assert_eq!(PlanTier::Free.max_products(), Some(10));
-        assert_eq!(PlanTier::Starter.max_products(), Some(50));
+        assert_eq!(PlanTier::Starter.max_products(), Some(100));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
     }
