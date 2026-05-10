@@ -279,14 +279,110 @@ impl Agent {
     }
 
     /// Run the agent loop. Calls `on_event` for each event.
-    #[tracing::instrument(skip(self, _on_event, cfg), fields(model = %cfg.model))]
+    #[tracing::instrument(skip(self, on_event, cfg), fields(model = %cfg.model))]
+    /// Anthropic Claude Agent SDK Archetype: Implements the harness via a single `query()` function
+    /// that returns an async iterator streaming messages. Uses a "dumb loop" Gather-Act-Verify cycle:
+    /// gather context (search files, read code) -> take action (edit files, run commands) -> verify results (run tests, check output).
+    pub async fn run_anthropic_dumb_loop<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        session_tools: &[ohc_builtin_agent_tools::Tool],
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        let mut messages = vec![crate::types::Message::user(initial_message)];
+        let phases = ["Gather", "Act", "Verify"];
+
+        for (i, phase) in phases.iter().enumerate() {
+            on_event(AgentEvent::IterationStarted { iteration: i as i32, message_count: messages.len() });
+
+            let phase_prompt = match *phase {
+                "Gather" => "Phase: Gather context. Use read-only tools like read, head, grep to search files and read code.",
+                "Act" => "Phase: Take action. Use mutating tools like write, edit, bash to edit files and run commands based on gathered context.",
+                "Verify" => "Phase: Verify results. Use bash to run tests or check output to verify your actions.",
+                _ => unreachable!(),
+            };
+
+            let req = crate::types::ChatRequest {
+                model: cfg.model.clone(),
+                system: format!("{}\n\nYou are in the {} phase.", cfg.server_system_message, phase_prompt),
+                messages: messages.clone(),
+                tools: session_tools.iter().map(|t| crate::types::ToolDefinition {
+                    name: t.name.clone(),
+                    description: t.description.clone(),
+                    parameters: t.parameters.clone(),
+                }).collect(),
+                max_tokens: cfg.max_tokens,
+                temperature: cfg.temperature,
+            };
+
+            let resp = self.llm.chat(req).await?;
+            let msg = resp.message;
+            messages.push(msg.clone());
+
+            if msg.tool_calls.is_empty() {
+                if *phase == "Verify" {
+                    return Ok(msg.content);
+                } else {
+                    continue;
+                }
+            }
+
+            let mut tool_results = vec![];
+            for tc in &msg.tool_calls {
+                let r = match self.execute_tool(tc, session_tools, &messages).await {
+                    Ok(res) => res,
+                    Err(e) => format!("Error: {:?}", e),
+                };
+
+                on_event(AgentEvent::ToolCall {
+                    name: tc.name.clone(),
+                    args_json: tc.arguments.to_string(),
+                    result: r.clone(),
+                    iteration: i as i32,
+                });
+
+                tool_results.push(crate::types::ToolResult {
+                    tool_call_id: tc.id.clone(),
+                    content: r,
+                    error: String::new(),
+                });
+            }
+
+            messages.push(crate::types::Message {
+                role: crate::types::Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results,
+                response_id: None,
+                previous_response_id: None,
+            });
+        }
+
+        // Final fallback if Verify phase didn't exit
+        let req = crate::types::ChatRequest {
+            model: cfg.model.clone(),
+            system: "Summarize the final result of the Gather-Act-Verify cycle.".to_string(),
+            messages: messages.clone(),
+            tools: vec![],
+            max_tokens: cfg.max_tokens,
+            temperature: cfg.temperature,
+        };
+        let resp = self.llm.chat(req).await?;
+        Ok(resp.message.content)
+    }
     pub async fn run_langgraph<F>(
         &self,
         cfg: &AgentRunConfig,
         initial_message: &str,
         session_tools: Vec<crate::tools::Tool>,
         initial_messages: &mut Vec<Message>,
-        _on_event: &mut F,
+        on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
         F: FnMut(AgentEvent) + Send + Sync,
@@ -296,7 +392,7 @@ impl Agent {
         if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
             let err_msg = "Task requires multi-agent split: >10 overlapping tools provided".to_string();
 
-            // Workaround to call the generic closure since _on_event is a generic F.
+            // Workaround to call the generic closure since on_event is a generic F.
             // Wait, we can just return the error directly.
             return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
         }
@@ -690,7 +786,7 @@ impl Agent {
                 let final_msgs = final_state.get("messages").unwrap().as_array().unwrap();
                 let last_msg = final_msgs.last().unwrap();
                 let content = last_msg.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                _on_event(AgentEvent::TaskComplete { content: content.clone() });
+                on_event(AgentEvent::TaskComplete { content: content.clone() });
 
                 // Cross-Department Memory Consolidation for LangGraph
                 if !content.is_empty() {
@@ -712,11 +808,11 @@ impl Agent {
             Err(e) => {
                 if let Some(msg) = e.strip_prefix("USER_FIXABLE:") {
                     let err_msg = format!("User intervention required: {}", msg);
-                    _on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                    on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
                     return Err(err_msg.into());
                 }
                 let err_msg = format!("LangGraph Error: {}", e);
-                _on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                on_event(AgentEvent::TaskError { error: err_msg.clone() });
                 Err(err_msg.into())
             }
         }
@@ -921,6 +1017,62 @@ impl Agent {
         });
 
         rx
+    }
+
+    /// Master Catalog B.6. Output Parsing via Native Tool Calls
+    /// Uses a schema-constrained response by forcing a specific tool call.
+    pub async fn run_structured<T: serde::de::DeserializeOwned + Send + Sync + 'static, F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        output_schema: serde_json::Value,
+        on_event: &mut F,
+    ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        let mut final_cfg = cfg.clone();
+
+        // Append instruction to force the use of the structured output tool
+        final_cfg.server_system_message = format!(
+            "{}\n\nCRITICAL INSTRUCTION: You MUST call the `return_structured_output` tool to return your final structured answer. Do NOT return raw text as the final answer.",
+            final_cfg.server_system_message
+        );
+
+        let mut structured_tools = self.tools.clone();
+
+        // We define a dummy executor because the tool is intercepted before execution
+        struct DummyExecutor;
+        #[async_trait::async_trait]
+        impl crate::tools::ToolExecutor for DummyExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Ok("Dummy".to_string())
+            }
+        }
+
+        structured_tools.push(crate::tools::Tool {
+            name: "return_structured_output".to_string(),
+            description: "Returns the final output matching the required JSON schema.".to_string(),
+            is_read_only: false,
+            parameters: output_schema,
+            execute: std::sync::Arc::new(DummyExecutor),
+        });
+
+        let temp_agent = Agent {
+            llm: self.llm.clone(),
+            tools: structured_tools,
+            progress: self.progress.clone(),
+            memory_store: self.memory_store.clone(),
+            checkpointer: self.checkpointer.clone(),
+            observation_store: self.observation_store.clone(),
+        };
+
+        // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
+        let raw_json_str = temp_agent.run(&final_cfg, initial_message, on_event).await?;
+
+        let parsed: T = serde_json::from_str(&raw_json_str)
+            .map_err(|e| format!("Failed to parse JSON into struct: {}. Raw: {}", e, raw_json_str))?;
+        Ok(parsed)
     }
 
     pub async fn run<F>(
@@ -1461,6 +1613,21 @@ impl Agent {
             // Note: Since `on_event` is `&mut F`, we can't easily share it across concurrent tasks.
             // For now, we will collect events and results from the concurrent execution, then emit them sequentially.
             // We will execute the read-only calls concurrently using `futures::future::join_all`.
+
+            // Output Parsing mechanic: Schema-Constrained Responses
+            // Intercept special output formatting tool natively
+            if let Some(tc) = mutating_calls.iter().chain(read_only_calls.iter()).find(|t| t.name == "return_structured_output") {
+                on_event(AgentEvent::ToolCall {
+                    name: tc.name.clone(),
+                    args_json: tc.arguments.to_string(),
+                    result: "Returning structured output".to_string(),
+                    iteration,
+                });
+
+                // When the model calls the structured output tool,
+                // we terminate the orchestrator immediately with the raw JSON arguments as the task completion.
+                return Ok(tc.arguments.to_string());
+            }
 
             let mut read_only_futures = Vec::new();
             for tc in &read_only_calls {
@@ -2092,6 +2259,63 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+    #[derive(serde::Deserialize, PartialEq, Debug)]
+    struct MyStructuredOutput {
+        city: String,
+        population: u32,
+    }
+
+    #[tokio::test]
+    async fn test_run_structured() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![ToolCall {
+                        id: "call_123".to_string(),
+                        name: "return_structured_output".to_string(),
+                        arguments: serde_json::json!({
+                            "city": "Tokyo",
+                            "population": 14000000
+                        }),
+                    }],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: Some("mock-id".to_string()),
+            }]),
+        });
+
+        let agent = Agent::new(client, vec![]);
+        let cfg = AgentRunConfig::default();
+        let schema = serde_json::json!({
+            "type": "object",
+            "properties": {
+                "city": { "type": "string" },
+                "population": { "type": "integer" }
+            },
+            "required": ["city", "population"]
+        });
+
+        let mut events = vec![];
+        let result: MyStructuredOutput = agent
+            .run_structured(&cfg, "What is the population of Tokyo?", schema, &mut |e| events.push(e))
+            .await
+            .unwrap();
+
+        assert_eq!(
+            result,
+            MyStructuredOutput {
+                city: "Tokyo".to_string(),
+                population: 14000000,
+            }
+        );
+    }
+
     #[tokio::test]
     async fn test_cascading_agents_md() {
         use tempfile::tempdir;
@@ -4774,6 +4998,87 @@ mod stream_tests {
 
         let rewind_emitted = events.iter().any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
         assert!(rewind_emitted, "RewindOccurred event should have been emitted");
+    }
+
+    struct DumbLoopMockClient;
+    #[async_trait::async_trait]
+    impl crate::llm::LlmClient for DumbLoopMockClient {
+        async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            if req.system.contains("Phase: Gather") {
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_gather".to_string(),
+                            name: "mock_read".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("id1".to_string()),
+                })
+            } else if req.system.contains("Phase: Act") {
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_act".to_string(),
+                            name: "mock_read".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("id2".to_string()),
+                })
+            } else {
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Final verified result"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id3".to_string()),
+                })
+            }
+        }
+    }
+
+    struct DumbLoopMockExecutor;
+    #[async_trait::async_trait]
+    impl ohc_builtin_agent_tools::ToolExecutor for DumbLoopMockExecutor {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+            Ok("read".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_anthropic_dumb_loop() {
+        let mock_tool = ohc_builtin_agent_tools::Tool {
+            name: "mock_read".to_string(),
+            description: "reads".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({}),
+            execute: std::sync::Arc::new(DumbLoopMockExecutor),
+        };
+
+        let client = std::sync::Arc::new(DumbLoopMockClient);
+        let agent = crate::agent::Agent::new(client, vec![mock_tool]);
+        let cfg = crate::agent::AgentRunConfig::default();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run_anthropic_dumb_loop(&cfg, "Hello", &agent.tools, &mut on_event).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Final verified result");
     }
 }
 

@@ -999,6 +999,7 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
 pub struct RedisMemoryStore {
     client: redis::Client,
     namespace: String,
+    connection: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
 }
 
 impl std::fmt::Debug for RedisMemoryStore {
@@ -1015,14 +1016,22 @@ impl RedisMemoryStore {
         Ok(Self {
             client,
             namespace: namespace.to_string(),
+            connection: tokio::sync::OnceCell::new(),
         })
+    }
+
+    async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
+        let conn = self.connection.get_or_try_init(|| async {
+            self.client.get_multiplexed_tokio_connection().await
+        }).await.map_err(|e| e.to_string())?;
+        Ok(conn.clone())
     }
 }
 
 #[async_trait]
 impl LongTermMemory for RedisMemoryStore {
     async fn retrieve(&self, _query: &str, limit: usize) -> Result<Vec<String>, String> {
-        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let key = format!("{}:memory", self.namespace);
         
         // Simple LRANGE to get recent memories. 
@@ -1039,7 +1048,7 @@ impl LongTermMemory for RedisMemoryStore {
     }
 
     async fn store(&self, content: &str, _tags: Vec<String>) -> Result<(), String> {
-        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let key = format!("{}:memory", self.namespace);
         
         let _: () = redis::cmd("LPUSH")
@@ -2494,5 +2503,58 @@ mod e2e_consolidation_tests {
         assert!(!remaining_ids.contains(&"prune_1".to_string()), "Should have pruned old, un-overridden record");
         assert!(remaining_ids.contains(&"keep_1".to_string()), "Should have kept the one with owner override");
         assert!(remaining_ids.contains(&"keep_2".to_string()), "Should have kept the recent record");
+    }
+
+    #[tokio::test]
+    async fn test_consolidation_edge_cases_and_overrides() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a".to_string(),
+            tenant_id: "org_edge".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true, // both have override
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b".to_string(),
+            tenant_id: "org_edge".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true, // both have override
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        // The fallback logic selects the one with the smaller (or larger) ID depending on order,
+        // but it must be deterministic and result in 1 remaining record.
+        let results = repo.cross_department_search("org_edge", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain after resolving identical-stat conflict");
     }
 }
