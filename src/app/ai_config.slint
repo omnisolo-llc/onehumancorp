@@ -11,7 +11,7 @@ export struct UiAiConfigProvider {
 }
 
 export component AiConfig inherits Window {
-    width: 600px;
+    min-width: 375px;
     height: 700px;
     title: "AI Providers";
 
@@ -24,7 +24,6 @@ export component AiConfig inherits Window {
     callback edit_provider(string);
     callback toggle_advanced();
 
-    toggle_advanced => { }
 
     VerticalBox {
         spacing: 20px;
@@ -35,7 +34,7 @@ export component AiConfig inherits Window {
             Rectangle {}
             AdvancedToggle {
                 is_advanced <=> root.is_advanced;
-                toggled => { toggle_advanced(); }
+                toggled => { is_advanced = !is_advanced; toggle_advanced(); }
             }
             if (is_advanced) : GlassCard {
                 width: 140px;
