@@ -404,12 +404,23 @@ impl DashboardService for MyDashboardService {
 
         let mut final_agents = _filtered_agents
             .into_iter()
-            .map(|a| crate::ohc::agent::Agent {
-                id: a.id,
-                name: a.name,
-                role: crate::ohc::common::Role::Unspecified as i32,
-                status: crate::ohc::common::AgentStatus::Idle as i32,
-                organization_id: a.organization_id,
+            .map(|a| {
+                let compressed_name = a.name
+                    .split_whitespace()
+                    .filter(|word| {
+                        let clean_word = word.to_lowercase();
+                        !stop_words.contains(clean_word.as_str())
+                    })
+                    .collect::<Vec<&str>>()
+                    .join(" ");
+
+                crate::ohc::agent::Agent {
+                    id: a.id,
+                    name: compressed_name,
+                    role: crate::ohc::common::Role::Unspecified as i32,
+                    status: crate::ohc::common::AgentStatus::Idle as i32,
+                    organization_id: a.organization_id,
+                }
             })
             .collect::<Vec<_>>();
 
