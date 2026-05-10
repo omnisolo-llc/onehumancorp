@@ -8,7 +8,7 @@ test.describe('Lens Audit E2E Flow', () => {
       await page.goto('/');
     } catch (e) {
       console.log('App server is not available for pure E2E. Skipping visual E2E since we tested using Rust Slint UI tests.');
-      test.skip();
+      // test.skip();
     }
   });
 
