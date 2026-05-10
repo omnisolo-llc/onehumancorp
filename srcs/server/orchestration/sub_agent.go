@@ -96,20 +96,22 @@ func (s *DefaultSubAgentSpawner) Spawn(ctx context.Context, task *SharedTask) er
 	// Broadcast SUB_AGENT_SPAWNED
 	s.broadcastLifecycleEvent(ctx, task.ID, "SUB_AGENT_SPAWNED")
 
+	// Make a copy of the task so that it's immune to mutations in the caller's test loops
+	tCopy := *task
+	tCopyPtr := &tCopy
+
 	if s.isSQLite {
 		// Throttled spawning for Standalone mode
 		s.semaphore <- struct{}{}
-		tCopy := *task
 		go func(t *SharedTask) {
 			defer func() { <-s.semaphore }()
 			s.runSubAgent(context.Background(), t)
-		}(&tCopy)
+		}(tCopyPtr)
 		return nil
 	}
 
 	// Unthrottled distributed spawning for Cloud mode
-	tCopy := *task
-	go s.runSubAgent(context.Background(), &tCopy)
+	go s.runSubAgent(context.Background(), tCopyPtr)
 	return nil
 }
 

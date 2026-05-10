@@ -17,6 +17,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("Failed to open test db: %v", err)
 	}
+	db.SetMaxOpenConns(1)
 
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS local_telemetry_metrics (
@@ -145,17 +146,15 @@ func TestTelemetrySyncEngine_SyncPendingMetrics_Failure(t *testing.T) {
 
 func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	// We do NOT defer db.Close() here because we want to ensure we wait for the daemon first.
 
 	// Mock the cloud endpoint
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
-	defer server.Close()
 
 	engine := NewTelemetrySyncEngine(db, server.URL)
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	attrs := map[string]interface{}{"service": "agent"}
 	err := engine.BufferMetric(ctx, "test_metric_daemon", 12.0, attrs)
@@ -163,14 +162,26 @@ func TestTelemetrySyncEngine_StartSyncDaemon(t *testing.T) {
 		t.Fatalf("Failed to buffer metric: %v", err)
 	}
 
-	go engine.StartSyncDaemon(ctx, 50*time.Millisecond)
-
-	// Wait for daemon to run
-	time.Sleep(200 * time.Millisecond)
+	go engine.StartSyncDaemon(ctx, 10*time.Millisecond)
 
 	var countSynced int
-	err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics WHERE synced_to_cloud = TRUE").Scan(&countSynced)
+	for i := 0; i < 50; i++ {
+		err = db.QueryRow("SELECT count(*) FROM local_telemetry_metrics WHERE synced_to_cloud = TRUE").Scan(&countSynced)
+		if err == nil && countSynced == 1 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
 	if err != nil || countSynced != 1 {
 		t.Fatalf("Expected 1 synced row after daemon run")
 	}
+
+	// Clean up carefully:
+	cancel()
+	engine.wg.Wait()
+
+	// Now we can safely close the server and DB
+	server.Close()
+	db.Close()
 }

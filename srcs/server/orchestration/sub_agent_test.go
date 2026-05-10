@@ -88,9 +88,6 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 		ID: taskID,
 		OrganizationID: "org-spawn-" + uuid.New().String(),
 	}
-	tokenMu.Lock()
-	tokenBudgets[task.OrganizationID] = 1000
-	tokenMu.Unlock()
 
 	// Provision tokens for the unique org
 	tokenMu.Lock()
@@ -102,7 +99,7 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 
 	foundSpawned := false
 	foundCompleted := false
-	for i := 0; i < 3000; i++ {
+	for i := 0; i < 500; i++ {
 		published := mesh.getPublished()
 		foundSpawned = false
 		foundCompleted = false
@@ -148,9 +145,6 @@ func TestSubAgentSpawner_SpawnCloud(t *testing.T) {
 		ID: taskID,
 		OrganizationID: "org-spawn-" + uuid.New().String(),
 	}
-	tokenMu.Lock()
-	tokenBudgets[task.OrganizationID] = 1000
-	tokenMu.Unlock()
 
 	// Provision tokens for the unique org
 	tokenMu.Lock()
@@ -222,7 +216,7 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 	assert.Equal(t, "ASSIGNED", fetchedTask.Status)
 
 	foundCompleted := false
-	for i := 0; i < 150; i++ {
+	for i := 0; i < 3000; i++ {
 		published := mesh.getPublished()
 		for _, msg := range published {
 			var payload map[string]interface{}

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,6 +30,7 @@ type TelemetrySyncEngine struct {
 	db          *sql.DB
 	remoteURL   string
 	httpClient  *http.Client
+	wg          sync.WaitGroup
 }
 
 func NewTelemetrySyncEngine(db *sql.DB, remoteURL string) *TelemetrySyncEngine {
@@ -124,6 +126,9 @@ func (e *TelemetrySyncEngine) syncToCloud(ctx context.Context, pt MetricPoint) e
 
 // StartSyncDaemon periodically attempts to flush the local SQLite telemetry table
 func (e *TelemetrySyncEngine) StartSyncDaemon(ctx context.Context, interval time.Duration) {
+	e.wg.Add(1)
+	defer e.wg.Done()
+
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -132,8 +137,11 @@ func (e *TelemetrySyncEngine) StartSyncDaemon(ctx context.Context, interval time
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if err := e.SyncPendingMetrics(ctx); err != nil {
-				log.Printf("error syncing metrics: %v", err)
+			// Ensure we don't attempt to sync if context is already canceled
+			if ctx.Err() == nil {
+				if err := e.SyncPendingMetrics(ctx); err != nil && ctx.Err() == nil {
+					log.Printf("error syncing metrics: %v", err)
+				}
 			}
 		}
 	}
