@@ -135,6 +135,9 @@ func RecordHarnessExecutionDuration(ctx context.Context, durationSecs float64) e
 
 // RecordMCPToolCall increments the counter for an MCP tool call.
 func RecordMCPToolCall(ctx context.Context, toolName string) error {
+	if !isTelemetryEnabled() {
+		return nil
+	}
 	if mcpToolCallsCounter != nil {
 		opts := metric.WithAttributes(
 			attribute.String("tool", toolName),
