@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"gopkg.in/yaml.v3"
-	"onehumancorp/srcs/server/pb"
 	"os"
 	"path/filepath"
 	"testing"
+	"onehumancorp/srcs/server/pb"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -25,12 +25,13 @@ func (m *mockMeshTransport) Publish(ctx context.Context, channel string, data []
 	return nil
 }
 
+
 func (m *mockMeshTransport) AdvertiseCapabilities(ctx context.Context, agent pb.Agent) error {
-	return nil
+    return nil
 }
 
 func (m *mockMeshTransport) DiscoverAgents(ctx context.Context, skill string) ([]pb.Agent, error) {
-	return nil, nil
+    return nil, nil
 }
 
 func (m *mockMeshTransport) StartHeartbeat(ctx context.Context, agent pb.Agent) {

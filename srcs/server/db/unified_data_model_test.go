@@ -208,6 +208,7 @@ func TestUnifiedDataModelRLSIntegration(t *testing.T) {
 	_, err = db.ExecContext(ctx, enableSQL)
 	assert.NoError(t, err)
 
+
 	// 3. Test Tenant A
 	connA, err := db.Conn(ctx)
 	assert.NoError(t, err)

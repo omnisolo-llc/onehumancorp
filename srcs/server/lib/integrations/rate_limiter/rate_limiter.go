@@ -2,21 +2,21 @@ package rate_limiter
 
 import (
 	"context"
-	"fmt"
-	"github.com/go-redis/redis/v8"
 	"os"
-	"sync"
 	"time"
+	"sync"
+	"github.com/go-redis/redis/v8"
+	"fmt"
 )
 
 type RateLimitInfo struct {
-	IsAllowed        bool
-	SoftLimitReached bool
-	UserMessage      string
+	IsAllowed          bool
+	SoftLimitReached   bool
+	UserMessage        string
 }
 
 type RateLimiterManager struct {
-	redisClient  *redis.Client
+	redisClient *redis.Client
 	localBuckets map[string]*localBucket
 	mu           sync.Mutex
 }
@@ -24,7 +24,7 @@ type RateLimiterManager struct {
 type localBucket struct {
 	actionsUsed int
 	monthKey    string
-	mu          sync.Mutex
+	mu         sync.Mutex
 }
 
 func NewRateLimiterManager(redisURL string) *RateLimiterManager {
@@ -95,7 +95,7 @@ func (m *RateLimiterManager) requestTokensStandalone(ctx context.Context, bucket
 	if !exists || lb.monthKey != monthKey {
 		lb = &localBucket{
 			actionsUsed: 0,
-			monthKey:    monthKey,
+			monthKey: monthKey,
 		}
 		m.localBuckets[bucket] = lb
 	}

@@ -67,11 +67,11 @@ func TestParityTimezone(t *testing.T) {
 
 	assert.False(t, fetched.CreatedAt.IsZero())
 
-	// Test if GetTasksByOrganization also parses it successfully
-	tasks, err := store.GetTasksByOrganization(context.Background(), "org-parity")
-	require.NoError(t, err)
-	assert.Len(t, tasks, 1)
-	assert.False(t, tasks[0].CreatedAt.IsZero())
+    // Test if GetTasksByOrganization also parses it successfully
+    tasks, err := store.GetTasksByOrganization(context.Background(), "org-parity")
+    require.NoError(t, err)
+    assert.Len(t, tasks, 1)
+    assert.False(t, tasks[0].CreatedAt.IsZero())
 }
 
 func TestParityTransactionIsolation(t *testing.T) {
@@ -109,14 +109,14 @@ func TestParityGetTaskNotFound(t *testing.T) {
 }
 
 func TestParityPayloadDependencies(t *testing.T) {
-	db := setupTestDB(t)
+    db := setupTestDB(t)
 	defer db.Close()
 	store := NewSqliteTaskStore(db)
 
 	task := &SharedTask{
 		OrganizationID: "org-deps",
 		Title:          "Deps Task",
-		Dependencies:   []byte(`["dep-1"]`),
+        Dependencies:   []byte(`["dep-1"]`),
 	}
 	err := store.CreateTask(context.Background(), task)
 	require.NoError(t, err)
@@ -124,12 +124,12 @@ func TestParityPayloadDependencies(t *testing.T) {
 	fetched, err := store.GetTask(context.Background(), task.ID)
 	require.NoError(t, err)
 
-	assert.Equal(t, `["dep-1"]`, string(fetched.Dependencies))
+    assert.Equal(t, `["dep-1"]`, string(fetched.Dependencies))
 
-	tasks, err := store.GetTasksByOrganization(context.Background(), "org-deps")
-	require.NoError(t, err)
-	assert.Len(t, tasks, 1)
-	assert.Equal(t, `["dep-1"]`, string(tasks[0].Dependencies))
+    tasks, err := store.GetTasksByOrganization(context.Background(), "org-deps")
+    require.NoError(t, err)
+    assert.Len(t, tasks, 1)
+    assert.Equal(t, `["dep-1"]`, string(tasks[0].Dependencies))
 }
 
 // NOTE: Testcontainers code was requested to test Postgres natively.

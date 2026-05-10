@@ -26,9 +26,9 @@ type MetricPoint struct {
 // TelemetrySyncEngine handles buffering telemetry data locally
 // and syncing it to the cloud when online.
 type TelemetrySyncEngine struct {
-	db         *sql.DB
-	remoteURL  string
-	httpClient *http.Client
+	db          *sql.DB
+	remoteURL   string
+	httpClient  *http.Client
 }
 
 func NewTelemetrySyncEngine(db *sql.DB, remoteURL string) *TelemetrySyncEngine {

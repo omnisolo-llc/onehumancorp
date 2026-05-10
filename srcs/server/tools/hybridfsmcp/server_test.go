@@ -394,21 +394,13 @@ func TestCloudProviderErrors(t *testing.T) {
 	}
 }
 
-type mockErrorProvider struct{}
 
+type mockErrorProvider struct{}
 func (m *mockErrorProvider) IsLocal() bool { return true }
-func (m *mockErrorProvider) ReadFile(ctx context.Context, path string) ([]byte, error) {
-	return nil, fmt.Errorf("read err")
-}
-func (m *mockErrorProvider) WriteFile(ctx context.Context, path string, content []byte) error {
-	return fmt.Errorf("write err")
-}
-func (m *mockErrorProvider) ListDir(ctx context.Context, path string) ([]string, error) {
-	return nil, fmt.Errorf("list err")
-}
-func (m *mockErrorProvider) SearchFiles(ctx context.Context, query string, path string) ([]string, error) {
-	return nil, fmt.Errorf("search err")
-}
+func (m *mockErrorProvider) ReadFile(ctx context.Context, path string) ([]byte, error) { return nil, fmt.Errorf("read err") }
+func (m *mockErrorProvider) WriteFile(ctx context.Context, path string, content []byte) error { return fmt.Errorf("write err") }
+func (m *mockErrorProvider) ListDir(ctx context.Context, path string) ([]string, error) { return nil, fmt.Errorf("list err") }
+func (m *mockErrorProvider) SearchFiles(ctx context.Context, query string, path string) ([]string, error) { return nil, fmt.Errorf("search err") }
 
 func TestServerErrors(t *testing.T) {
 	tmpDir, _ := os.MkdirTemp("", "server_err_test")
@@ -554,7 +546,7 @@ func TestFactoryErrors(t *testing.T) {
 	os.WriteFile(fileAsDir, []byte("data"), 0644)
 	invalidPath := filepath.Join(fileAsDir, "subdir")
 
-	// Force OHC_CLOUD_FS_MOUNT to invalid path to trigger NewCloudFSProvider error
+    // Force OHC_CLOUD_FS_MOUNT to invalid path to trigger NewCloudFSProvider error
 	t.Setenv("OHC_STANDALONE", "false")
 	t.Setenv("OHC_MULTITENANT", "true")
 	os.Setenv("OHC_CLOUD_FS_MOUNT", invalidPath)
@@ -563,21 +555,26 @@ func TestFactoryErrors(t *testing.T) {
 		t.Errorf("expected error from NewCloudFSProvider")
 	}
 
-	// Force OHC_LOCAL_FS_ROOT to invalid path
-	t.Setenv("OHC_STANDALONE", "true")
+    // Force OHC_LOCAL_FS_ROOT to invalid path
+    t.Setenv("OHC_STANDALONE", "true")
 	t.Setenv("OHC_MULTITENANT", "false")
-	os.Setenv("OHC_LOCAL_FS_ROOT", invalidPath)
-	_, err = NewProvider()
+    os.Setenv("OHC_LOCAL_FS_ROOT", invalidPath)
+    _, err = NewProvider()
 	if err == nil {
 		t.Errorf("expected error from NewLocalFSProvider")
 	}
 }
+
+
+
 
 func TestLocalProviderSanitizeRelError(t *testing.T) {
 	tmpDir, _ := os.MkdirTemp("", "local_rel_err")
 	defer os.RemoveAll(tmpDir)
 
 	provider, _ := NewLocalFSProvider(tmpDir)
+
+
 
 	// We have to bypass unexported field restrictions
 	// actually we can't easily without unsafe, but wait, `server_test.go` is in package `hybridfsmcp`!
@@ -597,6 +594,7 @@ func TestCloudProviderSanitizeRelError(t *testing.T) {
 
 	provider, _ := NewCloudFSProvider(tmpDir)
 
+
 	provider.mountPath = "relative_path"
 
 	ctx := context.WithValue(context.Background(), tenantIDKey{}, "tenant1")
@@ -605,6 +603,7 @@ func TestCloudProviderSanitizeRelError(t *testing.T) {
 		t.Errorf("expected error when Rel fails")
 	}
 }
+
 
 func TestLocalProviderSearchSanitizePathError(t *testing.T) {
 	tmpDir, _ := os.MkdirTemp("", "local_provider_sanitize_err2")
@@ -632,20 +631,25 @@ func TestCloudProviderSearchSanitizePathError(t *testing.T) {
 	}
 }
 
+
+
+
+
 func TestFactoryDefaultLocalPath(t *testing.T) {
 
 	t.Setenv("OHC_STANDALONE", "true")
 	t.Setenv("OHC_MULTITENANT", "false")
 	os.Setenv("OHC_LOCAL_FS_ROOT", "")
 
-	provider, err := NewProvider()
+
+    provider, err := NewProvider()
 	if err != nil {
 		t.Errorf("failed to create default local provider: %v", err)
 	}
 	if !provider.IsLocal() {
 		t.Errorf("expected local provider")
 	}
-	os.RemoveAll("./.local_workspace")
+    os.RemoveAll("./.local_workspace")
 }
 
 func TestLocalProviderWalkError(t *testing.T) {
@@ -683,18 +687,19 @@ func TestCloudProviderWalkError(t *testing.T) {
 	os.Chmod(unreadableDir, 0755)
 }
 
+
 func TestFactoryDefaultMountPath(t *testing.T) {
 	t.Setenv("OHC_STANDALONE", "false")
 	t.Setenv("OHC_MULTITENANT", "true")
 	t.Setenv("OHC_CLOUD_FS_MOUNT", "")
 
-	// It will attempt to use /data/tenant_volumes.
-	// If it fails (due to permissions), we expect an error. If it succeeds, we expect a provider.
-	_, err := NewProvider()
+    // It will attempt to use /data/tenant_volumes.
+    // If it fails (due to permissions), we expect an error. If it succeeds, we expect a provider.
+    _, err := NewProvider()
 	if err != nil {
 		// It's fine if it fails due to permissions, we just want to execute the path
 		if err.Error() == "invalid path" {
-			// Just an example, any error is fine as long as coverage is hit
-		}
+            // Just an example, any error is fine as long as coverage is hit
+        }
 	}
 }

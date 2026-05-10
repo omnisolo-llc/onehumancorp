@@ -3,9 +3,9 @@ package mcp
 import (
 	"context"
 	"fmt"
-	"onehumancorp/srcs/server/telemetry"
 	"os"
 	"time"
+	"onehumancorp/srcs/server/telemetry"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"

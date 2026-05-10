@@ -2,6 +2,8 @@ package orchestration
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -86,4 +88,22 @@ func TestLocalTeammateMesh_UnsubscribeOnContextDone(t *testing.T) {
 	shard.mu.RLock()
 	defer shard.mu.RUnlock()
 	assert.Empty(t, shard.subscribers[channel])
+}
+
+func TestCentrifugeMesh_PublishSubscribe(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	mesh := NewCentrifugeMesh(ts.URL)
+
+	ctx := context.Background()
+	channel := "test_channel"
+
+	err := mesh.Subscribe(ctx, channel, func(data []byte) {})
+	require.NoError(t, err)
+
+	err = mesh.Publish(ctx, channel, []byte("hello"))
+	require.NoError(t, err)
 }

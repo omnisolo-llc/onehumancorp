@@ -1,13 +1,13 @@
 package onboarding
 
 import (
-	"context"
 	"encoding/json"
+	"context"
 	"net/http"
 )
 
-type contextKey string
 
+type contextKey string
 const tenantContextKey contextKey = "tenant_id"
 
 type APIHandler struct {

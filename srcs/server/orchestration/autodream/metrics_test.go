@@ -1,9 +1,9 @@
 package autodream
 
 import (
+	"testing"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestMetricsRegistration(t *testing.T) {

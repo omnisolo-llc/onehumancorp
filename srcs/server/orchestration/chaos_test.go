@@ -3,9 +3,9 @@ package orchestration
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
+    "fmt"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -106,45 +106,45 @@ func TestChaosStressVerification(t *testing.T) {
 	localStore := NewSqliteTaskStore(localDB)
 	cloudStore := &mockPostgresProvider{NewSqliteTaskStore(cloudDB)}
 
-	// Simulate concurrent load
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+    // Simulate concurrent load
+    ctx, cancel := context.WithCancel(context.Background())
+    defer cancel()
 
-	// Create tasks BEFORE starting daemon to avoid race condition where db closes before it processes
-	for i := 0; i < 100; i++ {
-		task := &SharedTask{
-			ID:             fmt.Sprintf("task-stress-%d", i),
-			OrganizationID: "org-stress",
-			Title:          "Stress Task",
-			Status:         "CLOUD_ESCALATION",
-		}
-		err := localStore.CreateTask(context.Background(), task)
-		assert.NoError(t, err)
-		err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_ESCALATION")
-		assert.NoError(t, err)
-	}
+    // Create tasks BEFORE starting daemon to avoid race condition where db closes before it processes
+    for i := 0; i < 100; i++ {
+        task := &SharedTask{
+            ID:             fmt.Sprintf("task-stress-%d", i),
+            OrganizationID: "org-stress",
+            Title:          "Stress Task",
+            Status:         "CLOUD_ESCALATION",
+        }
+        err := localStore.CreateTask(context.Background(), task)
+        assert.NoError(t, err)
+        err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_ESCALATION")
+        assert.NoError(t, err)
+    }
 
-	go StartSyncDaemon(ctx, localStore, cloudStore)
+    go StartSyncDaemon(ctx, localStore, cloudStore)
 
-	time.Sleep(1 * time.Second)
+    time.Sleep(1 * time.Second)
 
-	// Cancel the context so StartSyncDaemon stops its loop
-	cancel()
-	time.Sleep(100 * time.Millisecond) // brief wait to let it exit
+    // Cancel the context so StartSyncDaemon stops its loop
+    cancel()
+    time.Sleep(100 * time.Millisecond) // brief wait to let it exit
 
-	// Assert tasks successfully synced
-	for i := 0; i < 100; i++ {
-		task, err := localStore.GetTask(context.Background(), fmt.Sprintf("task-stress-%d", i))
-		assert.NoError(t, err)
-		if task != nil {
-			assert.Equal(t, "CLOUD_PROCESSING", task.Status) // Assuming sync daemon successfully processed and marked them
-		}
+    // Assert tasks successfully synced
+    for i := 0; i < 100; i++ {
+        task, err := localStore.GetTask(context.Background(), fmt.Sprintf("task-stress-%d", i))
+        assert.NoError(t, err)
+        if task != nil {
+             assert.Equal(t, "CLOUD_PROCESSING", task.Status) // Assuming sync daemon successfully processed and marked them
+        }
 
-		// Ensure Cloud Store also received them
-		cloudTask, err := cloudStore.GetTask(context.Background(), fmt.Sprintf("task-stress-%d", i))
-		assert.NoError(t, err)
-		if cloudTask != nil {
-			assert.Equal(t, "PENDING", cloudTask.Status)
-		}
-	}
+        // Ensure Cloud Store also received them
+        cloudTask, err := cloudStore.GetTask(context.Background(), fmt.Sprintf("task-stress-%d", i))
+        assert.NoError(t, err)
+        if cloudTask != nil {
+            assert.Equal(t, "PENDING", cloudTask.Status)
+        }
+    }
 }
