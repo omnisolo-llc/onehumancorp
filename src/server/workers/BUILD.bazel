@@ -1,0 +1,13 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "agent_memory_pipeline.rs",
+        "competitor_audit.rs",
+        "department_workers.rs",
+        "maintenance.rs",
+        "memory.rs",
+        "mod.rs",
+
+    ],
+    visibility = ["//src/server:__pkg__"],
+)

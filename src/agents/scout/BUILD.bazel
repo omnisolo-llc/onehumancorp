@@ -1,13 +1,14 @@
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
-    name = "scout",
-    srcs = glob(["**/*.rs"]),
-    crate_name = "ohc_scout_agent",
-    edition = "2024",
-    proc_macro_deps = [
-        "@crates//:async-trait",
+    name = "scout_lib",
+    srcs = [
+        "agent.rs",
+        "db.rs",
+        "lib.rs",
+        "tests.rs",
     ],
+    edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
         "//src/agents/builtin:core",
@@ -22,11 +23,7 @@ rust_library(
 )
 
 rust_test(
-    name = "unit_tests",
-    crate = ":scout",
+    name = "scout_test",
+    crate = ":scout_lib",
     edition = "2024",
-    deps = [
-        "@crates//:tokio",
-        "@crates//:sqlx",
-    ],
 )

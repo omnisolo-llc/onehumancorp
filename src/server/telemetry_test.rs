@@ -14,9 +14,9 @@ mod tests {
 
         let mut sanitized_props = props;
         for (k, v) in sanitized_props.iter_mut() {
-            if crate::telemetry::is_sensitive_key(k) {
+            if ::server_telemetry::is_sensitive_key(k) {
                 *v = "[REDACTED]".to_string();
-            } else if crate::telemetry::is_email(v) {
+            } else if ::server_telemetry::is_email(v) {
                 *v = "[EMAIL_REDACTED]".to_string();
             }
         }
@@ -32,7 +32,7 @@ mod tests {
 
 
     use serde_json::{json, Value};
-    use crate::telemetry::{redact_interface_pii, buffer_metric};
+    use ::server_telemetry::{redact_interface_pii, buffer_metric};
 
     #[test]
     fn test_redact_pii_password() {
@@ -112,10 +112,10 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = crate::telemetry::record_sqlite_lock_contention(&pool, "test_operation").await;
+        let res = ::server_telemetry::record_sqlite_lock_contention(&pool, "test_operation").await;
         assert!(res.is_ok());
 
-        let res = crate::telemetry::record_sqlite_retry_exhausted(&pool, "test_operation").await;
+        let res = ::server_telemetry::record_sqlite_retry_exhausted(&pool, "test_operation").await;
         assert!(res.is_ok());
     }
 
@@ -127,7 +127,7 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = crate::telemetry::record_token_usage_forecast(&pool, "org_test", 15000.0).await;
+        let res = ::server_telemetry::record_token_usage_forecast(&pool, "org_test", 15000.0).await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_forecast' ORDER BY timestamp DESC LIMIT 1")
@@ -152,7 +152,7 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = crate::telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
+        let res = ::server_telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost' ORDER BY timestamp DESC LIMIT 1")
@@ -179,7 +179,7 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = crate::telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
+        let res = ::server_telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost' ORDER BY timestamp DESC LIMIT 1")
@@ -205,7 +205,7 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = crate::telemetry::record_swarm_job_latency_by_entity(&pool, "cloud", "test-entity-3", 125.0).await;
+        let res = ::server_telemetry::record_swarm_job_latency_by_entity(&pool, "cloud", "test-entity-3", 125.0).await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_swarm_job_latency_by_entity_seconds' ORDER BY timestamp DESC LIMIT 1")
@@ -395,7 +395,7 @@ mod tests {
                 ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
             ],
             || {
-                let config = crate::config::load().unwrap();
+                let config = ::server_config::load().unwrap();
 
                 // Assert that the config logic matches the policy:
                 // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=false, telemetry should NOT run.
@@ -416,7 +416,7 @@ mod tests {
                 ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
             ],
             || {
-                let config = crate::config::load().unwrap();
+                let config = ::server_config::load().unwrap();
 
                 // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=true, telemetry SHOULD run.
                 let should_start_telemetry = config.telemetry_enabled;
@@ -429,7 +429,7 @@ mod tests {
 
 #[tokio::test]
 async fn test_queue_length_gauge_initialization() {
-    let gauge = crate::telemetry::get_queue_length_gauge();
+    let gauge = ::server_telemetry::get_queue_length_gauge();
     gauge.add(1, &[]);
 }
 
@@ -441,7 +441,7 @@ async fn test_record_queue_length_with_deployment_mode() {
         _ => return, // Gracefully exit if DB is not available in sandbox or times out
     };
 
-    let res = crate::telemetry::record_queue_length(&pool, 5).await;
+    let res = ::server_telemetry::record_queue_length(&pool, 5).await;
     assert!(res.is_ok());
 
     let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_sub_agent_queue_length' ORDER BY timestamp DESC LIMIT 1")
@@ -516,7 +516,7 @@ fn test_redact_interface_pii_malicious_payloads() {
         "another_safe": 123
     });
 
-    let redacted = crate::telemetry::redact_interface_pii(payload);
+    let redacted = ::server_telemetry::redact_interface_pii(payload);
 
     // Verify root level safe fields
     assert_eq!(redacted["safe_field"], "This should not be redacted");

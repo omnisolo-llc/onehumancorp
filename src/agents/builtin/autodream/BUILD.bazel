@@ -1,0 +1,25 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "autodream",
+    srcs = [
+        "mod.rs",
+        "store.rs",
+    ],
+    crate_root = "mod.rs",
+
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/agents/builtin:core",
+        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/server/pricing:server_pricing",
+        "@crates//:chrono",
+        "@crates//:opentelemetry",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:tracing",
+    ],
+)

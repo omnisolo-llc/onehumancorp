@@ -22,14 +22,20 @@ cd "$workspace_root"
 export HOME="${HOME:-${TEST_TMPDIR:-/tmp}/home}"
 mkdir -p "$HOME"
 
-# Ensure playwright browsers are installed (shared cache)
+# Playwright browsers cache
 export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/tmp/ohc-playwright-browsers}"
 mkdir -p "$PLAYWRIGHT_BROWSERS_PATH"
 
-# Install chromium if not cached
+# Install Playwright dependencies and Chromium
+# Using --with-deps ensures system dependencies are installed for Ubuntu compatibility
 if ! find "$PLAYWRIGHT_BROWSERS_PATH" -maxdepth 3 -type f -name 'chrome-headless-shell' 2>/dev/null | grep -q .; then
-  echo "[playwright] Installing Chromium..."
-  npx playwright install chromium 2>&1 || true
+  echo "[playwright] Installing Chromium with dependencies..."
+  npx playwright install --with-deps chromium 2>&1 || {
+    # Fallback: try installing deps separately
+    echo "[playwright] Trying alternative installation..."
+    npx playwright install-deps chromium 2>&1 || true
+    npx playwright install chromium 2>&1 || true
+  }
 fi
 
 # Cleanup handler
@@ -46,7 +52,8 @@ trap cleanup EXIT
 
 # Start infrastructure
 echo "[playwright] Starting E2E infrastructure..."
-docker run -d --name e2e_postgres -p 5432:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc postgres:16-alpine || true && docker run -d --name e2e_redis -p 6379:6379 redis:7-alpine || true
+docker run -d --name e2e_postgres -p 5432:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc postgres:16-alpine || true
+docker run -d --name e2e_redis -p 6379:6379 redis:7-alpine || true
 
 # Wait for postgres
 echo "[playwright] Waiting for postgres..."
@@ -63,7 +70,6 @@ done
 # Start the server binary
 SERVER_BIN="${workspace_root}/bazel-bin/src/server/server"
 if [[ ! -x "$SERVER_BIN" ]]; then
-  # Try building it
   SERVER_BIN="$(find "${workspace_root}/bazel-bin" -name server -type f -executable 2>/dev/null | head -1)"
 fi
 
@@ -74,14 +80,12 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
   SERVER_PID=$!
 
-  # Wait for server
   echo "[playwright] Waiting for server on port 18789..."
   for i in $(seq 1 30); do
     if nc -z 127.0.0.1 18789 2>/dev/null; then
       echo "[playwright] Server is ready."
       break
     fi
-    # Check if server crashed
     if ! kill -0 "$SERVER_PID" 2>/dev/null; then
       echo "[playwright] Server process died. Log:"
       tail -20 "${TEST_TMPDIR:-/tmp}/server.log" 2>/dev/null || true

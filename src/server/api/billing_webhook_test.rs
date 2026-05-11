@@ -4,7 +4,7 @@ use axum::{
 };
 use serde_json::json;
 
-use crate::pricing::rate_limit::{PlanTier, RedisRateLimiter};
+use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use crate::api::billing_webhook::{stripe_webhook_handler, WebhookState};
 use crate::db::DB;
 
@@ -164,7 +164,7 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         return;
     }
 
-    let rate_limiter = Arc::new(crate::pricing::rate_limit::RedisRateLimiter::new(client));
+    let rate_limiter = Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client));
     let db = match crate::db::DB::new().await {
         Ok(d) => d,
         Err(_) => return,

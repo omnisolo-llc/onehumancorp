@@ -40,6 +40,7 @@ rust_library(
 rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
+        "auth.rs",
         "codex_runner.rs",
         "agent.rs",
         "checkpointer.rs",
@@ -167,8 +168,6 @@ rust_test(
 )
 
 exports_files([
-    "autodream.rs",
-    "autodream/store.rs",
     "worker.rs",
     "mcp/mod.rs",
     "mcp/client.rs",

@@ -2,7 +2,7 @@ use super::provider::{LocalFSProvider, CloudFSProvider, FileSystemProvider};
 use super::server::HybridFSMcpServer;
 use std::sync::Arc;
 use tempfile::tempdir;
-use crate::ohc::orchestration::McpInvokeRequest;
+use ::server_ohc::orchestration::McpInvokeRequest;
 
 #[tokio::test]
 async fn test_local_fs_provider() {

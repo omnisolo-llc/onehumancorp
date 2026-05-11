@@ -1,4 +1,31 @@
 actions:
+  - name: "playwright screenshots"
+    resource_requests:
+      cpu: 8
+      memory: 16GB
+      disk: 100GB
+    triggers:
+      push:
+        branches:
+          - "main"
+      pull_request:
+        branches:
+          - "*"
+    steps:
+      - run: |
+          # Build the server first
+          bazel build //src/server:server --config=linux
+
+          # Run Playwright tests with screenshots
+          # Uses playwright_test.sh which handles Docker infra (postgres, redis) and server startup
+          bazel test //src/e2e:playwright \
+            --test_output=streamed \
+            --test_timeout=300,600,900,1800 \
+            --cache_test_results=no
+
+          # Screenshots are saved to test-results/screenshots/ and explicit page.screenshot() calls save to test-results/*.png
+          # These are gitignored but available for review after test run
+
   - name: "bazel test //..."
     resource_requests:
       cpu: 8
@@ -11,10 +38,15 @@ actions:
       pull_request:
         branches:
           - "*"
+    env:
+      GOTOOLCHAIN: "auto"
     steps:
       - run: |
-          # xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" \
+          # Build release artifacts first (needed by verification_tests)
+          bazel build //release:all_release_artifacts --config=linux
+          # Run all tests on Linux
           bazel test \
+            --config=linux \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
@@ -32,10 +64,11 @@ actions:
       pull_request:
         branches:
           - "*"
+    env:
+      GOTOOLCHAIN: "auto"
     steps:
       - run: |
-          bazel test //... --test_output=errors --test_summary=terse
           bazel build //release:all_release_artifacts --config=linux
           # Cross-platform builds (assumes CI environment has toolchains)
-          bazel build //src/app:app //src/server:server --config=windows || echo "Warning: Windows build failed"
-          bazel build //src/app:app //src/server:server --config=macos || echo "Warning: MacOS build failed"
+          bazel build //src/server:server --config=windows || echo "Warning: Windows build failed"
+          bazel build //src/server:server --config=macos || echo "Warning: MacOS build failed"

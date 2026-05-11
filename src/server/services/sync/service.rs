@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use crate::ohc::orchestration::*;
-use crate::ohc::orchestration::sync_service_server::SyncService;
+use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::sync_service_server::SyncService;
 use crate::sip::SipDB;
 
 pub struct MySyncService {
@@ -85,7 +85,7 @@ impl SyncService for MySyncService {
         tracing::debug!("PowerSync received push request.");
 
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
         let mut tenant_id = parsed.0;
         if tenant_id.is_empty() {
             tenant_id = "system".to_string();
@@ -99,7 +99,7 @@ impl SyncService for MySyncService {
         }
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         for item in items {
             if item["table"].as_str() == Some("agent_missions") {
@@ -162,14 +162,14 @@ impl SyncService for MySyncService {
 
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
         let mut tenant_id = parsed.0;
         if tenant_id.is_empty() {
             tenant_id = "system".to_string();
         }
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let rows = match sqlx::query(
             "SELECT id, status, payload, organization_id, updated_at, version FROM agent_missions WHERE _sync_status = 'pending'"
@@ -234,7 +234,7 @@ impl SyncService for MySyncService {
         let deltas = req.deltas;
 
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
         let tenant_id = parsed.0;
 
         if tenant_id.is_empty() {
@@ -250,7 +250,7 @@ impl SyncService for MySyncService {
         }
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut synced_count = 0;
 
@@ -298,7 +298,7 @@ impl SyncService for MySyncService {
     ) -> Result<Response<SyncEscalationResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
         let tenant_id = if parsed.0.is_empty() { "system".to_string() } else { parsed.0 };
 
         let req = request.into_inner();

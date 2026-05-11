@@ -31,8 +31,8 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 pkg_files(
     name = "app_files",
-    srcs = ["//src/app:app"],
-    renames = {"//src/app:app": "ohc-app"},
+    srcs = ["//src/ui/tauri:app"],
+    renames = {"//src/ui/tauri:app": "ohc-app"},
     strip_prefix = strip_prefix.from_pkg(),
 )
 
@@ -98,9 +98,10 @@ oci_load(
 filegroup(
     name = "all_release_artifacts",
     srcs = [
-        ":app_tar",
-        ":app_deb",
-        ":app_windows_zip",
+        # Tauri app excluded - cannot build with Bazel due to compile-time codegen incompatibility
+        # ":app_tar",
+        # ":app_deb",
+        # ":app_windows_zip",
         ":app_image_tarball",
     ],
     visibility = ["//visibility:public"],
