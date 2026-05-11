@@ -227,12 +227,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if format.to_lowercase() == "json" {
         tracing_subscriber::registry()
             .with(tracing_subscriber::fmt::layer().json())
-            .with(tracing_subscriber::EnvFilter::from_default_env())
+            .with(tracing_subscriber::EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
             .init();
     } else {
         tracing_subscriber::registry()
             .with(tracing_subscriber::fmt::layer())
-            .with(tracing_subscriber::EnvFilter::from_default_env())
+            .with(tracing_subscriber::EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
             .init();
     }
     let agents_ui = app::Agents::new()?;

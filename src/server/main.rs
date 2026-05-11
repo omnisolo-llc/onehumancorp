@@ -7,12 +7,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if format.to_lowercase() == "json" {
         tracing_subscriber::registry()
             .with(fmt::layer().json())
-            .with(EnvFilter::from_default_env())
+            .with(EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
             .init();
     } else {
         tracing_subscriber::registry()
             .with(fmt::layer())
-            .with(EnvFilter::from_default_env())
+            .with(EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
             .init();
     }
 
