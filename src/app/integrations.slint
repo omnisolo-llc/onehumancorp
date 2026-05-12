@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export struct UiMcpTool {
     id: string,
@@ -23,18 +24,221 @@ export component Integrations inherits Window {
             spacing: 20px;
             padding: 24px;
 
+
         Text { text: "External Channels"; font-size: 20px; font-weight: 700; color: #1e293b; }
 
-        HorizontalBox {
+        if (root.width > 768px) : VerticalBox {
             spacing: 16px;
-            
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-                
+            HorizontalBox {
+                spacing: 16px;
+
+                GlassCard {
+                    width: 220px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "✈️ Telegram"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Connect your bot for mobile alerts"; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Telegram"); }
+                        }
+                    }
+                }
+
+                GlassCard {
+                    width: 220px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "👾 Discord"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Stream agent logs to a channel"; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Discord"); }
+                        }
+                    }
+                }
+            }
+            HorizontalBox {
+                spacing: 16px;
+
+                GlassCard {
+                    width: 220px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "💬 Twilio"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Send SMS alerts to customers"; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Twilio"); }
+                        }
+                    }
+                }
+
+                GlassCard {
+                    width: 220px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "📅 Cal.com"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Automated appointment booking"; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Cal.com"); }
+                        }
+                    }
+                }
+            }
+            HorizontalBox {
+                spacing: 16px;
+
+                GlassCard {
+                    width: 220px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "📅 Calendly"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Automated Booking"; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Calendly"); }
+                        }
+                    }
+                }
+
+                GlassCard {
+                    width: 220px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "💬 Chatwoot"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Unified Social Media DMs"; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Chatwoot"); }
+                        }
+                    }
+                }
+            }
+            HorizontalBox {
+                spacing: 16px;
+
+                GlassCard {
+                    width: 220px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "💬 Manychat"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Unified Social Media Inbox"; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Manychat"); }
+                        }
+                    }
+                }
+
+                GlassCard {
+                    width: 220px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "📧 Resend"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Native Email Campaign Manager"; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Resend"); }
+                        }
+                    }
+                }
+            }
+            HorizontalBox {
+                spacing: 16px;
+
+                GlassCard {
+                    width: 220px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "📧 Mailchimp"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Customer Re-engagement"; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Mailchimp"); }
+                        }
+                    }
+                }
+
+                GlassCard {
+                    width: 220px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "📦 Shippo"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Shipping Rate & Label Generation"; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Shippo"); }
+                        }
+                    }
+                }
+            }
+            HorizontalBox {
+                spacing: 16px;
+
+                GlassCard {
+                    width: 220px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "💳 Mercado Pago"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Local Payment Methods (LATAM)"; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Mercado Pago"); }
+                        }
+                    }
+                }
+
+                GlassCard {
+                    width: 220px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "💳 Razorpay"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Local Payment Methods (India)"; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Razorpay"); }
+                        }
+                    }
+                }
+            }
+            HorizontalBox {
+                spacing: 16px;
+
+                GlassCard {
+                    width: 220px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "📹 Zoom"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Native Link Generation"; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Configure";
+                            clicked => { configure_integration("Zoom"); }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (root.width <= 768px) : VerticalBox {
+            spacing: 16px;
+
+            GlassCard {
+                width: 100%;
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
@@ -46,14 +250,9 @@ export component Integrations inherits Window {
                     }
                 }
             }
-            
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-                
+
+            GlassCard {
+                width: 100%;
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
@@ -65,18 +264,9 @@ export component Integrations inherits Window {
                     }
                 }
             }
-        }
 
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
+            GlassCard {
+                width: 100%;
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
@@ -89,13 +279,8 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
+            GlassCard {
+                width: 100%;
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
@@ -107,18 +292,9 @@ export component Integrations inherits Window {
                     }
                 }
             }
-        }
 
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
+            GlassCard {
+                width: 100%;
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
@@ -131,13 +307,8 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
+            GlassCard {
+                width: 100%;
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
@@ -149,19 +320,9 @@ export component Integrations inherits Window {
                     }
                 }
             }
-        }
 
-
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
+            GlassCard {
+                width: 100%;
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
@@ -174,13 +335,8 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
+            GlassCard {
+                width: 100%;
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
@@ -192,18 +348,9 @@ export component Integrations inherits Window {
                     }
                 }
             }
-        }
 
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
+            GlassCard {
+                width: 100%;
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
@@ -216,13 +363,8 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
+            GlassCard {
+                width: 100%;
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
@@ -234,18 +376,9 @@ export component Integrations inherits Window {
                     }
                 }
             }
-        }
 
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
+            GlassCard {
+                width: 100%;
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
@@ -258,13 +391,8 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
+            GlassCard {
+                width: 100%;
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
@@ -276,18 +404,9 @@ export component Integrations inherits Window {
                     }
                 }
             }
-        }
 
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
+            GlassCard {
+                width: 100%;
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
@@ -300,15 +419,10 @@ export component Integrations inherits Window {
                 }
             }
         }
-
         Text { text: "Advanced Tool Connections"; font-size: 20px; font-weight: 700; color: #1e293b; }
         Text { text: "Manually trigger advanced connected tools for your business."; color: #64748b; }
 
-        Rectangle {
-            background: white;
-            border-color: #e2e8f0;
-            border-width: 1px;
-            border-radius: 8px;
+        GlassCard {
             
             VerticalBox {
                 padding: 16px;
