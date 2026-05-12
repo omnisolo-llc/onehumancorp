@@ -310,8 +310,8 @@ test('verify checklist flow and integration', async ({ page }) => {
     await page.click('button:has-text("Launch!")');
     await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
 
-    if (await page.locator('text="Continue to Setup Checklist"').isVisible()) {
-        await page.click('button:has-text("Continue to Setup Checklist")');
+    if (await page.locator('text="View Welcome Checklist →"').isVisible()) {
+        await page.click('button:has-text("View Welcome Checklist →")');
     } else {
         await page.click('button:has-text("Go to Dashboard")');
     }
@@ -366,8 +366,8 @@ test('verify checklist connects instagram routing', async ({ page }) => {
     await page.click('button:has-text("Launch!")');
     await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
 
-    if (await page.locator('text="Continue to Setup Checklist"').isVisible()) {
-        await page.click('button:has-text("Continue to Setup Checklist")');
+    if (await page.locator('text="View Welcome Checklist →"').isVisible()) {
+        await page.click('button:has-text("View Welcome Checklist →")');
     } else {
         await page.click('button:has-text("Go to Dashboard")');
     }
@@ -421,8 +421,8 @@ test('verify checklist share link routing', async ({ page }) => {
     await page.click('button:has-text("Launch!")');
     await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
 
-    if (await page.locator('text="Continue to Setup Checklist"').isVisible()) {
-        await page.click('button:has-text("Continue to Setup Checklist")');
+    if (await page.locator('text="View Welcome Checklist →"').isVisible()) {
+        await page.click('button:has-text("View Welcome Checklist →")');
     } else {
         await page.click('button:has-text("Go to Dashboard")');
     }
@@ -476,8 +476,8 @@ test('verify checklist fully completed state', async ({ page }) => {
     await page.click('button:has-text("Launch!")');
     await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
 
-    if (await page.locator('text="Continue to Setup Checklist"').isVisible()) {
-        await page.click('button:has-text("Continue to Setup Checklist")');
+    if (await page.locator('text="View Welcome Checklist →"').isVisible()) {
+        await page.click('button:has-text("View Welcome Checklist →")');
     } else {
         await page.click('button:has-text("Go to Dashboard")');
     }
@@ -535,8 +535,8 @@ test('verify checklist completion progress', async ({ page }) => {
     await page.click('button:has-text("Launch!")');
     await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
 
-    if (await page.locator('text="Continue to Setup Checklist"').isVisible()) {
-        await page.click('button:has-text("Continue to Setup Checklist")');
+    if (await page.locator('text="View Welcome Checklist →"').isVisible()) {
+        await page.click('button:has-text("View Welcome Checklist →")');
     } else {
         await page.click('button:has-text("Go to Dashboard")');
     }
