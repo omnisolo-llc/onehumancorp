@@ -55,8 +55,11 @@ Coordination is handled via the KAIROS Shared Task List and Teammate Mesh, ensur
 #### Critical 1-Tap Handoff Triggers
 To ensure the "1-Tap Approval" experience, the following coordination patterns are strictly enforced:
 1.  **Ops -> Success (The Fulfillment Flow)**: When "The Manager" marks an order as `SHIPPED` or `READY_FOR_PICKUP`, a `tenant.order.fulfillment_ready` event is emitted. "The Ambassador" immediately drafts a personalized notification for the customer.
-2.  **Sales -> Ops (The Quote flow)**: When a customer accepts a quote, "The Salesperson" emits `tenant.quote.accepted`. "The Manager" automatically creates an `ORDER` and a `BOOKING` in the shared task list, pending the owner's confirmation.
+2.  **Sales -> Ops (The Quote Flow)**: When a customer accepts a quote, "The Salesperson" emits `tenant.quote.accepted`. "The Manager" automatically creates an `ORDER` and a `BOOKING` in the shared task list, pending the owner's confirmation.
 3.  **Advisor -> Promoter (The Growth Flow)**: When "The Advisor" identifies a high-velocity product (e.g., Maya's vegan cake), it emits `tenant.insight.trending`. "The Promoter" then drafts a social media campaign or a website banner to capitalize on the trend.
+4.  **Protector -> Promoter (The Compliance Flow)**: When "The Protector" identifies a new legal requirement or disclaimer (e.g., allergen warning), it emits `tenant.legal.disclaimer_required`. "The Promoter" drafts an update to the storefront footer or product page.
+5.  **Accountant -> Advisor (The Profit Flow)**: When "The Accountant" detects a significant change in profit margins or high transaction fees, it emits `tenant.finance.margin_alert`. "The Advisor" generates a plain-language strategic briefing for the owner.
+6.  **Ambassador -> Sales (The Lead Flow)**: When "The Ambassador" identifies a high-intent inquiry in DMs that requires a quote, it emits `tenant.message.lead_identified`. "The Salesperson" drafts a professional quote for the owner to review.
 
 ### 3.3 Memory & Context
 Agents utilize a unified memory model:
