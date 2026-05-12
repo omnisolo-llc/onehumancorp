@@ -5,14 +5,6 @@ fn greet(name: &str) -> String {
     format!("Hello, {}!", name)
 }
 
-macro_rules! tauri_build_context {
-    () => {
-        include!("../tauri-build-context.rs");
-    };
-}
-
-tauri_build_context!();
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -23,6 +15,6 @@ pub fn run() {
             window.set_title("App").unwrap();
             Ok(())
         })
-        .run(tauri_context())
+        .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

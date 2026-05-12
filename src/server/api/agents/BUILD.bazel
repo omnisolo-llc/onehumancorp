@@ -1,9 +1,14 @@
-filegroup(
-    name = "srcs",
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "agents",
     srcs = [
-        "approvals.rs",
-        "hire.rs",
         "mod.rs",
+        "hire.rs",
+        "approvals.rs",
     ],
-    visibility = ["//src/server/api:__pkg__"],
+    visibility = ["//visibility:public"],
+    deps = [
+        # Dummy deps
+    ],
 )
