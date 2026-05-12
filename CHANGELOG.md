@@ -1,3 +1,9 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Chore
+- Cleaned up debug statements and TODO comments.
+
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
