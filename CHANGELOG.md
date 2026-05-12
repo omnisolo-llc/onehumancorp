@@ -1,3 +1,7 @@
+# Changelog
+
+- Removed debug statements and TODO comments from benchmark files (chores/technical debt cleanups).
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.

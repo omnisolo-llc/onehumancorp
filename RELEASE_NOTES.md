@@ -1,3 +1,7 @@
+# Release Notes
+
+- Removed debug statements and TODO comments from benchmark files (chores/technical debt cleanups).
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
