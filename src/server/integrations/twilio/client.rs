@@ -39,7 +39,7 @@ impl TwilioClientWrapper for RealTwilioClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    let _ = crate::telemetry::record_api_call_cost(
+                    let _ = ::server_telemetry::record_api_call_cost(
                         &crate::db::get_pool(),
                         "unknown",
                         "twilio_send_sms",
