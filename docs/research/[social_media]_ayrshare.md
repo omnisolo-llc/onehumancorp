@@ -1,19 +1,36 @@
-# Scout: Tool Integration Research Q2
+# Issue Brief: Social Media Publishing (Ayrshare)
 
-## 1. Social Media Integration
-**Title**: Integrate Ayrshare for Unified Social Media Inbox and Cross-Posting
-**Problem Statement**: Maya the Baker and Carlos the Handyman spend too much time jumping between Instagram DMs, Facebook Comments, and TikTok. They want a single inbox and a way to post to multiple platforms at once without understanding technical integrations.
-**Research Report**:
-- Ayrshare provides a unified API for posting and retrieving messages across all major social networks (Instagram, Facebook, X, TikTok, LinkedIn).
-- Competitor Wix has basic integrations, but Ayrshare makes it easy to support a wider array natively.
-- Pricing: Free tier available, then scales per user.
-- Fits OHC’s "The Promoter" agent to automate posts and "The Ambassador" to draft replies.
-- Non-technical users benefit by never leaving the OHC interface.
-- Works in Cloud mode well; Standalone mode might require personal Ayrshare API keys or direct OAuth.
-**Design Doc**:
-- Users link their social accounts via a simple OAuth popup in the "Marketing & Advertising" tab.
-- "The Ambassador" AI monitors incoming DMs and drafts replies visible in a unified "Customer Inbox."
-- "The Promoter" AI schedules and auto-posts images (e.g., new cake designs) to all linked platforms.
-**Implementation Prompt**: Implement an integration where users can link Instagram and Facebook, allowing OHC AI agents to read incoming messages and draft replies in the unified inbox, and schedule out outbound picture posts.
-**Priority**: P1
-**Estimated Scope**: Large
+## Title
+Implement Social Media Publishing (Ayrshare) for Small Business Owners
+
+## Problem Statement
+Posting the same promotional photo to Instagram, Facebook, and Twitter requires opening three different apps, copying and pasting the caption, and manually uploading the photo three times.
+
+## Research Report
+Ayrshare allows posting to multiple social networks simultaneously from one interface.
+
+**Persona Impact:** A bakery owner can take a photo of a new pastry, write one caption within the OHC dashboard, click 'Post', and it instantly appears on all their active social media profiles.
+
+**Advantages:** Massive time savings for marketing. Keeps the user inside the OHC ecosystem.
+
+**Risks:** If a specific network rejects the post formatting, the error messages can be confusing for a non-technical user.
+
+**Pricing Estimate:** Premium tiers start around $35/month.
+
+**Environment:** Works seamlessly in both Cloud and Standalone modes.
+
+## Design Doc
+1.  **Post Composer:** A beautiful, simple text box with an image upload button and checkboxes for each social network.
+2.  **Schedule Feature:** A simple date/time picker allowing the user to plan their posts for the week ahead.
+
+## Implementation Prompt
+Build a multi-network social media composer that allows the user to publish content to all their linked profiles simultaneously with a single click.
+
+## Priority
+P1
+
+## Estimated Scope
+Medium
+
+### Unique Considerations
+Different networks have different image aspect ratio requirements. The OHC composer must include a basic image cropping tool that prevents the user from submitting a post to Instagram that will be rejected due to incorrect dimensions, saving them from confusing error messages.

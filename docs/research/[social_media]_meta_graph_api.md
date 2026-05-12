@@ -1,20 +1,37 @@
-## [Social Media] Meta Graph API Integration
-**Title**: Integrate Meta Graph API for Unified Native Social Media Inbox
-**Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically, maintaining the Radical Simplicity ethos by avoiding complex third-party tools like Manychat.
-**Research Report**:
-- **Strategy**: Direct integration with Meta Graph API
-- **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
-- **Advantages**: No third-party SaaS fees, maintains Radical Simplicity. Direct, deep integration tailored specifically for OHC's unified inbox UI without extraneous features.
-- **Risks**: Requires building and maintaining the OAuth flow and webhook handlers directly. Meta's API reviews can be stringent.
-- **Pricing**: Free API usage.
-- **Compatibility**: Cloud (via webhooks/OAuth). Standalone (requires routing via a lightweight cloud proxy).
-**Design Doc**:
-- User goes to the Operations dashboard and clicks "Connect Instagram".
-- User authenticates with Facebook/Instagram via OAuth.
-- OHC registers webhooks to receive new DMs.
-- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Meta Graph API.
-- The user sees a unified "Customer Inbox" on their phone showing the conversation history.
-- **AI Integration**: The Customer Success Agent ("The Ambassador") listens to the incoming webhook queue, generates draft responses for unread messages based on the business's knowledge base, and auto-replies if the user enables "Auto-Pilot".
-**Implementation Prompt**: Implement a direct Meta Graph API OAuth flow. Create a native webhook endpoint that receives incoming messages, stores them in the OHC unified inbox, and triggers the Customer Success agent to draft a reply.
-**Priority**: P0
-**Estimated Scope**: Large
+# Issue Brief: Meta Integration (Facebook & Instagram)
+
+## Title
+Implement Meta Integration (Facebook & Instagram) for Small Business Owners
+
+## Problem Statement
+Fatima the salon owner constantly misses booking requests because they are buried in her Instagram Direct Messages. Checking a separate phone app is slow and disrupts her workflow.
+
+## Research Report
+The Meta integration connects the business's Facebook Page and Instagram Professional account directly to OHC.
+
+**Persona Impact:** This transforms Fatima's workflow. Instead of checking a separate app, all messages from her most important marketing channels appear inside the OHC unified inbox on her dashboard. She can reply during breaks.
+
+**Advantages:** Complete access to the world's largest social networks. Customers stay in their preferred app.
+
+**Risks:** The onboarding requires properly configured Facebook Business pages, which is confusing.
+
+**Pricing Estimate:** The underlying connection is free for the business.
+
+**Environment:** Works seamlessly in both Cloud (SaaS) and Standalone offline-first modes.
+
+## Design Doc
+1.  **Connection Flow:** A simple 'Connect to Facebook/Instagram' button that securely links their account.
+2.  **Unified Inbox:** A centralized view within OHC where Instagram DMs and Facebook messages flow into a single stream alongside regular emails.
+3.  **Notification Hub:** An alert system within OHC that notifies the user immediately when a new message arrives.
+
+## Implementation Prompt
+Create a seamless connection to Meta platforms so business owners can read and reply to their social media messages directly from the OHC dashboard. Focus purely on a click-through setup process.
+
+## Priority
+P0
+
+## Estimated Scope
+Large
+
+### Unique Considerations
+For Meta, handling the frequent token expiration is paramount. If Fatima's token expires, we cannot just fail silently. The UI must show a red banner indicating 'Instagram Connection Needs Re-Authentication' so she doesn't miss a week of DMs before noticing.

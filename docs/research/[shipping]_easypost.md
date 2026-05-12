@@ -1,18 +1,35 @@
-# Scout: Tool Integration Research Q2
+# Issue Brief: EasyPost Logistics
 
-## 5. Shipping & Logistics
-**Title**: Integrate EasyPost for Painless Shipping Labels & Tracking
-**Problem Statement**: Priya the Boutique Owner hates manually copying addresses to USPS/FedEx to buy shipping labels. She wants one button to print a label and auto-email the tracking number.
-**Research Report**:
-- EasyPost provides a single, unified API for 100+ carriers (USPS, FedEx, UPS, DHL).
-- Competitive pricing (free tier for low volume, pennies per label after).
-- Abstracts away complex carrier-specific APIs and handles tracking webhooks.
-- Great fit for OHC physical product merchants.
-**Design Doc**:
-- Upon order placement, "Operations" calculates the shipping rate via EasyPost and charges the customer.
-- In the Order details view, the business owner clicks "Print Label."
-- EasyPost generates a PDF (auto-compressed and stored in GCS).
-- Tracking updates via EasyPost webhooks trigger "The Ambassador" to email the customer automatically.
-**Implementation Prompt**: Connect EasyPost to the order fulfillment flow so users can generate shipping labels and automatically send tracking updates to customers.
-**Priority**: P1
-**Estimated Scope**: Medium
+## Title
+Implement EasyPost Logistics for Small Business Owners
+
+## Problem Statement
+A business needs extremely reliable tracking updates to ensure high customer satisfaction.
+
+## Research Report
+EasyPost is a highly reliable alternative for label generation and tracking.
+
+**Persona Impact:** The business owner has total confidence that their customers are receiving accurate, real-time updates about their package location, reducing support emails.
+
+**Advantages:** Very robust tracking infrastructure.
+
+**Risks:** Might be slightly more complex for a micro-business to conceptualize compared to simpler alternatives.
+
+**Pricing Estimate:** Pay-as-you-go based on label volume.
+
+**Environment:** Cloud and Standalone supported.
+
+## Design Doc
+1.  **Address Validation:** Automatically check the customer's entered address for typos at checkout to prevent failed deliveries.
+
+## Implementation Prompt
+Integrate EasyPost to provide robust address verification and reliable package tracking for physical goods sellers.
+
+## Priority
+P2
+
+## Estimated Scope
+Medium
+
+### Unique Considerations
+EasyPost's address verification is exceptionally strong. OHC should utilize this at the point of customer checkout, politely prompting the buyer if they forgot their apartment number before the order is even finalized.

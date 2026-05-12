@@ -1,19 +1,36 @@
-## [Social Media] Manychat Integration
-**Title**: Integrate Manychat for Unified Social Media Inbox
-**Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
-**Research Report**:
-- **Tool**: Manychat
-- **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
-- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
-- **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
-- **Pricing**: Free tier available (up to 1,000 contacts). Pro tier starts at $15/mo.
-- **Compatibility**: Cloud (via webhooks/OAuth). Standalone (would require local reverse proxy for webhooks, possible but complex).
-**Design Doc**:
-- User goes to the Operations dashboard and clicks "Connect Instagram".
-- User authenticates with Facebook/Instagram via OAuth.
-- OHC registers webhooks to receive new DMs.
-- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
-- The user sees a unified "Customer Inbox" on their phone showing the conversation history.
-**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
-**Priority**: P0
-**Estimated Scope**: Large
+# Issue Brief: ManyChat Auto-Responder
+
+## Title
+Implement ManyChat Auto-Responder for Small Business Owners
+
+## Problem Statement
+Business owners are overwhelmed by repetitive questions like 'What are your hours?' sent via social media. Answering these manually wastes hours every week.
+
+## Research Report
+ManyChat is a visual tool that automates responses on platforms like Instagram and Facebook.
+
+**Persona Impact:** The business owner can set up simple rules to automatically reply with a PDF menu or hours of operation. This provides instant gratification to the customer.
+
+**Advantages:** Very easy for non-technical users to build visual flowcharts of conversations.
+
+**Risks:** It introduces a second platform the user has to learn outside of OHC.
+
+**Pricing Estimate:** Generous free tier. Pro tier is around $15/month.
+
+**Environment:** Works in both Cloud and Standalone deployments.
+
+## Design Doc
+1.  **Account Link:** A 1-click button to authorize OHC to talk to their ManyChat account.
+2.  **Lead Capture:** When the automated bot finishes collecting information, that new contact seamlessly appears in the OHC Customer Directory.
+
+## Implementation Prompt
+Integrate ManyChat so that leads captured by their automated social media bots are automatically synced into the OHC platform as new customer records.
+
+## Priority
+P2
+
+## Estimated Scope
+Medium
+
+### Unique Considerations
+The integration must support the 'Live Chat Handoff' protocol flawlessly. When the ManyChat bot realizes the customer needs human intervention, the conversation must instantly appear in the OHC Unified Inbox, pushing a high-priority notification to the business owner to take over.

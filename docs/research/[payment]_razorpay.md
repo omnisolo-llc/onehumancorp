@@ -1,33 +1,36 @@
-# [Payment] Razorpay Integration (India)
+# Issue Brief: Razorpay (India Payments)
 
 ## Title
-Native Indian Payment Integration with Razorpay
+Implement Razorpay (India Payments) for Small Business Owners
 
 ## Problem Statement
-Rohan (Handmade Crafts) in India cannot easily use Stripe for local customers who prefer UPI, RuPay, or local net banking. He needs a trusted local payment gateway that feels native to Indian customers, avoiding the high failure rates and friction associated with international payment processors in the Indian market.
+An independent consultant in India needs to accept payments via UPI, which is the standard across the country. Traditional credit card gateways are insufficient.
 
 ## Research Report
-- **Strategy**: Direct API integration with Razorpay.
-- **Target Persona**: Rohan (Indian SMB owner).
-- **Advantages**: Deep support for UPI (India's primary payment method), local cards, and net banking. Includes features like Razorpay Magic Checkout for higher conversion. Trusted by millions of Indian merchants.
-- **Risks**: Stringent regulatory KYC requirements in India for the merchant.
-- **Pricing**: Competitive local pricing (~2% per transaction for domestic).
-- **Ease of Use**: Indian customers are highly familiar with the Razorpay checkout interface.
-- **Compatibility**: Cloud & Standalone.
+Razorpay provides seamless access to UPI and local Indian banking methods.
+
+**Persona Impact:** The consultant sends an invoice link. The client taps 'Pay', their Google Pay app opens automatically, and the payment is completed in seconds via UPI.
+
+**Advantages:** Best-in-class checkout experience for Indian consumers.
+
+**Risks:** Indian KYC regulations require significant documentation from the business owner before accepting live payments.
+
+**Pricing Estimate:** Standard competitive transaction fees (typically around 2%).
+
+**Environment:** Supported in both Cloud and Standalone deployments.
 
 ## Design Doc
-- **Integration with OHC**:
-    - Merchant chooses "India" as their region during setup, prompting Razorpay activation.
-    - OHC uses the Razorpay Orders API to initiate payments.
-    - Checkout widget supports UPI QR codes and local bank redirects natively.
-    - The "Accountant" AI agent reconciles INR transactions and tracks local tax (GST) compliance.
-- **User View**: A checkout screen that features UPI prominently, making payment instant for the customer.
+1.  **Seamless Checkout:** Implement the checkout flow so that mobile users are smoothly transitioned to their native UPI apps to complete the payment.
+2.  **KYC Assistance:** Provide clear, plain-language instructions within OHC on what documents the user needs to provide to Razorpay.
 
 ## Implementation Prompt
-Implement Razorpay as a native payment provider for the Indian market. Ensure the checkout flow supports UPI, local cards, and net banking. Normalize Razorpay webhooks into the standard OHC order and fulfillment system. Ensure the merchant can view transaction details in INR within the OHC dashboard.
+Integrate Razorpay to ensure Indian businesses can offer a flawless UPI payment experience to their customers directly from OHC invoices.
 
 ## Priority
 P1
 
 ## Estimated Scope
-Large
+Medium
+
+### Unique Considerations
+The Razorpay checkout modal must be deeply embedded into the OHC invoice view to prevent the customer from feeling like they are being redirected to a suspicious third-party site, maximizing conversion rates.

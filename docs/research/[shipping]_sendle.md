@@ -1,32 +1,35 @@
-# [Shipping] Sendle Integration
+# Issue Brief: Carbon Neutral Shipping
 
 ## Title
-Sustainable and Simple Shipping with Sendle
+Implement Carbon Neutral Shipping for Small Business Owners
 
 ## Problem Statement
-Priya (Boutique Owner) finds traditional shipping carriers confusing with their complex zones, weight charts, and hidden fees. She wants a simple, "flat-rate" shipping option that is easy to understand, carbon-neutral, and provides door-to-door service without her needing to wait at a post office.
+A boutique selling eco-friendly soaps wants their entire supply chain, including shipping, to align with their brand values.
 
 ## Research Report
-- **Strategy**: Integrate Sendle API for quote generation and label printing.
-- **Target Persona**: Priya (Boutique Owner), Eco-conscious merchants.
-- **Advantages**: Simple, door-to-door flat-rate pricing. Carbon neutral (B-Corp). Integrated tracking and simplified parcel sizes.
-- **Risks**: Primarily focused on Australia, USA, and Canada.
-- **Pricing**: Flat rates based on parcel size (e.g., "Shoebox", "Briefcase").
-- **Ease of Use**: Very high. No complex weight math; if it fits, it ships.
-- **Compatibility**: Cloud & Standalone (API Key based).
+Sendle provides 100% carbon-neutral shipping, specializing in small parcels.
+
+**Persona Impact:** The boutique owner can proudly advertise that all their shipping is carbon neutral. The pricing is simple, making it very easy to estimate shipping costs.
+
+**Advantages:** A fantastic marketing angle for modern, conscious businesses. Simple pricing.
+
+**Risks:** They do not support large, heavy, or freight items. Primarily focused on domestic routes.
+
+**Pricing Estimate:** Highly competitive flat rates for small packages.
+
+**Environment:** Cloud and Standalone supported.
 
 ## Design Doc
-- **Integration with OHC**:
-    - OHC fetches Sendle quotes based on the merchant's predefined parcel sizes.
-    - Merchant selects Sendle for fulfillment, and OHC generates the label and schedules a pickup.
-    - The "Ambassador" AI agent tracks the shipment and proactively notifies the customer of progress.
-- **User View**: A "Ship with Sendle" button that shows a single clear price and generates a label in one click.
+1.  **Eco-Badge:** Display a 'Carbon Neutral Delivery' badge on the customer-facing checkout page when Sendle is selected.
 
 ## Implementation Prompt
-Implement Sendle as a native shipping and fulfillment provider. Provide real-time flat-rate shipping quotes during the checkout and fulfillment process. Enable one-click label generation and automated pickup scheduling via the Sendle API. Ensure tracking numbers are automatically synced to the order and shared with the customer.
+Integrate Sendle to offer a simple, flat-rate, carbon-neutral shipping option that aligns with the values of modern boutique businesses.
 
 ## Priority
-P1
+P2
 
 ## Estimated Scope
-Medium
+Small
+
+### Unique Considerations
+OHC should aggregate the total carbon offset achieved by the user's Sendle shipments and present it as a shareable graphic in their dashboard, allowing them to easily post their environmental impact to social media.

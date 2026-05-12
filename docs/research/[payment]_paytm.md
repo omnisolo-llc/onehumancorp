@@ -1,32 +1,35 @@
-# [Payment] Paytm Integration (India)
+# Issue Brief: Paytm Wallet
 
 ## Title
-Native Indian Wallet and UPI Integration with Paytm
+Implement Paytm Wallet for Small Business Owners
 
 ## Problem Statement
-Small business owners in India need to cater to customers who use the Paytm ecosystem—one of the largest digital wallet and UPI platforms in the country. Rohan (Handmade Crafts) needs a way to accept these payments seamlessly so he doesn't lose customers who prefer their Paytm wallet for quick transactions.
+Consumers in India highly trust the Paytm brand and often carry balances in their Paytm wallets.
 
 ## Research Report
-- **Strategy**: Integration with Paytm for Business API.
-- **Target Persona**: Rohan (Indian SMB owner), Local retailers.
-- **Advantages**: Ubiquitous in India. Supports "Paytm Wallet" specifically, which is a major differentiator. Strong focus on QR-code based payments.
-- **Risks**: Competitive overlap with Razorpay; usually used as a secondary or specific wallet option.
-- **Pricing**: Standard local rates; often 0% for UPI-based transactions.
-- **Ease of Use**: extremely high brand recognition in India.
-- **Compatibility**: Cloud & Standalone.
+Paytm is a massive consumer wallet and payment gateway in India.
+
+**Persona Impact:** Offering Paytm at checkout increases consumer trust and conversion rates. The business owner captures more sales by offering maximum flexibility.
+
+**Advantages:** Massive brand recognition among consumers.
+
+**Risks:** Managing multiple payment gateways within OHC settings might confuse the business owner.
+
+**Pricing Estimate:** Competitive transaction fees.
+
+**Environment:** Supported in both Cloud and Standalone modes.
 
 ## Design Doc
-- **Integration with OHC**:
-    - Merchant connects their Paytm for Business account.
-    - OHC checkout displays "Pay with Paytm" (Wallet + UPI).
-    - Supports dynamic QR code generation for "Scan & Pay" scenarios.
-- **User View**: Customers see the familiar Paytm branding at checkout, allowing for a 1-tap payment experience from their mobile device.
+1.  **Toggle Activation:** A simple toggle in the Payment Settings to 'Enable Paytm Wallet Checkout'.
 
 ## Implementation Prompt
-Integrate Paytm as a native payment provider. Focus on supporting the Paytm Wallet and UPI checkout flows. Implement webhook handling to confirm payments and update order status in real-time. Ensure the integration handles the unique requirements of the Paytm Mini App or JS Checkout.
+Evaluate adding Paytm as an alternative checkout option in India to maximize consumer trust and payment flexibility.
 
 ## Priority
 P2
 
 ## Estimated Scope
 Medium
+
+### Unique Considerations
+If both Razorpay and Paytm are enabled, the OHC checkout UI must logically group the payment options so the customer isn't overwhelmed by redundant UPI buttons.

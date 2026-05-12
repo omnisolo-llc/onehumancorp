@@ -1,21 +1,36 @@
-## [Email Marketing] Issue Brief: AI-Generated Customer Broadcasts
+# Issue Brief: Automated Transactional Emails
 
-**Title**: Scout 🔍: Integrate Resend for AI-Powered Email Marketing
-**Problem Statement**:
-Business owners like Priya want to notify their existing customers about new stock or holiday sales. Traditional tools like Mailchimp are too complex and require manual template design, list management, and campaign scheduling.
-**Research Report**:
-- **Tool**: Resend.
-- **Evaluation**: Resend provides a developer-friendly, reliable email API. Instead of giving users a complex drag-and-drop builder, OHC can use the "Marketing" AI agent to generate beautiful HTML emails based on a simple text prompt from the user.
-- **Ease of Use**: Zero-friction. The user types "Tell my customers about the new summer dress collection," and the AI generates the subject line, body, and inserts product photos automatically.
-- **Pricing**: Resend charges around $20/mo for up to 50k emails, very economical to bundle into an OHC premium tier.
-- **Cloud vs. Standalone**: Cloud mode uses OHC's centralized Resend account. Standalone mode requires the user to input their own SMTP credentials.
-**Design Doc**:
-- "Marketing" tab -> "Send a Broadcast".
-- User provides a 1-sentence prompt.
-- The AI Agent generates a responsive HTML email preview.
-- User clicks "Send to all customers".
-- The system chunks the customer list and sends via the Resend API.
-**Implementation Prompt**:
-Create a feature where the user can prompt the AI to draft an email blast. Use the business's product catalog to enrich the email. Provide a preview UI. Once approved, queue the emails to be sent out via the Resend API to all opted-in customers, handling rate limits and basic bounce tracking.
-**Priority**: P2
-**Estimated Scope**: Medium
+## Title
+Implement Automated Transactional Emails for Small Business Owners
+
+## Problem Statement
+When a customer pays a deposit, they expect a receipt instantly. If it goes to spam, they panic and call the business, causing unnecessary stress for the owner.
+
+## Research Report
+Resend is a highly reliable service for sending essential platform emails.
+
+**Persona Impact:** The business owner doesn't have to do anything. OHC ensures that beautiful, branded, and highly-deliverable emails are sent to their customers exactly when needed.
+
+**Advantages:** Extremely high delivery rates. Ensures the business looks highly professional.
+
+**Risks:** None for the user. OHC handles all complexity.
+
+**Pricing Estimate:** Free for the user (OHC covers the infrastructure cost under the hood).
+
+**Environment:** Works perfectly in both Cloud and Standalone modes.
+
+## Design Doc
+1.  **Branding Settings:** User uploads their logo and chooses a brand color in OHC settings. All outbound receipts automatically use this branding.
+2.  **No Configuration:** There is no setup required from the user. It works by default.
+
+## Implementation Prompt
+Implement a robust transactional email system that automatically sends branded receipts and appointment confirmations to customers without any user configuration.
+
+## Priority
+P0
+
+## Estimated Scope
+Medium
+
+### Unique Considerations
+Transactional emails must be visually identical across all clients. The React Email templates used with Resend must be rigorously tested in Outlook, Gmail, and Apple Mail to ensure the small business's branding always looks impeccable.
