@@ -39,6 +39,7 @@ def _toolchain_extension(module_ctx):
         # Deduplicate versions to avoid noise when the same version is registered multiple times
         unique_versions = {v: True for v in versions}.keys()
         if len(unique_versions) > 1:
+            # TODO: should be semver-aware, using MVS
             selected = sorted(unique_versions, reverse = True)[0]
 
             # buildifier: disable=print
