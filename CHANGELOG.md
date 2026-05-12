@@ -6,6 +6,7 @@
 # OHC Hybrid Agentic OS - Changelog
 
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
+- Chore: Refactored benchmark latency script to remove debug prints
 
 ### Cloud Scaling Improvements
 - Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
