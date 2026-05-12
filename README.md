@@ -187,4 +187,3 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 - **Run the server:** `bazelisk run //src/server:server`
 - **Launch the app:** `bazelisk run //src/app:app`
 - **Build the docs site:** `bazelisk run //:docs_build`
-<!-- jules-force-update -->
