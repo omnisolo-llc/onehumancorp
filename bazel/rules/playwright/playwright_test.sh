@@ -18,11 +18,10 @@ else
 fi
 
 cd "$workspace_root"
+echo "[playwright] Running in $(pwd)"
 
 export HOME="${HOME:-${TEST_TMPDIR:-/tmp}/home}"
 mkdir -p "$HOME"
-
-# Playwright browsers are now handled by the official Docker image.
 
 # Unique container names for parallel isolation
 CONTAINER_SUFFIX=$(echo "${TEST_TARGET:-playwright}" | md5sum | cut -c1-8)
@@ -30,8 +29,6 @@ POSTGRES_NAME="e2e_postgres_${CONTAINER_SUFFIX}"
 VALKEY_NAME="e2e_valkey_${CONTAINER_SUFFIX}"
 
 # Random ports for parallel isolation
-# We use a simple retry loop to find an available port if possible, 
-# but for now we'll just use a random port in a high range.
 PG_PORT=$(shuf -i 20000-30000 -n 1)
 VK_PORT=$(shuf -i 30001-40000 -n 1)
 
@@ -61,12 +58,19 @@ for i in $(seq 1 60); do
 done
 
 # Start the server binary
-SERVER_BIN="${workspace_root}/src/server/server"
+# In Bazel, the binary is in the runfiles.
+SERVER_BIN="src/server/server"
+if [[ ! -x "$SERVER_BIN" ]]; then
+    # Try finding it via find if the relative path fails (bazel sandbox layout can vary)
+    SERVER_BIN=$(find . -name server -type f -executable | grep "src/server/server" | head -n 1)
+fi
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server from $SERVER_BIN..."
   DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
   REDIS_URL="redis://127.0.0.1:$VK_PORT" \
+  JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
+  OHC_SQLITE_KEY="test_sqlite_key" \
     "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
   SERVER_PID=$!
 
@@ -84,35 +88,19 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     sleep 1
   done
 else
-  echo "[playwright] Warning: server binary not found at $SERVER_BIN, tests may fail"
+  echo "[playwright] Error: server binary not found or not executable at $SERVER_BIN"
+  exit 1
 fi
 
-# Run the specific spec file via official Playwright Docker image
+# Run Playwright on the host (no Docker for tests)
 export CI=true
-export BASE_URL="${BASE_URL:-http://localhost:18789}"
-
-PLAYWRIGHT_IMAGE="mcr.microsoft.com/playwright:v1.59.1-noble"
-
-run_playwright() {
-  local target="$1"
-  echo "[playwright] Streaming workspace to container..."
-  
-  # Use tar to stream the current directory into the container.
-  # This avoids issues with Docker volume mounts in sandboxed CI environments.
-  # We use -h to follow symlinks so the container gets the actual content.
-  # We exclude node_modules to keep the stream small.
-  tar -chf - --exclude=node_modules . | docker run --rm -i \
-    --network=host \
-    -e CI=true \
-    -e BASE_URL="$BASE_URL" \
-    "$PLAYWRIGHT_IMAGE" \
-    bash -c "set -e && mkdir -p /work && tar -xf - -C /work && cd /work && npx --yes @playwright/test test --config playwright.config.ts $target"
-}
+export BASE_URL="http://localhost:18789"
 
 if [[ -n "$spec_file" ]]; then
-  echo "[playwright] Running spec: $spec_file"
-  run_playwright "src/e2e/$spec_file"
+  echo "[playwright] Running spec on host: $spec_file"
+  # We use npx to ensure we use the local playwright version
+  npx playwright test --config playwright.config.ts "src/e2e/$spec_file"
 else
-  echo "[playwright] Running all specs"
-  run_playwright ""
+  echo "[playwright] Running all specs on host"
+  npx playwright test --config playwright.config.ts
 fi
