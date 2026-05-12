@@ -1,0 +1,198 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export struct UiActionItem {
+    id: string,
+    agent_id: string,
+    action_type: string,
+    payload: string,
+    status: string,
+    timestamp: string,
+}
+
+export component ActionFeed inherits Window {
+    width: 375px;
+    height: 800px;
+    title: "Action Feed";
+    background: #0f172a;
+
+    in property <[UiActionItem]> actions;
+    in-out property <string> selected_action_id: "";
+
+    callback approve_action(string);
+    callback reject_action(string);
+    callback select_action(string);
+    callback close_modal();
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 16px;
+
+        Text {
+            text: "Action Feed";
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            font-family: "Outfit";
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 12px;
+                for action in actions : Rectangle {
+                    height: 100px;
+                    background: ta-action.has-hover ? #334155 : #1e293b;
+                    border-radius: 12px;
+                    border-color: #475569;
+                    border-width: 1px;
+
+                    ta-action := TouchArea {
+                        clicked => {
+                            selected_action_id = action.id;
+                            select_action(action.id);
+                        }
+                    }
+
+                    VerticalBox {
+                        padding: 12px;
+                        spacing: 8px;
+
+                        HorizontalBox {
+                            alignment: space-between;
+                            Text {
+                                text: action.action_type;
+                                font-weight: 600;
+                                color: #e2e8f0;
+                                font-size: 14px;
+                            }
+                            Text {
+                                text: action.timestamp;
+                                color: #94a3b8;
+                                font-size: 12px;
+                            }
+                        }
+
+                        Text {
+                            text: action.payload;
+                            color: #cbd5e1;
+                            font-size: 13px;
+                            overflow: elide;
+                        }
+
+                        HorizontalBox {
+                            spacing: 8px;
+                            Rectangle {
+                                background: #4f46e5;
+                                border-radius: 4px;
+                                padding-left: 4px; padding-right: 4px;
+                                padding-top: 2px; padding-bottom: 2px;
+                                Text {
+                                    text: action.agent_id;
+                                    color: white;
+                                    font-size: 10px;
+                                    font-weight: 600;
+                                }
+                            }
+                            Rectangle {
+                                background: action.status == "pending" ? #ca8a04 : (action.status == "approved" ? #16a34a : #dc2626);
+                                border-radius: 4px;
+                                padding-left: 4px; padding-right: 4px;
+                                padding-top: 2px; padding-bottom: 2px;
+                                Text {
+                                    text: action.status;
+                                    color: white;
+                                    font-size: 10px;
+                                    font-weight: 600;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Modal
+    if (selected_action_id != "") : Rectangle {
+        background: rgba(0, 0, 0, 0.5);
+        ta-bg := TouchArea {
+            clicked => { close_modal(); selected_action_id = ""; }
+        }
+
+        for action in actions : Rectangle {
+            if (action.id == selected_action_id) : GlassCard {
+                width: 343px;
+                height: 300px;
+
+                ta-modal := TouchArea {} // prevent clicks from passing through
+
+                VerticalBox {
+                    padding: 24px;
+                    spacing: 16px;
+
+                    Text {
+                        text: "Action Detail";
+                        font-size: 20px;
+                        font-weight: 700;
+                        color: white;
+                    }
+
+                    VerticalBox {
+                        spacing: 8px;
+                        Text { text: "Agent: " + action.agent_id; color: #94a3b8; font-size: 14px; }
+                        Text { text: "Type: " + action.action_type; color: #94a3b8; font-size: 14px; }
+                        Text { text: "Details:"; color: white; font-size: 14px; font-weight: 600; }
+                        Text { text: action.payload; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+                    }
+
+                    Rectangle {} // Spacer
+
+                    HorizontalBox {
+                        spacing: 16px;
+                        alignment: center;
+
+                        Rectangle {
+                            width: 120px;
+                            height: 44px;
+                            background: ta-reject.has-hover ? #b91c1c : #dc2626;
+                            border-radius: 22px;
+                            Text {
+                                text: "Reject/Edit";
+                                color: white;
+                                font-weight: 600;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                            ta-reject := TouchArea {
+                                clicked => {
+                                    reject_action(action.id);
+                                    selected_action_id = "";
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            width: 120px;
+                            height: 44px;
+                            background: ta-approve.has-hover ? #15803d : #16a34a;
+                            border-radius: 22px;
+                            Text {
+                                text: "Approve";
+                                color: white;
+                                font-weight: 600;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                            ta-approve := TouchArea {
+                                clicked => {
+                                    approve_action(action.id);
+                                    selected_action_id = "";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
