@@ -2,6 +2,7 @@
 pub enum PaymentMethod {
     CreditCard,
     Ach,
+    BatchPayout,
 }
 
 pub struct PaymentRouter;
@@ -17,6 +18,12 @@ impl PaymentRouter {
     /// Stripe Credit Card fee: 2.9% + $0.30
     /// Stripe ACH fee: 0.8%, capped at $5.00
     pub fn optimize_payment_method(amount_usd: f64) -> PaymentMethod {
+        // Very small transactions should be batched to avoid minimum fixed fees wiping out the margin.
+        // Stripe charges $0.30 fixed fee per CC transaction.
+        if amount_usd > 0.0 && amount_usd < 5.0 {
+            return PaymentMethod::BatchPayout;
+        }
+
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 

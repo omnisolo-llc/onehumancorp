@@ -45,6 +45,10 @@ impl StripeClient {
             crate::integrations::stripe::routing::PaymentMethod::Ach => {
                 Ok("https://checkout.stripe.com/c/pay/cs_test_ach...".to_string())
             },
+            crate::integrations::stripe::routing::PaymentMethod::BatchPayout => {
+                // Return a mock URL indicating the payment was added to a batch ledger
+                Ok("internal://batch_ledger/add_pending...".to_string())
+            },
             crate::integrations::stripe::routing::PaymentMethod::CreditCard => {
                 Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string())
             }
