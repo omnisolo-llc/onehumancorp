@@ -8,12 +8,38 @@ set -uo pipefail
 
 spec_file="${1:-}"
 
-# Resolve workspace root — we always run from the repo root
-if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]]; then
-  workspace_root="${BUILD_WORKSPACE_DIRECTORY}"
-elif [[ -n "${TEST_SRCDIR:-}" && -n "${TEST_WORKSPACE:-}" ]]; then
-  workspace_root="${TEST_SRCDIR}/${TEST_WORKSPACE}"
-else
+# Resolve workspace root using package.json symlink to find the actual workspace
+# The runfiles have package.json symlinked to /home/kevin/mono/package.json
+# We can use this to derive the actual workspace path
+workspace_root=""
+
+# Find package.json - first check runfiles, then current dir
+pkg_json=""
+for dir in "." ".." "../.."; do
+  if [[ -f "$dir/package.json" ]]; then
+    pkg_json="$dir/package.json"
+    break
+  fi
+done
+
+if [[ -n "$pkg_json" ]]; then
+  # Follow symlinks to get the real package.json path
+  real_pkg="$(realpath "$pkg_json" 2>/dev/null || echo "$pkg_json")"
+  # Get workspace root from package.json's directory (dirname of package.json is workspace root)
+  workspace_root="$(dirname "$real_pkg")"
+fi
+
+# Fallback to other methods
+if [[ -z "$workspace_root" ]] || [[ ! -d "$workspace_root/node_modules" ]]; then
+  if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]]; then
+    workspace_root="${BUILD_WORKSPACE_DIRECTORY}"
+  elif [[ -n "${TEST_SRCDIR:-}" && -n "${TEST_WORKSPACE:-}" ]]; then
+    workspace_root="$(realpath "${TEST_SRCDIR}/${TEST_WORKSPACE}" 2>/dev/null || echo "")"
+  fi
+fi
+
+# Final fallback
+if [[ -z "$workspace_root" ]] || [[ ! -d "$workspace_root/node_modules" ]]; then
   workspace_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 fi
 
@@ -105,12 +131,12 @@ fi
 export CI=true
 export BASE_URL="http://localhost:18789"
 
+# Use npx to run playwright - it will find the local installation via package.json
 if [[ -n "$spec_file" ]]; then
-  echo "[playwright] Running spec on host: src/e2e/$spec_file"
-  # We use npx to ensure we use the local playwright version
-  # Pass full path from workspace root
-  npx playwright test --config playwright.config.ts "src/e2e/$spec_file"
+  echo "[playwright] Running spec: $spec_file"
+  # npx will find playwright from the local package.json dependencies
+  npx playwright test --config ./playwright.config.ts "$spec_file"
 else
   echo "[playwright] Running all specs on host"
-  npx playwright test --config playwright.config.ts
+  npx playwright test --config ./playwright.config.ts
 fi
