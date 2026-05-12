@@ -72,6 +72,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_time_travel_rewind: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
+    pub autogen_pattern: Option<crate::autogen::AutoGenPattern>,
 }
 
 impl Default for AgentRunConfig {
@@ -1183,6 +1184,14 @@ impl Agent {
                 final_cfg.server_system_message = final_cfg.server_system_message.replace("Make a plan before executing.", "");
             }
         }
+        if let Some(pattern) = final_cfg.autogen_pattern.take() {
+            let orchestrator = crate::autogen::AutoGenOrchestrator::new(pattern);
+            let res = orchestrator.run(initial_message).await.map_err(|e| Box::new(crate::types::ToolError::Unexpected(e)) as Box<dyn std::error::Error + Send + Sync>)?;
+            let last_msg = res.final_response;
+            on_event(AgentEvent::TaskComplete { content: last_msg.clone() });
+            return Ok(last_msg);
+        }
+
         if final_cfg.enable_llmcompiler_plan_and_execute {
             return self.run_plan_and_execute(&final_cfg, initial_message, &session_tools, on_event).await;
         }

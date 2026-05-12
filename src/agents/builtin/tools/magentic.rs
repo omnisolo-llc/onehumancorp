@@ -44,8 +44,12 @@ impl ToolExecutor for MagenticExecutor {
                 let id = args["id"].as_str().ok_or_else(|| ToolError::LlmRecoverable("magentic: id is required for update".to_string()))?;
                 let status = args["status"].as_str().map(str::to_string);
                 let result = args["result"].as_str().map(str::to_string);
+                let priority = args["priority"].as_i64().map(|p| p as i32);
+                let metadata = args["metadata"].as_object().map(|m| {
+                    m.iter().map(|(k, v)| (k.clone(), v.to_string())).collect()
+                });
 
-                if self.store.write().await.update(id, status, result) {
+                if self.store.write().await.update(id, status, priority, result, metadata) {
                     Ok(format!("Updated task: {}", id))
                 } else {
                     Err(ToolError::LlmRecoverable(format!("Task not found: {}", id)))
@@ -98,9 +102,17 @@ pub fn magentic_tool(store: SharedTaskStore) -> Tool {
                     "enum": ["pending", "in_progress", "completed", "failed"],
                     "description": "New status for task (optional for update)."
                 },
+                "priority": {
+                    "type": "integer",
+                    "description": "New priority for task (optional for update)."
+                },
                 "result": {
                     "type": "string",
                     "description": "Result of the task (optional for update)."
+                },
+                "metadata": {
+                    "type": "object",
+                    "description": "New metadata for task (optional for update)."
                 }
             },
             "required": ["action"]

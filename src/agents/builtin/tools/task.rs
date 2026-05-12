@@ -14,10 +14,13 @@ pub struct Task {
     pub title: String,
     pub description: String,
     pub status: String, // "pending" | "in_progress" | "completed" | "failed"
+    pub priority: i32,  // 0: low, 1: medium, 2: high, 3: critical
+    pub dependencies: Vec<String>, // list of task IDs
     pub result: Option<String>,
     pub created_at: i64,
     pub updated_at: i64,
     pub assignee: String,
+    pub metadata: HashMap<String, String>,
 }
 
 /// In-memory task store.
@@ -38,27 +41,60 @@ impl TaskStore {
     }
 
     pub fn list(&self) -> Vec<&Task> {
-        self.tasks.values().collect()
+        let mut tasks: Vec<&Task> = self.tasks.values().collect();
+        // Sort by priority (desc) then by created_at (asc)
+        tasks.sort_by(|a, b| {
+            b.priority.cmp(&a.priority).then(a.created_at.cmp(&b.created_at))
+        });
+        tasks
     }
 
     pub fn update(
         &mut self,
         id: &str,
         status: Option<String>,
+        priority: Option<i32>,
         result: Option<String>,
+        metadata: Option<HashMap<String, String>>,
     ) -> bool {
         if let Some(task) = self.tasks.get_mut(id) {
             if let Some(s) = status {
                 task.status = s;
             }
+            if let Some(p) = priority {
+                task.priority = p;
+            }
             if let Some(r) = result {
                 task.result = Some(r);
+            }
+            if let Some(m) = metadata {
+                task.metadata.extend(m);
             }
             task.updated_at = Utc::now().timestamp_millis();
             true
         } else {
             false
         }
+    }
+
+    pub fn get_ready_tasks(&self) -> Vec<&Task> {
+        self.list()
+            .into_iter()
+            .filter(|t| {
+                if t.status != "pending" {
+                    return false;
+                }
+                // Check if all dependencies are completed
+                for dep_id in &t.dependencies {
+                    if let Some(dep) = self.tasks.get(dep_id) {
+                        if dep.status != "completed" {
+                            return false;
+                        }
+                    }
+                }
+                true
+            })
+            .collect()
     }
 }
 
@@ -79,6 +115,13 @@ impl ToolExecutor for TaskCreateExecutor {
             .ok_or_else(|| ToolError::LlmRecoverable("task_create: title is required".to_string()))?;
         let description = args["description"].as_str().unwrap_or("").to_string();
         let assignee = args["assignee"].as_str().unwrap_or("").to_string();
+        let priority = args["priority"].as_i64().unwrap_or(1) as i32;
+        let dependencies = args["dependencies"]
+            .as_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+            .collect();
 
         let now = Utc::now().timestamp_millis();
         let id = format!("task-{}", uuid::Uuid::new_v4().simple());
@@ -87,10 +130,13 @@ impl ToolExecutor for TaskCreateExecutor {
             title: title.to_string(),
             description,
             status: "pending".to_string(),
+            priority,
+            dependencies,
             result: None,
             created_at: now,
             updated_at: now,
             assignee,
+            metadata: HashMap::new(),
         };
 
         self.store.write().await.create(task);
@@ -155,9 +201,13 @@ impl ToolExecutor for TaskUpdateExecutor {
     ) -> Result<String, ToolError> {
         let id = args["id"].as_str().ok_or_else(|| ToolError::LlmRecoverable("task_update: id is required".to_string()))?;
         let status = args["status"].as_str().map(str::to_string);
+        let priority = args["priority"].as_i64().map(|p| p as i32);
         let result = args["result"].as_str().map(str::to_string);
+        let metadata = args["metadata"].as_object().map(|m| {
+            m.iter().map(|(k, v)| (k.clone(), v.to_string())).collect()
+        });
 
-        if self.store.write().await.update(id, status, result) {
+        if self.store.write().await.update(id, status, priority, result, metadata) {
             Ok(format!("Task updated: {}", id))
         } else {
             Err(ToolError::LlmRecoverable(format!("Task not found: {}", id)))
@@ -177,7 +227,9 @@ pub fn task_create_tool(store: SharedTaskStore) -> Tool {
             "properties": {
                 "title": {"type": "string", "description": "Task title."},
                 "description": {"type": "string", "description": "Task description."},
-                "assignee": {"type": "string", "description": "Agent to assign."}
+                "assignee": {"type": "string", "description": "Agent to assign."},
+                "priority": {"type": "integer", "description": "0: Low, 1: Medium, 2: High, 3: Critical."},
+                "dependencies": {"type": "array", "items": {"type": "string"}, "description": "List of task IDs this task depends on."}
             },
             "required": ["title"]
         }),
@@ -214,7 +266,7 @@ pub fn task_list_tool(store: SharedTaskStore) -> Tool {
 pub fn task_update_tool(store: SharedTaskStore) -> Tool {
     Tool {
         name: "TaskUpdate".to_string(),
-        description: "Update a task's status or result.".to_string(),
+        description: "Update a task's status, priority, or result.".to_string(),
         is_read_only: false,
         parameters: json!({
             "type": "object",
@@ -224,7 +276,9 @@ pub fn task_update_tool(store: SharedTaskStore) -> Tool {
                     "type": "string",
                     "enum": ["pending", "in_progress", "completed", "failed"]
                 },
-                "result": {"type": "string"}
+                "priority": {"type": "integer"},
+                "result": {"type": "string"},
+                "metadata": {"type": "object"}
             },
             "required": ["id"]
         }),

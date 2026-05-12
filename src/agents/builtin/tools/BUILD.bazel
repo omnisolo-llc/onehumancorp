@@ -23,6 +23,7 @@ rust_library(
         "read.rs",
         "recall.rs",
         "runner.rs",
+        "autogen.rs",
         "screenshot.rs",
         "sendmessage.rs",
         "sleep.rs",
