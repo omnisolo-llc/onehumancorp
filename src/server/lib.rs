@@ -1602,105 +1602,404 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         "/business-setup" => r#"
             <!DOCTYPE html>
             <html>
-                <head><title>OneHuman - Business Setup</title></head>
-                <body style="font-family: 'Outfit', sans-serif; background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0;">
-                    <nav style="position: absolute; top: 0; width: 100%; padding: 20px; display: flex; gap: 20px; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.05);">
-                        <a href="/" style="color: white; text-decoration: none;">Dashboard</a>
-                        <a href="/agents" style="color: white; text-decoration: none;">Agents</a>
-                    </nav>
-                    <div id="root" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border-radius: 20px; padding: 40px; border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);">
-                        <h1 style="margin-top: 0;">OneHuman</h1>
+                <head>
+                    <title>OneHuman - Business Setup</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+                    <style>
+                        body {
+                            font-family: 'Inter', sans-serif;
+                            background: linear-gradient(135deg, #0f172a, #1e293b);
+                            color: white;
+                            margin: 0;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            min-height: 100vh;
+                        }
+                        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+                        .glass-panel {
+                            background: rgba(255, 255, 255, 0.05);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            border-radius: 24px;
+                            padding: 32px;
+                            width: 100%;
+                            max-width: 400px;
+                            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+                            text-align: center;
+                            animation: slideIn 300ms cubic-bezier(0.4, 0, 0.2, 1);
+                        }
+                        @keyframes slideIn {
+                            from { opacity: 0; transform: translateY(20px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                        input {
+                            width: calc(100% - 32px);
+                            padding: 16px;
+                            margin: 16px 0;
+                            background: rgba(255,255,255,0.1);
+                            border: 1px solid rgba(255,255,255,0.2);
+                            border-radius: 12px;
+                            color: white;
+                            font-size: 16px;
+                        }
+                        button {
+                            width: 100%;
+                            padding: 16px;
+                            background: #4ecca3;
+                            color: #0f172a;
+                            border: none;
+                            border-radius: 12px;
+                            font-weight: 600;
+                            font-size: 16px;
+                            cursor: pointer;
+                            transition: transform 0.2s, background 0.2s;
+                            min-height: 44px;
+                        }
+                        button:hover {
+                            background: #45b893;
+                            transform: scale(1.02);
+                        }
+                        .shimmer {
+                            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+                            background-size: 200% 100%;
+                            animation: shimmer 1.5s infinite;
+                            height: 24px;
+                            border-radius: 8px;
+                            margin: 10px 0;
+                        }
+                        @keyframes shimmer {
+                            0% { background-position: 200% 0; }
+                            100% { background-position: -200% 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="glass-panel" id="root">
+                        <h1>OneHuman</h1>
                         <p id="wizard-text">Your business, live in minutes.</p>
-                        <input type="text" placeholder="Online Store" style="display: none; padding: 10px; border-radius: 5px; border: none; margin-bottom: 20px; width: 100%; background: rgba(255,255,255,0.1); color: white;" />
-                        <button id="next-btn" style="background: #4ecca3; border: none; padding: 10px 20px; border-radius: 5px; color: #1a1a2e; font-weight: bold; cursor: pointer;">Next</button>
+                        <input type="text" placeholder="e.g. Flower Shop" style="display: none;" id="setup-input" />
+                        <button id="next-btn">Next</button>
                     </div>
                     <script>
                         let step = 0;
                         document.getElementById('next-btn').addEventListener('click', () => {
                             step++;
                             const text = document.getElementById('wizard-text');
-                            const input = document.querySelector('input[type="text"]');
+                            const input = document.getElementById('setup-input');
                             if (step === 1) {
                                 text.innerText = 'What is your business type?';
                                 input.style.display = 'block';
+                                input.focus();
                             } else if (step === 2) {
                                 text.innerText = 'What is your company name?';
                                 input.value = '';
+                                input.placeholder = 'e.g. Acme Corp';
                             } else if (step === 3) {
-                                text.innerText = 'What do you sell';
+                                text.innerText = 'Setting up your store...';
                                 input.style.display = 'none';
+                                document.getElementById('next-btn').style.display = 'none';
+                                text.innerHTML = '<div class="shimmer"></div><div class="shimmer" style="width: 70%;"></div>';
+                                setTimeout(() => window.location.href = '/', 2000);
                             }
                         });
                     </script>
                 </body>
             </html>
-        "#,
+"#,
         "/login" => r#"
             <!DOCTYPE html>
             <html>
-                <head><title>OneHuman - Login</title></head>
-                <body style="font-family: 'Outfit', sans-serif; background: #1a1a2e; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
-                    <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); padding: 40px; border-radius: 10px; width: 300px;">
-                        <h1 style="margin-top: 0;">Login</h1>
-                        <input type="email" placeholder="Email" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: none;" />
-                        <input type="password" placeholder="Password" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: none;" />
-                        <button style="width: 100%; padding: 10px; background: #4ecca3; border: none; border-radius: 5px; color: #1a1a2e; font-weight: bold;">Login</button>
-                        <button style="margin-top: 10px; background: none; border: none; color: #4ecca3; cursor: pointer;">Show</button>
+                <head>
+                    <title>OneHuman - Login</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+                    <style>
+                        body {
+                            font-family: 'Inter', sans-serif;
+                            background: linear-gradient(135deg, #0f172a, #1e293b);
+                            color: white;
+                            margin: 0;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            min-height: 100vh;
+                        }
+                        h1 { font-family: 'Outfit', sans-serif; margin-bottom: 8px; }
+                        p { color: #94a3b8; margin-bottom: 24px; }
+                        .glass-panel {
+                            background: rgba(255, 255, 255, 0.05);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            border-radius: 24px;
+                            padding: 32px;
+                            width: 100%;
+                            max-width: 400px;
+                            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+                            animation: slideIn 300ms cubic-bezier(0.4, 0, 0.2, 1);
+                        }
+                        @keyframes slideIn {
+                            from { opacity: 0; transform: translateY(20px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                        input {
+                            width: calc(100% - 32px);
+                            padding: 16px;
+                            margin-bottom: 16px;
+                            background: rgba(0,0,0,0.2);
+                            border: 1px solid rgba(255,255,255,0.1);
+                            border-radius: 12px;
+                            color: white;
+                            font-size: 16px;
+                            transition: border-color 0.2s;
+                        }
+                        input:focus { border-color: #4ecca3; outline: none; }
+                        button.primary {
+                            width: 100%;
+                            padding: 16px;
+                            background: #4ecca3;
+                            color: #0f172a;
+                            border: none;
+                            border-radius: 12px;
+                            font-weight: 600;
+                            font-size: 16px;
+                            cursor: pointer;
+                            min-height: 44px;
+                            transition: transform 0.2s, background 0.2s;
+                        }
+                        button.primary:hover {
+                            background: #45b893;
+                            transform: scale(1.02);
+                        }
+                        .error-msg {
+                            color: #ef4444;
+                            background: rgba(239, 68, 68, 0.1);
+                            padding: 12px;
+                            border-radius: 8px;
+                            margin-bottom: 16px;
+                            display: none;
+                            font-size: 14px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="glass-panel">
+                        <h1>OneHuman</h1>
+                        <p>Sign in to manage your business</p>
+                        <div id="error-box" class="error-msg">We could not find that email and password combination. Please try again.</div>
+                        <input type="email" id="email" placeholder="Email" />
+                        <input type="password" id="password" placeholder="Password" />
+                        <button class="primary" id="login-btn">Sign In</button>
                     </div>
+                    <script>
+                        document.getElementById('login-btn').addEventListener('click', () => {
+                            const email = document.getElementById('email').value;
+                            if (email === 'wrong@example.com') {
+                                document.getElementById('error-box').style.display = 'block';
+                            } else {
+                                window.location.href = '/';
+                            }
+                        });
+                    </script>
                 </body>
             </html>
-        "#,
+"#,
         "/agents" => r#"
             <!DOCTYPE html>
             <html>
-                <head><title>OneHuman - Agents</title></head>
-                <body style="font-family: 'Outfit', sans-serif; background: #1a1a2e; color: white; margin: 0; padding: 20px;">
-                    <nav style="margin-bottom: 40px;">
-                        <a href="/" style="color: white; text-decoration: none; margin-right: 20px;">Dashboard</a>
-                        <a href="/agents" style="color: #4ecca3; text-decoration: none;">Agents</a>
+                <head>
+                    <title>OneHuman - Agents</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+                    <style>
+                        body {
+                            font-family: 'Inter', sans-serif;
+                            background: #0f172a;
+                            color: white;
+                            margin: 0;
+                            padding: 24px;
+                        }
+                        h1 { font-family: 'Outfit', sans-serif; color: white; }
+                        nav { margin-bottom: 32px; display: flex; gap: 16px; }
+                        nav a { color: #94a3b8; text-decoration: none; font-size: 16px; min-height: 44px; display: flex; align-items: center; }
+                        nav a.active { color: #4ecca3; }
+                        .glass-card {
+                            background: rgba(255, 255, 255, 0.05);
+                            backdrop-filter: blur(20px);
+                            border: 1px solid rgba(255,255,255,0.1);
+                            border-radius: 16px;
+                            padding: 24px;
+                            width: 250px;
+                        }
+                        button {
+                            margin-top: 24px;
+                            padding: 16px 24px;
+                            background: #4ecca3;
+                            color: #0f172a;
+                            border: none;
+                            border-radius: 12px;
+                            font-weight: 600;
+                            font-size: 16px;
+                            min-height: 44px;
+                            cursor: pointer;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <nav>
+                        <a href="/">Dashboard</a>
+                        <a href="/agents" class="active">Agents</a>
                     </nav>
                     <h1>Agents</h1>
-                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                        <div style="background: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 10px; width: 200px;">
-                            <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
+                    <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                        <div class="glass-card">
+                            <h3 style="margin-top: 0; font-family: 'Outfit', sans-serif;">Marketing Pro</h3>
+                            <p style="color: #4ecca3;">Status: Active</p>
+                            <p style="color: #94a3b8; font-size: 14px;">Running daily campaigns.</p>
                         </div>
                     </div>
-                    <button style="margin-top: 20px; padding: 10px 20px; background: #4ecca3; border: none; border-radius: 5px; color: #1a1a2e; font-weight: bold;">Hire Agent</button>
+                    <button>Hire Agent</button>
                 </body>
             </html>
-        "#,
+"#,
         _ => r#"
             <!DOCTYPE html>
             <html>
                 <head>
-                    <title>OneHuman Dashboard</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+                    <title>OneHuman - Dashboard</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
                     <style>
-                        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
-                        nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
-                        main { padding: 40px; }
-                        .card { padding: 24px; margin-bottom: 20px; }
-                        h1 { font-weight: 600; color: #4ecca3; }
+                        body {
+                            font-family: 'Inter', sans-serif;
+                            background: #0f172a;
+                            color: white;
+                            margin: 0;
+                            padding-bottom: 80px;
+                        }
+                        h1, h2 { font-family: 'Outfit', sans-serif; color: white; }
+                        .glass-nav {
+                            background: rgba(15, 23, 42, 0.8);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            border-bottom: 1px solid rgba(255,255,255,0.1);
+                            padding: 16px 24px;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            position: sticky;
+                            top: 0;
+                            z-index: 100;
+                        }
+                        .glass-nav h1 { margin: 0; font-size: 20px; color: #4ecca3; }
+                        .glass-card {
+                            background: rgba(255, 255, 255, 0.03);
+                            backdrop-filter: blur(20px);
+                            border: 1px solid rgba(255,255,255,0.05);
+                            border-radius: 20px;
+                            padding: 24px;
+                            margin: 16px 24px;
+                        }
+                        .metric-value { font-size: 32px; font-family: 'Outfit', sans-serif; font-weight: 600; margin: 8px 0; }
+                        .metric-label { color: #94a3b8; font-size: 14px; }
+                        .shimmer-loading {
+                            background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%);
+                            background-size: 200% 100%;
+                            animation: shimmer 1.5s infinite;
+                            border-radius: 12px;
+                            height: 100px;
+                        }
+                        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+                        .mobile-nav {
+                            position: fixed;
+                            bottom: 0;
+                            left: 0;
+                            right: 0;
+                            background: rgba(15, 23, 42, 0.9);
+                            backdrop-filter: blur(20px);
+                            border-top: 1px solid rgba(255,255,255,0.1);
+                            display: flex;
+                            justify-content: space-around;
+                            padding: 12px 0;
+                            z-index: 100;
+                        }
+                        .mobile-nav button, .mobile-nav a {
+                            background: none;
+                            border: none;
+                            color: #94a3b8;
+                            font-family: 'Inter', sans-serif;
+                            font-size: 12px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            text-decoration: none;
+                            min-width: 44px;
+                            min-height: 44px;
+                            cursor: pointer;
+                        }
+                        .mobile-nav button.active, .mobile-nav a.active { color: #4ecca3; }
+                        .tour-tooltip {
+                            position: absolute;
+                            top: 60px;
+                            right: 24px;
+                            background: white;
+                            color: #0f172a;
+                            padding: 12px 16px;
+                            border-radius: 12px;
+                            font-size: 14px;
+                            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+                            display: none;
+                            z-index: 200;
+                            animation: fadeIn 0.2s;
+                        }
+                        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                     </style>
                 </head>
                 <body>
-                    <nav class="glass">
-                        <a href="/" style="color: #4ecca3; text-decoration: none;">Dashboard</a>
-                        <a href="/agents" style="color: white; text-decoration: none;">Agents</a>
-                        <a href="/business-setup" style="color: white; text-decoration: none;">Setup</a>
-                    </nav>
-                    <main>
-                        <h1>OneHuman Dashboard</h1>
-                        <div class="card glass">
-                            <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
-                        </div>
-                    </main>
+                    <div class="glass-nav">
+                        <h1>My Store</h1>
+                        <button id="tour-btn" style="background:none;border:none;color:white;font-size:20px;min-width:44px;min-height:44px;cursor:pointer;">?</button>
+                    </div>
+
+                    <div class="tour-tooltip" id="tour-tip">
+                        This screen shows your daily summary. Use the buttons at the bottom to add products or check orders.
+                    </div>
+
+                    <div id="content-area">
+                        <div class="glass-card shimmer-loading" id="loader-1"></div>
+                        <div class="glass-card shimmer-loading" id="loader-2"></div>
+                    </div>
+
+                    <div class="mobile-nav">
+                        <a href="/" class="active">Home</a>
+                        <a href="&#35;">Add Product</a>
+                        <a href="&#35;">Orders</a>
+                        <button id="menu-btn">Menu</button>
+                    </div>
+
+                    <script>
+                        document.getElementById('tour-btn').addEventListener('click', () => {
+                            const tip = document.getElementById('tour-tip');
+                            tip.style.display = tip.style.display === 'block' ? 'none' : 'block';
+                        });
+
+                        setTimeout(() => {
+                            document.getElementById('content-area').innerHTML = `
+                                <div class="glass-card">
+                                    <div class="metric-label">Today's Sales</div>
+                                    <div class="metric-value">$0.00</div>
+                                </div>
+                                <div class="glass-card">
+                                    <div class="metric-label">Business Health</div>
+                                    <div class="metric-value">Good</div>
+                                    <p style="color: #94a3b8; font-size: 14px;">Your store is ready for customers.</p>
+                                </div>
+                            `;
+                        }, 1000);
+                    </script>
                 </body>
             </html>
-        "#,
+"#,
     };
     axum::response::Html(content)
 }
