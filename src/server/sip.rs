@@ -65,7 +65,7 @@ impl SipDB {
             let res = async {
                 let mut tx = self.pool.begin().await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'CLOUD_ESCALATION') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -78,18 +78,18 @@ impl SipDB {
                     .await?;
 
                 // Prioritize backlog by bumping updated_at for oldest pending missions
-                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10) RETURNING id")
+                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'PENDING' OR status = 'CLOUD_ESCALATION') AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10) RETURNING id")
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND tenant_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'CLOUD_ESCALATION') AND created_at < $1 AND tenant_id = $2")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'BURSTING') AND created_at < $1)) AND tenant_id = $2 LIMIT 1000) RETURNING id")
+                sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'BURSTING' OR status = 'CLOUD_ESCALATION') AND created_at < $1)) AND tenant_id = $2 LIMIT 1000) RETURNING id")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -511,6 +511,90 @@ mod tests {
         let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
         // Should error out gracefully with our dummy pool timeout instead of panicking
         assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_prune_stale_missions_logic_success() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://dummy".to_string());
+        if database_url == "postgres://dummy" {
+            // In environments without DB, just return instead of failing the build
+            return;
+        }
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .max_connections(1)
+            .connect(&database_url)
+            .await
+            .expect("Failed to connect to database");
+
+        let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_missions (
+                id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                payload TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                tenant_id TEXT,
+                mission_log TEXT
+            )"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // Clean up before test
+        sqlx::query("DELETE FROM agent_missions WHERE id IN ('test_mission_pending', 'test_mission_cloud_escalation')").execute(&pool).await.unwrap();
+
+        // Insert initial record (PENDING) - make it 8 days old so it's stale
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING")
+            .bind("test_mission_pending")
+            .bind("PENDING")
+            .bind("{}")
+            .bind("test_org")
+            .bind(chrono::Utc::now() - chrono::Duration::days(8))
+            .bind(chrono::Utc::now() - chrono::Duration::days(8))
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Insert initial record (CLOUD_ESCALATION) - make it 8 days old so it's stale
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING")
+            .bind("test_mission_cloud_escalation")
+            .bind("CLOUD_ESCALATION")
+            .bind("{}")
+            .bind("test_org")
+            .bind(chrono::Utc::now() - chrono::Duration::days(8))
+            .bind(chrono::Utc::now() - chrono::Duration::days(8))
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Call prune_stale_missions
+        let res = sip_db.prune_stale_missions(chrono::Duration::days(7)).await;
+        assert!(res.is_ok());
+
+        // Verify
+        let row1 = sqlx::query("SELECT status FROM agent_missions WHERE id = 'test_mission_pending'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let status1: String = row1.get("status");
+        assert_eq!(status1, "FAILED");
+
+        let row2 = sqlx::query("SELECT status FROM agent_missions WHERE id = 'test_mission_cloud_escalation'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let status2: String = row2.get("status");
+        assert_eq!(status2, "FAILED");
+
+        // Clean up
+        sqlx::query("DELETE FROM agent_missions WHERE id IN ('test_mission_pending', 'test_mission_cloud_escalation')").execute(&pool).await.unwrap();
     }
 }
 
