@@ -26,6 +26,7 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             base_url: "nats://localhost:4222".to_string(),
         }
     };
+
     catalog.push(nats_provider);
 
     // We avoid initializing a real TwilioProvider client here just for metadata
@@ -38,9 +39,65 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             base_url: "https://api.twilio.com".to_string(),
         }
     };
+
     catalog.push(twilio_provider);
     let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
     catalog.push(chromadb_provider.to_integration_provider());
+
+
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: "manychat".to_string(),
+            name: "Manychat".to_string(),
+            category: "social_media".to_string(),
+            base_url: "https://api.manychat.com".to_string(),
+        }
+    });
+
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: "calendly".to_string(),
+            name: "Calendly".to_string(),
+            category: "calendar".to_string(),
+            base_url: "https://api.calendly.com".to_string(),
+        }
+    });
+
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: "mailchimp".to_string(),
+            name: "Mailchimp".to_string(),
+            category: "email_marketing".to_string(),
+            base_url: "https://server.api.mailchimp.com".to_string(),
+        }
+    });
+
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: "mercadopago".to_string(),
+            name: "Mercado Pago".to_string(),
+            category: "payment".to_string(),
+            base_url: "https://api.mercadopago.com".to_string(),
+        }
+    });
+
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: "shippo".to_string(),
+            name: "Shippo".to_string(),
+            category: "shipping".to_string(),
+            base_url: "https://api.goshippo.com".to_string(),
+        }
+    });
+
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: "zoom".to_string(),
+            name: "Zoom".to_string(),
+            category: "video_conferencing".to_string(),
+            base_url: "https://api.zoom.us".to_string(),
+        }
+    });
 
     catalog
 }
