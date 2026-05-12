@@ -861,6 +861,12 @@ impl MeshTransport for NatsTransport {
 
 
 pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result<Arc<dyn MeshTransport>, String> {
+
+    if let Ok(overlay_url) = std::env::var("MESH_OVERLAY_URL") {
+        tracing::info!("Initialized UdpTcpFallbackTransport overlay");
+        return Ok(Arc::new(UdpTcpFallbackTransport::new(&overlay_url).await));
+    }
+
     if let Ok(nats_url) = std::env::var("NATS_URL") {
         match NatsTransport::new(&nats_url).await {
             Ok(t) => {
@@ -1302,5 +1308,169 @@ mod tests {
         }
 
         cancel();
+    }
+}
+
+
+pub struct UdpTcpFallbackTransport {
+    subs: DashMap<String, broadcast::Sender<Message>>,
+    presence: DashMap<String, (String, std::time::Instant)>,
+    overlay_url: String,
+}
+
+impl UdpTcpFallbackTransport {
+    pub async fn new(overlay_url: &str) -> Self {
+        UdpTcpFallbackTransport {
+            subs: DashMap::new(),
+            presence: DashMap::new(),
+            overlay_url: overlay_url.to_string(),
+        }
+    }
+}
+
+#[async_trait]
+impl MeshTransport for UdpTcpFallbackTransport {
+    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+        // Try UDP
+        if let Ok(socket) = tokio::net::UdpSocket::bind("0.0.0.0:0").await {
+            use prost::Message as ProstMessage;
+            let mut buf = Vec::new();
+            message.encode(&mut buf).unwrap();
+
+            if socket.send_to(&buf, &self.overlay_url).await.is_ok() {
+                if let Some(tx) = self.subs.get(topic) {
+                    let _ = tx.send(message);
+                }
+                return Ok(());
+            }
+        }
+
+        // Try TCP
+        if let Ok(mut stream) = tokio::net::TcpStream::connect(&self.overlay_url).await {
+            use prost::Message as ProstMessage;
+            use tokio::io::AsyncWriteExt;
+            let mut buf = Vec::new();
+            message.encode(&mut buf).unwrap();
+
+            if stream.write_all(&buf).await.is_ok() {
+                if let Some(tx) = self.subs.get(topic) {
+                    let _ = tx.send(message);
+                }
+                return Ok(());
+            }
+        }
+
+        // Fallback to HTTP
+        let client = reqwest::Client::new();
+        let payload = serde_json::json!({
+            "agent_id": message.agent_id,
+            "channel": topic,
+            "event_type": message.action,
+            "data": "fallback_payload"
+        });
+
+        let _ = client.post("http://localhost:8080/api/mesh/broadcast")
+            .json(&payload)
+            .send()
+            .await;
+
+        if let Some(tx) = self.subs.get(topic) {
+            let _ = tx.send(message);
+        }
+
+        Ok(())
+    }
+
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let tx = self.subs.entry(topic.to_string()).or_insert_with(|| {
+            let (tx, _) = broadcast::channel(100);
+            tx
+        }).clone();
+
+        let mut rx = tx.subscribe();
+
+        let worker = tokio::spawn(async move {
+            while let Ok(msg) = rx.recv().await {
+                handler(msg);
+            }
+        });
+
+        let cancel = Box::new(move || {
+            worker.abort();
+        });
+
+        Ok(cancel)
+    }
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        let lock_path = std::env::temp_dir().join(format!("ohc_mesh_lock_{}", resource));
+        let expires_at = chrono::Utc::now().timestamp_millis() + (ttl_seconds * 1000) as i64;
+        let payload = format!("{}:{}", owner, expires_at);
+
+        match std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
+            Ok(mut f) => {
+                use std::io::Write;
+                let _ = f.write_all(payload.as_bytes());
+                Ok(true)
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+                if let Ok(owner_bytes) = std::fs::read(&lock_path) {
+                    let current_data = String::from_utf8_lossy(&owner_bytes).into_owned();
+                    if let Some((stored_owner, stored_exp)) = current_data.split_once(':') {
+                        if let Ok(exp) = stored_exp.parse::<i64>() {
+                            if stored_owner == owner || exp <= chrono::Utc::now().timestamp_millis() {
+                                let _ = std::fs::remove_file(&lock_path);
+                                if let Ok(mut f) = std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
+                                    use std::io::Write;
+                                    let _ = f.write_all(payload.as_bytes());
+                                    return Ok(true);
+                                }
+                            }
+                        }
+                    } else {
+                        let _ = std::fs::remove_file(&lock_path);
+                        if let Ok(mut f) = std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
+                            use std::io::Write;
+                            let _ = f.write_all(payload.as_bytes());
+                            return Ok(true);
+                        }
+                    }
+                }
+                Ok(false)
+            }
+            Err(_) => Ok(false),
+        }
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        let lock_path = std::env::temp_dir().join(format!("ohc_mesh_lock_{}", resource));
+        if let Ok(owner_bytes) = std::fs::read(&lock_path) {
+            let current_data = String::from_utf8_lossy(&owner_bytes).into_owned();
+            if let Some((stored_owner, _)) = current_data.split_once(':') {
+                if stored_owner == owner {
+                    let _ = std::fs::remove_file(&lock_path);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        let expires_at = std::time::Instant::now() + std::time::Duration::from_secs(ttl_seconds);
+        self.presence.insert(agent_id.to_string(), (status.to_string(), expires_at));
+        Ok(())
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        let mut active = Vec::new();
+        let now = std::time::Instant::now();
+
+        self.presence.retain(|_, (_, expires_at)| *expires_at > now);
+
+        for entry in self.presence.iter() {
+            active.push((entry.key().clone(), entry.value().0.clone()));
+        }
+
+        Ok(active)
     }
 }

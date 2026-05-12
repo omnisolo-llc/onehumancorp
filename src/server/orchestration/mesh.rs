@@ -291,6 +291,12 @@ mod tests {
 
 
 pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn TeammateMesh>, String> {
+
+    if let Ok(overlay_url) = std::env::var("MESH_OVERLAY_URL") {
+        let transport = ohc_builtin_agent::mesh::transport::UdpTcpFallbackTransport::new(&overlay_url).await;
+        return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
+    }
+
     if let Ok(nats_url) = std::env::var("NATS_URL") {
         if let Ok(transport) = ohc_builtin_agent::mesh::transport::NatsTransport::new(&nats_url).await {
             return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
