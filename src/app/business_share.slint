@@ -1,0 +1,128 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component BusinessShare inherits Window { // embed
+    width: 375px;
+    height: 700px;
+    title: "Share my business";
+    out property <string> test_title: root.title;
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    in property <string> business_name: "My Awesome Store";
+    in property <string> business_tagline: "The best place to buy things";
+    in property <string> share_link: "ohc://share?b=123";
+
+    callback copy_link();
+    callback share_to_instagram();
+    callback share_to_x();
+    callback share_to_whatsapp();
+    callback close();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Share my business"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Rectangle {}
+            Button { text: "Close"; height: 44px; clicked => { close(); } }
+        }
+
+        Text { text: "This is how your store will look when shared:"; color: #94a3b8; font-size: 14px; font-family: "Inter"; }
+
+        // High-Fidelity OpenGraph Preview
+        GlassCard {
+            border-color: rgba(255, 255, 255, 0.2);
+            border-width: 1px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0px;
+
+            VerticalBox {
+                padding: 0px;
+                spacing: 0px;
+
+                // Cover Image Placeholder
+                Rectangle {
+                    height: 180px;
+                    background: @linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+                    border-top-left-radius: 12px;
+                    border-top-right-radius: 12px;
+
+                    VerticalBox {
+                        alignment: center;
+                        Text { text: "✨"; font-size: 48px; horizontal-alignment: center; }
+                    }
+                }
+
+                VerticalBox {
+                    padding: 24px;
+                    spacing: 8px;
+
+                    Text {
+                        text: business_name;
+                        font-size: 22px;
+                        font-family: "Outfit";
+                        font-weight: 700;
+                        color: white;
+                    }
+
+                    Text {
+                        text: business_tagline;
+                        font-size: 14px;
+                        font-family: "Inter";
+                        color: #cbd5e1;
+                        wrap: word-wrap;
+                        max-height: 40px;
+                    }
+
+                    HorizontalBox {
+                        spacing: 4px;
+                        Text { text: "🔗"; font-size: 12px; vertical-alignment: center; }
+                        Text {
+                            text: share_link;
+                            font-size: 12px;
+                            font-family: "Inter";
+                            color: #a855f7;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+
+        VerticalBox {
+            spacing: 12px;
+
+            Button {
+                text: "📋 Copy Shareable Link";
+                height: 52px;
+                primary: true;
+                clicked => { copy_link(); }
+            }
+
+            HorizontalBox {
+                spacing: 12px;
+                Button {
+                    text: "📷 Instagram";
+                    height: 48px;
+                    clicked => { share_to_instagram(); }
+                }
+
+                Button {
+                    text: "🐦 X (Twitter)";
+                    height: 48px;
+                    clicked => { share_to_x(); }
+                }
+            }
+
+            Button {
+                text: "💬 Share to WhatsApp";
+                height: 48px;
+                clicked => { share_to_whatsapp(); }
+            }
+        }
+
+        Rectangle {}
+    }
+}

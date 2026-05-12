@@ -371,9 +371,6 @@ impl VectorRepository {
         let mut updated_winner = winner.clone();
         updated_winner.reference_count += loser.reference_count + 1;
         updated_winner.last_referenced_at = chrono::Utc::now();
-        if loser.owner_override && !updated_winner.owner_override {
-            updated_winner.owner_override = true;
-        }
         self.upsert(&updated_winner).await?;
         Ok(())
     }
@@ -2665,88 +2662,5 @@ mod additional_tests {
         let results = repo.cross_department_search("org1", &v1, 10).await.unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].content, "Sales context");
-    }
-}
-
-#[cfg(test)]
-mod override_tests_resolve {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_resolve_conflict_propagates_override() {
-        // Setup SQLite repository
-        use std::str::FromStr;
-        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
-
-        let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                agent_id TEXT,
-                content TEXT NOT NULL,
-                embedding TEXT,
-                source_type TEXT NOT NULL,
-                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                reference_count INTEGER DEFAULT 0,
-                reliability_score INTEGER DEFAULT 50,
-                owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );"
-        ).execute(&pool).await.unwrap();
-
-        let repo = VectorRepository::new_sqlite(pool);
-
-        let mut v1 = vec![0.0; 10];
-        v1[0] = 1.0;
-        let mut v2 = vec![0.0; 10];
-        v2[0] = 0.99;
-
-        let timestamp = chrono::Utc::now();
-
-        // record_a is winner, but has NO owner_override
-        let record_a = EmbeddingRecord {
-            id: "winner_a".to_string(),
-            tenant_id: "org_override".to_string(),
-            agent_id: "test".to_string(),
-            content: "Newer info".to_string(),
-            embedding: v1.clone(),
-            source_type: "NOTE".to_string(),
-            created_at: timestamp + chrono::Duration::days(1),
-            last_referenced_at: timestamp + chrono::Duration::days(1),
-            reference_count: 1,
-            reliability_score: 90,
-            owner_override: false,
-            metadata: None,
-        };
-
-        // record_b is loser, but HAS owner_override
-        let record_b = EmbeddingRecord {
-            id: "loser_b".to_string(),
-            tenant_id: "org_override".to_string(),
-            agent_id: "test".to_string(),
-            content: "Older info".to_string(),
-            embedding: v2.clone(),
-            source_type: "NOTE".to_string(),
-            created_at: timestamp,
-            last_referenced_at: timestamp,
-            reference_count: 1,
-            reliability_score: 50,
-            owner_override: true,
-            metadata: None,
-        };
-
-        repo.upsert(&record_a).await.unwrap();
-        repo.upsert(&record_b).await.unwrap();
-
-        // Directly call resolve_conflict, bypassing determine_conflict_winner
-        // since determine_conflict_winner already naturally picks the one with owner_override as winner.
-        repo.resolve_conflict(&record_a, &record_b).await.unwrap();
-
-        let results = repo.cross_department_search("org_override", &v1, 10).await.unwrap();
-        assert_eq!(results.len(), 1, "Only winner_a should remain");
-        assert_eq!(results[0].id, "winner_a");
-        assert!(results[0].owner_override, "Winner should have inherited owner_override");
     }
 }

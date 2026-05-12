@@ -109,7 +109,7 @@ async fn test_builder_api() {
 
     let app = super::api::router(pool.clone());
 
-    use ::server_common::Claims;
+    use crate::auth::Claims;
     let claims = Claims {
         sub: "user123".to_string(),
         username: "user".to_string(),
@@ -208,7 +208,7 @@ async fn test_builder_generate_and_publish_draft() {
 
     let app = super::api::router(pool.clone());
 
-    use ::server_common::Claims;
+    use crate::auth::Claims;
     let claims = Claims {
         sub: "user123".to_string(),
         username: "user".to_string(),

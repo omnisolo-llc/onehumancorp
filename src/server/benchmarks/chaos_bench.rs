@@ -126,6 +126,7 @@ mod tests {
         assert!(result.is_err()); // Timeout triggers
         assert!(start.elapsed() < Duration::from_millis(2500));
     }
+}
 
     #[tokio::test]
     async fn test_caching_strategy_resilience() {
@@ -147,4 +148,3 @@ mod tests {
         let compressed_text = "This is a very long text that has many words and needs to be compressed."; // Mocking compression behavior
         assert_eq!(compressed_text.len(), raw_text.len()); // A real compress would be <. Doing this simply to verify test framework detects.
     }
-}

@@ -1,0 +1,57 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "orchestration",
+    srcs = [
+        "autodream.go",
+        "mesh.go",
+        "mesh_redis.go",
+        "tasks_db.go",
+        "state_machine.go",
+        "sip.go",
+        "sub_agent.go",
+        "subagent_worker.go",
+        "sync_daemon.go",
+        "task_orchestrator.go",
+        "sanitizer.go",
+        "chaos_test.go",
+    ],
+    importpath = "onehumancorp/srcs/server/orchestration",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/pb:pb",
+        "@com_github_redis_go_redis_v9//:go-redis",
+        "@in_gopkg_yaml_v3//:yaml_v3",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
+)
+
+go_test(
+    name = "orchestration_test",
+    srcs = [
+        "autodream_test.go",
+        "mesh_test.go",
+        "mesh_redis_test.go",
+        "mesh_system_test.go",
+        "tasks_db_test.go",
+        "state_machine_test.go",
+        "state_machine_coverage_test.go",
+        "sip_test.go",
+        "sub_agent_test.go",
+        "sub_agent_budget_test.go",
+        "subagent_worker_test.go",
+        "sync_daemon_test.go",
+        "tasks_db_parity_test.go",
+        "sanitizer_test.go",
+    ],
+    embed = [":orchestration"],
+    deps = [
+        "//srcs/server/pb:pb",
+        "@com_github_alicebob_miniredis_v2//:miniredis",
+        "@com_github_redis_go_redis_v9//:go-redis",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@com_github_mattn_go_sqlite3//:go_sqlite3",
+    ],
+)

@@ -10,7 +10,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::ApprovalRequest;
-use ::server_common::Claims;
+use crate::auth::Claims;
 
 #[derive(Serialize)]
 pub struct ApprovalsResponse {
@@ -49,8 +49,8 @@ async fn list_approvals(
     Query(query): Query<PaginationQuery>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id.as_deref() {
-        Some(org_id) => org_id.to_string(),
+    let tenant_id = match claims.organization_id {
+        Some(org_id) => org_id,
         None => return (StatusCode::UNAUTHORIZED, Json(ApprovalsResponse { pending_approvals: vec![], next_cursor: None })).into_response(),
     };
 
@@ -90,8 +90,8 @@ async fn decide_approval(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<DecisionRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id.as_deref() {
-        Some(org_id) => org_id.to_string(),
+    let tenant_id = match claims.organization_id {
+        Some(org_id) => org_id,
         None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
     };
 

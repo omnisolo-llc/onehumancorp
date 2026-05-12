@@ -31,7 +31,7 @@ impl StripeClient {
     }
 
     pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
-        let _ = ::server_telemetry::record_api_call_cost(
+        let _ = crate::telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             customer_id, // assume customer_id is a proxy for organization_id
             "stripe_checkout_session",
@@ -52,7 +52,7 @@ impl StripeClient {
     }
 
     pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
-        let _ = ::server_telemetry::record_api_call_cost(
+        let _ = crate::telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             "unknown",
             "stripe_get_subscription",

@@ -1,0 +1,43 @@
+import { HorizontalBox } from "std-widgets.slint";
+
+export component ToggleSwitch inherits HorizontalBox {
+    in property <string> text: "";
+    in-out property <bool> checked: false;
+    callback toggled();
+
+    spacing: 8px;
+    alignment: start;
+
+    TouchArea {
+        width: 44px;
+        height: 24px;
+        clicked => { checked = !checked; toggled(); }
+
+        Rectangle {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            background: root.checked ? #10b981 : #334155;
+
+            animate background { duration: 200ms; }
+
+            Rectangle {
+                width: 20px;
+                height: 20px;
+                border-radius: 10px;
+                background: white;
+                x: root.checked ? parent.width - self.width - 2px : 2px;
+                y: 2px;
+
+                animate x { duration: 200ms; easing: ease-in-out; }
+            }
+        }
+    }
+
+    if (root.text != "") : Text {
+        text: root.text;
+        color: white;
+        font-family: "Inter";
+        vertical-alignment: center;
+    }
+}

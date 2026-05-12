@@ -4,7 +4,7 @@ use sqlx::SqlitePool;
 use std::str::FromStr;
 use std::env;
 use sqlx::Row;
-use ::server_common::auth_utils::set_org_context;
+use crate::utils::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use std::path::Path;
 use std::sync::OnceLock;
@@ -187,10 +187,10 @@ impl DB {
                     if self.is_sqlite() && (err_str.contains("database is locked") || err_str.contains("sqlite_busy")) {
                         attempt += 1;
                         if attempt >= max_attempts {
-                            let _ = ::server_telemetry::record_sqlite_retry_exhausted(&self.pool, operation).await;
+                            let _ = crate::telemetry::record_sqlite_retry_exhausted(&self.pool, operation).await;
                             return Err(E::from(format!("SQLite retry exhausted after {} attempts: {}", max_attempts, err)));
                         }
-                        let _ = ::server_telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
+                        let _ = crate::telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
                     } else {

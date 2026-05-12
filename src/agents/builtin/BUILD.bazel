@@ -40,7 +40,6 @@ rust_library(
 rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
-        "auth.rs",
         "codex_runner.rs",
         "agent.rs",
         "checkpointer.rs",
@@ -165,13 +164,11 @@ rust_test(
     name = "unit_tests",
     crate = ":ohc_builtin_agent_lib",
     edition = "2024",
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
 
 exports_files([
+    "autodream.rs",
+    "autodream/store.rs",
     "worker.rs",
     "mcp/mod.rs",
     "mcp/client.rs",
