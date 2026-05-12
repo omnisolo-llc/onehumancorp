@@ -146,4 +146,6 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 
 
 - **[Teammate Mesh Walkthrough](teammate_mesh.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
+
+- **[AutoDream Pipeline Walkthrough](../../walkthroughs/autodream_pipeline.md)**: Visual guide to the memory consolidation engine.
 </div>
