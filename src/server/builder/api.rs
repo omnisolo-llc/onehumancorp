@@ -5,7 +5,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use crate::auth::Claims;
+use ::server_common::Claims;
 use serde_json::Value;
 use sqlx::PgPool;
 use uuid::Uuid;
