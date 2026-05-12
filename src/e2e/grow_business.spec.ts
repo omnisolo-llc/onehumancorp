@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Grow Business Flow', () => {
   test('should display dashboard', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?dashboard=1');
     await expect(page.locator('h1')).toContainText('Dashboard');
     await expect(page.locator('nav')).toBeVisible();
   });
@@ -18,7 +18,7 @@ test.describe('Grow Business Flow', () => {
   });
 
   test('should show welcome message on dashboard', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?dashboard=1');
     await expect(page.locator('text=Welcome back')).toBeVisible();
     await expect(page.locator('text=Your agents are working on your behalf')).toBeVisible();
   });
@@ -26,7 +26,7 @@ test.describe('Grow Business Flow', () => {
 
 test.describe('Navigation', () => {
   test('should have working nav links', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?dashboard=1');
     await page.locator('nav a:has-text("Agents")').click();
     await expect(page.locator('h1')).toContainText('Agents');
   });

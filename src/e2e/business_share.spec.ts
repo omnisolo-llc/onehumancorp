@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Business Share & Embed', () => {
   test('should display dashboard with nav links', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?dashboard=1');
     await expect(page.locator('h1')).toContainText('Dashboard');
     await expect(page.locator('nav')).toBeVisible();
     await expect(page.locator('nav a:has-text("Dashboard")')).toBeVisible();
@@ -10,7 +10,7 @@ test.describe('Business Share & Embed', () => {
   });
 
   test('should navigate to agents page', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?dashboard=1');
     await page.locator('nav a:has-text("Agents")').click();
     await expect(page.locator('h1')).toContainText('Agents');
   });

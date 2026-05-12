@@ -72,6 +72,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Check if docker is available
+if ! docker info >/dev/null 2>&1; then
+  echo "[playwright] Error: docker daemon is not available or /var/run/docker.sock is not accessible."
+  echo "[playwright] If running in Bazel sandbox, ensure 'no-sandbox' tag is present or use --sandbox_add_mount_pair=/var/run/docker.sock"
+  exit 1
+fi
+
 echo "[playwright] Starting E2E infrastructure (PG:$PG_PORT VK:$VK_PORT)..."
 docker run -d --name "$POSTGRES_NAME" -p "$PG_PORT:5432" -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
 docker run -d --name "$VALKEY_NAME" -p "$VK_PORT:6379" valkey/valkey:8-alpine
@@ -86,8 +93,8 @@ for i in $(seq 1 60); do
 done
 
 echo "[playwright] Initializing database roles..."
-docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
-docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
+docker exec "$POSTGRES_NAME" psql -h localhost -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
+docker exec "$POSTGRES_NAME" psql -h localhost -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
 
 echo "[playwright] Workspace root: $workspace_root"
 echo "[playwright] Searching for server binary..."
