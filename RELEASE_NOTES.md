@@ -1,3 +1,11 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize Cloud K8s Scaling multi-tenant queue processing.
+
+### Privacy/Offline Improvements
+- Enforce full local sovereignty testing and standalone isolated privacy mode for swarms.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements

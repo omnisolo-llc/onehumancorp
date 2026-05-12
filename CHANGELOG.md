@@ -1,3 +1,11 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize Cloud K8s Scaling multi-tenant queue processing.
+
+### Privacy/Offline Improvements
+- Enforce full local sovereignty testing and standalone isolated privacy mode for swarms.
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
