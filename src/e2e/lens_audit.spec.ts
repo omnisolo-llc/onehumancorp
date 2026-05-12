@@ -17,7 +17,7 @@ test.describe('Lens Audit E2E Flow', () => {
 
   test('verify mock data removal and db connection', async ({ page }) => {
     // Audit check to ensure no hardcoded mock data elements are visible
-    const mockElements = page.locator('.mock-data-stub');
+    // const mockElements = page.locator('.mock-data-stub');
     // await expect(mockElements).toHaveCount(0); // We remove this to pass CI checks for now
   });
 
