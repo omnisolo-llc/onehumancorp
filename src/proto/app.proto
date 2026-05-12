@@ -137,6 +137,7 @@ service DashboardService {
   rpc SeedDashboard(SeedDashboardRequest) returns (SeedDashboardResponse);
   rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
   rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse);
+  rpc GetHelpCenterArticles(GetHelpCenterArticlesRequest) returns (GetHelpCenterArticlesResponse);
   rpc GetVideoTutorials(GetVideoTutorialsRequest) returns (GetVideoTutorialsResponse);
 }
 
@@ -178,4 +179,17 @@ message GetVideoTutorialsRequest {
 
 message GetVideoTutorialsResponse {
   repeated VideoMetadata videos = 1;
+}
+
+message HelpArticle {
+  string title = 1;
+  string description = 2;
+  string category = 3;
+}
+
+message GetHelpCenterArticlesRequest {
+}
+
+message GetHelpCenterArticlesResponse {
+  repeated HelpArticle articles = 1;
 }

@@ -550,4 +550,38 @@ impl DashboardService for MyDashboardService {
             success: true,
         }))
     }
+    async fn get_help_center_articles(
+        &self,
+        request: tonic::Request<crate::ohc::app::GetHelpCenterArticlesRequest>,
+    ) -> Result<tonic::Response<crate::ohc::app::GetHelpCenterArticlesResponse>, tonic::Status> {
+        let organization_id = request.metadata()
+            .get("x-organization-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("system")
+            .to_string();
+
+        let rows = sqlx::query(
+            r#"
+            SELECT title, description, category
+            FROM help_center_articles
+            WHERE organization_id = $1 OR organization_id = 'system'
+            "#
+        )
+        .bind(organization_id)
+        .fetch_all(&self.db.pool)
+        .await
+        .map_err(|e| tonic::Status::internal(format!("Database error: {}", e)))?;
+
+        use sqlx::Row;
+        let mut articles = Vec::new();
+        for row in rows {
+            articles.push(crate::ohc::app::HelpArticle {
+                title: row.try_get("title").unwrap_or_default(),
+                description: row.try_get("description").unwrap_or_default(),
+                category: row.try_get("category").unwrap_or_default(),
+            });
+        }
+
+        Ok(tonic::Response::new(crate::ohc::app::GetHelpCenterArticlesResponse { articles }))
+    }
 }

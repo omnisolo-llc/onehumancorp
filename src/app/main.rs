@@ -2817,25 +2817,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let help_center_ui = app::HelpCenter::new().unwrap();
 
-                let all_articles = vec![
-                    app::HelpArticle { category: "Getting Started".into(), title: "Set up your store in 5 minutes".into(), description: "Follow our simple guide to add your first product and go live.".into() },
-                    app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
-                    app::HelpArticle { category: "Payments & Billing".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
-                    app::HelpArticle { category: "AI Helpers".into(), title: "What can the Customer Success Helper do?".into(), description: "Your helper can reply to customer emails and Instagram DMs automatically.".into() },
-                    app::HelpArticle { category: "Marketing".into(), title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into() },
-                    app::HelpArticle { category: "Troubleshooting".into(), title: "App is running slow".into(), description: "Learn how to clear your cache and speed up the app.".into() },
-                    app::HelpArticle { category: "Account & Billing".into(), title: "How to change your subscription".into(), description: "Find out how to upgrade or downgrade your plan and view past invoices.".into() },
-                ];
-                let all_articles_rc = std::rc::Rc::new(all_articles.clone());
+                let fetched_articles_rc = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+                let fetched_articles_rc_clone = fetched_articles_rc.clone();
+                let ui_weak = help_center_ui.as_weak();
+                slint::spawn_local(async move {
+                    if let Ok(mut client) = ohc::api::v1::dashboard_service_client::DashboardServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        if let Ok(res) = client.get_help_center_articles(tonic::Request::new(ohc::api::v1::GetHelpCenterArticlesRequest{})).await {
+                            let mut items = Vec::new();
+                            for a in res.into_inner().articles {
+                                items.push(app::HelpArticle {
+                                    title: a.title.into(),
+                                    description: a.description.into(),
+                                    category: a.category.into(),
+                                });
+                            }
+                            *fetched_articles_rc_clone.borrow_mut() = items.clone();
+                            if let Some(ui) = ui_weak.upgrade() {
+                                ui.set_articles(slint::ModelRc::new(slint::VecModel::from(items)));
+                            }
+                        }
+                    }
+                }).unwrap();
 
-                help_center_ui.set_articles(slint::ModelRc::new(slint::VecModel::from(all_articles)));
-
+                let cloned_articles_rc = fetched_articles_rc.clone();
                 let hc_weak_for_search = help_center_ui.as_weak();
-                let articles_for_search = all_articles_rc.clone();
                 help_center_ui.on_execute_search(move || {
                     if let Some(ui) = hc_weak_for_search.upgrade() {
                         let query = ui.get_search_query().to_string().to_lowercase();
-                        let filtered: Vec<app::HelpArticle> = articles_for_search.iter().filter(|a| {
+                        let ref_articles = cloned_articles_rc.borrow();
+                        let filtered: Vec<app::HelpArticle> = ref_articles.iter().filter(|a| {
                             a.title.to_lowercase().contains(&query) ||
                             a.description.to_lowercase().contains(&query) ||
                             a.category.to_lowercase().contains(&query)
