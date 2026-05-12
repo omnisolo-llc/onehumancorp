@@ -25,6 +25,7 @@
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
+- Chore (Cloud): Technical debt cleanup, removing debug logging and consolidating technical documentation.
 - Privacy/Offline (Standalone): Ensured local agents leverage Teammate Mesh gracefully with local-only fallback and zero-trust isolated environments.
 
 ## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
