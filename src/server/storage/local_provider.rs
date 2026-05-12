@@ -288,4 +288,24 @@ mod tests {
         assert_eq!(read_content, content);
         cleanup(dir);
     }
+
+    #[tokio::test]
+    async fn test_local_provider_cdn_url() {
+        let (p, dir) = new_test_provider();
+        write_file(&dir, "public/img.png", "data");
+
+        // Test without CDN env var
+        let url = p.get_blob_url("public/img.png").await.unwrap();
+        assert!(url.starts_with("file://"));
+
+        // Test with CDN env var
+        temp_env::with_var("OHC_CDN_URL", Some("https://cdn.ohc.app"), move || {
+            tokio::runtime::Handle::current().block_on(async {
+                let url = p.get_blob_url("public/img.png").await.unwrap();
+                assert_eq!(url, "https://cdn.ohc.app/public/img.png");
+            });
+        });
+
+        cleanup(dir);
+    }
 }

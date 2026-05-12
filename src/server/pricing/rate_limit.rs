@@ -145,7 +145,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
+                        "Your business is growing fast! You've reached your {} tier limit of {} AI actions. Upgrade to a higher plan to keep the momentum going and unlock even more power for your business.",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
@@ -163,7 +163,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
+                        "This agent is working overtime! It has reached its {} tier limit of {} actions. Upgrade your plan to unlock more agent capacity and keep your operations running smoothly.",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
@@ -196,7 +196,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
+                        "Your product catalog is expanding! You've reached the {} tier limit of {} products. Upgrade to a higher tier to add more items and reach more customers.",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
@@ -236,7 +236,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "You've reached your {} tier limit of {} agent. Upgrade to unlock more power!",
+                        "You're building a great team! You've reached the {} tier limit of {} agents. Upgrade your plan to hire more AI specialists and scale your business.",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
@@ -287,7 +287,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
+                        "Your business is growing and so is your data! You've reached the {} tier storage limit of {}MB. Upgrade to a higher plan to unlock more space for your product photos and assets.",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",

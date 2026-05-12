@@ -1,10 +1,25 @@
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
 filegroup(
     name = "srcs",
     srcs = [
         "chaos_bench.rs",
         "latency_bench.rs",
+        "cost_resilience_test.rs",
         "mod.rs",
 
     ],
     visibility = ["//src/server:__pkg__"],
+)
+
+rust_test(
+    name = "cost_resilience_test",
+    srcs = ["cost_resilience_test.rs"],
+    deps = [
+        "//src/server:server_lib",
+        "//src/server/pricing:server_pricing",
+        "@crates//:tokio",
+        "@crates//:uuid",
+    ],
+    edition = "2024",
 )

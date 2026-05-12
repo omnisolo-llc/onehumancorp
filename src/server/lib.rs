@@ -211,6 +211,15 @@ impl HubService for MyHubService {
             ::server_pricing::rate_limit::PlanTier::Business => 79,
         };
 
+        // Add savings insight
+        let auditor = self.hub.get_cost_auditor();
+        let saved_usd = auditor.get_total_savings();
+        let savings_insight = if saved_usd > 0.1 {
+            format!("You've saved ${:.2} this month through OHC's intelligent prompt caching!", saved_usd)
+        } else {
+            String::new()
+        };
+
         Ok(tonic::Response::new(::server_ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
             ai_actions_used: ai_used as i32,
@@ -218,6 +227,7 @@ impl HubService for MyHubService {
             storage_used_bytes: storage_used_bytes,
             storage_limit_bytes: storage_limit,
             next_bill_estimated: next_bill_estimated,
+            savings_insight,
         }))
     }
 
@@ -241,6 +251,25 @@ impl HubService for MyHubService {
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
+        let agent_breakdown = auditor.get_agent_costs_snapshot();
+        let most_expensive_agent = agent_breakdown.iter()
+            .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|a| a.0.clone())
+            .unwrap_or_else(|| "none".to_string());
+
+        // Prompt Audit for Optimization Tips
+        let mut tips = Vec::new();
+        if !most_expensive_agent.is_empty() && most_expensive_agent != "none" {
+            tips.push(format!("Optimization Tip: Agent {} is your top cost driver. Consider refining its instructions to reduce token usage.", most_expensive_agent));
+        }
+
+        let agents_list = self.hub.get_agents();
+        for agent in agents_list.iter() {
+            if let Some(tip) = ::server_pricing::prompt_audit::PromptAuditor::audit_system_prompt(&agent.name) {
+                 tips.push(format!("Agent {}: {}", agent.id, tip));
+            }
+        }
+
         Ok(tonic::Response::new(::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
             total_costs: (total_costs_f64 * 100.0) as i64,
@@ -249,6 +278,7 @@ impl HubService for MyHubService {
             payment_fees: (payment_fees_f64 * 100.0) as i64,
             period_start: "2024-05-01".to_string(), // In a real app this would be computed
             period_end: "2024-05-31".to_string(),
+            optimization_tips: tips,
         }))
     }
 
