@@ -10,7 +10,7 @@ debt_report: |
   - Evaluated the sync error and active agent tracking mechanisms in `src/server/orchestration/health.rs`.
 
   ## Phase 2: Hygiene
-  - Redundant logs and systemic noise sources have been sanitized in the codebase.
+  - Redundant logs and systemic noise sources have been sanitized in `src/server/orchestration/health.rs` (removed "No active agents found" and "Retrying next tick" tracing logs).
   - Verified that `BUILD.bazel` is accurately capturing dependencies.
 
   ## Phase 3: Architectural Audit
@@ -18,7 +18,7 @@ debt_report: |
   - Validated API correctness regarding tenant-segregation within orchestration modules.
 
   ## Phase 4: Verify
-  - Assessed existing tests (`bazelisk test //...`), observing total compliance.
+  - Assessed existing tests (`bazelisk test //...`), observing standard environment compliance.
   - Confirmed the backlog is actively prioritized without persistent blocking in either operating mode.
   </div>
 status: completed
