@@ -1650,23 +1650,62 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 </body>
             </html>
         "#,
-        "/agents" => r#"
+/agents" => r#"
             <!DOCTYPE html>
             <html>
                 <head><title>OneHuman - Agents</title></head>
                 <body style="font-family: 'Outfit', sans-serif; background: #1a1a2e; color: white; margin: 0; padding: 20px;">
-                    <nav style="margin-bottom: 40px;">
-                        <a href="/" style="color: white; text-decoration: none; margin-right: 20px;">Dashboard</a>
+                    <nav style="margin-bottom: 40px; display: flex; gap: 20px; backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 10px;">
+                        <a href="/" style="color: white; text-decoration: none;">Dashboard</a>
                         <a href="/agents" style="color: #4ecca3; text-decoration: none;">Agents</a>
                     </nav>
-                    <h1>Agents</h1>
-                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                        <div style="background: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 10px; width: 200px;">
-                            <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
+                    <h1>AI Departments</h1>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                        <div style="background: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 10px; backdrop-filter: blur(20px) saturate(200%);">
+                            <h3>The Manager (Ops)</h3><p>Status: Active</p>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 10px; backdrop-filter: blur(20px) saturate(200%);">
+                            <h3>The Ambassador (CS)</h3><p>Status: Active</p>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 10px; backdrop-filter: blur(20px) saturate(200%);">
+                            <h3>The Salesperson</h3><p>Status: Active</p>
                         </div>
                     </div>
-                    <button style="margin-top: 20px; padding: 10px 20px; background: #4ecca3; border: none; border-radius: 5px; color: #1a1a2e; font-weight: bold;">Hire Agent</button>
+                    <h2 style="margin-top: 40px;">Approval Queue</h2>
+                    <div id="approvals-feed" style="display: flex; flex-direction: column; gap: 15px;"></div>
+                    <script>
+                        async function loadApprovals() {
+                            const res = await fetch("/api/agents/approvals");
+                            const data = await res.json();
+                            const feed = document.getElementById("approvals-feed");
+                            feed.innerHTML = "";
+                            if(data.pending_approvals.length === 0) {
+                                feed.innerHTML = "<p>No pending approvals. Your business is running smoothly.</p>";
+                                return;
+                            }
+                            data.pending_approvals.forEach(app => {
+                                const card = document.createElement("div");
+                                card.style.cssText = "background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(20px);";
+                                card.innerHTML = `
+                                    <h4>${app.department} proposed an action</h4>
+                                    <p>${app.description}</p>
+                                    <p>Risk: <span style="color: ${app.action_risk === 'HIGH' ? '#ff6b6b' : '#4ecca3'}">${app.action_risk}</span></p>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button onclick="decide('${app.id}', true)" style="background: #4ecca3; color: #1a1a2e; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">Approve</button>
+                                        <button onclick="decide('${app.id}', false)" style="background: transparent; color: white; border: 1px solid white; padding: 8px 16px; border-radius: 5px; cursor: pointer;">Reject</button>
+                                    </div>
+                                `;
+                                feed.appendChild(card);
+                            });
+                        }
+                        async function decide(id, approved) {
+                            await fetch(`/api/agents/approvals/${id}`, {
+                                method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ approved })
+                            });
+                            loadApprovals();
+                        }
+                        loadApprovals();
+                    </script>
                 </body>
             </html>
         "#,
