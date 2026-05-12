@@ -1,3 +1,10 @@
+## v0.4.19 (Cloud) / v0.4.19+1 (Standalone)
+### Cloud Scaling Improvements
+- 🧹 Maintainer: Cleaned up latency benchmarks
+
+### Privacy/Offline Improvements
+- 🧹 Maintainer: Cleaned up latency benchmarks
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
