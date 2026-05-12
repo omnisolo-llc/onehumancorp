@@ -1,12 +1,11 @@
-pub mod harness;
+pub use ::server_harness as harness;
 pub mod api;
 pub mod db;
-pub mod auth;
+pub use ::server_auth as auth;
 pub mod hub;
 pub mod minimax;
 pub mod billing;
 pub mod ultraplan;
-#[path = "../agents/builtin/autodream.rs"]
 pub mod autodream;
 pub mod autodream_pipeline;
 pub mod tasks;
@@ -14,26 +13,28 @@ pub mod settings;
 pub mod scheduler;
 pub mod msgbus;
 pub mod pipeline;
-pub mod oidc;
+pub use ::server_oidc as oidc;
 pub mod sip;
 pub mod seeder;
 pub mod queue;
 pub mod domain;
-pub mod pricing;
+pub use ::server_pricing as pricing;
 pub mod analytics;
-pub mod telemetry;
+pub use ::server_telemetry as telemetry;
 #[cfg(test)]
 pub mod telemetry_test;
 pub mod chaos;
 pub mod integrations;
-pub mod utils;
+pub use ::server_utils as utils;
 pub mod orchestration;
 pub mod storage;
 pub mod interop;
 #[cfg(test)]
 pub mod benchmarks;
 
-pub mod config;
+pub use ::server_config as config;
+pub use ::server_common as common;
+pub use ::server_ohc as ohc;
 pub mod builder;
 use crate::orchestration::mesh::TeammateMesh;
 
@@ -109,17 +110,17 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
     let spiffe_id_str = spiffe_id.to_str()
         .map_err(|_| tonic::Status::invalid_argument("invalid x-spiffe-id header"))?;
 
-    match crate::auth::parse_spiffe_id(spiffe_id_str) {
+    match ::server_auth::parse_spiffe_id(spiffe_id_str) {
         Ok((_org_id, _agent_id)) => {
             tracing::info!("Authenticated SPIFFE ID successfully.");
         }
-        Err(e) => return Err(tonic::Status::permission_denied(e)),
+        Err(e) => return Err(e),
     }
 
     Ok(req)
 }
 
-pub mod ohc {
+pub mod proto {
     pub mod interop {
         pub use interop_proto::ohc::interop::*;
     }
@@ -149,10 +150,10 @@ pub mod ohc {
     }
 }
 
-use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
-use ohc::orchestration::growth_service_server::GrowthServiceServer;
-use ohc::billing::billing_service_server::BillingServiceServer;
-use ohc::orchestration::*;
+use ::server_ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
+use ::server_ohc::orchestration::growth_service_server::GrowthServiceServer;
+use ::server_ohc::billing::billing_service_server::BillingServiceServer;
+use ::server_ohc::orchestration::*;
 
 pub struct MyHubService {
     hub: Arc<Hub>,
@@ -183,34 +184,34 @@ impl HubService for MyHubService {
 
     async fn get_my_plan(
         &self,
-        request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::MyPlanResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::MyPlanResponse>, tonic::Status> {
         let tenant_id = request.metadata().get("x-tenant-id")
             .map(|v| v.to_str().unwrap_or("default"))
             .unwrap_or("default");
 
-        let tier = self.hub.tracker().get_tenant_tier(tenant_id).await.unwrap_or(crate::pricing::rate_limit::PlanTier::Free);
+        let tier = self.hub.tracker().get_tenant_tier(tenant_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
         let ai_used = self.hub.tracker().get_tenant_actions_used(tenant_id).await.unwrap_or(0);
         let storage_used_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
 
         let plan_name = match tier {
-            crate::pricing::rate_limit::PlanTier::Free => "Free",
-            crate::pricing::rate_limit::PlanTier::Starter => "Starter",
-            crate::pricing::rate_limit::PlanTier::Pro => "Pro",
-            crate::pricing::rate_limit::PlanTier::Business => "Business",
+            ::server_pricing::rate_limit::PlanTier::Free => "Free",
+            ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
+            ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
+            ::server_pricing::rate_limit::PlanTier::Business => "Business",
         }.to_string();
 
         let ai_limit = tier.monthly_action_limit().map(|v| v as i32);
         let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
 
         let next_bill_estimated = match tier {
-            crate::pricing::rate_limit::PlanTier::Free => 0,
-            crate::pricing::rate_limit::PlanTier::Starter => 9,
-            crate::pricing::rate_limit::PlanTier::Pro => 29,
-            crate::pricing::rate_limit::PlanTier::Business => 79,
+            ::server_pricing::rate_limit::PlanTier::Free => 0,
+            ::server_pricing::rate_limit::PlanTier::Starter => 9,
+            ::server_pricing::rate_limit::PlanTier::Pro => 29,
+            ::server_pricing::rate_limit::PlanTier::Business => 79,
         };
 
-        Ok(tonic::Response::new(crate::ohc::orchestration::MyPlanResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
             ai_actions_used: ai_used as i32,
             ai_actions_limit: ai_limit,
@@ -222,8 +223,8 @@ impl HubService for MyHubService {
 
     async fn get_cost_dashboard(
         &self,
-        request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::CostDashboardResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::CostDashboardResponse>, tonic::Status> {
         let tenant_id = request.metadata().get("x-tenant-id")
             .map(|v| v.to_str().unwrap_or("default"))
             .unwrap_or("default");
@@ -240,7 +241,7 @@ impl HubService for MyHubService {
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
-        Ok(tonic::Response::new(crate::ohc::orchestration::CostDashboardResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
             total_costs: (total_costs_f64 * 100.0) as i64,
             llm_cost: (llm_cost_f64 * 100.0) as i64,
@@ -253,8 +254,8 @@ impl HubService for MyHubService {
 
     async fn select_plan(
         &self,
-        request: tonic::Request<crate::ohc::orchestration::SelectPlanRequest>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::SelectPlanResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::SelectPlanRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::SelectPlanResponse>, tonic::Status> {
         let tenant_id = request.metadata().get("x-tenant-id")
             .map(|v| v.to_str().unwrap_or("default"))
             .unwrap_or("default").to_string();
@@ -285,7 +286,7 @@ impl HubService for MyHubService {
         }
             .map_err(|e| tonic::Status::internal(e))?;
 
-        Ok(tonic::Response::new(crate::ohc::orchestration::SelectPlanResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::SelectPlanResponse {
             success: true,
             checkout_url: url,
         }))
@@ -293,8 +294,8 @@ impl HubService for MyHubService {
 
     async fn cancel_subscription(
         &self,
-        request: tonic::Request<crate::ohc::orchestration::CancelSubscriptionRequest>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::CancelSubscriptionResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::CancelSubscriptionRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::CancelSubscriptionResponse>, tonic::Status> {
         let req = request.into_inner();
         let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
@@ -303,16 +304,16 @@ impl HubService for MyHubService {
         client.cancel_subscription(&req.plan_id).await
             .map_err(|e| tonic::Status::internal(e))?;
 
-        Ok(tonic::Response::new(crate::ohc::orchestration::CancelSubscriptionResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::CancelSubscriptionResponse {
             success: true,
         }))
     }
 
     async fn download_invoice(
         &self,
-        _request: tonic::Request<crate::ohc::orchestration::DownloadInvoiceRequest>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::DownloadInvoiceResponse>, tonic::Status> {
-        Ok(tonic::Response::new(crate::ohc::orchestration::DownloadInvoiceResponse {
+        _request: tonic::Request<::server_ohc::orchestration::DownloadInvoiceRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::DownloadInvoiceResponse>, tonic::Status> {
+        Ok(tonic::Response::new(::server_ohc::orchestration::DownloadInvoiceResponse {
             pdf_url: "https://invoice.stripe.com/...".to_string(),
         }))
     }
@@ -333,8 +334,8 @@ impl HubService for MyHubService {
 
     async fn handle_config_wizard(
         &self,
-        _request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
+        _request: tonic::Request<::server_ohc::orchestration::AgentConfig>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::WizardResponse>, tonic::Status> {
         tracing::debug!("Received ConfigWizard request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
@@ -344,8 +345,8 @@ impl HubService for MyHubService {
 
     async fn handle_prompt_tuning(
         &self,
-        _request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
+        _request: tonic::Request<::server_ohc::orchestration::PromptTuningConfig>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::WizardResponse>, tonic::Status> {
         tracing::debug!("Received PromptTuning request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
@@ -461,7 +462,7 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<SaveWizardStateRequest>,
     ) -> Result<tonic::Response<SaveWizardStateResponse>, tonic::Status> {
-        let auth_info = request.extensions().get::<crate::auth::orchestration::AuthInfo>()
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
 
         let org_id = auth_info.org_id.clone();
@@ -481,7 +482,7 @@ impl HubService for MyHubService {
         let tenant_id = org_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
-        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
             "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
@@ -511,7 +512,7 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<GetWizardStateRequest>,
     ) -> Result<tonic::Response<GetWizardStateResponse>, tonic::Status> {
-        let auth_info = request.extensions().get::<crate::auth::orchestration::AuthInfo>()
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
 
         let org_id = auth_info.org_id.clone();
@@ -521,7 +522,7 @@ impl HubService for MyHubService {
         let tenant_id = org_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
-        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let row = sqlx::query(
             "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
@@ -558,7 +559,7 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<ResetWizardStateRequest>,
     ) -> Result<tonic::Response<ResetWizardStateResponse>, tonic::Status> {
-        let auth_info = request.extensions().get::<crate::auth::orchestration::AuthInfo>()
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
 
         let org_id = auth_info.org_id.clone();
@@ -568,7 +569,7 @@ impl HubService for MyHubService {
         let tenant_id = org_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
-        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
             "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
@@ -830,8 +831,14 @@ impl HubService for MyHubService {
         &self,
         request: Request<ApproveTaskRequest>,
     ) -> Result<Response<ApproveTaskResponse>, Status> {
+        let org_id = request.extensions().get::<::server_common::Claims>()
+            .ok_or_else(|| Status::unauthenticated("Missing claims"))?
+            .organization_id.as_ref()
+            .ok_or_else(|| Status::unauthenticated("Missing org_id"))?
+            .clone();
+
         let req = request.into_inner();
-        self.hub.task_manager().approve_task(&req.task_id, req.is_approved)
+        self.hub.task_manager().approve_task(&req.task_id, req.is_approved, &org_id).await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(ApproveTaskResponse {
@@ -1081,7 +1088,7 @@ impl HubService for MyHubService {
 
     async fn publish_mesh_event(
         &self,
-        request: Request<crate::ohc::orchestration::PublishMeshEventRequest>,
+        request: Request<::server_ohc::orchestration::PublishMeshEventRequest>,
     ) -> Result<Response<PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if let Some(event) = req.event {
@@ -1231,6 +1238,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::1]:18789".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+    hub.set_db(db.clone());
     
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
@@ -1400,7 +1408,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
             model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
             llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
-            system_prompt: crate::pricing::compression::reduce_tokens(&std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default()),
+            system_prompt: ::server_pricing::compression::reduce_tokens(&std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default()),
             max_tokens: std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048),
             temperature: std::env::var("OHC_TEMPERATURE").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0),
             max_iterations: std::env::var("OHC_MAX_ITERATIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(100),
@@ -1427,7 +1435,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
     let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
-        std::sync::Arc::new(crate::pricing::rate_limit::RedisRateLimiter::new(client))
+        std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client))
     } else {
         panic!("Failed to initialize Redis client for RateLimiter at {}", redis_url);
     };
@@ -1454,10 +1462,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
+        .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
-            crate::utils::tier_middleware::tier_middleware,
+            ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
         .merge(webhook_router)
@@ -1483,10 +1492,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
-    let store = std::sync::Arc::new(auth::Store::new());
+    let store = std::sync::Arc::new(::server_auth::Store::new());
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
-    if crate::config::get().telemetry_enabled {
+    if ::server_config::get().telemetry_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url.clone());
         telemetry_daemon.start();
@@ -1572,10 +1581,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
+        .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
-        .add_service(crate::ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
-        .add_service(crate::ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
+        .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
+        .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .serve(addr)
         .await?;

@@ -1,0 +1,17 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "audit.rs",
+        "cli.rs",
+        "dayone.rs",
+        "diagnostics.rs",
+        "env_verifier.rs",
+        "mod.rs",
+        "onboarding_agent.rs",
+        "preflight.rs",
+        "provisioner.rs",
+        "validation.rs",
+        "wizard.rs",
+    ],
+    visibility = ["//src/server/services:__pkg__"],
+)

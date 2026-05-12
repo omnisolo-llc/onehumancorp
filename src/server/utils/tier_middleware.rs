@@ -7,14 +7,14 @@ use axum::{
 };
 use std::sync::Arc;
 use serde_json::json;
-use crate::pricing::rate_limit::RedisRateLimiter;
+use ::server_pricing::rate_limit::RedisRateLimiter;
 
 pub async fn tier_middleware(
     State(rate_limiter): State<Arc<RedisRateLimiter>>,
     req: Request,
     next: Next,
 ) -> Response {
-    let tenant_id = match req.extensions().get::<crate::auth::Claims>() {
+    let tenant_id = match req.extensions().get::<::server_auth::common::Claims>() {
         Some(claims) => claims.organization_id.clone().unwrap_or_else(|| "system".to_string()),
         None => "system".to_string(), // In tests or unauth paths
     };
@@ -50,7 +50,7 @@ mod tests {
     use axum::{routing::get, Router};
     use axum::http::StatusCode;
     use std::sync::Arc;
-    use crate::pricing::rate_limit::{RedisRateLimiter, PlanTier};
+    use ::server_pricing::rate_limit::{RedisRateLimiter, PlanTier};
     use redis::AsyncCommands;
 
     async fn setup_test_router(rate_limiter: Arc<RedisRateLimiter>) -> Router {
