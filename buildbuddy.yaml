@@ -14,7 +14,9 @@ actions:
           - "*"
     steps:
       - run: |
-          sudo apt-get update && sudo apt-get install -y ca-certificates curl git
+          sudo apt-get update && sudo apt-get install -y \
+            build-essential pkg-config libssl-dev \
+            ca-certificates curl git
           go install github.com/bazelbuild/bazelisk@latest
           export PATH=$PATH:$(go env GOPATH)/bin
           # Build the server first
@@ -46,6 +48,9 @@ actions:
       GOTOOLCHAIN: "auto"
     steps:
       - run: |
+          sudo apt-get update && sudo apt-get install -y \
+            build-essential pkg-config libssl-dev \
+            ca-certificates curl git
           go install github.com/bazelbuild/bazelisk@latest
           export PATH=$PATH:$(go env GOPATH)/bin
           # Build release artifacts first (needed by verification_tests)
@@ -75,6 +80,9 @@ actions:
       GOTOOLCHAIN: "auto"
     steps:
       - run: |
+          sudo apt-get update && sudo apt-get install -y \
+            build-essential pkg-config libssl-dev \
+            ca-certificates curl git
           go install github.com/bazelbuild/bazelisk@latest
           export PATH=$PATH:$(go env GOPATH)/bin
           bazelisk build //... --config=linux
