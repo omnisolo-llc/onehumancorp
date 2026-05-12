@@ -13,5 +13,6 @@ rust_library(
         "@crates//:sqlx",
         "@crates//:tracing",
         "@crates//:opentelemetry",
+        "@crates//:regex",
     ],
 )

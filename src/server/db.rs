@@ -787,6 +787,7 @@ pub async fn insert_autodream_memory(
 
 
     pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let redacted_blockers = ::server_telemetry::redact_text_pii(blockers);
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
@@ -796,7 +797,7 @@ pub async fn insert_autodream_memory(
                          updated_at = CURRENT_TIMESTAMP
                      WHERE id = $2"
                 )
-                .bind(blockers)
+                .bind(redacted_blockers)
                 .bind(mission_id)
                 .execute(sqlite_pool)
                 .await?;
@@ -811,7 +812,7 @@ pub async fn insert_autodream_memory(
                          updated_at = CURRENT_TIMESTAMP
                      WHERE id = $2"
                 )
-                .bind(blockers)
+                .bind(redacted_blockers)
                 .bind(mission_id)
                 .execute(&mut *tx)
                 .await?;

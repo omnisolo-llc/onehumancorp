@@ -547,6 +547,7 @@ pub fn extract_spiffe_id_from_metadata(md: &tonic::metadata::MetadataMap) -> Res
         .map(|s| s.to_string())
 }
 
+#[derive(Clone)]
 pub struct AuthInfo {
     pub spiffe_id: String,
     pub org_id: String,
@@ -645,7 +646,15 @@ impl AuthService for AuthServiceServerImpl {
     }
 
     async fn create_user(&self, request: Request<CreateUserRequest>) -> Result<Response<UserProto>, Status> {
+        let auth_info = request.extensions().get::<AuthInfo>()
+            .cloned()
+            .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
         let req = request.into_inner();
+
+        if ::server_config::get().multitenant && req.organization_id != auth_info.org_id {
+            return Err(Status::permission_denied("Cross-tenant user creation is prohibited"));
+        }
+
         let user = self.store.create_user(
             req.email.clone(),
             req.email.clone(),

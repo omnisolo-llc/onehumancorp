@@ -3,6 +3,7 @@ use serde_json::{Value, Map};
 use sqlx::{PgPool, query};
 use chrono::Utc;
 use std::sync::OnceLock;
+use regex::Regex;
 use opentelemetry::global;
 use opentelemetry::metrics::UpDownCounter;
 
@@ -243,11 +244,54 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("billing") ||
     k.contains("ip_address") ||
     k.contains("mac_address") ||
-    k.contains("geolocation")
+    k.contains("geolocation") ||
+    k.contains("tax_id") ||
+    k.contains("medical") ||
+    k.contains("health") ||
+    k.contains("passport")
+}
+
+static EMAIL_REGEX: OnceLock<Regex> = OnceLock::new();
+
+fn get_email_regex() -> &'static Regex {
+    EMAIL_REGEX.get_or_init(|| {
+        Regex::new(r"(?i)[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}").unwrap()
+    })
 }
 
 pub fn is_email(s: &str) -> bool {
-    s.contains('@') && s.contains('.')
+    get_email_regex().is_match(s)
+}
+
+pub fn redact_text_pii(text: &str) -> String {
+    let mut redacted = text.to_string();
+
+    // Redact emails
+    redacted = get_email_regex().replace_all(&redacted, "[EMAIL_REDACTED]").to_string();
+
+    // Redact lines containing sensitive keywords if they look like assignments or logs
+    let sensitive_keywords = [
+        "password", "secret", "api_key", "token", "ssn", "tax_id", "passport", "credit_card"
+    ];
+
+    let mut final_text = String::new();
+    for line in redacted.lines() {
+        let mut line_redacted = false;
+        let lower_line = line.to_lowercase();
+        for kw in &sensitive_keywords {
+            if lower_line.contains(kw) && (lower_line.contains(':') || lower_line.contains('=')) {
+                final_text.push_str(&format!("[REDACTED LINE CONTAINING {}]\n", kw.to_uppercase()));
+                line_redacted = true;
+                break;
+            }
+        }
+        if !line_redacted {
+            final_text.push_str(line);
+            final_text.push('\n');
+        }
+    }
+
+    final_text.trim_end().to_string()
 }
 
 #[cfg(test)]
@@ -292,6 +336,31 @@ mod tests {
         // But wait! `raw_email` key also contains "email"! Let's test a key that does NOT contain sensitive words but HAS email string
         assert_eq!(redacted_json["raw_email"], "[REDACTED]"); // "email" in key matched first!
         assert_eq!(redacted_json["API_KEY"], "[REDACTED]");
+    }
+
+    #[test]
+    fn test_redact_text_pii() {
+        let input = "Contact us at support@example.com or admin@localhost. Your password is 'secret123'. SSN: 123-45-6789.";
+        let redacted = redact_text_pii(input);
+        assert!(redacted.contains("[EMAIL_REDACTED]"));
+        assert!(!redacted.contains("support@example.com"));
+        assert!(!redacted.contains("admin@localhost"));
+        // password keyword triggers line redaction if there is a ':' or '='
+        let input2 = "password: secret123\napi_key = key-val\nSafe line";
+        let redacted2 = redact_text_pii(input2);
+        assert!(redacted2.contains("[REDACTED LINE CONTAINING PASSWORD]"));
+        assert!(redacted2.contains("[REDACTED LINE CONTAINING API_KEY]"));
+        assert!(redacted2.contains("Safe line"));
+        assert!(!redacted2.contains("secret123"));
+        assert!(!redacted2.contains("key-val"));
+    }
+
+    #[test]
+    fn test_is_sensitive_key_expansion() {
+        assert!(is_sensitive_key("tax_id"));
+        assert!(is_sensitive_key("medical_record"));
+        assert!(is_sensitive_key("health_data"));
+        assert!(is_sensitive_key("passport_number"));
     }
 }
 

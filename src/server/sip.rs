@@ -28,6 +28,7 @@ impl SipDB {
     }
 
     pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), sqlx::Error> {
+        let redacted_blockers = ::server_telemetry::redact_text_pii(blockers);
         let mut tx = self.pool.begin().await?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
 
@@ -38,7 +39,7 @@ impl SipDB {
                  updated_at = CURRENT_TIMESTAMP
              WHERE id = $2 AND tenant_id = $3"
         )
-        .bind(blockers)
+        .bind(redacted_blockers)
         .bind(mission_id)
         .bind(&self.org_id)
         .execute(&mut *tx)
@@ -464,8 +465,8 @@ mod tests {
                 .await
                 .unwrap();
 
-            // Call handoff_mission
-            let res = sip_db.handoff_mission("test_mission_id", "Missing dependencies").await;
+            // Call handoff_mission with PII
+            let res = sip_db.handoff_mission("test_mission_id", "Missing dependencies for user@example.com").await;
             assert!(res.is_ok());
 
             // Verify
@@ -479,9 +480,11 @@ mod tests {
 
             assert_eq!(status, "blocked");
             assert!(log.contains("Missing dependencies"));
+            assert!(log.contains("[EMAIL_REDACTED]"));
+            assert!(!log.contains("user@example.com"));
 
-            // Call again to test append
-            let res2 = sip_db.handoff_mission("test_mission_id", "Another blocker").await;
+            // Call again to test append and sensitive keyword
+            let res2 = sip_db.handoff_mission("test_mission_id", "password: secret-pii").await;
             assert!(res2.is_ok());
 
             let row2 = sqlx::query("SELECT mission_log FROM agent_missions WHERE id = 'test_mission_id'")
@@ -490,7 +493,8 @@ mod tests {
                 .unwrap();
 
             let log2: String = row2.get("mission_log");
-            assert!(log2.contains("Missing dependencies\nAnother blocker"));
+            assert!(log2.contains("[REDACTED LINE CONTAINING PASSWORD]"));
+            assert!(!log2.contains("secret-pii"));
 
             // Clean up
             sqlx::query("DELETE FROM agent_missions WHERE id = 'test_mission_id'").execute(&pool).await.unwrap();
