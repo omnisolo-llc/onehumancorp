@@ -7,6 +7,9 @@
 
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
 
@@ -15,6 +18,9 @@
 
 
 ## v0.4.39 (Cloud) / v0.4.39+1 (Standalone)
+
+### Chore Work
+- Remove debug loggings from tests
 
 ### Cloud Scaling Improvements
 - Add auto-scaling limits for Sub-Agent Queue and Teammate Mesh APIs to handle increased load spikes.
@@ -25,6 +31,9 @@
 
 ## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
 
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Enhance multi-tenant onboarding flow tests for the Welcome Checklist to ensure reliable scaling.
 
@@ -33,12 +42,18 @@
 
 
 ## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Fix orchestration mesh tests that failed due to multiple declarations and invalid imports.
 ### Privacy/Offline Improvements
 - Add missing `RedactInterfacePII` to fix backend telemetry data sync crashes.
 
 ## v0.4.35 (Cloud) / v0.4.35+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - 🔨 Forge: Sub-Agent Orchestration Queue Test Fixes (#12202)
 
@@ -58,11 +73,17 @@
 
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
 
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - 🛡️ Sentry: Health Guardianship /api/v1/health improvements for multi-tenant state sync
 
 ### Privacy/Offline Improvements
 - 🛡️ Sentry: Health Guardianship /api/v1/health improvements for standalone isolated node switching
+
+### Chore Work
+- Remove debug loggings from tests
 
 ### Cloud Scaling Improvements
 - 🧹 Maintainer: Ensure multitenant K8s compliance for all pods (#11546)
@@ -72,6 +93,9 @@
 
 
 ## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - 🔗 Link: update api routing to use axum 0.8 style path variables (#11553)
 
@@ -80,6 +104,9 @@
 
 
 ## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - 🔨 Forge: Refactor GrowthReferralWidget to use GlassCard for premium aesthetic (#11347)
 
@@ -87,6 +114,9 @@
 - 🔨 Forge: Refactor GrowthReferralWidget to use GlassCard for premium aesthetic (#11347)
 
 ## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
+
+### Chore Work
+- Remove debug loggings from tests
 
 ### Cloud Scaling Improvements
 - 🔗 Link: Implemented Teammate Mesh Communication Layer and Distributed Locks (#11313)
@@ -97,6 +127,9 @@
 
 
 ## v0.4.28 (Cloud) / v0.4.28+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - ✍️ Scribe: Scaled the Help Center & Tooltip Documentation System for multi-tenant cloud environments (#11267)
 
@@ -104,6 +137,9 @@
 - ✍️ Scribe: Enabled offline-first support for the Help Center & Tooltip Documentation System in standalone mode (#11267)
 
 ## v0.4.27 (Cloud) / v0.4.27+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - 🎨 Canvas: Refactored the MCP LocalProxyClient to use an abstract BlobProvider with S3 support for cloud multitenant scaling.
 
@@ -111,6 +147,9 @@
 - 🎨 Canvas: Added LocalBlobProvider implementation to ensure privacy and offline capabilities for the MCP proxy.
 
 ## v0.4.26 (Cloud) / v0.4.26+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Optimize parallel fetch latency in dashboard API endpoints (#4867)
 - Implement Business Journey Architecture with state machine and RLS (#c0f0)
@@ -124,6 +163,9 @@
 
 
 ## v0.4.25 (Cloud) / v0.4.25+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Fix IpcTransport cross-mode duplicate delivery and checkpoint races (#734b)
 - Fix gRPC calls with App UI Interceptor (#9cb3)
@@ -139,6 +181,9 @@
 - Add UI cards for missing tool integrations in Slint dashboard (#5748)
 
 ## v0.4.24 (Cloud) / v0.4.24+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - docs: update outdated Go/Flutter references to Rust/Slint (#9661)
 
@@ -150,6 +195,9 @@
 - Fix onboarding confetti state transition and wire checklist navigation (#9418)
 
 ## v0.4.22 (Cloud) / v0.4.22+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - chore: migrate protobufs to bazel and fix tests (#9343)
 
@@ -157,6 +205,9 @@
 - chore: migrate protobufs to bazel and fix tests (#9343)
 
 ## v0.4.21 (Cloud) / v0.4.21+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - 🤖 Implementer: Harness Upgrade - [CrewAI Role-based architecture] (#9107)
 
@@ -164,6 +215,9 @@
 - 🤖 Implementer: Harness Upgrade - [CrewAI Role-based architecture] (#9107)
 
 ## v0.4.20 (Cloud) / v0.4.20+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - 🤖 Implementer: Harness Upgrade - Anthropic 3-Stage Tool Gating (#8965)
 
@@ -171,6 +225,9 @@
 - 🤖 Implementer: Harness Upgrade - Anthropic 3-Stage Tool Gating (#8965)
 
 ## v0.4.19 (Cloud) / v0.4.19+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Fix Bazel test execution time warning for `server_test` (#8941)
 
@@ -178,6 +235,9 @@
 - Fix Bazel test execution time warning for `server_test` (#8941)
 
 ## v0.4.18 (Cloud) / v0.4.18+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)
 
@@ -185,6 +245,9 @@
 - 🔗 Link: Share Teammate Mesh and enable in-process builtin agent (#8924)
 
 ## v0.4.17 (Cloud) / v0.4.17+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - 🎥 Lens Audit: Softer Draft Wording (#8901)
 
@@ -192,6 +255,9 @@
 - 🎥 Lens Audit: Softer Draft Wording (#8901)
 
 ## v0.4.16 (Cloud) / v0.4.16+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - [Hybrid Security Fix] Enforced SPIFFE ID headers for Authentication and multi-tenancy (#8891)
 
@@ -199,6 +265,9 @@
 - [Hybrid Security Fix] Enforced SPIFFE ID headers for Authentication and multi-tenancy (#8891)
 
 ## v0.4.15 (Cloud) / v0.4.15+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Implement Harness Upgrade - Subagent Orchestration: Worktree pattern. SubagentExecutor spawns a git worktree with an isolated branch (`subagent-<task_id>`) for secure local subagent executions.
 
@@ -206,10 +275,16 @@
 - Implemented secure git worktree sandbox isolation to prevent parent directory access overrides when executing local tools.
 
 ## v0.4.14 (Cloud) / v0.4.14+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Refactored Teammate Mesh transport to use Protobuf serialization for interop improvements.
 
 ## v0.4.13 (Cloud) / v0.4.13+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Implemented Hybrid Distributed MeshLock Implementation
 - Abstracted SKIP LOCKED for sqlite and added chaos tests
@@ -229,6 +304,9 @@
 - Applied Glassmorphism UI tokens to dashboard, plan, cost, and walkthrough components.
 
 ## v0.4.11 (Cloud) / v0.4.11+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Implemented JSON minification and Gzip compression middleware to optimize server HTTP payloads.
 
@@ -236,6 +314,9 @@
 - Fixed TooltipRegistry namespace issue in Slint UI and improved dashboard accessibility.
 
 ## v0.4.10 (Cloud) / v0.4.10+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Creates formal SQL definitions for `crdt_deltas` and `local_mcp_rag_tasks` to prepare them for RLS.
 - Enforces `ENABLE ROW LEVEL SECURITY` across 18 tenant data tables and provisions them with default `CREATE POLICY` statements binding queries to the current authenticated database context.
@@ -246,6 +327,9 @@
 
 
 ## v0.4.9 (Cloud) / v0.4.9+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Implement Harness Upgrade: Guardrails & Safety, Agent Loop Capabilities, Concurrent Tool Execution, Granular Capability ACLs, and 4-types of Error Handling with Compounding Error Prevention.
 - Add hybrid latency benchmarks for cloud and standalone mode.
@@ -264,6 +348,9 @@
 
 
 ## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Implement Harness Upgrade with 4-types of Error Handling and Compounding Error Prevention.
 - Add cost dashboard and plan UI features.
@@ -275,6 +362,9 @@
 
 
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Implement Business Setup and Website Builder wizard UI scaffolding (#86b87bbd).
 - Implement onboarding wizard cross-device state management (#c58aec3b).
@@ -286,6 +376,9 @@
 - Implement Welcome Checklist post-onboarding widget on Dashboard (#ad60208b).
 
 ## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Implement Sub-Agent Orchestration Queue for KAIROS (#7696).
 - Implement Realtime Teammate Mesh APIs (#7687).
@@ -300,6 +393,9 @@
 - Generate business journey architecture report (#7664).
 
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Implement Phase 3: AutoDream Vector Data Pipelines.
 
@@ -307,6 +403,9 @@
 - Enhance AutoDream Vector Data Pipelines for standalone privacy.
 
 ## v0.4.4 (Cloud) / v0.4.4+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Parallel execution for SyncMissions and SyncContextSync.
 - Optimize OHC-SIP synchronization latency.
@@ -316,6 +415,9 @@
 - Add Telemetry for SQLite lock contention.
 
 ## v0.4.3 (Cloud) / v0.4.3+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Optimise Orchestration & Observability.
 
@@ -324,6 +426,9 @@
 
 
 ## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Implement Local Embedding Caching for Cost Optimization.
 
@@ -331,6 +436,9 @@
 - Enhance standalone performance via Local Embedding Caching.
 
 ## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Architect Cross-Mode Database Schema Syncer via MCP.
 - Optimize PopMessages latency.
@@ -341,6 +449,9 @@
 
 
 ## v0.3.11 (Cloud) / v0.3.11+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Implement Bubblewrap Sandbox Telemetry.
 - Implement Hybrid Parity Stress Tests.
@@ -349,6 +460,9 @@
 - Clean up dead Linear integration and harden standalone wrapper.
 
 ## v0.3.9 (Cloud) / v0.3.9+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Integrated Telemetry-MCP Bridge securely via docker-compose and added a thread-safe registration implementation for the KAIROS orchestrator.
 
@@ -356,6 +470,9 @@
 - Maintained Standalone telemetry consistency across single-user environments for the new MCP Bridge integration.
 
 ## v0.3.8 (Cloud) / v0.3.8+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Added MissionIngestionWorker to seamlessly vectorize mission artifacts into AutoDream long-term memory.
 
@@ -364,6 +481,9 @@
 
 
 ## v0.3.7 (Cloud) / v0.3.7+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Implemented Centrifuge WebSockets integration by hooking up CentrifugeNode to MeshTransport interface logic in orchestration.
 
@@ -371,6 +491,9 @@
 - Added interop.ValidateSPIFFEID validation to all realtime mesh broadcast and capability advertisements ensuring compliance with OHC Hybrid Architecture protocols.
 
 ## v0.3.6 (Cloud) / v0.3.6+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Implemented storage compression and token budget management tools for cost optimization in Kubernetes deployments.
 
@@ -380,6 +503,9 @@
 
 
 ## v0.3.5 (Cloud) / v0.3.5+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Enhanced Teammate Mesh APIs and AutoDream Worker logic for more scalable Kubernetes pod communications.
 
@@ -387,6 +513,9 @@
 - Continued stabilization of the offline KAIROS state machine functionality via SQLite fallbacks.
 
 ## v0.3.4 (Cloud) / v0.3.4+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Enhanced Cloud multi-tenant architecture and Hybrid Teammate Mesh APIs for improved coordination across Kubernetes pods.
 
@@ -394,6 +523,9 @@
 - Implemented fully offline-capable KAIROS state machine via SQLite with safe fallbacks.
 
 ## v0.3.3 (Cloud) / v0.3.3+1 (Standalone)
+### Chore Work
+- Remove debug loggings from tests
+
 ### Cloud Scaling Improvements
 - Enhanced Cloud multi-tenant architecture with robust onboarding tests and removed obsolete test files for cleaner CI/CD execution.
 
