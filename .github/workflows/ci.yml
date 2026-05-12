@@ -25,10 +25,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Install base dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ca-certificates curl git
+
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
+          bazelisk-cache: false
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -53,20 +58,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-playwright-
 
-      - name: Install system dependencies for Tauri and Slint
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            pkg-config libdbus-1-dev libatk1.0-dev libgtk-3-dev \
-            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev xvfb \
-            ca-certificates curl git
-
       - name: Build release artifacts
         run: bazel build //release:all_release_artifacts --config=linux
 
       - name: Test
         run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" \
           bazel test \
             --config=linux \
             --test_output=errors \
@@ -80,10 +76,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Install base dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ca-certificates curl git
+
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
+          bazelisk-cache: false
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -100,14 +101,6 @@ jobs:
             build --color=yes
             build --show_timestamps
 
-      - name: Install system dependencies for Tauri
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            pkg-config libdbus-1-dev libatk1.0-dev libgtk-3-dev \
-            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev \
-            ca-certificates curl git
-
       - name: Build all artifacts
         run: |
           bazel build //... --config=linux
@@ -120,10 +113,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Install base dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ca-certificates curl git
+
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
+          bazelisk-cache: false
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -136,11 +134,6 @@ jobs:
             test --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ca-certificates curl git
 
       - name: Build server
         run: bazel build //src/server:server --config=linux
