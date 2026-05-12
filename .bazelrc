@@ -2,8 +2,8 @@
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
 # Provides remote cache, remote execution, and build event streaming.
-build --config=buildbuddy-official
-test --config=buildbuddy-official
+build --config=local
+test --config=local
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
@@ -62,31 +62,31 @@ build --action_env=CI
 # ── BuildBuddy official (default) ─────────────────────────────────────────────
 # Remote cache + executor at onehumancorp.buildbuddy.io with BES streaming.
 common:buildbuddy --bes_timeout=600s
-build:buildbuddy-official --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/
-build:buildbuddy-official --bes_backend=grpcs://onehumancorp.buildbuddy.io
+build:local --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/
+build:local --bes_backend=grpcs://onehumancorp.buildbuddy.io
 # Upload BES data asynchronously so the build/test result is available sooner.
-build:buildbuddy-official --bes_upload_mode=fully_async
-build:buildbuddy-official --verbose_failures
-common:buildbuddy-official --remote_cache=grpcs://onehumancorp.buildbuddy.io
-# common:buildbuddy-official --remote_executor=grpcs://onehumancorp.buildbuddy.io
+build:local --bes_upload_mode=fully_async
+build:local --verbose_failures
+common:local --remote_cache=grpcs://onehumancorp.buildbuddy.io
+# common:local --remote_executor=grpcs://onehumancorp.buildbuddy.io
 # Proxy artifact downloads through BuildBuddy's CAS for faster blob fetches.
-common:buildbuddy-official --experimental_remote_downloader=grpcs://onehumancorp.buildbuddy.io
-common:buildbuddy-official --remote_upload_local_results
-common:buildbuddy-official --remote_timeout=10m
-# common:buildbuddy-official --remote_cache_compression
-common:buildbuddy-official --remote_local_fallback
+common:local --experimental_remote_downloader=grpcs://onehumancorp.buildbuddy.io
+common:local --remote_upload_local_results
+common:local --remote_timeout=10m
+# common:local --remote_cache_compression
+common:local --remote_local_fallback
 # Fall back to direct download when BuildBuddy CAS doesn't have the blob.
 # Prevents CacheNotFoundException from failing repository rule fetches.
-common:buildbuddy-official --experimental_remote_downloader_local_fallback
-common:buildbuddy-official --jobs=200
+common:local --experimental_remote_downloader_local_fallback
+common:local --jobs=200
 # Default read-only API key (public, read-only – cannot push artifacts or
 # modify any BuildBuddy state; safe to keep in version control).
-common:buildbuddy-official --remote_header=x-buildbuddy-api-key=0kY0rwFuU8wZVQ5339w6
+common:local --remote_header=x-buildbuddy-api-key=0kY0rwFuU8wZVQ5339w6
 
 # ── BuildBuddy self-hosted ──────────────────────────────────────
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
 # Note: uses --spawn_strategy=remote (all eligible actions remote-first) unlike
-# buildbuddy-official which relies on the global sandboxed,local fallback chain.
+# local which relies on the global sandboxed,local fallback chain.
 common:buildbuddy --bes_timeout=600s
 common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
 common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
