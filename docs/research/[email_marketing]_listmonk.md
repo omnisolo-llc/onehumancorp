@@ -1,17 +1,28 @@
-# Scout: Tool Integration Research Q2
+# Email Marketing: Customer Campaigns via Listmonk
 
-## 3. Email Marketing
-**Title**: Integrate Listmonk for Embedded, No-Jargon Email Campaigns
-**Problem Statement**: Priya the Boutique Owner wants to email her past customers when new stock arrives but finds Mailchimp confusing and expensive. She just wants to say "send this to everyone who bought last month."
-**Research Report**:
-- Listmonk is an open-source, self-hosted newsletter and mailing list manager.
-- It is lightweight (Go + PostgreSQL), aligning perfectly with the OHC backend stack.
-- Zero extra SaaS costs for OHC Standalone users; minimal scaling costs for Cloud.
-- Simplifies list management and supports template-based sending without complex drag-and-drop builders.
-**Design Doc**:
-- Customer Success ("The Ambassador") tags customers automatically (e.g., "bought-shoes").
-- Users type a plain-text prompt: "Draft an email about our new summer dresses."
-- AI generates the HTML, Listmonk handles the reliable batch delivery, bounce tracking, and open rate analytics.
-**Implementation Prompt**: Integrate Listmonk as the underlying email engine to allow users to trigger marketing emails to specific customer segments directly from the OHC dashboard.
-**Priority**: P2
-**Estimated Scope**: Medium
+## Title
+Implement Simple Customer Newsletters
+
+## Problem Statement
+Small business owners want to inform existing customers about sales, holiday hours, or new products, but traditional tools (Mailchimp) are too complicated and expensive for sending a simple occasional update.
+
+## Research Report
+- **Tool Evaluated:** Listmonk
+- **Ease of Use:** Medium-High. Much simpler than enterprise tools, but requires initial SMTP setup.
+- **Pricing:** Open source (100% free if self-hosted).
+- **Reputation:** Fast, reliable, and lightweight standalone newsletter manager.
+- **Cloud/Standalone Compatibility:** Great for Standalone. For Cloud, OHC would manage a centralized SMTP pool.
+
+## Design Doc
+- **Integration Point:** A "Campaigns" or "Announcements" tab linked to the Customer Directory.
+- **User Experience:** The user selects a list of customers, types a rich-text message (like writing an email), and clicks send. OHC tracks who opened it.
+- **System Behavior:** OHC syncs the customer list to Listmonk. When a user sends a campaign, OHC triggers the Listmonk API to dispatch emails through the configured SMTP provider.
+
+## Implementation Prompt
+Build a simple email announcement feature. Allow users to select segments of their customer list (e.g., "All", "Recent Customers") and compose a message using a basic rich-text editor. Avoid complex drag-and-drop template builders; focus on simple, plain-text or lightweight branded emails. Include basic analytics (sent, opened) on the dashboard.
+
+## Priority
+P2
+
+## Estimated Scope
+Medium

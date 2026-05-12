@@ -1,18 +1,28 @@
-# Scout: Tool Integration Research Q2
+# Shipping & Logistics: Multi-Carrier Shipping via EasyPost
 
-## 5. Shipping & Logistics
-**Title**: Integrate EasyPost for Painless Shipping Labels & Tracking
-**Problem Statement**: Priya the Boutique Owner hates manually copying addresses to USPS/FedEx to buy shipping labels. She wants one button to print a label and auto-email the tracking number.
-**Research Report**:
-- EasyPost provides a single, unified API for 100+ carriers (USPS, FedEx, UPS, DHL).
-- Competitive pricing (free tier for low volume, pennies per label after).
-- Abstracts away complex carrier-specific APIs and handles tracking webhooks.
-- Great fit for OHC physical product merchants.
-**Design Doc**:
-- Upon order placement, "Operations" calculates the shipping rate via EasyPost and charges the customer.
-- In the Order details view, the business owner clicks "Print Label."
-- EasyPost generates a PDF (auto-compressed and stored in GCS).
-- Tracking updates via EasyPost webhooks trigger "The Ambassador" to email the customer automatically.
-**Implementation Prompt**: Connect EasyPost to the order fulfillment flow so users can generate shipping labels and automatically send tracking updates to customers.
-**Priority**: P1
-**Estimated Scope**: Medium
+## Title
+Automate Shipping Rates and Label Generation
+
+## Problem Statement
+E-commerce small business owners spend hours manually typing addresses into carrier websites (USPS, FedEx, local posts) to compare rates and print shipping labels.
+
+## Research Report
+- **Tool Evaluated:** EasyPost
+- **Ease of Use:** High. Excellent developer documentation translates to a smooth user experience.
+- **Pricing:** Pay-as-you-go (e.g., 1¢ per label), no monthly fees.
+- **Reputation:** Extremely reliable, high uptime, broad international carrier support.
+- **Cloud/Standalone Compatibility:** API-only (Cloud). Requires internet access for Standalone mode, but can cache some static rates locally if needed.
+
+## Design Doc
+- **Integration Point:** "Orders" management screen.
+- **User Experience:** When an order is ready to ship, the owner enters package dimensions/weight. OHC instantly displays a list of carrier options sorted by price/speed. The owner clicks "Buy Label," and a printable PDF is generated. Tracking info is automatically emailed to the customer.
+- **System Behavior:** OHC queries EasyPost API for rates and label generation. Tracking webhooks from EasyPost update OHC order status.
+
+## Implementation Prompt
+Integrate a shipping rate calculator and label printing workflow into the Order Details page. Provide an interface to input package weight and dimensions, fetch rates, and generate a printable shipping label. Automatically update the order status to 'Shipped' and provide the tracking number in the UI.
+
+## Priority
+P2
+
+## Estimated Scope
+Medium

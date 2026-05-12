@@ -1,17 +1,28 @@
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Order Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
-**Research Report**:
-- **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
-**Design Doc**:
-- User goes to Settings and toggles "Send me SMS for new orders".
-- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
-- (Future: Customers can also receive SMS receipts).
-**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
-**Priority**: P2
-**Estimated Scope**: Medium
+# SMS & Notifications: Automated Alerts via Twilio
+
+## Title
+Automate SMS Reminders and Notifications
+
+## Problem Statement
+Emails often go unread. Small business owners (especially service providers) suffer from no-shows. They need an automated way to send text messages to clients to confirm appointments or provide service updates, without giving out their personal phone number.
+
+## Research Report
+- **Tool Evaluated:** Twilio
+- **Ease of Use:** Developer-focused, requires OHC to build a simple UI on top.
+- **Pricing:** Pay-as-you-go (fractions of a cent per message).
+- **Reputation:** Industry gold standard for telecom APIs.
+- **Cloud/Standalone Compatibility:** API-only. Standalone instances will need external internet access to dispatch messages.
+
+## Design Doc
+- **Integration Point:** Settings -> Notifications, and individual customer profiles.
+- **User Experience:** The owner toggles "Send SMS Reminders." OHC provisions a local phone number for their business. When a client books an appointment, they receive an automated text 24 hours prior.
+- **System Behavior:** OHC uses Twilio's API to buy numbers and send outbound SMS, parsing inbound replies (e.g., "Confirm") to update OHC state.
+
+## Implementation Prompt
+Build an SMS notification settings panel. Allow users to configure simple automated text message templates (e.g., appointment reminders, order ready for pickup). Ensure the system handles opt-outs (STOP messages) automatically to remain compliant.
+
+## Priority
+P1
+
+## Estimated Scope
+Medium
