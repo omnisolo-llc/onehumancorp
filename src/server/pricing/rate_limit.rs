@@ -63,7 +63,7 @@ pub struct RateLimitStatus {
 pub struct RedisRateLimiter {
     client: Client,
     connection: OnceCell<redis::aio::MultiplexedConnection>,
-    pub telemetry_store: Option<std::sync::Arc<crate::harness::telemetry::ViolationStore>>,
+    pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
 }
 
 impl RedisRateLimiter {
@@ -71,7 +71,7 @@ impl RedisRateLimiter {
         Self { client, connection: OnceCell::new(), telemetry_store: None }
     }
 
-    pub fn with_telemetry(mut self, store: std::sync::Arc<crate::harness::telemetry::ViolationStore>) -> Self {
+    pub fn with_telemetry(mut self, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
         self.telemetry_store = Some(store);
         self
     }
