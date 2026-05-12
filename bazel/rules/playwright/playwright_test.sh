@@ -58,11 +58,20 @@ for i in $(seq 1 60); do
 done
 
 # Start the server binary
-# In Bazel, the binary is in the runfiles.
-SERVER_BIN="src/server/server"
-if [[ ! -x "$SERVER_BIN" ]]; then
-    # Try finding it via find if the relative path fails (bazel sandbox layout can vary)
-    SERVER_BIN=$(find . -name server -type f -executable | grep "src/server/server" | head -n 1)
+# In Bazel runfiles, the binary is available as:
+#   - ./bazel-bin/src/server/server (outside sandbox)
+#   - ./src/server/server (symlink in runfiles _main)
+SERVER_BIN=""
+for candidate in "bazel-bin/src/server/server" "src/server/server"; do
+  if [[ -x "$candidate" ]]; then
+    SERVER_BIN="$candidate"
+    break
+  fi
+done
+
+if [[ -z "$SERVER_BIN" ]]; then
+  # Try finding it via find if the relative paths fail
+  SERVER_BIN=$(find . -name server -type f -executable 2>/dev/null | grep -m1 "src/server/server" || echo "")
 fi
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
@@ -97,8 +106,9 @@ export CI=true
 export BASE_URL="http://localhost:18789"
 
 if [[ -n "$spec_file" ]]; then
-  echo "[playwright] Running spec on host: $spec_file"
+  echo "[playwright] Running spec on host: src/e2e/$spec_file"
   # We use npx to ensure we use the local playwright version
+  # Pass full path from workspace root
   npx playwright test --config playwright.config.ts "src/e2e/$spec_file"
 else
   echo "[playwright] Running all specs on host"
