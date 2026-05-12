@@ -8,6 +8,7 @@
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
+- Chore: Codebase hygiene - removed debug logs and resolved TODOs.
 - Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
 
 ### Privacy/Offline Improvements

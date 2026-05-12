@@ -1,6 +1,7 @@
 # OHC Hybrid Agentic OS Release Notes: v0.4.41
 
 ## Cloud (Scaling) Improvements
+- Chore: Codebase hygiene - removed debug logs and resolved TODOs.
 - Enhanced backend scaling capabilities.
 - OCI container improvements.
 
