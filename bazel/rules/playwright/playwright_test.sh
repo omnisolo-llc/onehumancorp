@@ -53,10 +53,7 @@ for i in $(seq 1 60); do
 done
 
 # Start the server binary
-SERVER_BIN="${workspace_root}/bazel-bin/src/server/server"
-if [[ ! -x "$SERVER_BIN" ]]; then
-  SERVER_BIN="$(find "${workspace_root}/bazel-bin" -name server -type f -executable 2>/dev/null | head -1)"
-fi
+SERVER_BIN="${workspace_root}/src/server/server"
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server from $SERVER_BIN..."
@@ -79,7 +76,7 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     sleep 1
   done
 else
-  echo "[playwright] Warning: server binary not found, tests may fail"
+  echo "[playwright] Warning: server binary not found at $SERVER_BIN, tests may fail"
 fi
 
 # Run the specific spec file via official Playwright Docker image

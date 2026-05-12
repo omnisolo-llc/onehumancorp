@@ -165,6 +165,10 @@ rust_test(
     name = "unit_tests",
     crate = ":ohc_builtin_agent_lib",
     edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 exports_files([

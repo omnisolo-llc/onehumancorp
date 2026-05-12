@@ -137,6 +137,10 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         "@crates//:tempfile",
         "@crates//:tokio-tungstenite",
@@ -149,6 +153,10 @@ rust_test(
     srcs = ["crypto.rs"],
     crate_root = "crypto.rs",
     edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         "//src/server/utils:server_utils",
         "//src/proto:mcp_proxy_tonic",

@@ -23,6 +23,8 @@ def define_playwright_tests():
             data = native.glob(["*.spec.ts"]) + [
                 "//src/server:server",
                 "//deploy:docker-compose.e2e.yml",
+                "//:playwright.config.ts",
+                "//:package.json",
             ],
             env = {
                 "BASE_URL": "http://localhost:18789",
@@ -35,6 +37,10 @@ def define_playwright_tests():
                 "requires-docker",
 
             ],
+            target_compatible_with = select({
+                "@platforms//os:linux": [],
+                "//conditions:default": ["@platforms//:incompatible"],
+            }),
         )
         targets.append(":" + name)
 
