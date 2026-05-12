@@ -47,7 +47,6 @@ impl TaskWorker {
                     };
                     
                     if let Some(issue) = issue {
-                        debug!("Worker {}: processing issue {}", worker_id, issue.id);
                         Self::process_issue_internal(issue, plane_client.clone(), hub.clone()).await;
                     } else {
                         break; // Channel closed
@@ -71,7 +70,6 @@ impl TaskWorker {
                                 let dispatch_count = workers.min(issues.len());
                                 for issue in issues.into_iter().take(dispatch_count) {
                                     if let Err(_) = task_tx.send(issue).await {
-                                        debug!("agent task worker: task channel full, dropping issue dispatch");
                                         break;
                                     }
                                 }
@@ -87,7 +85,6 @@ impl TaskWorker {
     }
 
     async fn process_issue_internal(issue: Issue, plane_client: Arc<PlaneClient>, hub: Arc<Hub>) {
-        debug!("agent task worker: processing issue: {}, title: {}", issue.id, issue.name);
         
         if let Err(e) = plane_client.update_issue_status(&issue.id, "in_progress").await {
             error!("failed to update plane issue status: {}", e);
@@ -117,10 +114,8 @@ impl TaskWorker {
                 
                 let _ = hub.publish(msg);
                 
-                debug!("agent task worker: issue marked in_progress, delegating to agent: {}", a.id);
                 
                 if a.provider_type == "builtin" || a.provider_type.is_empty() {
-                    debug!("agent task worker: dispatching to builtin Rust agent via gRPC: {}", a.id);
                     let payload_str = payload.to_string();
                     let role = a.role.clone();
                     let issue_id = issue.id.clone();
@@ -128,7 +123,6 @@ impl TaskWorker {
                     
                     tokio::spawn(async move {
                         if let Err(e) = Self::dispatch_to_builtin_agent(&payload_str, &format!("plane issue {}", issue_id), &role).await {
-                            debug!("builtin agent dispatch error: {}, agent_id: {}", e, agent_id);
                         }
                     });
                 }
@@ -139,7 +133,6 @@ impl TaskWorker {
         }
         
         if !agent_found {
-            debug!("agent task worker: issue marked in_progress but no available agents to delegate to");
         }
     }
 
@@ -164,7 +157,6 @@ impl TaskWorker {
                 return Err("Circuit breaker OPEN. Agent in paused state. Business owner has been notified.".to_string());
             } else {
                 // Allow a single trial request by temporarily acting as half-open (we don't reset failures yet)
-                debug!("Circuit breaker HALF-OPEN: attempting recovery request");
             }
         }
 
@@ -203,7 +195,6 @@ impl TaskWorker {
 
             match result {
                 Ok(Ok(last_content)) => {
-                    debug!("builtin agent task completed: {}, result_len: {}", description, last_content.len());
                     CONSECUTIVE_FAILURES.store(0, std::sync::atomic::Ordering::SeqCst);
                     return Ok(());
                 }

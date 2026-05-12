@@ -336,7 +336,6 @@ impl HubService for MyHubService {
         &self,
         _request: tonic::Request<::server_ohc::orchestration::AgentConfig>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::WizardResponse>, tonic::Status> {
-        tracing::debug!("Received ConfigWizard request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
             message: "success".to_string(),
@@ -347,7 +346,6 @@ impl HubService for MyHubService {
         &self,
         _request: tonic::Request<::server_ohc::orchestration::PromptTuningConfig>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::WizardResponse>, tonic::Status> {
-        tracing::debug!("Received PromptTuning request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
             message: "success".to_string(),

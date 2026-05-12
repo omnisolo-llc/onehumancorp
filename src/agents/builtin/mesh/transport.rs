@@ -409,7 +409,6 @@ impl SqliteTransport {
             Err(e) => {
                 let err_str = e.to_string();
                 if !err_str.contains("duplicate column") && !err_str.contains("already exists") {
-                    tracing::debug!("Failed to migrate mesh_messages: {}", err_str);
                 }
             }
         }

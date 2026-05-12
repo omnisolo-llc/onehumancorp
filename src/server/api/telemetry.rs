@@ -14,7 +14,6 @@ pub struct MetricBatchItem {
 pub async fn sync_telemetry_handler(
     Json(batch): Json<Vec<MetricBatchItem>>,
 ) -> impl IntoResponse {
-    tracing::debug!("Received telemetry batch with {} items", batch.len());
 
     for item in batch {
         // In a real cloud environment, we would ingest this into Prometheus

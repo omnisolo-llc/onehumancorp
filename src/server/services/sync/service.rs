@@ -82,7 +82,6 @@ impl SyncService for MySyncService {
     ) -> Result<Response<PowerSyncPushResponse>, Status> {
         let md = request.metadata().clone();
         let req = request.into_inner();
-        tracing::debug!("PowerSync received push request.");
 
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
         let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
@@ -158,7 +157,6 @@ impl SyncService for MySyncService {
         request: Request<PowerSyncPullRequest>,
     ) -> Result<Response<PowerSyncPullResponse>, Status> {
         use sqlx::Row;
-        tracing::debug!("PowerSync received pull request");
 
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");

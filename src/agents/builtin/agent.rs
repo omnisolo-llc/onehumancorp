@@ -848,7 +848,6 @@ impl Agent {
                             if let Err(e) = store_clone.store(&content_to_store, vec!["AUTO_CONSOLIDATED_LANGGRAPH".to_string()]).await {
                                 tracing::error!("Failed to auto-consolidate LangGraph memory: {}", e);
                             } else {
-                                tracing::debug!("Successfully auto-consolidated LangGraph memory.");
                             }
                         });
                     }
@@ -918,7 +917,6 @@ impl Agent {
                 // Feed the original prompt, the failed completion, and the parsing error back to the model.
                 let mut attempt = 0;
                 let mut current_req = plan_req; // Dummy validation comment: Output Parsing Fallback test coverage
-                tracing::debug!("Output Parsing: Fallback logic triggered.");
                 let mut last_error = e.to_string();
                 let mut final_plan = None;
 
@@ -2176,7 +2174,6 @@ impl Agent {
                             if let Err(e) = store_clone.store(&content_to_store, vec!["AUTO_CONSOLIDATED".to_string()]).await {
                                 tracing::error!("Failed to auto-consolidate memory: {}", e);
                             } else {
-                                tracing::debug!("Successfully auto-consolidated memory.");
                             }
                         });
                     }

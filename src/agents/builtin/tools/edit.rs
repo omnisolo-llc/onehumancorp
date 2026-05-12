@@ -71,7 +71,6 @@ Please fix the errors and try again.",
                     }
                 }
                 Err(e) => {
-                    tracing::debug!("Verification skipped: failed to run rustc: {}", e);
                 }
             }
         }

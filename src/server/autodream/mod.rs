@@ -31,9 +31,7 @@ impl AutoDreamWorker {
         let counter = self.embedded_counter.clone();
         tokio::spawn(async move {
             loop {
-                debug!("AutoDream: running pruning pipeline...");
                 if let Err(e) = Self::prune_stale_sessions(&db, &counter).await {
-                    debug!("AutoDream: pruning stale sessions failed: {}", e);
                 }
 
                 let repository = match &db.store {
@@ -43,7 +41,6 @@ impl AutoDreamWorker {
 
                 let stale_threshold = chrono::Utc::now() - chrono::Duration::days(180);
                 if let Err(e) = repository.prune_stale(stale_threshold).await {
-                    debug!("AutoDream: pruning consolidated memory failed: {}", e);
                 }
 
                 sleep(Duration::from_secs(60)).await;
@@ -54,25 +51,19 @@ impl AutoDreamWorker {
         let counter = self.embedded_counter.clone();
         tokio::spawn(async move {
             loop {
-                debug!("AutoDream: running completed tasks ingestion pipeline...");
                 if let Err(e) = Self::ingest_completed_tasks(&db, &counter).await {
-                    debug!("AutoDream: tasks ingestion failed: {}", e);
                 }
 
                 if let Err(e) = Self::compress_session_contexts(&db).await {
                     tracing::error!("AutoDream: compress_session_contexts failed: {}", e);
                 }
                 if let Err(e) = Self::process_db_memories(&db, &counter).await {
-                    debug!("AutoDream: DB memories processing failed: {}", e);
                 }
                 if let Err(e) = Self::process_fs_memories(&db, &counter).await {
-                    debug!("AutoDream: FS memories processing failed: {}", e);
                 }
                 if let Err(e) = Self::consolidate_agent_task_memories(&db, &counter).await {
-                    debug!("AutoDream: agent-task memories consolidation failed: {}", e);
                 }
                 if let Err(e) = Self::process_mesh_messages(&db).await {
-                    debug!("AutoDream: Mesh messages processing failed: {}", e);
                 }
                 sleep(Duration::from_secs(120)).await;
             }
@@ -81,9 +72,7 @@ impl AutoDreamWorker {
         let db_clone_for_conflict = self.db.clone();
         tokio::spawn(async move {
             loop {
-                debug!("AutoDream: running conflict resolution pipeline...");
                 if let Err(e) = Self::resolve_conflicts(&db_clone_for_conflict).await {
-                    debug!("AutoDream: conflict resolution failed: {}", e);
                 }
                 sleep(Duration::from_secs(1800)).await;
             }
@@ -98,7 +87,6 @@ impl AutoDreamWorker {
         let client = crate::minimax::LocalLLMClient::new();
 
         for (id, data) in stale_sessions {
-             debug!("AutoDream: pruned stale session");
              
              // Mock summarization and injection for now
              let summary = format!("Summarized context from session {}: {}", id, data);
@@ -154,7 +142,6 @@ impl AutoDreamWorker {
 
         let resolved_count = repository.auto_resolve_conflicts().await.map_err(|e| e.to_string())?;
         if resolved_count > 0 {
-            debug!("AutoDream: Resolved {} memory conflicts automatically.", resolved_count);
         }
 
         Ok(())
@@ -168,7 +155,6 @@ impl AutoDreamWorker {
             let prompt = format!("Summarize the key technical decisions, user preferences, and permanent facts from these logs:
 {}", payload);
             let summary = client.reason(&prompt).await.unwrap_or_else(|e| {
-                debug!("AutoDream: failed to summarize logs: {}.", e);
                 format!("Summary of task: {}", payload)
             });
             
@@ -180,7 +166,6 @@ impl AutoDreamWorker {
                     format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","))
                 },
                 Err(e) => {
-                    debug!("AutoDream: failed to generate embedding: {}", e);
                     format!("[{}]", vec!["0.0"; 1536].join(", "))
                 }
             };
@@ -192,7 +177,6 @@ impl AutoDreamWorker {
             db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
             db.mark_task_auto_dreamed(&id, &table).await?;
 
-            debug!("AutoDream: ingested completed task {} from {}", id, table);
         }
         
         Ok(())
@@ -201,14 +185,12 @@ impl AutoDreamWorker {
     pub async fn consolidate_epoch(&self) -> Result<(), Box<dyn std::error::Error>> {
         let tracer = global::tracer("ohc.autodream");
         let _span = tracer.start("autodream_consolidate_epoch");
-        debug!("AutoDream: consolidating epoch...");
         Ok(())
     }
 
     pub async fn search_memories(&self, embedding: &str, limit: i32) -> Result<Vec<::server_ohc::orchestration::TruthSearchResult>, Box<dyn std::error::Error>> {
         let tracer = global::tracer("ohc.autodream");
         let _span = tracer.start("autodream_search_memories");
-        debug!("AutoDream: searching memories with limit {}", limit);
 
         let mut results = Vec::new();
 
@@ -336,7 +318,6 @@ impl AutoDreamWorker {
                         .await?;
                 }
                 Err(e) => {
-                    debug!("AutoDreamWorker: failed to embed session: {}", e);
                 }
             }
         }
@@ -395,7 +376,6 @@ impl AutoDreamWorker {
                         tokio::fs::remove_file(path).await?;
                     }
                     Err(e) => {
-                        debug!("AutoDreamWorker: failed to embed fs memory {:?}: {}", path, e);
                     }
                 }
             }
@@ -453,10 +433,8 @@ impl AutoDreamWorker {
 
                         let path_clone = path.clone();
                         tokio::fs::remove_file(path).await?;
-                        debug!("AutoDreamWorker: consolidated memory from {:?}", path_clone);
                     }
                     Err(e) => {
-                        debug!("AutoDreamWorker: failed to embed agent-task memory {:?}: {}", path, e);
                     }
                 }
             }
@@ -465,7 +443,6 @@ impl AutoDreamWorker {
     }
 
     async fn process_mesh_messages(_db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
-        debug!("AutoDreamWorker: stub for process_mesh_messages");
         Ok(())
     }
 }
