@@ -1,5 +1,5 @@
 actions:
-  - name: "playwright screenshots"
+  - name: "bazel test //src/e2e:playwright"
     container_image: "ubuntu-24.04"
     resource_requests:
       cpu: 8
@@ -22,8 +22,7 @@ actions:
           # Uses playwright_test.sh which handles Docker infra (postgres, redis) and server startup
           bazel test //src/e2e:playwright \
             --test_output=streamed \
-            --test_timeout=300,600,900,1800 \
-            --cache_test_results=no
+            --test_timeout=300,600,900,1800
 
           # Screenshots are saved to test-results/screenshots/ and explicit page.screenshot() calls save to test-results/*.png
           # These are gitignored but available for review after test run
