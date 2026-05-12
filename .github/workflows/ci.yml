@@ -30,6 +30,16 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ca-certificates curl git
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Install Bazelisk
+        run: |
+          go install github.com/bazelbuild/bazelisk@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
@@ -59,11 +69,11 @@ jobs:
             ${{ runner.os }}-playwright-
 
       - name: Build release artifacts
-        run: bazel build //release:all_release_artifacts --config=linux
+        run: bazelisk build //release:all_release_artifacts --config=linux
 
       - name: Test
         run: |
-          bazel test \
+          bazelisk test \
             --config=linux \
             --test_output=errors \
             --test_summary=terse \
@@ -80,6 +90,16 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ca-certificates curl git
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Install Bazelisk
+        run: |
+          go install github.com/bazelbuild/bazelisk@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -103,9 +123,9 @@ jobs:
 
       - name: Build all artifacts
         run: |
-          bazel build //... --config=linux
-          bazel build //... --config=windows || echo "Warning: Windows build failed"
-          bazel build //... --config=macos || echo "Warning: MacOS build failed"
+          bazelisk build //... --config=linux
+          bazelisk build //... --config=windows || echo "Warning: Windows build failed"
+          bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
 
   playwright-e2e:
     runs-on: oci-runner # ubuntu-latest
@@ -117,6 +137,16 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ca-certificates curl git
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Install Bazelisk
+        run: |
+          go install github.com/bazelbuild/bazelisk@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -136,10 +166,10 @@ jobs:
             build --show_timestamps
 
       - name: Build server
-        run: bazel build //src/server:server --config=linux
+        run: bazelisk build //src/server:server --config=linux
 
       - name: Run E2E tests
         run: |
-          bazel test //src/e2e:playwright \
+          bazelisk test //src/e2e:playwright \
             --test_output=streamed \
             --test_timeout=300,600,900,1800
