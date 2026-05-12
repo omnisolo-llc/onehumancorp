@@ -1,57 +1,99 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); color: #fff;">
+# Teammate Mesh Orchestration Walkthrough
 
-# Teammate Mesh Walkthrough
+<div style="background: rgba(255, 255, 255, 0.05); font-family: 'Outfit', 'Inter', sans-serif; backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border-radius: 12px; padding: 24px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 2rem;">
+  <strong>Premium Walkthrough</strong><br>
+  Welcome to the interactive walkthrough for the Teammate Mesh Orchestration system. This guide illustrates how real-time communication flows between agents in the OHC Hybrid Agentic OS, using Redis Pub/Sub for Cloud Mode or local IPC for Standalone Mode.
+</div>
 
-Welcome to the Teammate Mesh interactive walkthrough. The Teammate Mesh is the real-time communication spine of the One Human Corp (OHC) Hybrid Architecture, allowing agents to collaborate, deliberate, and execute tasks autonomously. This walkthrough explains the agent-to-agent communication over the `mesh:tasks` and `mesh:presence` channels, which are fundamental components of the mailbox protocol and event bus channels.
+## Architecture Overview
 
-## 1. Mesh Transport Overview
+The Teammate Mesh acts as the neural network for our agentic swarm. It guarantees that whether an agent is running locally on a developer's machine or distributed across a Kubernetes cluster, the communication logic remains identical.
 
-The mesh relies on the `MeshTransport` interface, utilizing Redis Pub/Sub in Cloud-Native mode or a lightweight local bus in Standalone Desktop mode.
+### Core Communication Channels
 
-### Event Publishing and Subscribing
+1.  **`mesh:tasks`**: The global event bus where orchestrators dispatch high-level tasks to available implementers.
+2.  **`mesh:presence`**: A heartbeat channel where agents broadcast their availability and status.
+3.  **`mailbox:{agent_id}`**: Direct, point-to-point communication channels used for agent-to-agent negotiations, results delivery, and error reporting.
 
-Agents use the `CentrifugeNode` to subscribe to relevant channels. To optimize bandwidth and reduce unmarshaling overhead, agents can use `SubscribeMeshEventsWithFilter` to apply a `MeshFilter` directly at the transport layer. The event bus has specialized channels for different categories of communication, primarily `mesh:presence` for status and `mesh:tasks` for coordinating work.
+## Sequence Diagram: Agent Communication Flow
 
-```mermaid
-sequenceDiagram
-    participant AgentA as Agent A (Implementer)
-    participant PresenceBus as mesh:presence Channel
-    participant TaskBus as mesh:tasks Channel
-    participant AgentB as Agent B (Scribe)
-
-    AgentA->>PresenceBus: Broadcast Presence (Status: Online)
-    AgentB->>PresenceBus: Receive Presence (Agent A Online)
-
-    AgentA->>TaskBus: 1. Subscribe (Filter: Topic="docs")
-    AgentB->>TaskBus: 2. Broadcast (Topic="code", Payload=...)
-    TaskBus--xAgentA: 3. Ignored by Filter
-    AgentB->>TaskBus: 4. Broadcast (Topic="docs", Payload=...)
-    TaskBus-->>AgentA: 5. Event Delivered
-    AgentA->>AgentA: 6. Process Event Payload
-```
-
-## 2. Mailbox Protocol
-
-The mailbox protocol governs how agents directly send and receive directed messages to each other using the underlying event bus channels. When an agent wants to directly message another agent, rather than broadcasting to a wide audience, it uses specific directed messages encoded within the mesh.
-
-### Direct Messaging via Event Bus
+Below is a detailed sequence diagram showing the standard flow of a task from an Orchestrator through the Teammate Mesh to an Implementer, and back.
 
 ```mermaid
 sequenceDiagram
-    participant AgentA as Agent A (Sender)
-    participant EventBus as Event Bus
-    participant AgentB as Agent B (Receiver)
+    participant O as Orchestrator Agent
+    participant Redis as Teammate Mesh (Redis/IPC)
+    participant I as Implementer Agent
 
-    AgentA->>EventBus: Broadcast Message (Recipient: Agent B)
-    EventBus->>AgentB: Deliver Message (Filter Matches Recipient)
-    AgentB->>EventBus: Broadcast Acknowledgment (Recipient: Agent A)
-    EventBus->>AgentA: Deliver Acknowledgment
+    %% Presence heartbeat
+    loop Every 5 seconds
+        I->>Redis: PUBLISH mesh:presence {id: "agent-123", status: "idle"}
+    end
+
+    %% Task dispatch
+    Note over O, I: Task Dispatch Phase
+    O->>Redis: PUBLISH mesh:tasks {task_id: "t-456", type: "IMPLEMENT"}
+    Redis-->>I: (Subscriber receives task)
+
+    %% Task acknowledgement
+    Note over I: Implementer evaluates capability
+    I->>Redis: PUBLISH mailbox:{orchestrator_id} {type: "ACK", task_id: "t-456", agent_id: "agent-123"}
+    Redis-->>O: (Orchestrator receives ACK)
+
+    %% Execution
+    Note over I: Executing task...
+
+    %% Status updates
+    loop During execution
+        I->>Redis: PUBLISH mailbox:{orchestrator_id} {type: "STATUS", progress: "50%"}
+    end
+
+    %% Completion
+    Note over I: Task complete
+    I->>Redis: PUBLISH mailbox:{orchestrator_id} {type: "RESULT", status: "SUCCESS", payload: "{...}"}
+    Redis-->>O: (Orchestrator receives RESULT)
 ```
 
-## 3. Best Practices
+## Event Filtering in Action
 
-- **Non-blocking Callbacks:** When processing events inside subscription callbacks (especially during database cursor iteration), wrap long-running operations in goroutines to prevent blocking the transport layer.
-- **Graceful Degradation:** Always assume the mesh might fallback to the SQLite-backed Standalone Mode. Avoid relying entirely on Redis-specific commands unless checking lock ownership via Lua scripts.
-- **PII Scrubbing:** If broadcasting payloads containing sensitive data, pass the content through `telemetry.RedactPII(str)` before broadcasting.
+Agents often don't need to process every single event on the mesh. `SubscribeMeshEventsWithFilter` enables highly efficient targeted message delivery:
 
+```mermaid
+graph TD
+    Incoming[Incoming Mesh Event] --> FilterCheck{Filter Match?}
+    FilterCheck -->|Yes| Process[Process Event]
+    FilterCheck -->|No| Discard[Discard Event]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Incoming,FilterCheck,Process,Discard premium;
+```
+
+## Protocol Specifications
+
+### The Mailbox Protocol
+
+Direct communication between agents relies on the Mailbox Protocol. When Agent A needs to talk to Agent B, it publishes a message to `mailbox:{agent_b_id}`.
+
+This protocol ensures:
+*   **Privacy**: Only the targeted agent processes the message.
+*   **Reliability**: In Cloud mode, this is backed by Redis streams or reliable Pub/Sub, ensuring messages are delivered even if the agent momentarily drops connection.
+
+### The Presence Protocol
+
+Agents continuously broadcast their state to `mesh:presence`. This allows the orchestrator to build a real-time topology of the swarm.
+Status states include:
+*   `STARTING`: Agent is initializing and connecting to the mesh.
+*   `IDLE`: Agent is ready for work.
+*   `BUSY`: Agent is currently executing a task.
+*   `TERMINATING`: Agent is shutting down gracefully.
+
+## Standalone vs Cloud Mode
+
+<div style="background: rgba(255, 255, 255, 0.05); font-family: 'Outfit', 'Inter', sans-serif; backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border-radius: 12px; padding: 24px; border: 1px solid rgba(255,255,255,0.1); margin-top: 2rem;">
+  <strong>Implementation Detail</strong><br>
+  The `TeammateMesh` interface completely abstracts the underlying transport layer.
+  <ul>
+    <li><strong>Cloud Mode</strong>: Uses Redis Pub/Sub for distributed, high-throughput messaging across clusters.</li>
+    <li><strong>Standalone Mode</strong>: Uses local SQLite-backed IPC or in-memory channels, enabling identical behavior without external dependencies.</li>
+  </ul>
 </div>

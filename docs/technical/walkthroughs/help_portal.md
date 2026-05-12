@@ -128,7 +128,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[Distributed State Machine Walkthrough](distributed_state_machine.md)**: Visual guide to the task transition lifecycle.
 - **[Hybrid MCP RAG Protocol Walkthrough](hybrid_mcp_rag.md)**: Explore the architectural flow between Standalone and Cloud states.
 - **[KAIROS Sub-Agent Orchestration Walkthrough](sub_agent_orchestration.md)**: Explore the orchestration of sub-agents.
-- **[Teammate Mesh Walkthrough](teammate_mesh.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
+- **[Teammate Mesh Walkthrough](teammate_mesh_walkthrough.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
 - **[AutoDream Pipeline Walkthrough](autodream_pipeline.md)**: Visual guide to the memory consolidation engine.
 - **[Omni-Context Sub-Agent Routing Walkthrough](omni_context_routing.md)**: Visual guide to the zero-latency sub-agent context injection.
 - **[Virtual Meeting Room Walkthrough](virtual_meeting_room.md)**: Visual guide to the UltraPlan protocol and agent deliberation.
