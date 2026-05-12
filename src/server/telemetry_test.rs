@@ -561,3 +561,22 @@ fn test_redact_interface_pii_malicious_payloads() {
     assert_eq!(redacted["array_of_evil"][1]["address"], "[REDACTED]");
     assert_eq!(redacted["array_of_evil"][1]["phone"], "[REDACTED]");
 }
+
+#[test]
+fn test_telemetry_compliance_guardrails() {
+    // Tests the rule: "Implement automated checks for PII leakage in multi-tenant environments."
+    // In our codebase, the `redact_interface_pii` function handles the redaction
+    // and is unconditionally applied before saving to telemetry_buffer.
+    // Ensure that it effectively redacts expected PII keys like `email` and `tenant_id`
+    let original_json = serde_json::json!({
+        "tenant_id": "org-12345",
+        "email": "test@example.com",
+        "safe_data": 42
+    });
+
+    let redacted_json = ::server_telemetry::redact_interface_pii(original_json);
+
+    assert_eq!(redacted_json["safe_data"], 42);
+    assert_eq!(redacted_json["tenant_id"], "[REDACTED]");
+    assert_eq!(redacted_json["email"], "[REDACTED]");
+}

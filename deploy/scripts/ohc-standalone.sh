@@ -91,7 +91,7 @@ if [ "$OHC_TELEMETRY_ENABLED" = "true" ]; then
     --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
     --network host \
     -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml \
-    prom/prometheus:latest --config.file=/etc/prometheus/prometheus.yml --enable-feature=agent > /dev/null 2>&1
+    prom/prometheus:v2.52.0 --config.file=/etc/prometheus/prometheus.yml --enable-feature=agent > /dev/null 2>&1
   echo -e "  ${GREEN}✓ Prometheus agent started in Docker (resource constrained)${RESET}"
 fi
 
