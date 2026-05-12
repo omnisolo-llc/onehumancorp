@@ -1,3 +1,8 @@
+# OHC Hybrid Agentic OS Release Notes: v0.4.42
+
+## Chore
+- Removed debug statements from latency benchmark.
+
 # OHC Hybrid Agentic OS Release Notes: v0.4.41
 
 ## Cloud (Scaling) Improvements
