@@ -17,22 +17,6 @@ impl Tracker {
         Tracker { rate_limiter: None, stripe_client: None, mercadopago_client: None }
     }
 
-    pub fn new_with_redis(redis_url: &str) -> Self {
-        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| Arc::new(MercadoPagoClient::new(token)));
-        let stripe_client = std::env::var("STRIPE_API_KEY")
-            .ok()
-            .map(|key| Arc::new(StripeClient::new(key)));
-        if let Ok(client) = Client::open(redis_url) {
-            Tracker {
-                rate_limiter: Some(Arc::new(RedisRateLimiter::new(client))),
-                stripe_client,
-                mercadopago_client: mercadopago_client.clone(),
-            }
-        } else {
-            Tracker { rate_limiter: None, stripe_client, mercadopago_client }
-        }
-    }
-
 
     pub async fn track_storage_usage(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {

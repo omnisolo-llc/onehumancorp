@@ -54,6 +54,7 @@ impl SandboxAdapter for SandboxManager {
             let labels = json!({ "command": cmd });
             let _ = buffer_metric(
                 pool,
+                "system",
                 "harness.sandbox.wrapped_executions",
                 "counter",
                 1.0,
@@ -91,6 +92,7 @@ impl SandboxAdapter for SandboxManager {
                 let labels = json!({ "command": cmd });
                 let _ = buffer_metric(
                     pool,
+                    "system",
                     "harness.sandbox.violations",
                     "counter",
                     1.0,

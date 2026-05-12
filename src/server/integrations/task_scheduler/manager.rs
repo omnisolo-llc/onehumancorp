@@ -64,10 +64,6 @@ impl MemoryTaskQueue {
         }
     }
 
-    pub fn set_task_status(&self, task_id: &str, status: TaskStatus) {
-        let mut map = self.tasks.write().unwrap();
-        map.insert(task_id.to_string(), status);
-    }
 }
 
 #[async_trait]

@@ -15,9 +15,6 @@ impl AutoDreamPipeline {
         AutoDreamPipeline { db, llm_client, cache: None }
     }
 
-    pub fn new_with_cache(db: Arc<DB>, llm_client: Arc<dyn LLMClient>, cache: Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Self {
-        AutoDreamPipeline { db, llm_client, cache: Some(cache) }
-    }
 
     pub fn start_worker(&self) {
         let db = self.db.clone();

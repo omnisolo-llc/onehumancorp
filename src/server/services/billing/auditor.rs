@@ -188,27 +188,6 @@ impl CostAuditor {
         *current_revenue += amount;
     }
 
-    pub fn record_compute_event(&self, event: ComputeEvent) -> f64 {
-        let compute_cost = calculator::calculate_compute_cost(event.compute_hours, &self.config);
-        let network_cost = calculator::calculate_network_cost(event.network_egress_bytes, &self.config);
-        let total = compute_cost + network_cost;
-
-        let mut agent_costs = self.agent_costs.lock().unwrap();
-        let mut total_cost = self.total_cost.lock().unwrap();
-        let mut total_compute_cost = self.total_compute_cost.lock().unwrap();
-        let mut total_network_cost = self.total_network_cost.lock().unwrap();
-
-        let current_cost = agent_costs.entry(event.agent_id.clone()).or_insert(0.0);
-        *current_cost += total;
-        *total_cost += total;
-        *total_compute_cost += compute_cost;
-        *total_network_cost += network_cost;
-
-        self.compute_cost_counter.add(total, &[KeyValue::new("agent_id", event.agent_id.clone())]);
-
-        total
-    }
-
     pub fn generate_report(&self) -> String {
         let agent_costs = self.agent_costs.lock().unwrap();
         let agent_budgets = self.agent_budgets.lock().unwrap();

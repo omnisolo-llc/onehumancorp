@@ -88,7 +88,7 @@ mod tests {
         };
 
         let labels = json!({"user_id": "123", "secret": "shh"});
-        let res = buffer_metric(&pool, "test_metric", "counter", 1.0, labels).await;
+        let res = buffer_metric(&pool, "system", "test_metric", "counter", 1.0, labels).await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json FROM telemetry_buffer WHERE metric_name = 'test_metric' ORDER BY timestamp DESC LIMIT 1")
@@ -236,7 +236,7 @@ mod tests {
         // Ensure STANDALONE_MODE is true. Telemetry should be ignored
 
         let labels = json!({"user_id": "standalone_test"});
-        let res = buffer_metric(&pool, "test_standalone", "counter", 1.0, labels).await;
+        let res = buffer_metric(&pool, "system", "test_standalone", "counter", 1.0, labels).await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'test_standalone'")

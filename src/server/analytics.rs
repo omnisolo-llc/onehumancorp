@@ -18,14 +18,6 @@ impl Tracker {
         }
         sanitized_props
     }
-
-    pub fn track_event(&self, name: &str, props: HashMap<String, String>) {
-        // Redact PII from props before logging to ensure compliance in multi-tenant environments
-        let sanitized_props = self.sanitize_props(props);
-
-        // Use a generic log statement to avoid test violations for exact property matching
-        tracing::info!("Event tracked: {}, props count: {}", name, sanitized_props.len());
-    }
 }
 
 impl Default for Tracker {

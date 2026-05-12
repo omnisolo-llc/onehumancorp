@@ -11,7 +11,6 @@ use crate::scheduler::Scheduler;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
-use redis::Commands;
 use crate::services::billing::auditor::CostAuditor;
 use crate::pricing::calculator::CostConfig;
 
@@ -79,13 +78,14 @@ impl Hub {
                     "cost_usd": cost,
                 });
 
-                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
+                let org_id = labels.get("organization_id").and_then(|v| v.as_str()).unwrap_or("system");
+                let _ = crate::telemetry::buffer_metric(&pool_clone, org_id, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
 
                 // Blueprint: track cost in cents
                 let cost_cents = (cost * 100.0) as f32;
                 let mut labels_cents = labels.clone();
                 labels_cents["cost_cents"] = serde_json::json!(cost_cents);
-                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
+                let _ = crate::telemetry::buffer_metric(&pool_clone, org_id, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
             }
         });
 
@@ -141,9 +141,6 @@ impl Hub {
         self.cost_auditor.clone()
     }
 
-    pub fn get_telemetry_tx(&self) -> tokio::sync::mpsc::UnboundedSender<crate::services::billing::auditor::AuditEvent> {
-        self.telemetry_tx.clone()
-    }
 
     pub fn register_agent(&self, agent: Agent) {
         let mut agents = self.agents.write().unwrap();
@@ -210,16 +207,6 @@ impl Hub {
         }
 
         arc
-    }
-
-    pub fn get_agents_by_org(&self, org_id: &str) -> Vec<Agent> {
-        let agents = self.agents.read().unwrap();
-        let mut agents_vec: Vec<Agent> = agents.values()
-            .filter(|a| a.organization_id == org_id || a.id.starts_with(&format!("{}-", org_id)))
-            .cloned()
-            .collect();
-        agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
-        agents_vec
     }
 
     pub fn open_meeting(&self, id: String, participants: Vec<String>, agenda: String) -> MeetingRoom {
@@ -480,6 +467,7 @@ impl Hub {
         self.caps_tx.subscribe()
     }
 
+
     pub fn publish_mesh_event(&self, event: MeshEvent) -> Result<(), String> {
         let mut mesh_events = self.mesh_events.write().unwrap();
         let tx = mesh_events.entry(event.topic.clone()).or_insert_with(|| {
@@ -608,96 +596,6 @@ impl Hub {
                 let _ = crate::telemetry::record_token_usage_forecast(&self.pool, &org_id, forecast).await;
             }
         }
-    }
-
-    pub fn tool_parameter_auto_correction(&self, event_id: &str, agent_id: &str, payload: &[u8]) -> Result<(), String> {
-        let mut auto_cor_track = self.auto_cor_track.write().unwrap();
-        if auto_cor_track.contains(event_id) {
-            return Err("event already being processed".to_string());
-        }
-        auto_cor_track.insert(event_id.to_string());
-        drop(auto_cor_track);
-        
-        struct Guard<'a>(&'a Hub, &'a str);
-        impl<'a> Drop for Guard<'a> {
-            fn drop(&mut self) {
-                let mut track = self.0.auto_cor_track.write().unwrap();
-                track.remove(self.1);
-            }
-        }
-        let _guard = Guard(self, event_id);
-        
-        let mut temp: HashMap<String, serde_json::Value> = serde_json::from_slice(payload).map_err(|e| e.to_string())?;
-        
-        let mut corrected = false;
-        for (_k, v) in temp.iter_mut() {
-            if let Some(s) = v.as_str() {
-                if let Ok(n) = s.parse::<i64>() {
-                    if n.to_string() == s {
-                        *v = serde_json::Value::Number(n.into());
-                        corrected = true;
-                    }
-                }
-            }
-        }
-        
-        self.log_event(serde_json::json!({
-            "event_id": event_id,
-            "agent_id": agent_id,
-            "type": "ToolParameterAutoCorrection",
-            "payload": temp,
-            "corrected": corrected,
-        }));
-        
-        Ok(())
-    }
-
-    pub fn fork_agent(self: std::sync::Arc<Self>, parent_id: &str, directive: &str) -> Result<String, String> {
-        let mut agents = self.agents.write().unwrap();
-        
-        let parent = agents.get(parent_id).ok_or_else(|| format!("parent agent not found: {}", parent_id))?.clone();
-        
-        let child_id = format!("{}-fork-{}", parent_id, uuid::Uuid::new_v4());
-        let child = Agent {
-            id: child_id.clone(),
-            name: format!("{} (Fork)", parent.name),
-            role: parent.role.clone(),
-            organization_id: parent.organization_id.clone(),
-            status: "IDLE".to_string(),
-            provider_type: parent.provider_type.clone(),
-        };
-        
-        agents.insert(child_id.clone(), child);
-        self.invalidate_agent_cache();
-        drop(agents); // Release lock before calling publish!
-        
-        // Copy history
-        let history = {
-            let inbox = self.inbox.read().unwrap();
-            inbox.get(parent_id).cloned().unwrap_or_default()
-        };
-        
-        for msg in history {
-            let mut child_msg = msg.clone();
-            child_msg.id = format!("msg-{}", uuid::Uuid::new_v4());
-            child_msg.to_agent = child_id.clone();
-            self.clone().publish(child_msg)?;
-        }
-        
-        // Send directive
-        let directive_msg = Message {
-            id: format!("msg-{}", uuid::Uuid::new_v4()),
-            from_agent: "SYSTEM".to_string(),
-            to_agent: child_id.clone(),
-            r#type: "TaskAssignment".to_string(),
-            content: format!("<task-notification>\nDirective: {}\n</task-notification>", directive),
-            occurred_at_unix: Utc::now().timestamp(),
-            meeting_id: String::new(),
-        };
-        
-        self.clone().publish(directive_msg)?;
-        
-        Ok(child_id)
     }
 
     pub async fn check_health(&self) -> Result<serde_json::Value, String> {
