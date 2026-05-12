@@ -1,4 +1,4 @@
-issue_category: feature
+issue_category: cleanup
 debt_report: |
   <div markdown="1" style="backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
   # 🧹 Maintainer: System Health Audit & Triage
@@ -14,6 +14,7 @@ debt_report: |
   - Ran `bazelisk test //...` to ensure all tests are 100% green.
   - Zero noise reduction was strictly audited. Circular dependencies evaluated and none blocking functionality.
   - Confirmed `BUILD.bazel` remains accurate.
+  - Cleaned up debug log pollution in benchmarks.
 
   ## Phase 3: Architectural Audit
   - Verified no violation of Zero Trust or SPIRE principles.
