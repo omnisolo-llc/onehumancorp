@@ -399,3 +399,4 @@
 
 ### Privacy/Offline Improvements
 - Improved standalone offline test parity by ensuring onboarding integration tests run smoothly in isolated local environments without heavy Cloud dependencies.
+- chore: Cleaned up technical debt and removed debug print statements from benchmarks
