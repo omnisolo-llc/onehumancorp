@@ -115,6 +115,181 @@ impl Reducer for DefaultReducer {
     }
 }
 
+pub struct HarnessReducer;
+
+impl Reducer for HarnessReducer {
+    fn reduce(&self, state: &mut Value, update: Value) {
+        if let (Value::Object(state_map), Value::Object(update_map)) = (state, update) {
+            for (k, v) in update_map {
+                match v {
+                    Value::Array(mut new_arr) => {
+                        if k == "messages" {
+                            if let Some(Value::Array(existing_arr)) = state_map.get_mut(&k) {
+                                existing_arr.append(&mut new_arr);
+                            } else {
+                                state_map.insert(k, Value::Array(new_arr));
+                            }
+                        } else {
+                            state_map.insert(k, Value::Array(new_arr));
+                        }
+                    }
+                    _ => {
+                        state_map.insert(k, v);
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub struct AgentHarness {
+    pub graph: StateGraph,
+}
+
+impl AgentHarness {
+    pub fn new(llm: Arc<dyn crate::llm::LlmClient>, tools: Vec<crate::tools::Tool>) -> Self {
+        let mut graph = StateGraph::new(Arc::new(HarnessReducer));
+
+        let llm_prepare = llm.clone();
+        let tools_prepare = tools.clone();
+
+        // prepare: Formats the initial state, loads system prompt and tools into the context.
+        graph.add_node("prepare", move |_state| {
+            let tools_prepare = tools_prepare.clone();
+            async move {
+                // Return only the partial update to prevent Reducer from duplicating initial state
+                Ok(serde_json::json!({"prepared": true}))
+            }
+        });
+
+        let llm_node = llm.clone();
+        let tools_llm = tools.clone();
+
+        // llm_call: Makes the actual LLM call and parses response for tool_calls.
+        graph.add_node("llm_call", move |state| {
+            let llm = llm_node.clone();
+            let tools = tools_llm.clone();
+            async move {
+                let messages = state.get("messages").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+
+                let req_messages = messages.iter().map(|m| serde_json::from_value::<ohc_builtin_agent_core::types::Message>(m.clone()).unwrap()).collect::<Vec<_>>();
+
+                let req = ohc_builtin_agent_core::types::ChatRequest {
+                    model: "default".to_string(),
+                    system: "".to_string(),
+                    messages: req_messages,
+                    tools: tools.iter().map(|t| t.definition.clone()).collect(),
+                    max_tokens: 1000,
+                    temperature: 0.0,
+                };
+
+                let resp = llm.chat(req).await.map_err(|e| e.to_string())?;
+
+                let has_tool_calls = !resp.message.tool_calls.is_empty();
+
+                Ok(serde_json::json!({
+                    "messages": [serde_json::to_value(&resp.message).unwrap()],
+                    "has_tool_calls": has_tool_calls
+                }))
+            }
+        });
+
+        // tool_node: Executes tools read-only operations run concurrently; mutating operations run serially
+        let tools_exec = tools.clone();
+        graph.add_node("tool_node", move |state| {
+            let tools = tools_exec.clone();
+            async move {
+                let messages = state.get("messages").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+                let last_msg = messages.last().unwrap();
+                let msg_obj = serde_json::from_value::<ohc_builtin_agent_core::types::Message>(last_msg.clone()).unwrap();
+
+                let mut read_only_calls = vec![];
+                let mut mutating_calls = vec![];
+
+                for tc in &msg_obj.tool_calls {
+                    if let Some(tool) = tools.iter().find(|t| t.name == tc.name) {
+                        if tool.is_read_only {
+                            read_only_calls.push((tc.clone(), tool.clone()));
+                        } else {
+                            mutating_calls.push((tc.clone(), tool.clone()));
+                        }
+                    } else {
+                        mutating_calls.push((tc.clone(), crate::tools::Tool {
+                            name: tc.name.clone(),
+                            description: "".to_string(),
+                            definition: Default::default(),
+                            is_read_only: false,
+                            handler: Arc::new(|_| async move { Err("Tool not found".to_string()) }),
+                        }));
+                    }
+                }
+
+                let mut tool_results = vec![];
+
+                // Execute read-only tools concurrently
+                let mut read_only_futures = Vec::new();
+                for (tc, tool) in read_only_calls {
+                    let tc_clone = tc.clone();
+                    let tool_clone = tool.clone();
+                    read_only_futures.push(async move {
+                        let res = (tool_clone.handler)(&tc_clone.arguments).await;
+                        let (content, error) = match res {
+                            Ok(c) => (c, "".to_string()),
+                            Err(e) => ("".to_string(), e),
+                        };
+                        ohc_builtin_agent_core::types::ToolResult {
+                            tool_call_id: tc_clone.id,
+                            content,
+                            error,
+                        }
+                    });
+                }
+
+                let mut ro_results = futures::future::join_all(read_only_futures).await;
+                tool_results.append(&mut ro_results);
+
+                // Execute mutating tools serially
+                for (tc, tool) in mutating_calls {
+                    let res = (tool.handler)(&tc.arguments).await;
+                    let (content, error) = match res {
+                        Ok(c) => (c, "".to_string()),
+                        Err(e) => ("".to_string(), e),
+                    };
+                    tool_results.push(ohc_builtin_agent_core::types::ToolResult {
+                        tool_call_id: tc.id,
+                        content,
+                        error,
+                    });
+                }
+
+                Ok(serde_json::json!({
+                    "messages": [{"role": "tool", "content": "", "tool_results": tool_results, "tool_calls": []}],
+                    "has_tool_calls": false
+                }))
+            }
+        });
+
+        graph.add_edge("prepare", "llm_call");
+        graph.add_edge("tool_node", "llm_call");
+
+        graph.add_conditional_edges("llm_call", |state| {
+            if state.get("has_tool_calls").and_then(|v| v.as_bool()).unwrap_or(false) {
+                "tool_node".to_string()
+            } else {
+                END.to_string()
+            }
+        });
+
+        graph.set_entry_point("prepare");
+
+        Self { graph }
+    }
+
+    pub async fn run(&self, initial_state: Value) -> Result<Value, String> {
+        self.graph.run(initial_state).await
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
