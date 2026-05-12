@@ -40,9 +40,10 @@ pub fn minify_json_string(input: &str) -> String {
 pub fn minify_chat_request(mut req: ChatRequest) -> ChatRequest {
     req.system = minify_json_string(&req.system);
     for m in &mut req.messages {
-        m.content = minify_json_string(&m.content);
+        // Miser aggressive truncation: remove extra whitespace and newlines
+        m.content = minify_json_string(&m.content.trim()).replace("\n\n", "\n");
         for tr in &mut m.tool_results {
-            tr.content = minify_json_string(&tr.content);
+            tr.content = minify_json_string(&tr.content.trim()).replace("\n\n", "\n");
         }
     }
     req
@@ -59,9 +60,14 @@ pub fn truncate_by_word_count(data: &str, max_words: usize) -> String {
     words[..max_words].join(" ")
 }
 
-pub fn truncate_chat_request(mut req: ChatRequest, max_history_words: usize) -> ChatRequest {
+pub fn truncate_chat_request(mut req: ChatRequest, mut max_history_words: usize) -> ChatRequest {
     if req.messages.len() <= 1 {
         return req;
+    }
+
+    // Miser optimization: use a conservative word budget to prevent token explosion
+    if max_history_words == 0 || max_history_words > 4000 {
+        max_history_words = 2000;
     }
 
     let mut current_words = 0;

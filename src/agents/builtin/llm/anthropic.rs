@@ -373,6 +373,10 @@ impl LlmClient for AnthropicClient {
 
         let stop_reason = result.stop_reason.unwrap_or_default();
 
+        if result.usage.cache_read_input_tokens > 0 {
+             tracing::info!(saved = result.usage.cache_read_input_tokens, "Miser alert: Saved tokens via Anthropic prompt caching");
+        }
+
         Ok(ChatResponse {
             message: Message {
                 role: Role::Assistant,
@@ -382,7 +386,7 @@ impl LlmClient for AnthropicClient {
                 response_id: result.id.clone(),
                 previous_response_id: None,
             },
-                        usage: Usage {
+            usage: Usage {
                 input_tokens: result.usage.input_tokens,
                 output_tokens: result.usage.output_tokens,
                 cache_creation_input_tokens: result.usage.cache_creation_input_tokens,

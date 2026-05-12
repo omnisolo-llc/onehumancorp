@@ -310,6 +310,10 @@ pub async fn record_storage_rw_cost(pool: &PgPool, organization_id: &str, operat
 }
 
 pub async fn record_email_send_cost(pool: &PgPool, organization_id: &str, count: i64) -> Result<(), Box<dyn std::error::Error>> {
+    let meter = global::meter("ohc.infrastructure");
+    let counter = meter.u64_counter("ohc_email_send_total").build();
+    counter.add(count as u64, &[opentelemetry::KeyValue::new("organization_id", organization_id.to_string())]);
+
     buffer_metric(
         pool,
         "ohc_email_send_cost",
@@ -317,6 +321,27 @@ pub async fn record_email_send_cost(pool: &PgPool, organization_id: &str, count:
         count as f32,
         serde_json::json!({
             "organization_id": organization_id,
+        }),
+    )
+    .await
+}
+
+pub async fn record_external_api_call(pool: &PgPool, organization_id: &str, service: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let meter = global::meter("ohc.infrastructure");
+    let counter = meter.u64_counter("ohc_external_api_call_total").build();
+    counter.add(1, &[
+        opentelemetry::KeyValue::new("organization_id", organization_id.to_string()),
+        opentelemetry::KeyValue::new("service", service.to_string()),
+    ]);
+
+    buffer_metric(
+        pool,
+        "ohc_external_api_call_total",
+        "counter",
+        1.0,
+        serde_json::json!({
+            "organization_id": organization_id,
+            "service": service,
         }),
     )
     .await

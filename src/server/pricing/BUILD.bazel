@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_pricing",
@@ -7,8 +7,14 @@ rust_library(
         "cache.rs",
         "calculator.rs",
         "compression.rs",
+        "context_manager.rs",
         "mod.rs",
+        "quota.rs",
+        "prompt_audit.rs",
         "prompt_caching.rs",
+        "steering.rs",
+        "registry.rs",
+        "tests.rs",
         "rate_limit.rs",
     ],
     crate_root = "mod.rs",
@@ -25,6 +31,9 @@ rust_library(
         "@crates//:flate2",
         "@crates//:base64",
         "@crates//:dashmap",
+        "//src/agents/builtin:core",
+        "@crates//:once_cell",
+        "@crates//:uuid",
         "@crates//:sha2",
         "@crates//:opentelemetry",
         "@crates//:hex",
@@ -32,4 +41,10 @@ rust_library(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
+)
+
+rust_test(
+    name = "server_pricing_test",
+    crate = ":server_pricing",
+    edition = "2024",
 )

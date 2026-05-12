@@ -352,11 +352,17 @@ impl LlmClient for OpenAIClient {
 
         let usage = result
             .usage
-                        .map(|u| Usage {
-                input_tokens: u.prompt_tokens,
-                output_tokens: u.completion_tokens,
-                cache_read_input_tokens: u.prompt_tokens_details.as_ref().map(|d| d.cached_tokens).unwrap_or(0),
-                cache_creation_input_tokens: 0,
+            .map(|u| {
+                let cached = u.prompt_tokens_details.as_ref().map(|d| d.cached_tokens).unwrap_or(0);
+                if cached > 0 {
+                    tracing::info!(saved = cached, "Miser alert: Saved tokens via OpenAI prompt caching");
+                }
+                Usage {
+                    input_tokens: u.prompt_tokens,
+                    output_tokens: u.completion_tokens,
+                    cache_read_input_tokens: cached,
+                    cache_creation_input_tokens: 0,
+                }
             })
             .unwrap_or_default();
 

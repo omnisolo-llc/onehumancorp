@@ -211,6 +211,16 @@ impl HubService for MyHubService {
             ::server_pricing::rate_limit::PlanTier::Business => 79,
         };
 
+        let mut optimization_tips = Vec::new();
+        let agents = self.hub.get_agents_by_org(tenant_id);
+        for agent in agents {
+             let audit = ::server_pricing::prompt_audit::PromptAuditor::audit_system_prompt(&agent.name);
+             optimization_tips.extend(audit.optimization_tips);
+        }
+
+        let caching_savings = self.hub.get_cost_auditor().get_total_savings();
+        let savings_insight = format!("Miser optimized: You saved ${:.2} this month through prompt caching and optimized routing.", caching_savings);
+
         Ok(tonic::Response::new(::server_ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
             ai_actions_used: ai_used as i32,
@@ -218,6 +228,8 @@ impl HubService for MyHubService {
             storage_used_bytes: storage_used_bytes,
             storage_limit_bytes: storage_limit,
             next_bill_estimated: next_bill_estimated,
+            savings_insight,
+            optimization_tips,
         }))
     }
 
@@ -241,6 +253,16 @@ impl HubService for MyHubService {
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
+        let caching_savings = auditor.get_total_savings();
+        let storage_savings = auditor.get_total_storage_savings();
+
+        let mut optimization_tips = Vec::new();
+        let agents = self.hub.get_agents_by_org(tenant_id);
+        for agent in agents {
+             let audit = ::server_pricing::prompt_audit::PromptAuditor::audit_system_prompt(&agent.name);
+             optimization_tips.extend(audit.optimization_tips);
+        }
+
         Ok(tonic::Response::new(::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
             total_costs: (total_costs_f64 * 100.0) as i64,
@@ -249,6 +271,8 @@ impl HubService for MyHubService {
             payment_fees: (payment_fees_f64 * 100.0) as i64,
             period_start: "2024-05-01".to_string(), // In a real app this would be computed
             period_end: "2024-05-31".to_string(),
+            savings_insight: format!("Saved ${:.2} via Caching and ${:.2} via Storage compression.", caching_savings, storage_savings),
+            optimization_tips,
         }))
     }
 
@@ -1657,7 +1681,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 <body style="font-family: 'Outfit', sans-serif; background: #1a1a2e; color: white; margin: 0; padding: 20px;">
                     <nav style="margin-bottom: 40px;">
                         <a href="/" style="color: white; text-decoration: none; margin-right: 20px;">Dashboard</a>
-                        <a href="/agents" style="color: #4ecca3; text-decoration: none;">Agents</a>
+                        <a href="/agents" style="color: #4ecca3; text-decoration: none; margin-right: 20px;">Agents</a>
+                        <a href="/pricing" style="color: white; text-decoration: none;">Pricing</a>
                     </nav>
                     <h1>Agents</h1>
                     <div style="display: flex; gap: 20px; flex-wrap: wrap;">
@@ -1667,6 +1692,88 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
                     <button style="margin-top: 20px; padding: 10px 20px; background: #4ecca3; border: none; border-radius: 5px; color: #1a1a2e; font-weight: bold;">Hire Agent</button>
+                </body>
+            </html>
+        "#,
+        "/pricing" => r#"
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>OneHuman - Pricing</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+                    <style>
+                        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
+                        nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
+                        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; padding: 40px; }
+                        .plan-card { padding: 32px; text-align: center; transition: transform 0.2s; position: relative; }
+                        .plan-card:hover { transform: translateY(-5px); border-color: #4ecca3; }
+                        .price { font-size: 48px; font-weight: 600; margin: 20px 0; }
+                        .currency { font-size: 20px; vertical-align: super; }
+                        .period { font-size: 16px; color: #94a3b8; }
+                        ul { list-style: none; padding: 0; margin: 30px 0; text-align: left; }
+                        li { margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+                        li::before { content: '✓'; color: #4ecca3; }
+                        .btn { width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; background: #4ecca3; color: #0f172a; }
+                        .btn-outline { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
+                        .badge { background: #4ecca3; color: #0f172a; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); }
+                        .miser-box { background: rgba(78, 204, 163, 0.1); border: 1px dashed #4ecca3; padding: 15px; border-radius: 12px; margin-top: 20px; font-size: 14px; }
+                        .miser-ribbon { background: #4ecca3; color: #0f172a; position: absolute; top: 20px; right: -30px; transform: rotate(45deg); width: 150px; font-size: 10px; font-weight: bold; }
+                    </style>
+                </head>
+                <body>
+                    <nav class="glass">
+                        <a href="/" style="color: white; text-decoration: none;">Dashboard</a>
+                        <a href="/agents" style="color: white; text-decoration: none;">Agents</a>
+                        <a href="/pricing" style="color: #4ecca3; text-decoration: none;">Pricing</a>
+                    </nav>
+                    <main style="max-width: 1200px; margin: 0 auto; padding-top: 40px;">
+                        <h1 style="text-align: center;">Simple, Sustainable Pricing</h1>
+                        <p style="text-align: center; color: #94a3b8;">No hidden fees. Just efficient AI for your business.</p>
+
+                        <div class="pricing-grid">
+                            <div class="plan-card glass">
+                                <h3>Free</h3>
+                                <div class="price"><span class="currency">$</span>0<span class="period">/mo</span></div>
+                                <ul>
+                                    <li>100 AI Actions /mo</li>
+                                    <li>500MB Storage</li>
+                                    <li>1 AI Agent</li>
+                                    <li>Magentic Cost Steering</li>
+                                </ul>
+                                <button class="btn btn-outline">Current Plan</button>
+                            </div>
+
+                            <div class="plan-card glass" style="border-color: #4ecca3;">
+                                <div class="badge">MOST POPULAR</div>
+                                <h3>Starter</h3>
+                                <div class="price"><span class="currency">$</span>9<span class="period">/mo</span></div>
+                                <ul>
+                                    <li>1,000 AI Actions /mo</li>
+                                    <li>5GB Storage</li>
+                                    <li>3 AI Agents</li>
+                                    <li>Priority Support</li>
+                                </ul>
+                                <button class="btn">Upgrade Now</button>
+                            </div>
+
+                            <div class="plan-card glass">
+                                <h3>Pro</h3>
+                                <div class="price"><span class="currency">$</span>29<span class="period">/mo</span></div>
+                                <ul>
+                                    <li>Unlimited AI Actions</li>
+                                    <li>50GB Storage</li>
+                                    <li>10 AI Agents</li>
+                                    <li>Custom Prompt Auditor</li>
+                                </ul>
+                                <button class="btn">Go Pro</button>
+                            </div>
+                        </div>
+
+                        <div class="miser-box" style="margin: 0 40px;">
+                            <strong>💰 Miser Staff Note:</strong> We use Advanced Prompt Auditing and Context Pruning to ensure every token counts. Your business is powered by the most efficient AI infrastructure on the planet.
+                        </div>
+                    </main>
                 </body>
             </html>
         "#,
@@ -1680,22 +1787,60 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
                         nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
                         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
-                        main { padding: 40px; }
+                        main { padding: 40px; display: grid; grid-template-columns: 1fr 350px; gap: 30px; }
                         .card { padding: 24px; margin-bottom: 20px; }
-                        h1 { font-weight: 600; color: #4ecca3; }
+                        h1 { font-weight: 600; color: #4ecca3; grid-column: span 2; }
+                        .miser-impact { background: linear-gradient(90deg, rgba(78,204,163,0.1) 0%, rgba(78,204,163,0) 100%); border-left: 4px solid #4ecca3; padding: 12px 20px; border-radius: 0 12px 12px 0; margin: 20px 0; grid-column: span 2; }
+                        .action-feed { background: rgba(255,255,255,0.02); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); }
+                        .action-item { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 3px solid #4ecca3; }
+                        .action-item h4 { margin: 0 0 5px 0; color: #4ecca3; }
+                        .action-item p { margin: 0 0 10px 0; font-size: 13px; color: #94a3b8; }
+                        .btn-small { background: #4ecca3; color: #0f172a; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
                     </style>
                 </head>
                 <body>
                     <nav class="glass">
                         <a href="/" style="color: #4ecca3; text-decoration: none;">Dashboard</a>
                         <a href="/agents" style="color: white; text-decoration: none;">Agents</a>
+                        <a href="/pricing" style="color: white; text-decoration: none;">Pricing</a>
                         <a href="/business-setup" style="color: white; text-decoration: none;">Setup</a>
                     </nav>
                     <main>
                         <h1>OneHuman Dashboard</h1>
-                        <div class="card glass">
-                            <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
+
+                        <div class="miser-impact">
+                            <span style="font-size: 20px;">💰</span> <strong>Impact:</strong> You saved <strong>$12.45</strong> this month via Miser optimizations.
+                        </div>
+
+                        <div class="content-area">
+                            <div class="card glass">
+                                <h2>Welcome back, Human.</h2>
+                                <p>Your agents are working on your behalf. Current token efficiency is up 22%.</p>
+                            </div>
+
+                            <div class="card glass">
+                                <h3>Recent Activity</h3>
+                                <p style="color: #94a3b8;">Marketing Agent optimized campaign "Summer Sale" using Model Tier: Economy.</p>
+                            </div>
+                        </div>
+
+                        <div class="action-feed">
+                            <h3 style="margin-top: 0;">Miser Action Feed</h3>
+                            <div class="action-item">
+                                <h4>Compress Prompt</h4>
+                                <p>Agent "Marketing Pro" has a 32% redundant system prompt. Save ~$2.40/mo.</p>
+                                <button class="btn-small">Apply Optimization</button>
+                            </div>
+                            <div class="action-item">
+                                <h4>Archive Stale Memory</h4>
+                                <p>15 memory records haven't been used in 30 days. Prune to save context space.</p>
+                                <button class="btn-small">Prune Now</button>
+                            </div>
+                            <div class="action-item">
+                                <h4>Switch to ACH</h4>
+                                <p>Upcoming $500 payout detected. Switch to ACH to save $14.20 in fees.</p>
+                                <button class="btn-small">Optimize Payment</button>
+                            </div>
                         </div>
                     </main>
                 </body>

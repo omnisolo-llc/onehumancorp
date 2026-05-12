@@ -3,6 +3,7 @@ filegroup(
     srcs = [
         "chaos_bench.rs",
         "latency_bench.rs",
+        "miser_resilience_test.rs",
         "mod.rs",
 
     ],

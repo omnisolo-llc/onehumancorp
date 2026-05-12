@@ -80,9 +80,10 @@ struct GrowthState {
 }
 
 async fn handle_social_post(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(_req): Json<SocialPostRequest>,
 ) -> impl IntoResponse {
+    let _ = ::server_telemetry::record_external_api_call(&state.pool, "unknown", "social_platform").await;
     Json(SocialPostResponse {
         posted: true,
         post_id: uuid::Uuid::new_v4().to_string(),
@@ -90,12 +91,14 @@ async fn handle_social_post(
 }
 
 async fn handle_send_campaign(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(_req): Json<CampaignRequest>,
 ) -> impl IntoResponse {
+    let emails_sent = 150;
+    let _ = ::server_telemetry::record_email_send_cost(&state.pool, "unknown", emails_sent as i64).await;
     Json(CampaignResponse {
         campaign_id: uuid::Uuid::new_v4().to_string(),
-        emails_sent: 150,
+        emails_sent,
     })
 }
 
