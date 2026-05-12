@@ -53,7 +53,7 @@ mod tests {
         match pool.begin().await {
             Ok(mut tx) => {
                 // Call the actual vulnerable function to test application logic
-                crate::utils::auth_utils::set_org_context(&mut *tx, "").await.expect("Failed to call set_org_context");
+                ::server_common::auth_utils::set_org_context(&mut *tx, "").await.expect("Failed to call set_org_context");
                 let result = sqlx::query("SELECT COUNT(*) FROM customers")
                     .fetch_one(&mut *tx).await;
                 let row = result.expect("Query failed to execute");

@@ -1,0 +1,10 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "chaos_bench.rs",
+        "latency_bench.rs",
+        "mod.rs",
+
+    ],
+    visibility = ["//src/server:__pkg__"],
+)

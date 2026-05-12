@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use crate::ohc::orchestration::*;
-use crate::ohc::orchestration::wizard_service_server::WizardService;
+use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::wizard_service_server::WizardService;
 use std::sync::RwLock;
 
 pub struct MyWizardService {
@@ -202,7 +202,7 @@ impl WizardService for MyWizardService {
 mod tests {
     use super::*;
     use tonic::Request;
-    use crate::ohc::orchestration::EmptyRequest;
+    use ::server_ohc::orchestration::EmptyRequest;
     use std::sync::Mutex;
     use std::sync::OnceLock;
 

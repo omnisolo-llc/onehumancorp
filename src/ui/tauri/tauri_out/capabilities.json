@@ -1,0 +1,12 @@
+{
+  "default": {
+    "identifier": "default",
+    "description": "Default capability for the app",
+    "windows": ["main"],
+    "webviews": [],
+    "permissions": [
+      "core:default"
+    ],
+    "platforms": null
+  }
+}

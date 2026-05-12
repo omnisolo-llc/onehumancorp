@@ -1,5 +1,5 @@
 use super::server::LocalProxyServer;
-use crate::ohc::orchestration::McpInvokeRequest;
+use ::server_ohc::orchestration::McpInvokeRequest;
 
 #[tokio::test]
 async fn test_local_proxy_server_tools() {

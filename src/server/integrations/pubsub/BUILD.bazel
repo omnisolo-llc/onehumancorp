@@ -1,0 +1,8 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "mcp.rs",
+        "mod.rs",
+    ],
+    visibility = ["//src/server/integrations:__pkg__"],
+)

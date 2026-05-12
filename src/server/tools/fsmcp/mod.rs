@@ -3,7 +3,7 @@ use std::env;
 use std::fs;
 use std::sync::Arc;
 
-use crate::auth::Claims;
+use ::server_common::Claims;
 use crate::storage::provider::Provider;
 
 /// Cleans a relative path string and resolves it securely against the base path.

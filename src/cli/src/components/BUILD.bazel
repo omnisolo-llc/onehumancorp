@@ -1,0 +1,16 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+
+js_library(
+    name = "components",
+    srcs = [
+        "AgentStatus.tsx",
+        "ErrorState.tsx",
+        "MarkdownText.tsx",
+        "PromptInput.tsx",
+        "ToolProgress.tsx",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/cli/src/hooks",
+    ],
+)

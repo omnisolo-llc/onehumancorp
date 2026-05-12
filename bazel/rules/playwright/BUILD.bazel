@@ -1,0 +1,4 @@
+exports_files([
+    "playwright_test.sh",
+    "run_playwright.sh",
+])

@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use crate::ohc::orchestration::*;
-use crate::ohc::orchestration::scheduler_service_server::SchedulerService;
+use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::scheduler_service_server::SchedulerService;
 use std::sync::Arc;
 use crate::hub::Hub;
 use crate::scheduler::{Task, Schedule, ScheduleType, TaskStatus};
@@ -22,8 +22,8 @@ impl SchedulerService for MySchedulerService {
         &self,
         request: Request<EmptyRequest>,
     ) -> Result<Response<ScheduledTasksResponse>, Status> {
-        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
-        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
 
 
@@ -36,8 +36,8 @@ impl SchedulerService for MySchedulerService {
         &self,
         request: Request<CreateScheduledTaskRequest>,
     ) -> Result<Response<ProtoTask>, Status> {
-        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
-        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
 
 
@@ -67,8 +67,8 @@ impl SchedulerService for MySchedulerService {
         &self,
         request: Request<CancelScheduledTaskRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
-        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
-        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
 
 

@@ -16,7 +16,7 @@ impl MercadoPagoClient {
     }
 
     pub async fn create_checkout_preference(&self, _price_id: &str, tenant_id: &str) -> Result<String, String> {
-        let _ = crate::telemetry::record_api_call_cost(
+        let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             tenant_id,
             "mercadopago_create_checkout_preference",

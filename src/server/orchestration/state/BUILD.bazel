@@ -1,0 +1,11 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "cloud.rs",
+        "mod.rs",
+        "parity_test.rs",
+        "standalone.rs",
+        "test.rs",
+    ],
+    visibility = ["//src/server/orchestration:__pkg__"],
+)

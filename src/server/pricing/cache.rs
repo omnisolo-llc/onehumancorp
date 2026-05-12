@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 use dashmap::DashMap;
-use crate::pricing::compression;
+use crate::compression;
 
 #[derive(Debug, Clone)]
 pub struct CacheEntry {

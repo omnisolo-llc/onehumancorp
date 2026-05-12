@@ -39,7 +39,7 @@ async fn hire_handler(
     State(hub): State<Arc<Hub>>,
     req: axum::extract::Request,
 ) -> impl IntoResponse {
-    let tenant_id = match req.extensions().get::<crate::auth::Claims>() {
+    let tenant_id = match req.extensions().get::<::server_common::Claims>() {
         Some(claims) => claims.organization_id.clone().unwrap_or_else(|| "system".to_string()),
         None => "system".to_string(),
     };
@@ -55,7 +55,7 @@ async fn hire_handler(
     let now = chrono::Utc::now().timestamp();
     let agent_id = format!("agent-{}", now);
 
-    let agent = crate::ohc::orchestration::Agent {
+    let agent = ::server_ohc::orchestration::Agent {
         id: agent_id.clone(),
         name: payload.name.clone(),
         role: payload.role.clone(),

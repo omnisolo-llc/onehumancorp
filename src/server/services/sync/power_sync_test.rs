@@ -166,8 +166,8 @@ mod tests {
 
         // Start a mock gRPC server
         use tonic::{Request, Response, Status};
-        use crate::ohc::orchestration::{PowerSyncPushRequest, PowerSyncPushResponse, PowerSyncPullRequest, PowerSyncPullResponse};
-        use crate::ohc::orchestration::sync_service_server::{SyncService, SyncServiceServer};
+        use ::server_ohc::orchestration::{PowerSyncPushRequest, PowerSyncPushResponse, PowerSyncPullRequest, PowerSyncPullResponse};
+        use ::server_ohc::orchestration::sync_service_server::{SyncService, SyncServiceServer};
         use tokio::sync::Mutex;
 
         struct MockSyncService {
@@ -178,9 +178,9 @@ mod tests {
         impl SyncService for MockSyncService {
             async fn hybrid_sync_missions(
                 &self,
-                _request: Request<crate::ohc::orchestration::HybridSyncMissionsRequest>,
-            ) -> Result<Response<crate::ohc::orchestration::HybridSyncMissionsResponse>, Status> {
-                Ok(Response::new(crate::ohc::orchestration::HybridSyncMissionsResponse {
+                _request: Request<::server_ohc::orchestration::HybridSyncMissionsRequest>,
+            ) -> Result<Response<::server_ohc::orchestration::HybridSyncMissionsResponse>, Status> {
+                Ok(Response::new(::server_ohc::orchestration::HybridSyncMissionsResponse {
                     status: "success".to_string(),
                     message: "mock".to_string(),
                     synced_count: 0,
@@ -189,9 +189,9 @@ mod tests {
 
             async fn vector_sync(
                 &self,
-                _request: Request<crate::ohc::orchestration::VectorSyncRequest>,
-            ) -> Result<Response<crate::ohc::orchestration::VectorSyncResponse>, Status> {
-                Ok(Response::new(crate::ohc::orchestration::VectorSyncResponse {
+                _request: Request<::server_ohc::orchestration::VectorSyncRequest>,
+            ) -> Result<Response<::server_ohc::orchestration::VectorSyncResponse>, Status> {
+                Ok(Response::new(::server_ohc::orchestration::VectorSyncResponse {
                     status: "success".to_string(),
                     message: "mock".to_string(),
                 }))
@@ -229,9 +229,9 @@ mod tests {
 
             async fn sync_mcp_deltas(
                 &self,
-                _request: Request<crate::ohc::orchestration::SyncMcpDeltasRequest>,
-            ) -> Result<Response<crate::ohc::orchestration::SyncMcpDeltasResponse>, Status> {
-                Ok(Response::new(crate::ohc::orchestration::SyncMcpDeltasResponse {
+                _request: Request<::server_ohc::orchestration::SyncMcpDeltasRequest>,
+            ) -> Result<Response<::server_ohc::orchestration::SyncMcpDeltasResponse>, Status> {
+                Ok(Response::new(::server_ohc::orchestration::SyncMcpDeltasResponse {
                     status: "success".to_string(),
                     message: "mock".to_string(),
                     synced_count: 0,
@@ -240,9 +240,9 @@ mod tests {
 
             async fn sync_escalation(
                 &self,
-                _request: Request<crate::ohc::orchestration::SyncEscalationRequest>,
-            ) -> Result<Response<crate::ohc::orchestration::SyncEscalationResponse>, Status> {
-                Ok(Response::new(crate::ohc::orchestration::SyncEscalationResponse {
+                _request: Request<::server_ohc::orchestration::SyncEscalationRequest>,
+            ) -> Result<Response<::server_ohc::orchestration::SyncEscalationResponse>, Status> {
+                Ok(Response::new(::server_ohc::orchestration::SyncEscalationResponse {
                     status: "success".to_string(),
                     message: "mock".to_string(),
                     synced_count: 0,

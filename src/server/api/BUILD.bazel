@@ -1,0 +1,16 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "autodream.rs",
+        "billing_webhook.rs",
+        "billing_webhook_test.rs",
+        "growth.rs",
+        "health.rs",
+        "mesh_handler.rs",
+        "mod.rs",
+        "telemetry.rs",
+        "//src/server/api/agents:srcs",
+        "//src/server/api/onboarding:srcs",
+    ],
+    visibility = ["//src/server:__pkg__"],
+)
