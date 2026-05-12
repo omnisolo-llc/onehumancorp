@@ -15,12 +15,14 @@ actions:
     steps:
       - run: |
           sudo apt-get update && sudo apt-get install -y ca-certificates curl git
+          go install github.com/bazelbuild/bazelisk@latest
+          export PATH=$PATH:$(go env GOPATH)/bin
           # Build the server first
-          bazel build //src/server:server --config=linux
+          bazelisk build //src/server:server --config=linux
 
           # Run Playwright tests with screenshots
           # Uses playwright_test.sh which handles Docker infra (postgres, redis) and server startup
-          bazel test //src/e2e:playwright \
+          bazelisk test //src/e2e:playwright \
             --test_output=streamed \
             --test_timeout=300,600,900,1800
 
@@ -44,10 +46,12 @@ actions:
       GOTOOLCHAIN: "auto"
     steps:
       - run: |
+          go install github.com/bazelbuild/bazelisk@latest
+          export PATH=$PATH:$(go env GOPATH)/bin
           # Build release artifacts first (needed by verification_tests)
-          bazel build //release:all_release_artifacts --config=linux
+          bazelisk build //release:all_release_artifacts --config=linux
           # Run all tests on Linux
-          bazel test \
+          bazelisk test \
             --config=linux \
             --test_output=errors \
             --test_summary=terse \
@@ -71,7 +75,9 @@ actions:
       GOTOOLCHAIN: "auto"
     steps:
       - run: |
-          bazel build //... --config=linux
+          go install github.com/bazelbuild/bazelisk@latest
+          export PATH=$PATH:$(go env GOPATH)/bin
+          bazelisk build //... --config=linux
           # Cross-platform builds (assumes CI environment has toolchains)
-          bazel build //... --config=windows || echo "Warning: Windows build failed"
-          bazel build //... --config=macos || echo "Warning: MacOS build failed"
+          bazelisk build //... --config=windows || echo "Warning: Windows build failed"
+          bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
