@@ -18,7 +18,7 @@ def define_playwright_tests():
         name = _playwright_target_name(spec)
         sh_test(
             name = name,
-            srcs = ["playwright_test.sh"],
+            srcs = ["//bazel/rules/playwright:playwright_test.sh"],
             args = [spec],
             data = native.glob(["*.spec.ts"]) + [
                 "//src/server:server",

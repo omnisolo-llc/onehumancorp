@@ -22,21 +22,7 @@ cd "$workspace_root"
 export HOME="${HOME:-${TEST_TMPDIR:-/tmp}/home}"
 mkdir -p "$HOME"
 
-# Playwright browsers cache
-export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/tmp/ohc-playwright-browsers}"
-mkdir -p "$PLAYWRIGHT_BROWSERS_PATH"
-
-# Install Playwright dependencies and Chromium
-# Using --with-deps ensures system dependencies are installed for Ubuntu compatibility
-if ! find "$PLAYWRIGHT_BROWSERS_PATH" -maxdepth 3 -type f -name 'chrome-headless-shell' 2>/dev/null | grep -q .; then
-  echo "[playwright] Installing Chromium with dependencies..."
-  npx playwright install --with-deps chromium 2>&1 || {
-    # Fallback: try installing deps separately
-    echo "[playwright] Trying alternative installation..."
-    npx playwright install-deps chromium 2>&1 || true
-    npx playwright install chromium 2>&1 || true
-  }
-fi
+# Playwright browsers are now handled by the official Docker image.
 
 # Cleanup handler
 cleanup() {
@@ -45,15 +31,14 @@ cleanup() {
     kill "$SERVER_PID" >/dev/null 2>&1 || true
     wait "$SERVER_PID" >/dev/null 2>&1 || true
   fi
-  docker rm -f e2e_postgres e2e_redis >/dev/null 2>&1 || true
+  docker rm -f e2e_postgres e2e_valkey >/dev/null 2>&1 || true
   exit "$exit_code"
 }
 trap cleanup EXIT
 
-# Start infrastructure
 echo "[playwright] Starting E2E infrastructure..."
 docker run -d --name e2e_postgres -p 5432:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc postgres:16-alpine || true
-docker run -d --name e2e_redis -p 6379:6379 redis:7-alpine || true
+docker run -d --name e2e_valkey -p 6379:6379 valkey/valkey:8-alpine || true
 
 # Wait for postgres
 echo "[playwright] Waiting for postgres..."
@@ -97,14 +82,28 @@ else
   echo "[playwright] Warning: server binary not found, tests may fail"
 fi
 
-# Run the specific spec file
+# Run the specific spec file via official Playwright Docker image
 export CI=true
 export BASE_URL="${BASE_URL:-http://localhost:18789}"
 
+PLAYWRIGHT_IMAGE="mcr.microsoft.com/playwright:v1.59.1-noble"
+
+run_playwright() {
+  local target="$1"
+  docker run --rm \
+    --network=host \
+    -v "$(pwd):/work" \
+    -w /work \
+    -e CI=true \
+    -e BASE_URL="$BASE_URL" \
+    "$PLAYWRIGHT_IMAGE" \
+    npx playwright test --config playwright.config.ts $target
+}
+
 if [[ -n "$spec_file" ]]; then
   echo "[playwright] Running spec: $spec_file"
-  npx playwright test --config playwright.config.ts "src/e2e/$spec_file" || true
+  run_playwright "src/e2e/$spec_file" || true
 else
   echo "[playwright] Running all specs"
-  npx playwright test --config playwright.config.ts || true
+  run_playwright "" || true
 fi
