@@ -43,6 +43,15 @@ pub async fn run_health_monitor(
             }
         }
 
+        // Advanced probe for hybrid-mode switching
+        if let Ok(health) = monitor_hub.check_health().await {
+            if let Some(switch_pending) = health.get("hybrid_mode_switch_pending").and_then(|v| v.as_bool()) {
+                if switch_pending {
+                    tracing::warn!("HEALTH MONITOR: Hybrid-mode switch is pending, throttling non-essential missions.");
+                }
+            }
+        }
+
         let mut to_fire_now: Vec<String> = Vec::new();
         match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.get_active_agents()).await {
             Ok(Ok(agents)) => {
