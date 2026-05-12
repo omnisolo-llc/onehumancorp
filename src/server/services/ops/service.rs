@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::ops_service_server::OpsService;
+use crate::ohc::orchestration::*;
+use crate::ohc::orchestration::ops_service_server::OpsService;
 use std::sync::{Arc, RwLock};
 use chrono::Utc;
 use crate::hub::Hub;
@@ -289,8 +289,8 @@ impl OpsService for MyOpsService {
         &self,
         request: Request<ScaleRequest>,
     ) -> Result<Response<ScaleResponse>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
-        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
         let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
 
 
@@ -370,8 +370,8 @@ impl OpsService for MyOpsService {
         &self,
         request: Request<EmptyRequest>,
     ) -> Result<Response<PruneMissionsResponse>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
-        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
+        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
         let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
 
 

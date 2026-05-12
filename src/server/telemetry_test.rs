@@ -14,9 +14,9 @@ mod tests {
 
         let mut sanitized_props = props;
         for (k, v) in sanitized_props.iter_mut() {
-            if ::server_telemetry::is_sensitive_key(k) {
+            if crate::telemetry::is_sensitive_key(k) {
                 *v = "[REDACTED]".to_string();
-            } else if ::server_telemetry::is_email(v) {
+            } else if crate::telemetry::is_email(v) {
                 *v = "[EMAIL_REDACTED]".to_string();
             }
         }
@@ -32,7 +32,7 @@ mod tests {
 
 
     use serde_json::{json, Value};
-    use ::server_telemetry::{redact_interface_pii, buffer_metric};
+    use crate::telemetry::{redact_interface_pii, buffer_metric};
 
     #[test]
     fn test_redact_pii_password() {
@@ -112,10 +112,10 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = ::server_telemetry::record_sqlite_lock_contention(&pool, "test_operation").await;
+        let res = crate::telemetry::record_sqlite_lock_contention(&pool, "test_operation").await;
         assert!(res.is_ok());
 
-        let res = ::server_telemetry::record_sqlite_retry_exhausted(&pool, "test_operation").await;
+        let res = crate::telemetry::record_sqlite_retry_exhausted(&pool, "test_operation").await;
         assert!(res.is_ok());
     }
 
@@ -127,7 +127,7 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = ::server_telemetry::record_token_usage_forecast(&pool, "org_test", 15000.0).await;
+        let res = crate::telemetry::record_token_usage_forecast(&pool, "org_test", 15000.0).await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_forecast' ORDER BY timestamp DESC LIMIT 1")
@@ -152,7 +152,7 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = ::server_telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
+        let res = crate::telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost' ORDER BY timestamp DESC LIMIT 1")
@@ -179,7 +179,7 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = ::server_telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
+        let res = crate::telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost' ORDER BY timestamp DESC LIMIT 1")
@@ -205,7 +205,7 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = ::server_telemetry::record_swarm_job_latency_by_entity(&pool, "cloud", "test-entity-3", 125.0).await;
+        let res = crate::telemetry::record_swarm_job_latency_by_entity(&pool, "cloud", "test-entity-3", 125.0).await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_swarm_job_latency_by_entity_seconds' ORDER BY timestamp DESC LIMIT 1")
@@ -261,39 +261,24 @@ mod tests {
         let mut violations = Vec::new();
 
         let mut search_dirs = vec![PathBuf::from(".")];
-        // Try multiple possible source locations
-        let possible_src_roots = vec![
-            PathBuf::from("src"),
-            PathBuf::from("src/server"),
-        ];
-        if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
-            let runfiles = PathBuf::from(&runfiles_dir);
-            // In bazel runfiles, the manifest is at RUNFILES_DIR/MANIFEST.txt
-            // The actual source files are symlinked in the runfiles directory
-            // We need to find where the src directory actually is
-            for entry in std::fs::read_dir(&runfiles).into_iter().flatten().flatten() {
-                let path = entry.path();
-                if path.is_dir() && path.file_name().map_or(false, |n| n == "src") {
-                    search_dirs.push(path);
-                }
-            }
-            // Also try workspace name prefix (common pattern)
-            if let Ok(workspace) = env::var("TEST_WORKSPACE") {
-                let prefixed = runfiles.join(&workspace).join("src");
-                if prefixed.exists() {
-                    search_dirs.push(prefixed);
-                }
-            }
-        }
-        for src_root in possible_src_roots {
-            if src_root.exists() {
-                search_dirs.push(src_root);
-            }
+        if let Ok(workspace_dir) = env::var("BUILD_WORKSPACE_DIRECTORY") {
+            let mut p = PathBuf::from(&workspace_dir);
+            p.push("src");
+            search_dirs.push(p.clone());
+            let mut p2 = PathBuf::from(&workspace_dir);
+            p2.push("srcs");
+            search_dirs.push(p2);
+        } else if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
+            let p = PathBuf::from(runfiles_dir.clone());
+            search_dirs.push(p);
+            let mut p2 = PathBuf::from(runfiles_dir.clone()); p2.push("ohc"); search_dirs.push(p2.clone());
+            p2.push("srcs");
+            search_dirs.push(p2);
         }
 
         let mut checked_files = 0;
 
-        for dir in &search_dirs {
+        for dir in search_dirs {
             if dir.exists() {
                 let walker = WalkDir::new(&dir).into_iter().filter_entry(|e| {
                     e.path().components().all(|c| c.as_os_str() != "external")
@@ -392,13 +377,7 @@ mod tests {
             }
         }
 
-        let search_dirs_for_error = search_dirs.clone();
-        if checked_files == 0 {
-            // No files found to check - likely running in an environment where source files
-            // are not accessible (e.g., some bazel sandboxes). Skip the test gracefully.
-            println!("PII test skipped: Could not find any .rs files. Search dirs: {:?}", search_dirs_for_error);
-            return;
-        }
+        assert!(checked_files > 10, "Could not find enough .rs files to run PII leakage test. Checked: {}", checked_files);
         assert!(
             violations.is_empty(),
             "Found PII logging violations in the following lines:\n{:#?}",
@@ -416,7 +395,7 @@ mod tests {
                 ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
             ],
             || {
-                let config = ::server_config::load().unwrap();
+                let config = crate::config::load().unwrap();
 
                 // Assert that the config logic matches the policy:
                 // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=false, telemetry should NOT run.
@@ -437,7 +416,7 @@ mod tests {
                 ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
             ],
             || {
-                let config = ::server_config::load().unwrap();
+                let config = crate::config::load().unwrap();
 
                 // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=true, telemetry SHOULD run.
                 let should_start_telemetry = config.telemetry_enabled;
@@ -450,7 +429,7 @@ mod tests {
 
 #[tokio::test]
 async fn test_queue_length_gauge_initialization() {
-    let gauge = ::server_telemetry::get_queue_length_gauge();
+    let gauge = crate::telemetry::get_queue_length_gauge();
     gauge.add(1, &[]);
 }
 
@@ -462,7 +441,7 @@ async fn test_record_queue_length_with_deployment_mode() {
         _ => return, // Gracefully exit if DB is not available in sandbox or times out
     };
 
-    let res = ::server_telemetry::record_queue_length(&pool, 5).await;
+    let res = crate::telemetry::record_queue_length(&pool, 5).await;
     assert!(res.is_ok());
 
     let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_sub_agent_queue_length' ORDER BY timestamp DESC LIMIT 1")
@@ -537,7 +516,7 @@ fn test_redact_interface_pii_malicious_payloads() {
         "another_safe": 123
     });
 
-    let redacted = ::server_telemetry::redact_interface_pii(payload);
+    let redacted = crate::telemetry::redact_interface_pii(payload);
 
     // Verify root level safe fields
     assert_eq!(redacted["safe_field"], "This should not be redacted");

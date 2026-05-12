@@ -1,5 +1,5 @@
-use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelService;
-use ::server_ohc::mcp_proxy::{ServerToProxy, ProxyToServer};
+use crate::ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelService;
+use crate::ohc::mcp_proxy::{ServerToProxy, ProxyToServer};
 use tonic::{Request, Response, Status, Streaming};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
@@ -30,12 +30,12 @@ impl McpReverseTunnelService for ReverseTunnelServer {
             while let Ok(Some(msg)) = in_stream.message().await {
                 if let Some(payload) = msg.payload {
                     match payload {
-                        ::server_ohc::mcp_proxy::proxy_to_server::Payload::Register(reg) => {
+                        crate::ohc::mcp_proxy::proxy_to_server::Payload::Register(reg) => {
                             info!("Registered local proxy with SPIFFE ID: {}", reg.spiffe_id);
                             active_spiffe_id = Some(reg.spiffe_id.clone());
-                            let _ = ::server_telemetry::record_mcp_proxy_connections_active(&pool, &reg.spiffe_id, 1.0).await;
+                            let _ = crate::telemetry::record_mcp_proxy_connections_active(&pool, &reg.spiffe_id, 1.0).await;
                         }
-                        ::server_ohc::mcp_proxy::proxy_to_server::Payload::InvokeResponse(res) => {
+                        crate::ohc::mcp_proxy::proxy_to_server::Payload::InvokeResponse(res) => {
                             info!("Received response for {}: success={}", msg.request_id, res.success);
                         }
                     }
@@ -43,7 +43,7 @@ impl McpReverseTunnelService for ReverseTunnelServer {
             }
 
             if let Some(spiffe_id) = active_spiffe_id {
-                let _ = ::server_telemetry::record_mcp_proxy_connections_active(&pool, &spiffe_id, -1.0).await;
+                let _ = crate::telemetry::record_mcp_proxy_connections_active(&pool, &spiffe_id, -1.0).await;
             }
 
             info!("Tunnel connection closed.");

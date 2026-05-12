@@ -44,11 +44,11 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
     await menuBtn.click();
 
     // Verify straightforward options in the menu
-    await expect(page.locator('button:has-text("Connect Custom Software")')).toBeVisible();
+    await expect(page.locator('button:has-text("Connect Apps")')).toBeVisible();
     await expect(page.locator('button:has-text("Video Tutorials")')).toBeVisible();
   });
 
-  test('Flow 4: User navigates to Connect Custom Software to review available connections', async ({ page }) => {
+  test('Flow 4: User navigates to Connect Apps to review available connections', async ({ page }) => {
     await page.goto('/login');
     await page.fill('input[type="email"]', 'grandma@example.com');
     await page.fill('input[type="password"]', 'password123');
@@ -56,7 +56,7 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
     await page.waitForURL('**/*');
 
     await page.click('button:has-text("Menu")');
-    await page.click('button:has-text("Connect Custom Software")');
+    await page.click('button:has-text("Connect Apps")');
 
     // Verify API screen uses grandma-friendly terms
     await expect(page.locator('text=Custom Integration')).toBeVisible();

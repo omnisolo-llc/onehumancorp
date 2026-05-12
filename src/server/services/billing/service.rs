@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::billing::*;
-use ::server_ohc::billing::billing_service_server::BillingService;
+use crate::ohc::billing::*;
+use crate::ohc::billing::billing_service_server::BillingService;
 use crate::services::billing::auditor::{CostAuditor, AuditEvent};
 use std::sync::Arc;
 
@@ -72,7 +72,7 @@ impl BillingService for MyBillingService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::server_pricing::calculator::CostConfig;
+    use crate::pricing::calculator::CostConfig;
 
     #[tokio::test]
     async fn test_track_token_usage() {

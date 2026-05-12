@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 use serde_json::Value;
 
-use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
+use crate::pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use crate::db::DbStore;
 
 #[derive(Clone)]

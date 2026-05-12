@@ -1,0 +1,265 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export struct UiProduct {
+    id: string,
+    name: string,
+    type_label: string,
+    price: string,
+    inventory_count: int,
+    is_out_of_stock: bool,
+}
+
+export component BusinessManager inherits Window {
+    preferred-width: 500px;
+    min-width: 375px;
+    height: 600px;
+    out property <string> test_title: root.title;
+    // "list" | "add"
+    in-out property <string> current_view: "list";
+
+    in property <[UiProduct]> products;
+
+    in-out property <int> step: 0;
+    in-out property <string> selected_type: "";
+
+    // Form fields
+    in-out property <string> product_name: "";
+    in-out property <string> product_description: "";
+    in-out property <string> product_price: "";
+
+    // Service specific
+    in-out property <string> service_duration: "60";
+    in-out property <bool> show_offering_hint: false;
+    in-out property <bool> show_details_hint: false;
+    in-out property <string> service_schedule: "{}";
+
+    callback next_step();
+    callback prev_step();
+    callback select_type(string);
+    callback submit(string, string, string, string, string, string); // type, name, desc, price, duration, schedule
+    callback close();
+    callback action_add_new();
+    callback action_edit(string);
+    callback action_archive(string);
+
+    next_step => { step = step + 1; }
+    prev_step => { step = step - 1; }
+    select_type(t) => { selected_type = t; }
+    action_add_new => { current_view = "add"; step = 0; selected_type = ""; product_name = ""; product_description = ""; product_price = ""; }
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: current_view == "list" ? "My Offerings" : "Add Offering"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            GlassCard {}
+            if (current_view == "add") : Button { text: "Back to List"; clicked => { current_view = "list"; } }
+            if (current_view == "list") : Button { text: "Close"; clicked => { close(); } }
+        }
+
+        if (current_view == "list") : VerticalBox {
+            spacing: 16px;
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 12px;
+                    for prod in products : GlassCard {
+                        border-color: prod.is_out_of_stock ? rgba(239, 68, 68, 0.5) : rgba(255, 255, 255, 0.1);
+                        border-width: 1px;
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 12px;
+
+                            HorizontalBox {
+                                Text { text: prod.name; font-size: 18px; font-weight: 700; color: white; font-family: "Outfit"; }
+                                GlassCard {}
+                                Text { text: prod.price; font-size: 16px; font-weight: 700; color: #10b981; font-family: "Inter"; }
+                            }
+
+                            HorizontalBox {
+                                spacing: 8px;
+                                GlassCard {
+                                    background: rgba(255, 255, 255, 0.1);
+                                    border-radius: 4px;
+                                    padding: 4px;
+                                    Text { text: prod.type_label; font-size: 12px; color: #cbd5e1; font-family: "Inter"; }
+                                }
+                                if (!prod.is_out_of_stock) : GlassCard {
+                                    background: rgba(16, 185, 129, 0.1);
+                                    border-radius: 4px;
+                                    padding: 4px;
+                                    Text { text: prod.inventory_count + " in stock"; font-size: 12px; color: #10b981; font-family: "Inter"; }
+                                }
+                                if (prod.is_out_of_stock) : GlassCard {
+                                    background: rgba(239, 68, 68, 0.2);
+                                    border-radius: 4px;
+                                    padding: 4px;
+                                    Text { text: "⚠️ Out of Stock"; font-size: 12px; color: #ef4444; font-weight: 700; font-family: "Inter"; }
+                                }
+                            }
+
+                            HorizontalBox {
+                                alignment: end;
+                                spacing: 8px;
+                                Button { text: "Edit"; height: 44px; clicked => { action_edit(prod.id); } }
+                                Button { text: "Archive"; height: 44px; clicked => { action_archive(prod.id); } }
+                            }
+                        }
+                    }
+                }
+            }
+
+            GlassCard {
+                height: 52px;
+                background: rgba(168, 85, 247, 0.8);
+                VerticalBox { alignment: center; Text { text: "+ Add New Offering"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { action_add_new(); } }
+            }
+        }
+
+        // Step 0: Select Type
+        if (current_view == "add" && step == 0) : VerticalBox {
+            spacing: 16px;
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "What type of offering are you creating?"; color: #94a3b8; font-family: "Inter"; font-size: 14px; vertical-alignment: center; }
+                Button { text: "?"; width: 44px; height: 44px; clicked => { show_offering_hint = !show_offering_hint; } }
+            }
+            if (show_offering_hint) : Text {
+                text: "Choose Physical for items you ship, Digital for files like PDFs, or Service for bookings and your time.";
+                color: #cbd5e1;
+                font-size: 14px;
+                wrap: word-wrap;
+            }
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 12px;
+
+                    GlassCard {
+                        height: 70px;
+                        background: selected_type == "PHYSICAL" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "📦 Physical Item"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                            Text { text: "Shipped to customers"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        }
+                        TouchArea { clicked => { select_type("PHYSICAL"); } }
+                    }
+
+                    GlassCard {
+                        height: 70px;
+                        background: selected_type == "DIGITAL" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "💻 Digital Download"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                            Text { text: "Files, templates, etc."; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        }
+                        TouchArea { clicked => { select_type("DIGITAL"); } }
+                    }
+
+                    GlassCard {
+                        height: 70px;
+                        background: selected_type == "SERVICE" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        VerticalBox { alignment: center; padding: 12px;
+                            Text { text: "⏱️ My Time / Service"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                            Text { text: "Bookings, consultations, etc."; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                        }
+                        TouchArea { clicked => { select_type("SERVICE"); } }
+                    }
+                }
+            }
+        }
+
+        // Step 1: Details
+        if (current_view == "add" && step == 1) : VerticalBox {
+            spacing: 16px;
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "Details"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                Button { text: "?"; width: 44px; height: 44px; clicked => { show_details_hint = !show_details_hint; } }
+            }
+            if (show_details_hint) : Text {
+                text: "Fill in these details to help your customers understand exactly what they are getting.";
+                color: #cbd5e1;
+                font-size: 14px;
+                wrap: word-wrap;
+            }
+
+            VerticalBox {
+                spacing: 8px;
+                Text { text: "Name"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                LineEdit { text <=> product_name; placeholder-text: "E.g. Custom Vegan Cake"; height: 44px; }
+            }
+
+            VerticalBox {
+                spacing: 8px;
+                Text { text: "Description"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                LineEdit { text <=> product_description; placeholder-text: "Brief description"; height: 44px; }
+            }
+
+            VerticalBox {
+                spacing: 8px;
+                Text { text: "Price (USD)"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                LineEdit { text <=> product_price; input-type: decimal; placeholder-text: "0.00"; height: 44px; }
+            }
+
+            if (selected_type == "SERVICE") : VerticalBox {
+                spacing: 16px;
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Duration (minutes)"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    LineEdit { text <=> service_duration; input-type: number; placeholder-text: "60"; height: 44px; }
+                }
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Available Hours"; color: #94a3b8; font-family: "Inter"; font-size: 14px; }
+                    LineEdit { text <=> service_schedule; placeholder-text: "e.g. Mon-Fri 9am-5pm"; height: 44px; }
+                }
+            }
+        }
+
+        Rectangle {} // Spacer
+
+        // Navigation
+        if (current_view == "add") : HorizontalBox {
+            if (step > 0) : GlassCard {
+                width: 100px;
+                height: 44px;
+                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
+                TouchArea { clicked => { prev_step(); } }
+            }
+            if (step == 0) : GlassCard { width: 100px; } // spacer
+
+            GlassCard {} // Center spacer
+
+            if (step == 0) : GlassCard {
+                width: 120px;
+                height: 44px;
+                background: selected_type != "" ? rgba(168, 85, 247, 0.8) : rgba(100, 116, 139, 0.4);
+                VerticalBox { alignment: center; Text { text: "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea {
+                    enabled: selected_type != "";
+                    clicked => { next_step(); }
+                }
+            }
+
+            if (step == 1) : GlassCard {
+                width: 160px;
+                height: 44px;
+                background: rgba(168, 85, 247, 1.0);
+                VerticalBox { alignment: center; Text { text: "Create"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                TouchArea {
+                    clicked => {
+                        submit(selected_type, product_name, product_description, product_price, service_duration, service_schedule);
+                        close();
+                    }
+                }
+            }
+        }
+    }
+}

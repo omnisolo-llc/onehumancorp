@@ -12,10 +12,6 @@ js_binary(
     name = "ts_proto_wrapper",
     data = ["//:node_modules/ts-proto"],
     entry_point = ":ts_proto_wrapper.js",
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:public"],
 )
 
@@ -25,9 +21,5 @@ py_binary(
     srcs = ["gen_dart_yaml.py"],
     main = "gen_dart_yaml.py",
     python_version = "PY3",
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:public"],
 )

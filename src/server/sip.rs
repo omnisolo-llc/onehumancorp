@@ -29,7 +29,7 @@ impl SipDB {
 
     pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
 
         sqlx::query(
             "UPDATE agent_missions
@@ -191,7 +191,7 @@ impl SipDB {
                     None
                 };
                 let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
+                crate::utils::auth_utils::set_org_context(&mut *tx, "system").await?;
                 self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local).await?;
                 tx.commit().await?;
                 Ok::<(), sqlx::Error>(())

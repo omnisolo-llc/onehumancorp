@@ -1,9 +1,0 @@
-filegroup(
-    name = "srcs",
-    srcs = [
-        "mod.rs",
-        "protocol.rs",
-
-    ],
-    visibility = ["//src/server:__pkg__"],
-)
