@@ -65,6 +65,36 @@ impl NamespaceJsonStore {
 
 #[async_trait]
 impl LongTermMemory for NamespaceJsonStore {
+    async fn consolidate_session(
+        &self,
+        _session_id: &str,
+        messages: &[ohc_builtin_agent_core::types::Message],
+        llm: std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>,
+    ) -> Result<(), String> {
+        if messages.is_empty() {
+            return Ok(());
+        }
+
+        let mut transcript = String::new();
+        for m in messages {
+            transcript.push_str(&format!("[Role: {}]\n{}\n---\n", m.role, m.content));
+        }
+
+        let summary_req = ohc_builtin_agent_core::types::ChatRequest {
+            model: "default".to_string(),
+            system: "Summarize the following agent session to be stored in long-term memory. Focus on important facts and final results.".to_string(),
+            messages: vec![ohc_builtin_agent_core::types::Message::user(format!("Session transcript:\n{}", transcript))],
+            tools: vec![],
+            max_tokens: 500,
+            temperature: 0.0,
+        };
+
+        let summary = llm.chat(summary_req).await.map_err(|e| e.to_string())?.message.content;
+        self.store(&summary, vec!["summaries".to_string()]).await?;
+
+        Ok(())
+    }
+
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut all_entries = Vec::new();
 

@@ -771,6 +771,17 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
+
+    /// Autonomous Consolidation: Automatically summarizes the session and updates the 3-tier memory or vector store.
+    async fn consolidate_session(
+        &self,
+        _session_id: &str,
+        _messages: &[ohc_builtin_agent_core::types::Message],
+        _llm: std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+
     fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> { None }
 }
 
@@ -824,6 +835,36 @@ impl LongTermMemory for PersistentMemoryStore {
             metadata: Some(serde_json::to_string(&tags).unwrap_or_default()),
         };
         self.repo.upsert(&record).await
+    }
+
+    async fn consolidate_session(
+        &self,
+        _session_id: &str,
+        messages: &[ohc_builtin_agent_core::types::Message],
+        llm: std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>,
+    ) -> Result<(), String> {
+        if messages.is_empty() {
+            return Ok(());
+        }
+
+        let mut transcript = String::new();
+        for m in messages {
+            transcript.push_str(&format!("[Role: {}]\n{}\n---\n", m.role, m.content));
+        }
+
+        let summary_req = ohc_builtin_agent_core::types::ChatRequest {
+            model: "default".to_string(),
+            system: "Summarize the following agent session to be stored in long-term memory. Focus on important facts, architectural decisions, and final results.".to_string(),
+            messages: vec![ohc_builtin_agent_core::types::Message::user(format!("Session transcript:\n{}", transcript))],
+            tools: vec![],
+            max_tokens: 500,
+            temperature: 0.0,
+        };
+
+        let summary = llm.chat(summary_req).await.map_err(|e| e.to_string())?.message.content;
+        self.store(&summary, vec!["AUTO_CONSOLIDATED".to_string()]).await?;
+
+        Ok(())
     }
 }
 
@@ -991,6 +1032,75 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
     }
     fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
         Some(std::sync::Arc::new(self.clone()))
+    }
+
+    async fn consolidate_session(
+        &self,
+        session_id: &str,
+        messages: &[ohc_builtin_agent_core::types::Message],
+        llm: std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>,
+    ) -> Result<(), String> {
+        if messages.is_empty() {
+            return Ok(());
+        }
+
+        // 1. Log full transcript
+        let mut transcript = String::new();
+        for m in messages {
+            transcript.push_str(&format!("[Role: {}]\n{}\n", m.role, m.content));
+            if !m.tool_calls.is_empty() {
+                for tc in &m.tool_calls {
+                    transcript.push_str(&format!("  Tool Call: {} ({})\n", tc.name, tc.arguments));
+                }
+            }
+            if !m.tool_results.is_empty() {
+                for tr in &m.tool_results {
+                    transcript.push_str(&format!("  Tool Result: {}\n", tr.content));
+                    if !tr.error.is_empty() {
+                        transcript.push_str(&format!("  Error: {}\n", tr.error));
+                    }
+                }
+            }
+            transcript.push_str("---\n");
+        }
+        self.append_transcript(session_id, &transcript).await?;
+
+        // 2. Generate lightweight index entry (max 150 chars)
+        let index_req = ohc_builtin_agent_core::types::ChatRequest {
+            model: "default".to_string(),
+            system: "You are an expert at summarizing agent sessions. Generate a one-line summary (max 150 chars) of the following session. Focus on the core objective and result. Respond ONLY with the summary.".to_string(),
+            messages: vec![ohc_builtin_agent_core::types::Message::user(format!("Session transcript:\n{}", transcript))],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        };
+        let index_summary = llm.chat(index_req).await.map_err(|e| e.to_string())?.message.content;
+        self.store(&index_summary, vec![]).await?;
+
+        // 3. Identify topic and update topic file
+        let topic_req = ohc_builtin_agent_core::types::ChatRequest {
+            model: "default".to_string(),
+            system: "Identify the primary topic of this agent session (e.g. 'Postgres Security', 'UI Design System', 'Email Marketing'). Respond ONLY with the topic name.".to_string(),
+            messages: vec![ohc_builtin_agent_core::types::Message::user(format!("Session transcript:\n{}", transcript))],
+            tools: vec![],
+            max_tokens: 50,
+            temperature: 0.0,
+        };
+        let topic_name = llm.chat(topic_req).await.map_err(|e| e.to_string())?.message.content;
+
+        let existing_topic = self.retrieve_topic(&topic_name).await.unwrap_or_default();
+        let update_req = ohc_builtin_agent_core::types::ChatRequest {
+            model: "default".to_string(),
+            system: format!("Update the following topic documentation with the new findings from this session. Be comprehensive but concise. Preserve existing important information.\n\nExisting Documentation:\n{}", existing_topic),
+            messages: vec![ohc_builtin_agent_core::types::Message::user(format!("New session findings:\n{}", transcript))],
+            tools: vec![],
+            max_tokens: 1000,
+            temperature: 0.0,
+        };
+        let updated_topic = llm.chat(update_req).await.map_err(|e| e.to_string())?.message.content;
+        self.write_topic(&topic_name, &updated_topic).await?;
+
+        Ok(())
     }
 }
 
@@ -2662,5 +2772,72 @@ mod additional_tests {
         let results = repo.cross_department_search("org1", &v1, 10).await.unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].content, "Sales context");
+    }
+}
+
+#[cfg(test)]
+mod consolidation_tests {
+    use super::*;
+    use crate::types::{ChatRequest, ChatResponse, Message, Role, Usage};
+
+    struct ConsolidationMockLlm {
+        pub responses: tokio::sync::Mutex<Vec<String>>,
+    }
+
+    #[async_trait::async_trait]
+    impl ohc_builtin_agent_llm::LlmClient for ConsolidationMockLlm {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().await;
+            let content = if !resps.is_empty() {
+                resps.remove(0)
+            } else {
+                "default summary".to_string()
+            };
+            Ok(ChatResponse {
+                message: Message::assistant(content),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("mock".to_string()),
+            })
+        }
+        async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(vec![0.0; 1536])
+        }
+    }
+
+    #[tokio::test]
+    async fn test_anthropic_3tier_consolidate_session() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let store = Anthropic3TierMemoryStore::new(temp_dir.path()).unwrap();
+
+        let llm = std::sync::Arc::new(ConsolidationMockLlm {
+            responses: tokio::sync::Mutex::new(vec![
+                "Concise session summary".to_string(), // For index
+                "Database Security".to_string(),      // For topic name
+                "# Database Security\n\nFindings: RLS is active.".to_string(), // For topic content
+            ]),
+        });
+
+        let messages = vec![
+            Message::user("How to secure Postgres?"),
+            Message::assistant("Use RLS."),
+        ];
+
+        store.consolidate_session("session_123", &messages, llm).await.unwrap();
+
+        // Verify index
+        let index = store.get_lightweight_index().await.unwrap();
+        assert!(index.contains("Concise session summary"));
+
+        // Verify topic
+        let topic = store.retrieve_topic("Database Security").await.unwrap();
+        assert!(topic.contains("RLS is active"));
+
+        // Verify transcript
+        let transcript_path = temp_dir.path().join("transcripts").join("session_123.log");
+        assert!(transcript_path.exists());
+        let transcript_content = std::fs::read_to_string(transcript_path).unwrap();
+        assert!(transcript_content.contains("How to secure Postgres?"));
+        assert!(transcript_content.contains("Use RLS."));
     }
 }

@@ -257,6 +257,22 @@ impl Agent {
     pub fn add_tool(&mut self, tool: Tool) {
         self.tools.push(tool);
     }
+
+    fn consolidate_autonomous(&self, thread_id: Option<String>, messages: Vec<ohc_builtin_agent_core::types::Message>) {
+        if let Some(store) = &self.memory_store {
+            let store_clone = store.clone();
+            let llm_clone = self.llm.clone();
+            let session_id = thread_id.unwrap_or_else(|| format!("session-{}", uuid::Uuid::new_v4()));
+            tokio::spawn(async move {
+                if let Err(e) = store_clone.consolidate_session(&session_id, &messages, llm_clone).await {
+                    tracing::error!("Failed autonomous memory consolidation: {}", e);
+                } else {
+                    tracing::debug!("Successfully completed autonomous memory consolidation for session {}.", session_id);
+                }
+            });
+        }
+    }
+
     pub fn new(llm: Arc<dyn LlmClient>, tools: Vec<Tool>) -> Self {
         Self {
             llm,
@@ -374,6 +390,12 @@ impl Agent {
             temperature: cfg.temperature,
         };
         let resp = self.llm.chat(req).await?;
+
+        // Autonomous Memory Consolidation for Anthropic Dumb Loop
+        let mut final_messages = messages.clone();
+        final_messages.push(resp.message.clone());
+        self.consolidate_autonomous(cfg.thread_id.clone(), final_messages);
+
         Ok(resp.message.content)
     }
     pub async fn run_langgraph<F>(
@@ -788,20 +810,10 @@ impl Agent {
                 let content = last_msg.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 on_event(AgentEvent::TaskComplete { content: content.clone() });
 
-                // Cross-Department Memory Consolidation for LangGraph
-                if !content.is_empty() {
-                    if let Some(store) = &self.memory_store {
-                        let content_to_store = content.clone();
-                        let store_clone = store.clone();
-                        tokio::spawn(async move {
-                            if let Err(e) = store_clone.store(&content_to_store, vec!["AUTO_CONSOLIDATED_LANGGRAPH".to_string()]).await {
-                                tracing::error!("Failed to auto-consolidate LangGraph memory: {}", e);
-                            } else {
-                                tracing::debug!("Successfully auto-consolidated LangGraph memory.");
-                            }
-                        });
-                    }
-                }
+                // Autonomous Memory Consolidation for LangGraph
+                let mut final_messages = initial_messages.clone();
+                final_messages.push(Message::assistant(content.clone()));
+                self.consolidate_autonomous(cfg.thread_id.clone(), final_messages);
 
                 Ok(content)
             }
@@ -992,6 +1004,15 @@ impl Agent {
         let final_resp = self.llm.chat(replier_req).await?;
 
         on_event(AgentEvent::TaskComplete { content: final_resp.message.content.clone() });
+
+        // Autonomous Memory Consolidation for Plan-and-Execute
+        let mut final_messages = vec![Message::user(initial_message.to_string())];
+        for step in executed_steps {
+            final_messages.push(Message::assistant(step));
+        }
+        final_messages.push(Message::assistant(final_resp.message.content.clone()));
+        self.consolidate_autonomous(cfg.thread_id.clone(), final_messages);
+
         Ok(final_resp.message.content)
     }
 
@@ -2081,23 +2102,9 @@ impl Agent {
                 let _ = std::process::Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&wd).output();
             }
 
-            // Cross-Department Memory Consolidation: Auto-store task result if successful
+            // Autonomous Memory Consolidation: Auto-summarize and consolidate session if terminal
             if iteration == max_iterations - 1 || tool_calls.is_empty() {
-                // This is the last iteration or no more tool calls (terminal)
-                // We'll store the final thought in long-term memory if configured
-                if !last_assistant_content.is_empty() {
-                    if let Some(store) = &self_with_memory.memory_store {
-                        let content_to_store = last_assistant_content.clone();
-                        let store_clone = store.clone();
-                        tokio::spawn(async move {
-                            if let Err(e) = store_clone.store(&content_to_store, vec!["AUTO_CONSOLIDATED".to_string()]).await {
-                                tracing::error!("Failed to auto-consolidate memory: {}", e);
-                            } else {
-                                tracing::debug!("Successfully auto-consolidated memory.");
-                            }
-                        });
-                    }
-                }
+                self.consolidate_autonomous(final_cfg.thread_id.clone(), messages.clone());
             }
 
 
