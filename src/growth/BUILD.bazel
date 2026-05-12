@@ -1,0 +1,21 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "growth",
+    srcs = [
+        "referral.rs",
+        "share.rs",
+        "social.rs",
+        "email.rs",
+        "funnel.rs",
+        "storefront.rs",
+        "notifications.rs",
+        "lib.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+rust_test(
+    name = "growth_test",
+    crate = ":growth",
+)
