@@ -1,0 +1,10 @@
+{
+  "dashboard.revenue": "The total money your business has made from sales before any costs or fees are taken out.",
+  "dashboard.visitors": "The number of unique people who have looked at your website today.",
+  "products.inventory": "How many items of this product you currently have ready to sell.",
+  "products.sku": "A short code you can invent to help you organize your items. It stands for Stock Keeping Unit.",
+  "payments.payouts": "When the money you made from sales is officially moved into your personal or business bank account.",
+  "settings.domain": "The web address people type into their browser to find your store, like www.yourstorename.com.",
+  "agents.hire": "Turn on this AI helper so it can start working for your business immediately.",
+  "marketing.campaign": "A specific plan to promote your business, like sending a newsletter or running a small ad."
+}
