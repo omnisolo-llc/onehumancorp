@@ -39,10 +39,7 @@ impl TelemetrySyncDaemon {
     }
 
     async fn sync_metrics(&self) -> Result<(), Box<dyn std::error::Error>> {
-        if self.cloud_url.is_empty() {
-            return Ok(());
-        }
-        if self.cloud_url.is_empty() {
+        if self.cloud_url.is_empty() || !::server_config::get().telemetry_enabled {
             return Ok(());
         }
         let rows = query(
