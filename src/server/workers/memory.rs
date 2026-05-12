@@ -19,6 +19,13 @@ impl MemoryConsolidationWorker {
         }
     }
 
+    pub async fn run_once(&self) -> Result<(usize, bool), String> {
+        let resolved = self.repository.auto_resolve_conflicts().await?;
+        let older_than = Utc::now() - chrono::Duration::days(self.prune_threshold_days);
+        let pruned = self.repository.prune_stale(older_than).await.is_ok();
+        Ok((resolved, pruned))
+    }
+
     pub fn start(&self) {
         let repository = self.repository.clone();
         let interval_duration = self.poll_interval;
@@ -28,16 +35,26 @@ impl MemoryConsolidationWorker {
             loop {
                 interval.tick().await;
                 let older_than = Utc::now() - chrono::Duration::days(prune_threshold_days);
-                if let Err(e) = repository.prune_stale(older_than).await {
-                    tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
+
+                debug!("MemoryConsolidationWorker: starting pass...");
+
+                match repository.prune_stale(older_than).await {
+                    Ok(_) => debug!("MemoryConsolidationWorker: successfully pruned stale context"),
+                    Err(e) => tracing::error!("MemoryConsolidationWorker: Failed to prune stale context: {}", e),
                 }
-                if let Err(e) = repository.auto_resolve_conflicts().await {
-                    tracing::error!("Consolidation Worker: Failed to resolve memory conflicts: {}", e);
+
+                match repository.auto_resolve_conflicts().await {
+                    Ok(count) => if count > 0 {
+                        info!("MemoryConsolidationWorker: resolved {} memory conflicts", count);
+                    },
+                    Err(e) => tracing::error!("MemoryConsolidationWorker: Failed to resolve memory conflicts: {}", e),
                 }
             }
         });
     }
 }
+
+use tracing::{info, debug};
 
 #[cfg(test)]
 mod tests {

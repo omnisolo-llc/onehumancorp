@@ -38,4 +38,3 @@ pub mod harness;
 pub mod langgraph;
 pub mod masking_tests;
 pub mod codex_runner;
-pub mod consolidation_worker;

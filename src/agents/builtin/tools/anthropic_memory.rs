@@ -9,6 +9,7 @@ use super::{Tool, ToolExecutor};
 pub trait MemoryAccessor: Send + Sync {
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String>;
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
+    async fn store_topic(&self, topic_name: &str, content: &str) -> Result<(), String>;
 }
 
 struct TopicRetrieveExecutor {
@@ -94,5 +95,51 @@ pub fn transcript_search_tool(accessor: Arc<dyn MemoryAccessor>) -> Tool {
             "required": ["query"]
         }),
         execute: Arc::new(TranscriptSearchExecutor { accessor }),
+    }
+}
+
+struct KnowledgePromoteExecutor {
+    accessor: Arc<dyn MemoryAccessor>,
+}
+
+#[async_trait::async_trait]
+impl ToolExecutor for KnowledgePromoteExecutor {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let topic_name = args["topic_name"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("knowledge_promote: topic_name is required".to_string()))?;
+        let content = args["content"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("knowledge_promote: content is required".to_string()))?;
+
+        self.accessor
+            .store_topic(topic_name, content)
+            .await
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+
+        Ok(format!("Successfully promoted knowledge to topic: {}", topic_name))
+    }
+}
+
+pub fn knowledge_promote_tool(accessor: Arc<dyn MemoryAccessor>) -> Tool {
+    Tool {
+        name: "KnowledgePromote".to_string(),
+        description: "Promotes a confirmed fact or technical decision to a permanent 'Topic' file, making it highly reliable and prioritized for all departments.".to_string(),
+        is_read_only: false,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "topic_name": {
+                    "type": "string",
+                    "description": "A concise, descriptive name for the knowledge topic (e.g., 'MayaBakery_Pricing_2024')."
+                },
+                "content": {
+                    "type": "string",
+                    "description": "The full detail of the fact or decision to be stored."
+                }
+            },
+            "required": ["topic_name", "content"]
+        }),
+        execute: Arc::new(KnowledgePromoteExecutor { accessor }),
     }
 }

@@ -111,27 +111,50 @@ impl VectorRepository {
     }
 
     pub async fn cross_department_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
-        self.semantic_search(tenant_id, query_embedding, limit).await
+        // Cross-department search is essentially a semantic search across all agents for a tenant.
+        // We filter out purely transient data like raw transcripts unless requested,
+        // focusing on consolidated summaries and manual notes.
+        self.semantic_search_filtered(tenant_id, query_embedding, limit, Some(vec!["TASK_SUMMARY", "MANUAL", "TOPIC", "SESSION_DATA"])).await
     }
 
     pub async fn semantic_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+        self.semantic_search_filtered(tenant_id, query_embedding, limit, None).await
+    }
+
+    pub async fn semantic_search_filtered(&self, tenant_id: &str, query_embedding: &[f32], limit: i64, source_types: Option<Vec<&str>>) -> Result<Vec<EmbeddingRecord>, String> {
         let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
 
         let mut results = Vec::new();
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                let rows = sqlx::query(
+                let query = if let Some(types) = &source_types {
+                    format!(
+                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                         FROM consolidated_memory \
+                         WHERE tenant_id = $1 AND source_type = ANY($4) \
+                         ORDER BY embedding <=> $2::vector \
+                         LIMIT $3"
+                    )
+                } else {
                     "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
                      FROM consolidated_memory \
                      WHERE tenant_id = $1 \
                      ORDER BY embedding <=> $2::vector \
-                     LIMIT $3"
-                )
-                .bind(tenant_id)
-                .bind(emb_str)
-                .bind(limit)
-                .fetch_all(pool)
+                     LIMIT $3".to_string()
+                };
+
+                let mut q = sqlx::query(&query)
+                    .bind(tenant_id)
+                    .bind(emb_str)
+                    .bind(limit);
+
+                if let Some(types) = source_types {
+                    let types_string: Vec<String> = types.into_iter().map(|s| s.to_string()).collect();
+                    q = q.bind(types_string);
+                }
+
+                let rows = q.fetch_all(pool)
                 .await
                 .map_err(|e| e.to_string())?;
 
@@ -186,17 +209,33 @@ impl VectorRepository {
                     .is_ok();
 
                 if has_vec_extension {
-                    let rows = sqlx::query(
+                    let query = if let Some(types) = &source_types {
+                        let placeholders = types.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+                        format!(
+                            "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                             FROM consolidated_memory \
+                             WHERE tenant_id = ? AND source_type IN ({}) \
+                             ORDER BY vec_distance_cosine(embedding, ?) \
+                             LIMIT ?",
+                             placeholders
+                        )
+                    } else {
                         "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
                          FROM consolidated_memory \
                          WHERE tenant_id = ? \
                          ORDER BY vec_distance_cosine(embedding, ?) \
-                         LIMIT ?"
-                    )
-                    .bind(tenant_id)
-                    .bind(&emb_str)
-                    .bind(limit)
-                    .fetch_all(pool)
+                         LIMIT ?".to_string()
+                    };
+
+                    let mut q = sqlx::query(&query).bind(tenant_id);
+                    if let Some(types) = source_types {
+                        for t in types {
+                            q = q.bind(t);
+                        }
+                    }
+                    q = q.bind(&emb_str).bind(limit);
+
+                    let rows = q.fetch_all(pool)
                     .await
                     .map_err(|e| e.to_string())?;
 
@@ -245,14 +284,29 @@ impl VectorRepository {
                         let _ = q.execute(pool).await;
                     }
                 } else {
-                    let rows = sqlx::query(
+                    let query = if let Some(types) = &source_types {
+                        let placeholders = types.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+                        format!(
+                            "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                             FROM consolidated_memory \
+                             WHERE tenant_id = ? AND source_type IN ({}) \
+                             LIMIT 1000",
+                             placeholders
+                        )
+                    } else {
                         "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
                          FROM consolidated_memory \
                          WHERE tenant_id = ? \
-                         LIMIT 1000"
-                    )
-                    .bind(tenant_id)
-                    .fetch_all(pool)
+                         LIMIT 1000".to_string()
+                    };
+
+                    let mut q = sqlx::query(&query).bind(tenant_id);
+                    if let Some(types) = source_types {
+                        for t in types {
+                            q = q.bind(t);
+                        }
+                    }
+                    let rows = q.fetch_all(pool)
                     .await
                     .map_err(|e| e.to_string())?;
 
@@ -329,14 +383,23 @@ impl VectorRepository {
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
+                // Multi-tier pruning logic:
+                // 1. Prune stale TASK_SUMMARIES (transient reasoning)
+                // 2. Prune old raw TRANSCRIPTS if not referenced
+                // 3. Prune low-reliability records
+                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') \
+                             OR (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 2 AND source_type = 'TRANSCRIPT') \
+                             OR (reliability_score < 20 AND owner_override = FALSE)")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
+                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') \
+                             OR (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 2 AND source_type = 'TRANSCRIPT') \
+                             OR (reliability_score < 20 AND owner_override = FALSE)")
+                    .bind(older_than)
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -396,25 +459,28 @@ impl VectorRepository {
     /// Determines the winner of a memory conflict between two embedding records.
     pub fn determine_conflict_winner<'a>(a: &'a EmbeddingRecord, b: &'a EmbeddingRecord) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
         if a.owner_override != b.owner_override {
-            if a.owner_override {
-                (a, b)
-            } else {
-                (b, a)
-            }
-        } else if a.reliability_score != b.reliability_score {
-            if a.reliability_score > b.reliability_score {
-                (a, b)
-            } else {
-                (b, a)
-            }
-        } else if a.created_at != b.created_at {
-            if a.created_at > b.created_at {
-                (a, b)
-            } else {
-                (b, a)
-            }
+            if a.owner_override { (a, b) } else { (b, a) }
         } else {
-            (a, b) // Fallback, just pick 'a'
+            // Source type weights: TOPIC > MANUAL > SESSION_DATA > TASK_SUMMARY > TRANSCRIPT
+            let source_weight = |s: &str| match s {
+                "TOPIC" => 100,
+                "MANUAL" => 80,
+                "SESSION_DATA" => 60,
+                "TASK_SUMMARY" => 40,
+                "TRANSCRIPT" => 20,
+                _ => 0,
+            };
+
+            let weight_a = source_weight(&a.source_type) + a.reliability_score;
+            let weight_b = source_weight(&b.source_type) + b.reliability_score;
+
+            if weight_a != weight_b {
+                if weight_a > weight_b { (a, b) } else { (b, a) }
+            } else if a.created_at != b.created_at {
+                if a.created_at > b.created_at { (a, b) } else { (b, a) }
+            } else {
+                (a, b)
+            }
         }
     }
 
@@ -761,19 +827,14 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String>;
 
     /// 3-Tier: Get the lightweight index (always loaded in context)
-    async fn get_lightweight_index(&self) -> Result<String, String> {
-        Ok("".to_string())
-    }
+    async fn get_lightweight_index(&self) -> Result<String, String>;
 
     /// 3-Tier: Pull a detailed topic file on demand
-    async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> {
-        Err("Not implemented".to_string())
-    }
+    async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String>;
 
     /// 3-Tier: Search raw transcripts
-    async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
-        Ok(vec![])
-    }
+    async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
+
     fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> { None }
 }
 
@@ -797,7 +858,49 @@ impl std::fmt::Debug for PersistentMemoryStore {
 impl LongTermMemory for PersistentMemoryStore {
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let embedding = self.llm.generate_embedding(query).await.map_err(|e| e.to_string())?;
-        let records = self.repo.semantic_search(&self.tenant_id, &embedding, limit as i64).await?;
+        // Cross-department search by default for persistent store
+        let records = self.repo.cross_department_search(&self.tenant_id, &embedding, limit as i64).await?;
+        Ok(records.into_iter().map(|r| r.content).collect())
+    }
+
+    async fn get_lightweight_index(&self) -> Result<String, String> {
+        // Build index from TOPICs and high-reliability MANUAL entries
+        let records = self.repo.semantic_search_filtered(
+            &self.tenant_id,
+            &vec![0.0; 1536], // Dummy vector for general retrieval
+            20,
+            Some(vec!["TOPIC", "MANUAL"])
+        ).await?;
+
+        let mut index = String::new();
+        for r in records {
+            if r.owner_override || r.reliability_score > 80 {
+                let summary = if r.content.len() > 100 { format!("{}...", &r.content[..97]) } else { r.content.clone() };
+                index.push_str(&format!("- {} (type: {}, id: {})\n", summary.replace('\n', " "), r.source_type, r.id));
+            }
+        }
+        Ok(index)
+    }
+
+    async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
+        let records = self.repo.semantic_search_filtered(
+            &self.tenant_id,
+            &self.llm.generate_embedding(topic_name).await.unwrap_or_default(),
+            1,
+            Some(vec!["TOPIC"])
+        ).await?;
+
+        records.first().map(|r| r.content.clone()).ok_or_else(|| "Topic not found".to_string())
+    }
+
+    async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        let embedding = self.llm.generate_embedding(query).await.map_err(|e| e.to_string())?;
+        let records = self.repo.semantic_search_filtered(
+            &self.tenant_id,
+            &embedding,
+            limit as i64,
+            Some(vec!["TRANSCRIPT"])
+        ).await?;
         Ok(records.into_iter().map(|r| r.content).collect())
     }
 
@@ -806,11 +909,17 @@ impl LongTermMemory for PersistentMemoryStore {
         let id = uuid::Uuid::new_v4().to_string();
         let now = chrono::Utc::now();
 
-        let source_type = if tags.contains(&"AUTO_CONSOLIDATED".to_string()) || tags.contains(&"AUTO_CONSOLIDATED_LANGGRAPH".to_string()) {
+        let mut source_type = if tags.contains(&"AUTO_CONSOLIDATED".to_string()) || tags.contains(&"AUTO_CONSOLIDATED_LANGGRAPH".to_string()) {
             "TASK_SUMMARY"
         } else {
             "MANUAL"
         };
+
+        if tags.contains(&"TOPIC".to_string()) {
+            source_type = "TOPIC";
+        } else if tags.contains(&"TRANSCRIPT".to_string()) {
+            source_type = "TRANSCRIPT";
+        }
 
         let record = EmbeddingRecord {
             id,
@@ -915,6 +1024,10 @@ impl ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor for Anthropic3Tie
         }
         Ok(results)
     }
+
+    async fn store_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
+        self.write_topic(topic_name, content).await
+    }
 }
 
 #[async_trait]
@@ -992,6 +1105,11 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
         }
         Ok(results)
     }
+
+    async fn store_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
+        self.write_topic(topic_name, content).await
+    }
+
     fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
         Some(std::sync::Arc::new(self.clone()))
     }
@@ -1032,8 +1150,24 @@ impl RedisMemoryStore {
 }
 
 #[async_trait]
+impl ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor for PersistentMemoryStore {
+    async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
+        use crate::memory_store::LongTermMemory;
+        LongTermMemory::retrieve_topic(self, topic_name).await
+    }
+    async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        use crate::memory_store::LongTermMemory;
+        LongTermMemory::search_transcripts(self, query, limit).await
+    }
+    async fn store_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
+        use crate::memory_store::LongTermMemory;
+        LongTermMemory::store(self, content, vec!["TOPIC".to_string(), topic_name.to_string()]).await
+    }
+}
+
+#[async_trait]
 impl LongTermMemory for RedisMemoryStore {
-    async fn retrieve(&self, _query: &str, limit: usize) -> Result<Vec<String>, String> {
+    async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut conn = self.get_connection().await?;
         let key = format!("{}:memory", self.namespace);
         
@@ -1046,8 +1180,28 @@ impl LongTermMemory for RedisMemoryStore {
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
-            
-        Ok(results)
+
+        let query_lower = query.to_lowercase();
+        Ok(results.into_iter().filter(|r| r.to_lowercase().contains(&query_lower)).take(limit).collect())
+    }
+
+    async fn get_lightweight_index(&self) -> Result<String, String> {
+        let memories = self.retrieve("", 10).await?;
+        let mut index = String::new();
+        for m in memories {
+            let summary = if m.len() > 100 { format!("{}...", &m[..97]) } else { m.clone() };
+            index.push_str(&format!("- {}\n", summary.replace('\n', " ")));
+        }
+        Ok(index)
+    }
+
+    async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
+        let res = self.retrieve(topic_name, 1).await?;
+        res.first().cloned().ok_or_else(|| "Topic not found".to_string())
+    }
+
+    async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        self.retrieve(query, limit).await
     }
 
     async fn store(&self, content: &str, _tags: Vec<String>) -> Result<(), String> {

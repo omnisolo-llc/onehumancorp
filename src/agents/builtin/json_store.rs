@@ -103,6 +103,25 @@ impl LongTermMemory for NamespaceJsonStore {
         Ok(results)
     }
 
+    async fn get_lightweight_index(&self) -> Result<String, String> {
+        let memories = self.retrieve("", 10).await?;
+        let mut index = String::new();
+        for m in memories {
+            let summary = if m.len() > 100 { format!("{}...", &m[..97]) } else { m.clone() };
+            index.push_str(&format!("- {}\n", summary.replace('\n', " ")));
+        }
+        Ok(index)
+    }
+
+    async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
+        let res = self.retrieve(topic_name, 1).await?;
+        res.first().cloned().ok_or_else(|| "Topic not found".to_string())
+    }
+
+    async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        self.retrieve(query, limit).await
+    }
+
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
         let timestamp = chrono::Utc::now().timestamp();
         let entry = JsonMemoryEntry {

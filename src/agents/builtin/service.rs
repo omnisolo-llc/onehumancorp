@@ -48,8 +48,6 @@ use ohc_builtin_agent_tools::{
 use crate::departments::{Department, get_department_config};
 use std::str::FromStr;
 use tokio::sync::RwLock;
-use crate::consolidation_worker::ConsolidationWorker;
-use std::time::Duration;
 
 pub const DEFAULT_ADDRESS: &str = "127.0.0.1:50051";
 const AGENT_VERSION: &str = "1.0.0";
@@ -179,7 +177,6 @@ impl AgentServiceImpl {
                 match sqlx::SqlitePool::connect_lazy(&db_url) {
                     Ok(pool) => {
                         let repo = Arc::new(VectorRepository::new_sqlite(pool));
-                        self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_secs(3600), 180)).spawn_background_task());
                         self.memory = Some(repo);
                     }
                     Err(e) => {
@@ -190,7 +187,6 @@ impl AgentServiceImpl {
                 match sqlx::PgPool::connect_lazy(&db_url) {
                     Ok(pool) => {
                         let repo = Arc::new(VectorRepository::new(pool));
-                        self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_secs(3600), 180)).spawn_background_task());
                         self.memory = Some(repo);
                     }
                     Err(e) => {
@@ -486,7 +482,7 @@ impl AgentService for AgentServiceImpl {
         let llm = self.resolve_llm(&task_req.llm_provider, &task_req.model, &task_req.llm_endpoint);
         let run_cfg = self.build_run_config(&task_req, &task_req.department, &llm).await;
         let task = task_req.task.clone();
-        let memory = self.memory.clone();
+        let ltm = run_cfg.long_term_memory.clone();
 
         let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
@@ -651,24 +647,9 @@ impl AgentService for AgentServiceImpl {
 
             let result = last_result;
 
-            // Record memory entry.
-            if let (Ok(content), Some(store)) = (&result, &memory) {
-                let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
-                let record = EmbeddingRecord {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    tenant_id: org_id,
-                    agent_id: "agent".to_string(),
-                    content: content.clone(),
-                    embedding: vec![],
-                    source_type: "TASK_SUMMARY".to_string(),
-                    created_at: chrono::Utc::now(),
-                    last_referenced_at: chrono::Utc::now(),
-                    reference_count: 0,
-                    reliability_score: 50,
-                    owner_override: false,
-                    metadata: None,
-                };
-                let _ = store.upsert(&record).await;
+            // Record memory entry using the LongTermMemory store which handles embeddings.
+            if let (Ok(content), Some(store)) = (result, ltm) {
+                let _ = store.store(&content, vec!["TASK_SUMMARY".to_string(), "AUTO_CONSOLIDATED".to_string()]).await;
             }
         });
 
