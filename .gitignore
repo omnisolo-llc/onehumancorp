@@ -117,6 +117,3 @@ debian-binary
 /*.diff
 /srcs/
 /scratch/
-/src/ui/next/.next
-/src/ui/next/out
-/src/ui/tauri/gen
