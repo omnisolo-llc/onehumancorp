@@ -1,3 +1,12 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Implement base UI handlers, swap API and mesh server ports.
+
+### Privacy/Offline Improvements
+- Update playwright test runner to execute on-host.
+
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
