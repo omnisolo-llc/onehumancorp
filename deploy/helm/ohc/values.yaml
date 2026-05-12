@@ -1,5 +1,5 @@
 backend:
-  image: onehumancorp/server:latest
+  image: onehumancorp/server:v0.4.41
   replicas: 1
   headless: false
   service:
@@ -45,7 +45,7 @@ resourceQuota:
 # In cloud-native mode the core runs as a dedicated micro-service.
 ohcCore:
   enabled: true
-  image: onehumancorp/mono-core:latest
+  image: onehumancorp/mono-core:v0.4.41
   replicas: 1
   service:
     port: 18789
@@ -130,7 +130,7 @@ multiTenant:
 # PowerSync - synchronization engine
 powersync:
   enabled: true
-  image: journeyapps/powersync-service:latest
+  image: journeyapps/powersync-service:1.20.5
   replicas: 1
   service:
     type: ClusterIP

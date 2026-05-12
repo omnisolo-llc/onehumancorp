@@ -123,6 +123,7 @@
 - Privacy/Offline (Standalone): [Hybrid Security Fix] Enforced SPIFFE ID headers for Authentication and multi-tenancy (#8891)
 
 ## v0.4.15 (Cloud) / v0.4.15+1 (Standalone)
+- Chore: Remove explicit debug logging and replace latest Docker tags with semantic versions
 - Scaling (Cloud): Implement Harness Upgrade - Subagent Orchestration: Worktree pattern. SubagentExecutor spawns a git worktree with an isolated branch (`subagent-<task_id>`) for secure local subagent executions.
 - Privacy/Offline (Standalone): Implemented secure git worktree sandbox isolation to prevent parent directory access overrides when executing local tools.
 

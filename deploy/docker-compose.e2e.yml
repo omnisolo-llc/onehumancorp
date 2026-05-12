@@ -53,7 +53,7 @@ services:
   # (IsSQLite() == false for Postgres), so no actual requests are made.
   # This container simply exists to satisfy any connectivity checks.
   ohc-core:
-    image: public.ecr.aws/docker/library/busybox:latest
+    image: public.ecr.aws/docker/library/busybox:1.37.0
     command: sleep infinity
     deploy:
       resources:
