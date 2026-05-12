@@ -1,3 +1,10 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Chore
+- Clean up technical debt by removing explicit debug print statements from benchmark files.
+- Add dummy sequence document for consolidation cleanup.
+
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
