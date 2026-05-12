@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Integrations Page', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     const loginLink = page.locator('text=/Login/i');
     await loginLink.click();
     await page.fill('input[type="email"]', 'test@example.com');
@@ -223,7 +223,7 @@ test.describe('Integrations Page', () => {
 
 test.describe('Pipeline Management', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     const loginLink = page.locator('text=/Login/i');
     await loginLink.click();
     await page.fill('input[type="email"]', 'test@example.com');

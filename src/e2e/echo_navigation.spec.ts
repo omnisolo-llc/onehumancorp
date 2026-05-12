@@ -5,7 +5,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
 
   test('Bottom navigation bar is present and has exact required actions', async ({ page }) => {
     // 1. Start from home page (login)
-    await page.goto('/');
+    await page.goto('/login');
 
     // 2. Perform the exact login flow as a user would
     await page.fill('input[type="email"]', 'test@example.com');
@@ -33,7 +33,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking Add Product in bottom nav completes action', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
@@ -49,7 +49,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking View Orders in bottom nav completes action', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
@@ -64,7 +64,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking Check Messages in bottom nav completes action', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
@@ -78,7 +78,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking See Analytics in bottom nav completes action', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
@@ -92,7 +92,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking Share Store in bottom nav completes action', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await page.fill('input[type="email"]', 'test@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');

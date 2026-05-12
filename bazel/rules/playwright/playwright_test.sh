@@ -50,7 +50,9 @@ export HOME="${HOME:-${TEST_TMPDIR:-/tmp}/home}"
 mkdir -p "$HOME"
 
 # Unique container names for parallel isolation
-CONTAINER_SUFFIX=$(echo "${TEST_TARGET:-playwright}" | md5sum | cut -c1-8)
+# Incorporate a random component to prevent collisions even if TEST_TARGET is duplicated or missing
+RAND_ID=$(head /dev/urandom | tr -dc a-z0-9 | head -c 6)
+CONTAINER_SUFFIX="$(echo "${TEST_TARGET:-playwright}" | md5sum | cut -c1-8)_${RAND_ID}"
 POSTGRES_NAME="e2e_postgres_${CONTAINER_SUFFIX}"
 VALKEY_NAME="e2e_valkey_${CONTAINER_SUFFIX}"
 
@@ -83,21 +85,38 @@ for i in $(seq 1 60); do
   sleep 1
 done
 
-# Start the server binary
-# In Bazel runfiles, the binary is available as:
-#   - ./bazel-bin/src/server/server (outside sandbox)
-#   - ./src/server/server (symlink in runfiles _main)
+echo "[playwright] Initializing database roles..."
+docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
+docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
+
+echo "[playwright] Workspace root: $workspace_root"
+echo "[playwright] Searching for server binary..."
+
 SERVER_BIN=""
-for candidate in "bazel-bin/src/server/server" "src/server/server"; do
+# First check runfiles (relative to current sandbox)
+for candidate in "src/server/server" "../_main/src/server/server"; do
   if [[ -x "$candidate" ]]; then
-    SERVER_BIN="$candidate"
+    SERVER_BIN="$(realpath "$candidate")"
+    echo "[playwright] Found server in runfiles: $SERVER_BIN"
     break
   fi
 done
 
+# If not found, check relative to workspace_root
 if [[ -z "$SERVER_BIN" ]]; then
-  # Try finding it via find if the relative paths fail
-  SERVER_BIN=$(find . -name server -type f -executable 2>/dev/null | grep -m1 "src/server/server" || echo "")
+  for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
+    if [[ -x "$candidate" ]]; then
+      SERVER_BIN="$candidate"
+      echo "[playwright] Found server relative to workspace: $SERVER_BIN"
+      break
+    fi
+  done
+fi
+
+if [[ -z "$SERVER_BIN" ]]; then
+  # Try finding it via find
+  SERVER_BIN=$(find "$workspace_root" -name server -type f -executable 2>/dev/null | grep -m1 "src/server/server" || echo "")
+  [[ -n "$SERVER_BIN" ]] && echo "[playwright] Found server via find: $SERVER_BIN"
 fi
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
