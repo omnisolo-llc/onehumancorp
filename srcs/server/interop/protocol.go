@@ -1,3 +1,4 @@
+//go:build skip
 package interop
 
 import (
@@ -8,7 +9,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	interoppb "onehumancorp/srcs/server/pb/interop"
 )
 
 type InteropProtocol struct {

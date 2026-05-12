@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/screens/business_setup_wizard_screen.dart';
 import 'package:app/services/api_service.dart';
+import 'package:app/providers/wizard_provider.dart';
 
 class MockApiService extends ApiService {
   @override
@@ -11,7 +12,7 @@ class MockApiService extends ApiService {
     return 'A fantastic AI-generated description for $productName!';
   }
 }
-import 'package:app/providers/wizard_provider.dart';
+
 
 void main() {
   group('BusinessSetupWizardScreen Environment Tests', () {

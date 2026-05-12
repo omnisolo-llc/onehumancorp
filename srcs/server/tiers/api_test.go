@@ -10,7 +10,7 @@ import (
 
 	"onehumancorp/srcs/server/onboarding"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mutecomm/go-sqlcipher/v4"
 )
 
 func TestAPIHandler(t *testing.T) {

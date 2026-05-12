@@ -31,7 +31,7 @@ type TaskStore interface {
 	GetTask(ctx context.Context, id string) (*SharedTask, error)
 	UpdateTaskStatus(ctx context.Context, id string, status string) error
 	GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error)
-	PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error)
+	PollDelegatedTasks(ctx context.Context, organizationID string, limit int) ([]*SharedTask, error)
 	ReportMissionHandover(ctx context.Context, missionID string, blockers string) error
 }
 
@@ -229,7 +229,7 @@ func (s *PostgresTaskStore) UpdateTaskStatus(ctx context.Context, id string, sta
 }
 
 
-func (s *PostgresTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error) {
+func (s *PostgresTaskStore) PollDelegatedTasks(ctx context.Context, organizationID string, limit int) ([]*SharedTask, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -239,11 +239,11 @@ func (s *PostgresTaskStore) PollDelegatedTasks(ctx context.Context, limit int) (
 	query := `
 		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
 		FROM shared_tasks
-		WHERE status = 'PENDING' AND priority = 'DELEGATED'
+		WHERE status = 'PENDING' AND priority = 'DELEGATED' AND organization_id = $1
 		FOR UPDATE SKIP LOCKED
-		LIMIT $1
+		LIMIT $2
 	`
-	rows, err := tx.QueryContext(ctx, query, limit)
+	rows, err := tx.QueryContext(ctx, query, organizationID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -514,7 +514,7 @@ func (s *SqliteTaskStore) CreateTask(ctx context.Context, task *SharedTask) erro
 	return tx.Commit()
 }
 
-func (s *SqliteTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error) {
+func (s *SqliteTaskStore) PollDelegatedTasks(ctx context.Context, organizationID string, limit int) ([]*SharedTask, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -527,10 +527,10 @@ func (s *SqliteTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]
 	query := `
 		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, created_at, updated_at
 		FROM shared_tasks
-		WHERE status = 'PENDING' AND priority = 'DELEGATED'
+		WHERE status = 'PENDING' AND priority = 'DELEGATED' AND organization_id = ?
 		LIMIT ?
 	`
-	rows, err := tx.QueryContext(ctx, query, limit)
+	rows, err := tx.QueryContext(ctx, query, organizationID, limit)
 	if err != nil {
 		return nil, err
 	}

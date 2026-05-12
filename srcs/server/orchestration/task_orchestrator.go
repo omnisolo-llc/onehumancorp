@@ -6,14 +6,16 @@ import (
 )
 
 type DefaultTaskOrchestrator struct {
-	db      TaskStore
-	spawner SubAgentSpawner
+	db             TaskStore
+	spawner        SubAgentSpawner
+	organizationID string
 }
 
-func NewDefaultTaskOrchestrator(db TaskStore, spawner SubAgentSpawner) *DefaultTaskOrchestrator {
+func NewDefaultTaskOrchestrator(db TaskStore, spawner SubAgentSpawner, organizationID string) *DefaultTaskOrchestrator {
 	return &DefaultTaskOrchestrator{
-		db:      db,
-		spawner: spawner,
+		db:             db,
+		spawner:        spawner,
+		organizationID: organizationID,
 	}
 }
 
@@ -36,7 +38,7 @@ func (t *DefaultTaskOrchestrator) StartBackgroundWorker(ctx context.Context) {
 func (t *DefaultTaskOrchestrator) PollTasks(ctx context.Context) error {
 	// Let's assume we can add a method PollDelegatedTasks to TaskStore
 	// We'll define PollDelegatedTasks to fetch up to 10 delegated tasks.
-	tasks, err := t.db.PollDelegatedTasks(ctx, 10)
+	tasks, err := t.db.PollDelegatedTasks(ctx, t.organizationID, 10)
 	if err != nil {
 		return err
 	}

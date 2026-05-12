@@ -19,7 +19,7 @@ type mockLocalDB struct {
 	updateErr  error
 }
 
-func (m *mockLocalDB) PollDelegatedTasks(ctx context.Context, limit int) ([]*orchestration.SharedTask, error) {
+func (m *mockLocalDB) PollDelegatedTasks(ctx context.Context, organizationID string, limit int) ([]*orchestration.SharedTask, error) {
 	return nil, nil
 }
 

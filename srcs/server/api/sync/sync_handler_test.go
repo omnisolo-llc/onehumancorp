@@ -30,7 +30,7 @@ func (m *mockTaskStore) GetTask(ctx context.Context, id string) (*orchestration.
 func (m *mockTaskStore) GetTasksByOrganization(ctx context.Context, organizationID string) ([]*orchestration.SharedTask, error) {
 	return nil, nil
 }
-func (m *mockTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]*orchestration.SharedTask, error) {
+func (m *mockTaskStore) PollDelegatedTasks(ctx context.Context, organizationID string, limit int) ([]*orchestration.SharedTask, error) {
 	return nil, nil
 }
 func (m *mockTaskStore) ReportMissionHandover(ctx context.Context, missionID string, blockers string) error {
