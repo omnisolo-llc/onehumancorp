@@ -7,6 +7,9 @@
 
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
+### Technical Debt Cleanup
+- Removed stray debugging logs from benchmarks to clean up output.
+
 ### Cloud Scaling Improvements
 - Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
 
