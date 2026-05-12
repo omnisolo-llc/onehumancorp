@@ -34,11 +34,19 @@ impl GroupChat {
 pub struct GroupChatManager {
     pub chat: GroupChat,
     pub llm: Arc<dyn crate::llm::LlmClient>,
+    pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
+    pub thread_id: Option<String>,
 }
 
 impl GroupChatManager {
     pub fn new(chat: GroupChat, llm: Arc<dyn crate::llm::LlmClient>) -> Self {
-        Self { chat, llm }
+        Self { chat, llm, checkpointer: None, thread_id: None }
+    }
+
+    pub fn with_checkpointer(mut self, checkpointer: Arc<dyn crate::checkpointer::CheckpointSaver>, thread_id: String) -> Self {
+        self.checkpointer = Some(checkpointer);
+        self.thread_id = Some(thread_id);
+        self
     }
 }
 
@@ -162,7 +170,17 @@ impl GroupChatManager {
             // Append to transcript
             let mut w_transcript = self.chat.transcript.write().await;
             w_transcript.push(Message::assistant(formatted_response.clone()));
+            let current_messages = w_transcript.clone();
             drop(w_transcript);
+
+            // Super-step Checkpointing for Group Chat
+            if let (Some(cp), Some(tid)) = (&self.checkpointer, &self.thread_id) {
+                 let mut agent_state = crate::types::AgentState::new(tid);
+                 agent_state.iteration = round as i32;
+                 agent_state.messages = current_messages;
+                 agent_state.scratchpad.insert("autogen_last_speaker".to_string(), serde_json::json!(next_speaker.name));
+                 let _ = cp.snapshot(tid, &agent_state).await;
+            }
 
             if response_text.contains("TERMINATE") {
                 tracing::info!("Group chat terminated by {}.", next_speaker.name);
@@ -178,11 +196,19 @@ impl GroupChatManager {
 /// The Orchestrator that manages a sequential flow of agents.
 pub struct SequentialChatManager {
     pub agents: Vec<ChatAgent>,
+    pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
+    pub thread_id: Option<String>,
 }
 
 impl SequentialChatManager {
     pub fn new(agents: Vec<ChatAgent>) -> Self {
-        Self { agents }
+        Self { agents, checkpointer: None, thread_id: None }
+    }
+
+    pub fn with_checkpointer(mut self, checkpointer: Arc<dyn crate::checkpointer::CheckpointSaver>, thread_id: String) -> Self {
+        self.checkpointer = Some(checkpointer);
+        self.thread_id = Some(thread_id);
+        self
     }
 
     /// Run the sequential chat loop, passing output from one agent to the next.
@@ -219,6 +245,13 @@ Provide your response, which will be passed to the next agent in the sequence.",
             let formatted_response = format!("{}: {}", agent_cfg.name, response_text);
             transcript.push(Message::assistant(formatted_response.clone()));
 
+            // Super-step Checkpointing for Sequential Chat
+            if let (Some(cp), Some(tid)) = (&self.checkpointer, &self.thread_id) {
+                 let mut agent_state = crate::types::AgentState::new(tid);
+                 agent_state.messages = transcript.clone();
+                 let _ = cp.snapshot(tid, &agent_state).await;
+            }
+
             // The output of this agent becomes the input for the next
             current_input = response_text;
         }
@@ -238,6 +271,8 @@ pub struct MagenticManager {
     pub sub_agents: Vec<ChatAgent>,
     pub task_store: Arc<RwLock<TaskStore>>,
     pub max_rounds: usize,
+    pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
+    pub thread_id: Option<String>,
 }
 
 impl MagenticManager {
@@ -247,7 +282,15 @@ impl MagenticManager {
             sub_agents,
             task_store: Arc::new(RwLock::new(TaskStore::default())),
             max_rounds,
+            checkpointer: None,
+            thread_id: None,
         }
+    }
+
+    pub fn with_checkpointer(mut self, checkpointer: Arc<dyn crate::checkpointer::CheckpointSaver>, thread_id: String) -> Self {
+        self.checkpointer = Some(checkpointer);
+        self.thread_id = Some(thread_id);
+        self
     }
 
     pub async fn run_magentic(&self, initial_task: &str) -> Result<Vec<Message>, String> {
@@ -327,6 +370,14 @@ impl MagenticManager {
 
                     transcript.push(Message::assistant(format!("{}: {}", agent.name, sub_response)));
 
+                    // Super-step Checkpointing for Magentic
+                    if let (Some(cp), Some(tid)) = (&self.checkpointer, &self.thread_id) {
+                         let mut agent_state = crate::types::AgentState::new(tid);
+                         agent_state.iteration = round as i32;
+                         agent_state.messages = transcript.clone();
+                         let _ = cp.snapshot(tid, &agent_state).await;
+                    }
+
                     // Automatically update task status as complete
                     let _ = magentic_tool(self.task_store.clone()).execute.execute(
                         serde_json::json!({
@@ -347,11 +398,19 @@ impl MagenticManager {
 pub struct ConcurrentChatManager {
     pub agents: Vec<ChatAgent>,
     pub synthesizer: Option<ChatAgent>,
+    pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
+    pub thread_id: Option<String>,
 }
 
 impl ConcurrentChatManager {
     pub fn new(agents: Vec<ChatAgent>, synthesizer: Option<ChatAgent>) -> Self {
-        Self { agents, synthesizer }
+        Self { agents, synthesizer, checkpointer: None, thread_id: None }
+    }
+
+    pub fn with_checkpointer(mut self, checkpointer: Arc<dyn crate::checkpointer::CheckpointSaver>, thread_id: String) -> Self {
+        self.checkpointer = Some(checkpointer);
+        self.thread_id = Some(thread_id);
+        self
     }
 
     /// Run the concurrent chat loop, fanning out the input to all agents, then fanning in to the synthesizer if present.
@@ -398,6 +457,14 @@ Provide your response.",
             transcript.push(Message::assistant(text));
         }
 
+        // Super-step Checkpointing for Concurrent Chat (Fan-out boundary)
+        if let (Some(cp), Some(tid)) = (&self.checkpointer, &self.thread_id) {
+             let mut agent_state = crate::types::AgentState::new(tid);
+             agent_state.messages = transcript.clone();
+             agent_state.scratchpad.insert("autogen_phase".to_string(), serde_json::json!("fan_out_complete"));
+             let _ = cp.snapshot(tid, &agent_state).await;
+        }
+
         if let Some(synth) = &self.synthesizer {
             tracing::info!("Fan-in Step: {} is running...", synth.name);
 
@@ -427,6 +494,14 @@ Please synthesize these outputs into a final cohesive response.",
 
             let formatted_response = format!("{}: {}", synth.name, response_text);
             transcript.push(Message::assistant(formatted_response.clone()));
+
+            // Super-step Checkpointing for Concurrent Chat (Fan-in complete)
+            if let (Some(cp), Some(tid)) = (&self.checkpointer, &self.thread_id) {
+                 let mut agent_state = crate::types::AgentState::new(tid);
+                 agent_state.messages = transcript.clone();
+                 agent_state.scratchpad.insert("autogen_phase".to_string(), serde_json::json!("fan_in_complete"));
+                 let _ = cp.snapshot(tid, &agent_state).await;
+            }
         }
 
         Ok(transcript)

@@ -33,6 +33,7 @@ pub mod generative_visibility;
 pub mod magentic;
 pub mod recall;
 pub mod mcp_dynamic;
+pub mod debugger;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
@@ -86,6 +87,8 @@ pub fn all_tools(
     working_dir: Option<std::path::PathBuf>,
     memory_accessor: Option<Arc<dyn anthropic_memory::MemoryAccessor>>,
     observation_store: Arc<dashmap::DashMap<String, String>>,
+    checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
+    thread_id: Option<String>,
 ) -> Vec<Tool> {
     let runner = Arc::new(runner::RealCommandRunner);
     let mut tools = vec![
@@ -127,6 +130,10 @@ pub fn all_tools(
     if let Some(accessor) = memory_accessor {
         tools.push(anthropic_memory::topic_retrieve_tool(accessor.clone()));
         tools.push(anthropic_memory::transcript_search_tool(accessor));
+    }
+
+    if let (Some(cp), Some(tid)) = (checkpointer, thread_id) {
+        tools.push(debugger::debugger_tool(cp, tid));
     }
 
     tools

@@ -161,3 +161,26 @@ impl std::fmt::Display for ToolError {
 }
 
 impl std::error::Error for ToolError {}
+
+/// Unified container for all agent execution state.
+/// This is used for super-step checkpointing and time-travel rewind.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AgentState {
+    pub thread_id: String,
+    pub iteration: i32,
+    pub messages: Vec<Message>,
+    pub scratchpad: std::collections::HashMap<String, serde_json::Value>,
+    pub metadata: std::collections::HashMap<String, String>,
+}
+
+impl AgentState {
+    pub fn new(thread_id: &str) -> Self {
+        Self {
+            thread_id: thread_id.to_string(),
+            iteration: 0,
+            messages: Vec::new(),
+            scratchpad: std::collections::HashMap::new(),
+            metadata: std::collections::HashMap::new(),
+        }
+    }
+}

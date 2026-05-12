@@ -19,6 +19,8 @@ pub struct StateGraph {
     conditional_edges: HashMap<String, ConditionFn>,
     entry_point: Option<String>,
     reducer: Arc<dyn Reducer>,
+    pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
+    pub thread_id: Option<String>,
 }
 
 pub const END: &str = "__END__";
@@ -31,7 +33,15 @@ impl StateGraph {
             conditional_edges: HashMap::new(),
             entry_point: None,
             reducer,
+            checkpointer: None,
+            thread_id: None,
         }
+    }
+
+    pub fn with_checkpointer(mut self, checkpointer: Arc<dyn crate::checkpointer::CheckpointSaver>, thread_id: String) -> Self {
+        self.checkpointer = Some(checkpointer);
+        self.thread_id = Some(thread_id);
+        self
     }
 
     pub fn add_node<F, Fut>(&mut self, name: &str, node_fn: F)
@@ -77,6 +87,27 @@ impl StateGraph {
 
             let update = node_fn(current_state.clone()).await?;
             self.reducer.reduce(&mut current_state, update);
+
+            // Super-step Checkpointing at Node Transition
+            if let (Some(cp), Some(tid)) = (&self.checkpointer, &self.thread_id) {
+                 let mut agent_state = crate::types::AgentState::new(tid);
+                 agent_state.iteration = iterations as i32;
+                 agent_state.scratchpad.insert("langgraph_current_node".to_string(), serde_json::json!(current_node));
+                 agent_state.scratchpad.insert("langgraph_state".to_string(), current_state.clone());
+
+                 // If the state has "messages", sync them to agent_state.messages
+                 if let Some(msgs_val) = current_state.get("state.messages").and_then(|v| v.as_array()) {
+                      let mut msgs = vec![];
+                      for m in msgs_val {
+                           if let Ok(msg) = serde_json::from_value::<crate::types::Message>(m.clone()) {
+                                msgs.push(msg);
+                           }
+                      }
+                      agent_state.messages = msgs;
+                 }
+
+                 let _ = cp.snapshot(tid, &agent_state).await;
+            }
 
             if let Some(cond_fn) = self.conditional_edges.get(&current_node) {
                 current_node = cond_fn(&current_state);

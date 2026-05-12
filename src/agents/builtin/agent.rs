@@ -71,6 +71,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_langgraph_mechanic: bool,
     pub enable_time_travel_rewind: bool,
     pub max_rewind_attempts: usize,
+    pub initial_state: Option<crate::types::AgentState>,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
 }
 
@@ -120,6 +121,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_langgraph_mechanic: false,
             enable_time_travel_rewind: false,
             max_rewind_attempts: 3,
+            initial_state: None,
             long_term_memory: None,
         }
     }
@@ -281,7 +283,7 @@ impl Agent {
     /// Run the agent loop. Calls `on_event` for each event.
     #[tracing::instrument(skip(self, on_event, cfg), fields(model = %cfg.model))]
     /// Anthropic Claude Agent SDK Archetype: Implements the harness via a single `query()` function
-    /// that returns an async iterator streaming messages. Uses a "dumb loop" Gather-Act-Verify cycle:
+    /// that returns an async iterator streaming state.messages. Uses a "dumb loop" Gather-Act-Verify cycle:
     /// gather context (search files, read code) -> take action (edit files, run commands) -> verify results (run tests, check output).
     pub async fn run_anthropic_dumb_loop<F>(
         &self,
@@ -356,9 +358,9 @@ impl Agent {
             for tc in &read_only_calls {
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.to_vec();
-                let messages_clone = messages.clone();
+                let messages_snapshot = messages.clone();
                 read_only_futures.push(async move {
-                    let r = match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
+                    let r = match self.execute_tool(&tc_clone, &session_tools_clone, &messages_snapshot).await {
                         Ok(res) => res,
                         Err(e) => format!("Error: {:?}", e),
                     };
@@ -432,7 +434,7 @@ impl Agent {
         cfg: &AgentRunConfig,
         initial_message: &str,
         session_tools: Vec<crate::tools::Tool>,
-        initial_messages: &mut Vec<Message>,
+        messages: &mut Vec<Message>,
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
@@ -450,10 +452,13 @@ impl Agent {
 
         // Add initial message if needed
         if !initial_message.is_empty() {
-            initial_messages.push(Message::user(initial_message));
+            messages.push(Message::user(initial_message));
         }
 
         let mut graph = crate::langgraph::StateGraph::new(std::sync::Arc::new(crate::langgraph::DefaultReducer));
+        if let (Some(cp), Some(tid)) = (&self.checkpointer, &cfg.thread_id) {
+            graph = graph.with_checkpointer(cp.clone(), tid.clone());
+        }
 
         let llm = self.llm.clone();
         let tools_def: Vec<_> = session_tools.iter().map(|t| crate::types::ToolDefinition {
@@ -483,7 +488,7 @@ impl Agent {
             let llm_cfg_c = llm_cfg.clone();
             let llm_tools_c = llm_tools.clone();
             Box::pin(async move {
-                let msgs_val = state.get("messages").unwrap().as_array().unwrap();
+                let msgs_val = state.get("state.messages").unwrap().as_array().unwrap();
                 let mut msgs = vec![];
                 for m in msgs_val {
                     let role_str = m["role"].as_str().unwrap();
@@ -567,8 +572,8 @@ impl Agent {
                                 "tool_calls": final_tool_calls
                             }
                         });
-                        // Also append to messages array using the reducer
-                        update.as_object_mut().unwrap().insert("messages".to_string(), serde_json::json!([{
+                        // Also append to state.messages array using the reducer
+                        update.as_object_mut().unwrap().insert("state.messages".to_string(), serde_json::json!([{
                                 "role": "assistant",
                                 "content": final_content,
                                 "tool_calls": final_tool_calls
@@ -780,7 +785,7 @@ impl Agent {
                 Ok(serde_json::json!({
                     "has_tool_calls": false, // Clear flag
                     "error_counts": error_counts,
-                    "messages": [{
+                    "state.messages": [{
                         "role": "tool",
                         "content": "",
                         "tool_results": tool_results_json
@@ -803,7 +808,7 @@ impl Agent {
         graph.set_entry_point("llm_call");
 
         // Convert initial messages to json state
-        let msgs_json: Vec<_> = initial_messages.iter().map(|m| {
+        let msgs_json: Vec<_> = messages.iter().map(|m| {
             serde_json::json!({
                 "role": match m.role {
                     crate::types::Role::User => "user",
@@ -825,16 +830,16 @@ impl Agent {
             })
         }).collect();
 
-        let initial_state = serde_json::json!({
-            "messages": msgs_json,
+        let initial_langgraph_state = serde_json::json!({
+            "state.messages": msgs_json,
             "has_tool_calls": false,
             "total_tokens": 0,
             "error_counts": {}
         });
 
-        match graph.run(initial_state).await {
+        match graph.run(initial_langgraph_state).await {
             Ok(final_state) => {
-                let final_msgs = final_state.get("messages").unwrap().as_array().unwrap();
+                let final_msgs = final_state.get("state.messages").unwrap().as_array().unwrap();
                 let last_msg = final_msgs.last().unwrap();
                 let content = last_msg.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 on_event(AgentEvent::TaskComplete { content: content.clone() });
@@ -1047,7 +1052,7 @@ impl Agent {
     }
 
     /// Anthropic Claude Agent SDK Archetype: Implements the harness via a single `query()` function
-    /// that returns an async iterator (stream) of messages. Uses a "dumb loop" Gather-Act-Verify cycle.
+    /// that returns an async iterator (stream) of state.messages. Uses a "dumb loop" Gather-Act-Verify cycle.
     pub fn query(
         self: Arc<Self>,
         cfg: AgentRunConfig,
@@ -1224,14 +1229,25 @@ impl Agent {
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
 
         let mut tool_error_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        let mut super_step_checkpoints: Vec<String> = Vec::new();
         let mut malformed_retries = 0;
         let max_malformed_retries = 3;
 
-        let mut messages: Vec<Message> = final_cfg.injected_context.clone().unwrap_or_default();
+        let mut tool_error_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        let mut super_step_checkpoints: Vec<String> = Vec::new();
+        let mut malformed_retries = 0;
+        let max_malformed_retries = 3;
+
+        let thread_id_val = final_cfg.thread_id.clone().unwrap_or_else(|| "default".to_string());
+        let mut state = final_cfg.initial_state.clone().unwrap_or_else(|| crate::types::AgentState::new(&thread_id_val));
+        if let Some(injected) = &final_cfg.injected_context {
+            state.messages.extend(injected.clone());
+        }
+
         let mut last_checkpoint_id: Option<String> = None;
 
         if final_cfg.enable_langgraph_mechanic {
-            return self_with_memory.run_langgraph(&final_cfg, initial_message, session_tools, &mut messages, on_event).await;
+            return self_with_memory.run_langgraph(&final_cfg, initial_message, session_tools, &mut state.messages, on_event).await;
         }
 
         if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
@@ -1240,15 +1256,23 @@ impl Agent {
                     .map_err(|e| format!("Failed to fetch requested checkpoint {}: {}", resume_id, e))?
                     .ok_or_else(|| format!("Requested checkpoint {} not found", resume_id))?;
 
-                messages = serde_json::from_value::<Vec<Message>>(cp.data.clone())
-                    .map_err(|e| format!("Failed to deserialize requested checkpoint: {}", e))?;
+                state = serde_json::from_value::<crate::types::AgentState>(cp.data.clone()).unwrap_or_else(|_| {
+                    let mut s = crate::types::AgentState::new(thread_id);
+                    if let Ok(msgs) = serde_json::from_value::<Vec<Message>>(cp.data.clone()) {
+                        s.messages = msgs;
+                    }
+                    s
+                });
                 last_checkpoint_id = Some(cp.checkpoint_id.clone());
                 checkpointer.restore_checkpoint(resume_id).await.map_err(|e| format!("Failed to restore workspace: {}", e))?;
             } else {
                 if let Ok(checkpoints) = checkpointer.list_checkpoints(thread_id).await {
                     if let Some(cp) = checkpoints.first() {
-                        if let Ok(saved_msgs) = serde_json::from_value::<Vec<Message>>(cp.data.clone()) {
-                            messages = saved_msgs;
+                        if let Ok(saved_state) = serde_json::from_value::<crate::types::AgentState>(cp.data.clone()) {
+                            state = saved_state;
+                            last_checkpoint_id = Some(cp.checkpoint_id.clone());
+                        } else if let Ok(saved_msgs) = serde_json::from_value::<Vec<Message>>(cp.data.clone()) {
+                            state.messages = saved_msgs;
                             last_checkpoint_id = Some(cp.checkpoint_id.clone());
                         }
                     }
@@ -1259,18 +1283,20 @@ impl Agent {
         let generated_uuid_path = format!(".agent_checkpoint_{}.json", uuid::Uuid::new_v4());
         let scratchpad_path = final_cfg.state_scratchpad_path.clone().unwrap_or(generated_uuid_path);
 
-        if messages.is_empty() && final_cfg.enable_state_checkpointing {
+        if state.messages.is_empty() && final_cfg.enable_state_checkpointing {
             if let Ok(contents) = tokio::fs::read_to_string(&scratchpad_path).await {
-                if let Ok(saved_msgs) = serde_json::from_str::<Vec<Message>>(&contents) {
-                    messages = saved_msgs;
+                if let Ok(saved_state) = serde_json::from_str::<crate::types::AgentState>(&contents) {
+                    state = saved_state;
+                } else if let Ok(saved_msgs) = serde_json::from_str::<Vec<Message>>(&contents) {
+                    state.messages = saved_msgs;
                 }
             }
         }
 
-        if messages.is_empty() {
-            messages.push(Message::user(initial_message));
+        if state.messages.is_empty() {
+            state.messages.push(Message::user(initial_message));
         } else if !initial_message.is_empty() {
-            messages.push(Message::user(initial_message));
+            state.messages.push(Message::user(initial_message));
         }
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
@@ -1281,10 +1307,10 @@ impl Agent {
 
         let mut combined_system = build_hierarchical_system_prompt(&final_cfg, &session_tools);
 
-        // Long-Term Memory Retrieval
-        let mut checkpoint_history: Vec<String> = Vec::new();
+        // Super-step Checkpoint History
         if let Some(id) = &last_checkpoint_id {
-            checkpoint_history.push(id.clone());
+            super_step_checkpoints.push(id.clone());
+        let mut _unused_msgs: Vec<Message> = state.messages.clone();
         }
         let mut rewind_attempts_remaining = final_cfg.max_rewind_attempts;
 
@@ -1318,23 +1344,24 @@ impl Agent {
             let iteration = turn_count;
             turn_count += 1;
 
+            state.iteration = iteration;
             on_event(AgentEvent::IterationStarted {
                 iteration,
-                message_count: messages.len(),
+                message_count: state.messages.len(),
             });
 
-            let mut final_messages = messages.clone();
+            let mut current_messages = state.messages.clone();
 
             // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
             if final_cfg.enable_acon_context_strategy {
-                let msg_count = final_messages.len();
+                let msg_count = current_messages.len();
                 if msg_count > 3 {
                     // We preserve the last 2 messages (usually assistant + tool results)
                     // For older Tool role messages, we strip the raw tool output but keep reasoning
                     let threshold = msg_count - 2;
                     for i in 0..threshold {
-                        if final_messages[i].role == Role::Tool {
-                            for tr in &mut final_messages[i].tool_results {
+                        if current_messages[i].role == Role::Tool {
+                            for tr in &mut current_messages[i].tool_results {
                                 if tr.error.is_empty() && !tr.content.starts_with("[ACON:") && !tr.content.is_empty() {
                                     tr.content = "[ACON: Tool output omitted to prioritize reasoning traces.]".to_string();
                                 }
@@ -1351,7 +1378,7 @@ impl Agent {
                 if !final_cfg.developer_instructions.is_empty() {
                     reminder_text.push_str(&format!("[System Reminder: {}]\n\n", final_cfg.developer_instructions));
                 }
-                if !final_cfg.user_instructions.is_empty() && final_messages.len() > 3 {
+                if !final_cfg.user_instructions.is_empty() && current_messages.len() > 3 {
                     // Truncate user instructions if it's too long, just to remind the core objective
                     let mut end_idx = 1000;
                     if final_cfg.user_instructions.len() > 1000 {
@@ -1366,10 +1393,10 @@ impl Agent {
                 }
 
                 if !reminder_text.is_empty() {
-                    final_messages.push(Message::user(reminder_text.trim()));
+                    current_messages.push(Message::user(reminder_text.trim()));
                 }
             } else if !final_cfg.developer_instructions.is_empty() {
-                final_messages.push(Message::user(format!("[System Reminder: {}]", final_cfg.developer_instructions)));
+                current_messages.push(Message::user(format!("[System Reminder: {}]", final_cfg.developer_instructions)));
             }
 
             let mut req_tools = Vec::new();
@@ -1390,7 +1417,7 @@ impl Agent {
             let req = ChatRequest {
                 model: final_cfg.model.clone(),
                 system: combined_system.clone(),
-                messages: final_messages,
+                messages: current_messages,
                 tools: req_tools,
                 max_tokens: final_cfg.max_tokens,
                 temperature: final_cfg.temperature,
@@ -1416,7 +1443,7 @@ impl Agent {
                         }
                         let err_msg = format!("Malformed LLM response: {}. Agent retrying...", e);
                         on_event(AgentEvent::TaskError { error: err_msg.clone() });
-                        messages.push(Message::user("Your previous response was malformed or invalid JSON. Please ensure your tool calls are properly formatted."));
+                        state.messages.push(Message::user("Your previous response was malformed or invalid JSON. Please ensure your tool calls are properly formatted."));
                         continue;
                     } else {
                         on_event(AgentEvent::TaskError { error: err.clone() });
@@ -1512,11 +1539,11 @@ impl Agent {
                     return Ok(msg);
                 }
                 if decision.action == BudgetAction::Continue {
-                    // Add the budget nudge to messages and continue.
+                    // Add the budget nudge to state.messages and continue.
                     if !resp.message.content.is_empty() {
-                        messages.push(resp.message.clone());
+                        state.messages.push(resp.message.clone());
                     }
-                    messages.push(Message::user(&decision.nudge_message));
+                    state.messages.push(Message::user(&decision.nudge_message));
                     continue;
                 }
             }
@@ -1524,7 +1551,7 @@ impl Agent {
             let tool_calls = resp.message.tool_calls.clone();
 
             // Add assistant message to history (including tool calls).
-            messages.push(resp.message.clone());
+            state.messages.push(resp.message.clone());
 
             // Telemetry: track individual tool executions
             let tool_call_counter = meter.u64_counter("ohc_agent_tool_execution_total").build();
@@ -1552,13 +1579,38 @@ impl Agent {
                                     "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
                                     final_cfg.computational_guide_command, stdout, stderr
                                 );
-                                messages.push(Message::user(err_msg));
+
+                                if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && super_step_checkpoints.len() > 1 {
+                                     let _ = super_step_checkpoints.pop(); // Remove current step
+                                     if let Some(prev_id) = super_step_checkpoints.last().cloned() {
+                                          if let Some(checkpointer) = &self.checkpointer {
+                                               if let Ok(Some(cp)) = checkpointer.get_checkpoint(final_cfg.thread_id.as_ref().unwrap(), &prev_id).await {
+                                                    if let Ok(restored_state) = serde_json::from_value::<crate::types::AgentState>(cp.data) {
+                                                         state = restored_state;
+                                                         let _ = checkpointer.restore_checkpoint(&prev_id).await;
+                                                         rewind_attempts_remaining -= 1;
+                                                         state.messages.push(Message::system(format!(
+                                                              "TIME-TRAVEL REWIND: Computational guide verification failed. I have rewound your state to checkpoint '{}'. Error: {}. Please fix your work.",
+                                                              prev_id, err_msg
+                                                         )));
+                                                         on_event(AgentEvent::RewindOccurred {
+                                                              iteration,
+                                                              checkpoint_id: prev_id,
+                                                              reason: "Computational guide failure".to_string(),
+                                                         });
+                                                         continue;
+                                                    }
+                                               }
+                                          }
+                                     }
+                                }
+                                state.messages.push(Message::user(err_msg));
                                 continue;
                             }
                         }
                         Err(e) => {
                             let err_msg = format!("Failed to execute computational guide command '{}': {}", final_cfg.computational_guide_command, e);
-                            messages.push(Message::user(err_msg));
+                            state.messages.push(Message::user(err_msg));
                             continue;
                         }
                     }
@@ -1579,20 +1631,45 @@ impl Agent {
                                     "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
                                     final_cfg.visual_verification_command, stdout, stderr
                                 );
-                                messages.push(Message::user(err_msg));
+
+                                if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && super_step_checkpoints.len() > 1 {
+                                     let _ = super_step_checkpoints.pop();
+                                     if let Some(prev_id) = super_step_checkpoints.last().cloned() {
+                                          if let Some(checkpointer) = &self.checkpointer {
+                                               if let Ok(Some(cp)) = checkpointer.get_checkpoint(final_cfg.thread_id.as_ref().unwrap(), &prev_id).await {
+                                                    if let Ok(restored_state) = serde_json::from_value::<crate::types::AgentState>(cp.data) {
+                                                         state = restored_state;
+                                                         let _ = checkpointer.restore_checkpoint(&prev_id).await;
+                                                         rewind_attempts_remaining -= 1;
+                                                         state.messages.push(Message::system(format!(
+                                                              "TIME-TRAVEL REWIND: Visual verification failed. I have rewound your state to checkpoint '{}'. Please fix the UI issue.",
+                                                              prev_id
+                                                         )));
+                                                         on_event(AgentEvent::RewindOccurred {
+                                                              iteration,
+                                                              checkpoint_id: prev_id,
+                                                              reason: "Visual verification failure".to_string(),
+                                                         });
+                                                         continue;
+                                                    }
+                                               }
+                                          }
+                                     }
+                                }
+                                state.messages.push(Message::user(err_msg));
                                 continue;
                             } else {
                                 let stdout = String::from_utf8_lossy(&output.stdout);
                                 if stdout.contains("REJECT") {
                                     let err_msg = format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim());
-                                    messages.push(Message::user(err_msg));
+                                    state.messages.push(Message::user(err_msg));
                                     continue;
                                 }
                             }
                         }
                         Err(e) => {
                             let err_msg = format!("Failed to execute visual verification command '{}': {}", final_cfg.visual_verification_command, e);
-                            messages.push(Message::user(err_msg));
+                            state.messages.push(Message::user(err_msg));
                             continue;
                         }
                     }
@@ -1603,8 +1680,7 @@ impl Agent {
                     let judge_req = ChatRequest {
                         model: final_cfg.model.clone(),
                         system: "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Output ONLY 'APPROVE' or 'REJECT: <reason>'.".to_string(),
-                        messages: vec![Message::user(format!("Evaluate this output:
-{}", last_assistant_content))],
+                        messages: vec![Message::user(format!("Evaluate this output:\n{}", last_assistant_content))],
                         tools: vec![],
                         max_tokens: 500,
                         temperature: 0.0,
@@ -1616,7 +1692,32 @@ impl Agent {
                             if judge_text.starts_with("REJECT:") {
                                 let reason = judge_text.strip_prefix("REJECT:").unwrap_or(judge_text).trim();
                                 let err_msg = format!("Your previous output was evaluated by an LLM-as-judge and rejected. Reason: {}. Please correct your work and use tools if necessary.", reason);
-                                messages.push(Message::user(err_msg));
+
+                                if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && super_step_checkpoints.len() > 1 {
+                                     let _ = super_step_checkpoints.pop();
+                                     if let Some(prev_id) = super_step_checkpoints.last().cloned() {
+                                          if let Some(checkpointer) = &self.checkpointer {
+                                               if let Ok(Some(cp)) = checkpointer.get_checkpoint(final_cfg.thread_id.as_ref().unwrap(), &prev_id).await {
+                                                    if let Ok(restored_state) = serde_json::from_value::<crate::types::AgentState>(cp.data) {
+                                                         state = restored_state;
+                                                         let _ = checkpointer.restore_checkpoint(&prev_id).await;
+                                                         rewind_attempts_remaining -= 1;
+                                                         state.messages.push(Message::system(format!(
+                                                              "TIME-TRAVEL REWIND: LLM Judge rejected your output. Reason: {}. I have rewound your state to checkpoint '{}'. Please try a different approach.",
+                                                              reason, prev_id
+                                                         )));
+                                                         on_event(AgentEvent::RewindOccurred {
+                                                              iteration,
+                                                              checkpoint_id: prev_id,
+                                                              reason: format!("LLM Judge rejection: {}", reason),
+                                                         });
+                                                         continue;
+                                                    }
+                                               }
+                                          }
+                                     }
+                                }
+                                state.messages.push(Message::user(err_msg));
                                 continue;
                             }
                             // If APPROVE or anything else, we proceed to output guardrails.
@@ -1628,9 +1729,6 @@ impl Agent {
                         }
                     }
                 }
-                // In a production-grade agent, we might use a separate LLM pass
-                // to evaluate confidence in the final answer if threshold > 0.
-                // For now, we'll assume the model is confident if it didn't use more tools.
 
                 // OpenAI Mechanic: Output Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
@@ -1647,7 +1745,6 @@ impl Agent {
             }
 
             // Execute tool calls and collect results.
-            // Split tools into read-only and mutating to implement the concurrent retrieval mechanic.
             let mut read_only_calls = Vec::new();
             let mut mutating_calls = Vec::new();
 
@@ -1660,16 +1757,9 @@ impl Agent {
                 }
             }
 
-            // We need a helper to execute a single tool call with retries and guardrails.
-            // We use a macro or inline logic to avoid borrowing issues with `on_event`.
             let mut tool_results: Vec<ToolResult> = vec![ToolResult { tool_call_id: String::new(), content: String::new(), error: String::new() }; tool_calls.len()];
 
-            // Note: Since `on_event` is `&mut F`, we can't easily share it across concurrent tasks.
-            // For now, we will collect events and results from the concurrent execution, then emit them sequentially.
-            // We will execute the read-only calls concurrently using `futures::future::join_all`.
-
-            // Output Parsing mechanic: Schema-Constrained Responses
-            // Intercept special output formatting tool natively
+            // Intercept structured output tool
             if let Some(tc) = mutating_calls.iter().chain(read_only_calls.iter()).find(|t| t.name == "return_structured_output") {
                 on_event(AgentEvent::ToolCall {
                     name: tc.name.clone(),
@@ -1677,34 +1767,30 @@ impl Agent {
                     result: "Returning structured output".to_string(),
                     iteration,
                 });
-
-                // When the model calls the structured output tool,
-                // we terminate the orchestrator immediately with the raw JSON arguments as the task completion.
                 return Ok(tc.arguments.to_string());
             }
 
             let mut read_only_futures = Vec::new();
             for tc in &read_only_calls {
-                // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_tool(tc, guard_cfg) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
-                        return Err(e.into()); // Tripwire: halt the loop immediately
+                        return Err(e.into());
                     }
                 }
                 let gating_res = Self::check_tool_gating(tc, true, &final_cfg);
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
-                let messages_clone = messages.clone();
+                let messages_snapshot = state.messages.clone();
                 let cfg_max_retries = final_cfg.max_retries;
                 read_only_futures.push(async move {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
                     let mut retry_count = 0;
-                    let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                    let max_retries = cfg_max_retries;
                     loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
+                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_snapshot).await {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
@@ -1728,7 +1814,6 @@ impl Agent {
 
             let ro_results = futures::future::join_all(read_only_futures).await;
 
-            // Emit events and collect results for read-only tools
             for (tc, res) in ro_results {
                 let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
                 match res {
@@ -1766,64 +1851,36 @@ impl Agent {
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
                         if *count > final_cfg.max_retries {
-                            if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
+                            if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && super_step_checkpoints.len() > 1 {
                                 rewind_attempts_remaining -= 1;
-                                let _ = checkpoint_history.pop();
-                                if let Some(prev_id) = checkpoint_history.last().cloned() {
-                                    let mut restored_msgs = None;
+                                let _ = super_step_checkpoints.pop();
+                                if let Some(prev_id) = super_step_checkpoints.last().cloned() {
                                     if let Some(checkpointer) = &self.checkpointer {
                                         if let Ok(Some(cp)) = checkpointer.get_checkpoint(final_cfg.thread_id.as_ref().unwrap(), &prev_id).await {
-                                            if let Ok(msgs) = serde_json::from_value::<Vec<Message>>(cp.data) {
+                                            if let Ok(restored_state) = serde_json::from_value::<crate::types::AgentState>(cp.data) {
+                                                state = restored_state;
                                                 let _ = checkpointer.restore_checkpoint(&prev_id).await;
-                                                restored_msgs = Some(msgs);
+                                                state.messages.push(Message::system(format!(
+                                                    "TIME-TRAVEL REWIND: Tool '{}' failed {} times. I have rewound your state to checkpoint '{}'. Please try a different approach.",
+                                                    tc.name, final_cfg.max_retries, prev_id
+                                                )));
+                                                on_event(AgentEvent::RewindOccurred {
+                                                    iteration,
+                                                    checkpoint_id: prev_id,
+                                                    reason: format!("Tool '{}' failed consecutively", tc.name),
+                                                });
+                                                tool_error_counts.remove(&tc.name);
+                                                continue;
                                             }
                                         }
-                                    }
-
-                                    // State Management: OpenAI uses lightweight previous_response_id chaining.
-                                    // Fallback to lightweight chaining if checkpointer is absent or fails.
-                                    if restored_msgs.is_none() {
-                                        let mut new_messages = Vec::new();
-                                        let mut found = false;
-                                        for m in messages.iter() {
-                                            new_messages.push(m.clone());
-                                            if let Some(rid) = &m.response_id {
-                                                if rid == &prev_id {
-                                                    found = true;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                        if found {
-                                            restored_msgs = Some(new_messages);
-                                        } else if !new_messages.is_empty() {
-                                            new_messages.truncate(1);
-                                            restored_msgs = Some(new_messages);
-                                        }
-                                    }
-
-                                    if let Some(msgs) = restored_msgs {
-                                        messages = msgs;
-                                        messages.push(Message::system(format!(
-                                            "TIME-TRAVEL REWIND: Tool '{}' failed consecutively beyond max_retries limit. I have rewound your state to checkpoint '{}'. Please try a different approach to solve the task.",
-                                            tc.name, prev_id
-                                        )));
-                                        on_event(AgentEvent::RewindOccurred {
-                                            iteration,
-                                            checkpoint_id: prev_id,
-                                            reason: format!("Tool '{}' failed 3 times", tc.name),
-                                        });
-                                        tool_error_counts.remove(&tc.name);
-                                        continue;
                                     }
                                 }
                             }
-                            let fatal_msg = format!("Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
+                            let fatal_msg = format!("Tool '{}' failed consecutively beyond max_retries limit. Last error: {}", tc.name, msg);
                             on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
                             return Err(fatal_msg.into());
                         }
 
-                        // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -1858,37 +1915,20 @@ impl Agent {
                 }
             }
 
-            // Execute mutating calls sequentially to prevent race conditions
             for tc in &mutating_calls {
-                // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_tool(&tc, guard_cfg) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
-                        return Err(e.into()); // Tripwire: halt the loop immediately
+                        return Err(e.into());
                     }
                 }
 
-                // Anthropic Mechanic: 3-Stage Tool Gating
                 if let Err(e) = Self::check_tool_gating(&tc, false, &final_cfg) {
                     match e {
                         ToolError::UserFixable(msg) => {
                             let err = format!("USER_FIXABLE: {}", msg);
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
-                        }
-                        ToolError::Fatal(msg) => {
-                            let err = format!("Fatal tool error: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
-                        }
-                        ToolError::Unexpected(msg) => {
-                            let err = format!("Unexpected tool error: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
-                        }
-                        ToolError::HandoffRequested(target) => {
-                            on_event(AgentEvent::Handoff { target_agent: target.clone() });
-                            return Ok(format!("Handoff requested to {}", target));
                         }
                         _ => {
                             let err = format!("Fatal tool error: {:?}", e);
@@ -1899,12 +1939,12 @@ impl Agent {
                 }
 
                 let mut retry_count = 0;
-                let max_retries = final_cfg.max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                let max_retries = final_cfg.max_retries;
                 let mut content = String::new();
                 let mut error = String::new();
 
                 loop {
-                    match self.execute_tool(&tc, &session_tools, &messages).await {
+                    match self.execute_tool(&tc, &session_tools, &state.messages).await {
                         Ok(r) => {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
@@ -1925,14 +1965,7 @@ impl Agent {
                                 tokio::time::sleep(backoff).await;
                                 continue;
                             } else {
-                                let err = format!("Transient error after retries: {}", msg);
-                                on_event(AgentEvent::ToolCall {
-                                    name: tc.name.clone(),
-                                    args_json: tc.arguments.to_string(),
-                                    result: format!("Error: {}", err),
-                                    iteration,
-                                });
-                                error = err;
+                                error = format!("Transient error after retries: {}", msg);
                                 break;
                             }
                         }
@@ -1940,92 +1973,40 @@ impl Agent {
                             let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                             *count += 1;
                             if *count > final_cfg.max_retries {
-                                if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
+                                if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && super_step_checkpoints.len() > 1 {
                                     rewind_attempts_remaining -= 1;
-                                    let _ = checkpoint_history.pop();
-                                    if let Some(prev_id) = checkpoint_history.last().cloned() {
-                                        let mut restored_msgs = None;
+                                    let _ = super_step_checkpoints.pop();
+                                    if let Some(prev_id) = super_step_checkpoints.last().cloned() {
                                         if let Some(checkpointer) = &self.checkpointer {
                                             if let Ok(Some(cp)) = checkpointer.get_checkpoint(final_cfg.thread_id.as_ref().unwrap(), &prev_id).await {
-                                                if let Ok(msgs) = serde_json::from_value::<Vec<Message>>(cp.data) {
+                                                if let Ok(restored_state) = serde_json::from_value::<crate::types::AgentState>(cp.data) {
+                                                    state = restored_state;
                                                     let _ = checkpointer.restore_checkpoint(&prev_id).await;
-                                                    restored_msgs = Some(msgs);
+                                                    state.messages.push(Message::system(format!(
+                                                        "TIME-TRAVEL REWIND: Tool '{}' failed {} times. I have rewound your state to checkpoint '{}'.",
+                                                        tc.name, final_cfg.max_retries, prev_id
+                                                    )));
+                                                    on_event(AgentEvent::RewindOccurred {
+                                                        iteration,
+                                                        checkpoint_id: prev_id,
+                                                        reason: format!("Tool '{}' failed consecutively", tc.name),
+                                                    });
+                                                    tool_error_counts.remove(&tc.name);
+                                                    continue;
                                                 }
                                             }
-                                        }
-
-                                        // State Management: OpenAI uses lightweight previous_response_id chaining.
-                                        // Fallback to lightweight chaining if checkpointer is absent or fails.
-                                        if restored_msgs.is_none() {
-                                            let mut new_messages = Vec::new();
-                                            let mut found = false;
-                                            for m in messages.iter() {
-                                                new_messages.push(m.clone());
-                                                if let Some(rid) = &m.response_id {
-                                                    if rid == &prev_id {
-                                                        found = true;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                            if found {
-                                                restored_msgs = Some(new_messages);
-                                            } else if !new_messages.is_empty() {
-                                                new_messages.truncate(1);
-                                                restored_msgs = Some(new_messages);
-                                            }
-                                        }
-
-                                        if let Some(msgs) = restored_msgs {
-                                            messages = msgs;
-                                            messages.push(Message::system(format!(
-                                                "TIME-TRAVEL REWIND: Tool '{}' failed consecutively beyond max_retries limit. I have rewound your state to checkpoint '{}'. Please try a different approach to solve the task.",
-                                                tc.name, prev_id
-                                            )));
-                                            on_event(AgentEvent::RewindOccurred {
-                                                iteration,
-                                                checkpoint_id: prev_id,
-                                                reason: format!("Tool '{}' failed 3 times", tc.name),
-                                            });
-                                            tool_error_counts.remove(&tc.name);
-                                            continue;
                                         }
                                     }
                                 }
-                                let fatal_msg = format!("Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
-                                on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
-                                return Err(fatal_msg.into());
+                                return Err(format!("Tool '{}' failed consecutively. Last error: {}", tc.name, msg).into());
                             }
-
-                            // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: msg.clone(),
-                                iteration,
-                            });
                             error = msg;
-                            content = String::new();
                             break;
                         }
-                        Err(ToolError::UserFixable(msg)) => {
-                            let err = format!("USER_FIXABLE: {}", msg);
-                            on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                            return Err(err.into());
-                        }
-                        Err(ToolError::Fatal(msg)) => {
-                            let err = format!("Fatal tool error: {}", msg);
+                        Err(e) => {
+                            let err = format!("Fatal tool error: {:?}", e);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
-                        }
-                        Err(ToolError::Unexpected(msg)) => {
-                            let err = format!("Unexpected tool error: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
-                        }
-                        Err(ToolError::HandoffRequested(target)) => {
-                            on_event(AgentEvent::Handoff { target_agent: target.clone() });
-                            return Ok(format!("Handoff requested to {}", target));
                         }
                     }
                 }
@@ -2039,33 +2020,16 @@ impl Agent {
             }
 
             if final_cfg.enable_observation_masking {
-                // JetBrains Observation Masking: Hide the raw output of old tools from the prompt,
-                // but keep the `tool_calls` themselves visible so the model remembers what it did.
-                // Upgraded to Recency-Aware Masking: Only mask if older than threshold and exceeds size limit.
-                let msg_count = messages.len();
+                let msg_count = state.messages.len();
                 for i in 0..msg_count {
-                    if messages[i].role == Role::Tool {
+                    if state.messages[i].role == Role::Tool {
                         let age = msg_count - i;
                         if age > final_cfg.observation_masking_threshold {
-                            for tr in &mut messages[i].tool_results {
+                            for tr in &mut state.messages[i].tool_results {
                                 if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked") {
                                     let bytes = tr.content.len();
                                     if bytes > final_cfg.observation_masking_size_limit {
-                                        let preview_chars = 100;
-                                        let char_count = tr.content.chars().count();
-                                        if char_count > preview_chars * 2 {
-                                            let start_preview: String = tr.content.chars().take(preview_chars).collect();
-                                            let end_preview: String = tr.content.chars().skip(char_count - preview_chars).collect();
-                                            tr.content = format!(
-                                                "[Observation Masked to save context. Output was {} bytes. Preview: {}...{} The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
-                                                bytes, start_preview, end_preview, tr.tool_call_id
-                                            );
-                                        } else {
-                                            tr.content = format!(
-                                                "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
-                                                bytes, tr.tool_call_id
-                                            );
-                                        }
+                                        tr.content = format!("[Observation Masked to save context. Output was {} bytes. Tool ID: {}]", bytes, tr.tool_call_id);
                                     }
                                 }
                             }
@@ -2074,8 +2038,7 @@ impl Agent {
                 }
             }
 
-            // Append tool results as a user turn.
-            messages.push(Message {
+            state.messages.push(Message {
                 role: Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
@@ -2084,27 +2047,11 @@ impl Agent {
                 previous_response_id: last_response_id.clone(),
             });
 
-            // State Management Checkpointing Mechanic
-            // 1. Configured Checkpointer (Database or Git)
+            // Super-step Checkpointing
             if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
-                let checkpoint_id = uuid::Uuid::new_v4().to_string();
-                let cp = crate::checkpointer::Checkpoint {
-                    thread_id: thread_id.clone(),
-                    checkpoint_id: checkpoint_id.clone(),
-                    parent_id: last_checkpoint_id.clone(),
-                    data: serde_json::to_value(&messages).unwrap_or(serde_json::Value::Null),
-                    metadata: serde_json::json!({
-                        "iteration": iteration,
-                        "turn_input_tokens": turn_input_tokens,
-                        "turn_output_tokens": output_tokens,
-                    }),
-                    created_at: chrono::Utc::now(),
-                };
-                if let Err(e) = checkpointer.put_checkpoint(cp).await {
-                    tracing::warn!("Failed to save checkpoint to database: {}", e);
-                } else {
+                if let Ok(checkpoint_id) = checkpointer.snapshot(thread_id, &state).await {
                     last_checkpoint_id = Some(checkpoint_id.clone());
-                    checkpoint_history.push(checkpoint_id.clone());
+                    super_step_checkpoints.push(checkpoint_id.clone());
                     on_event(AgentEvent::CheckpointSaved {
                         iteration,
                         path: format!("db:{}", checkpoint_id),
@@ -2112,155 +2059,48 @@ impl Agent {
                 }
             }
 
-            // 2. Local File Scratchpad (Claude Code)
-            if final_cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
-                if let Ok(json_state) = serde_json::to_string_pretty(&messages) {
-                    if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
-                        on_event(AgentEvent::CheckpointSaved {
-                            iteration,
-                            path: scratchpad_path.clone(),
-                        });
-                    }
+            if final_cfg.enable_state_checkpointing {
+                if let Ok(json_state) = serde_json::to_string_pretty(&state) {
+                    let _ = tokio::fs::write(&scratchpad_path, json_state).await;
                 }
             }
 
-            // 3. Git Commit Checkpointing (Claude Code Mechanic)
-            if cfg.enable_git_checkpointing && !mutating_calls.is_empty() {
-                let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-
-                // 1. Progress File (Claude Code structured scratchpad)
-                let thread_id_val = final_cfg.thread_id.clone().unwrap_or_else(|| "default".to_string());
-                let progress_file_path = std::path::Path::new(&wd).join(format!(".agent_progress_{}.json", thread_id_val));
-
-                let checkpoint_id = uuid::Uuid::new_v4().to_string();
-                let cp = crate::checkpointer::Checkpoint {
-                    thread_id: thread_id_val,
-                    checkpoint_id: checkpoint_id.clone(),
-                    parent_id: last_checkpoint_id.clone(),
-                    data: serde_json::to_value(&messages).unwrap_or(serde_json::Value::Null),
-                    metadata: serde_json::json!({
-                        "iteration": iteration,
-                        "agent_id": final_cfg.agent_id,
-                    }),
-                    created_at: chrono::Utc::now(),
-                };
-
-                if let Ok(json_data) = serde_json::to_string_pretty(&cp) {
-                    let _ = std::fs::write(&progress_file_path, json_data);
-                }
-
-                // 2. Git commit (Claude Code)
-                let commit_msg = format!("Checkpoint: {}", checkpoint_id);
-                let _ = std::process::Command::new("git").arg("add").arg(".").current_dir(&wd).output();
-                let _ = std::process::Command::new("git").arg("commit").arg("--allow-empty").arg("-m").arg(&commit_msg).current_dir(&wd).output();
-                let _ = std::process::Command::new("git").arg("tag").arg("-f").arg(&checkpoint_id).current_dir(&wd).output();
-
-                last_checkpoint_id = Some(checkpoint_id.clone());
-                checkpoint_history.push(checkpoint_id.clone());
-
-                on_event(AgentEvent::CheckpointSaved {
-                    iteration,
-                    path: format!("git:{}", checkpoint_id),
-                });
-            }
-
-            // Cross-Department Memory Consolidation: Auto-store task result if successful
-            if iteration == max_iterations - 1 || tool_calls.is_empty() {
-                // This is the last iteration or no more tool calls (terminal)
-                // We'll store the final thought in long-term memory if configured
-                if !last_assistant_content.is_empty() {
-                    if let Some(store) = &self_with_memory.memory_store {
-                        let content_to_store = last_assistant_content.clone();
-                        let store_clone = store.clone();
-                        tokio::spawn(async move {
-                            if let Err(e) = store_clone.store(&content_to_store, vec!["AUTO_CONSOLIDATED".to_string()]).await {
-                                tracing::error!("Failed to auto-consolidate memory: {}", e);
-                            } else {
-                                tracing::debug!("Successfully auto-consolidated memory.");
-                            }
-                        });
-                    }
-                }
-            }
-
-
-            // Context Compaction Mechanic
-            // Use the input_tokens from the last request to determine the current context window size.
-
-            if final_cfg.enable_context_compaction && turn_input_tokens > final_cfg.compaction_threshold_tokens {
-                // We want to compact if we have enough messages to make it worthwhile
-                if messages.len() > 5 {
+            if final_cfg.enable_context_compaction && turn_input_tokens > (final_cfg.compaction_threshold_tokens as u32) {
+                if state.messages.len() > 5 {
                     let mut compact_messages = Vec::new();
-                    // Keep the first message (usually the initial prompt)
-                    compact_messages.push(messages[0].clone());
-
-                    // The middle part to be compacted
+                    compact_messages.push(state.messages[0].clone());
                     let middle_start = 1;
-                    let middle_end = messages.len() - 3;
+                    let middle_end = state.messages.len() - 3;
 
                     if middle_end > middle_start {
                         let mut middle_text = String::new();
-                        for m in &messages[middle_start..middle_end] {
-                            middle_text.push_str(&format!("[Role: {}]\n", m.role));
-                            if !m.content.is_empty() {
-                                middle_text.push_str(&m.content);
-                                middle_text.push('\n');
-                            }
-                            if !m.tool_calls.is_empty() {
-                                middle_text.push_str("Tool Calls:\n");
-                                for tc in &m.tool_calls {
-                                    middle_text.push_str(&format!("  {} ({})\n", tc.name, tc.arguments.to_string()));
-                                }
-                            }
-                            if !m.tool_results.is_empty() {
-                                middle_text.push_str("Tool Results:\n");
-                                for tr in &m.tool_results {
-                                    let mut preview = tr.content.clone();
-                                    if preview.len() > 200 {
-                                        preview.truncate(200);
-                                        preview.push_str("...");
-                                    }
-                                    middle_text.push_str(&format!("  {} (error: {})\n", preview, tr.error));
-                                }
-                            }
-                            middle_text.push_str("---\n");
+                        for m in &state.messages[middle_start..middle_end] {
+                            middle_text.push_str(&format!("[Role: {}]\n{}\n---\n", m.role, m.content));
                         }
 
                         let summary_req = ChatRequest {
                             model: final_cfg.model.clone(),
-                            system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve all architectural decisions, unresolved bugs, and the exact state of progress. Discard redundant or raw tool outputs. Be concise.".to_string(),
+                            system: "Summarize the following agent conversation. Preserve all architectural decisions.".to_string(),
                             messages: vec![Message::user(format!("Compact this conversation:\n{}", middle_text))],
                             tools: vec![],
-                            max_tokens: 2000,
+                            max_tokens: 1000,
                             temperature: 0.0,
                         };
 
-                        match self.llm.chat(summary_req).await {
-                            Ok(summary_resp) => {
-                                let summary = summary_resp.message.content;
-                                compact_messages.push(Message::user(format!("[Context Compacted by Harness]:\n{}", summary)));
-                                // Append the remaining recent messages
-                                compact_messages.extend_from_slice(&messages[middle_end..]);
-                                messages = compact_messages;
-                            }
-                            Err(e) => {
-                                // If compaction fails, just log it and continue. Don't crash the agent.
-                                let err = format!("Context compaction failed: {}", e);
-                                on_event(AgentEvent::TaskError { error: err.clone() });
-                            }
+                        if let Ok(summary_resp) = self.llm.chat(summary_req).await {
+                            compact_messages.push(Message::user(format!("[Context Compacted]:\n{}", summary_resp.message.content)));
+                            compact_messages.extend_from_slice(&state.messages[middle_end..]);
+                            state.messages = compact_messages;
                         }
                     }
                 }
             }
         }
 
-        // Hit max iterations.
         let err_msg = format!("Terminal condition reached: max turn limit exceeded ({} iterations).", max_iterations);
         on_event(AgentEvent::TaskError { error: err_msg.clone() });
-        return Err(err_msg.into());
+        Err(err_msg.into())
     }
-
-
     // Anthropic Mechanic: 3-Stage Tool Gating
     fn check_tool_gating(tc: &ToolCall, is_read_only: bool, cfg: &AgentRunConfig) -> Result<(), ToolError> {
         // Stage 1: Trust establishment at project load
@@ -2735,7 +2575,7 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                     })
                 } else if *count == 3 {
-                    // Turn 3: Final answer. We check the received messages.
+                    // Turn 3: Final answer. We check the received state.messages.
                     // The history should be: User, Assistant(call1), Tool(result1), Assistant(call2), Tool(result2)
                     // With ACON enabled, result1 should be stripped. result2 should remain intact since it's in the last 2 messages.
                     let messages = &req.messages;
@@ -3198,7 +3038,7 @@ mod tests {
         //   The new tool result is appended.
         // Iter 2: LLM returns final answer.
 
-        // We can't directly inspect `messages` from the outside, but we can verify it compiled
+        // We can't directly inspect `state.messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
     }
@@ -4185,9 +4025,9 @@ mod tests {
         cfg2.resume_from_checkpoint_id = Some(saved_cp_id);
 
         let mut events2 = Vec::new();
-        let _ = agent2.run(&cfg2, "Ignored Task (will use loaded messages)", &mut |e| events2.push(e)).await;
+        let _ = agent2.run(&cfg2, "Ignored Task (will use loaded state.messages)", &mut |e| events2.push(e)).await;
 
-        // Verify the second run resumed properly by checking if it loaded the messages.
+        // Verify the second run resumed properly by checking if it loaded the state.messages.
         // It should have immediately hit the ChatResponse and finished.
         // However, because there are NO tool calls in the ChatResponse, the loop hits the "Terminal condition",
         // returning early BEFORE saving another checkpoint!
@@ -4374,7 +4214,7 @@ mod tests {
             last_request: tokio::sync::Mutex::new(None),
         });
 
-        // Create an agent and we will inject some state so messages.len() > 3
+        // Create an agent and we will inject some state so state.messages.len() > 3
         let agent = Agent::new(client.clone(), vec![]);
 
         let mut cfg = AgentRunConfig::default();
@@ -4386,7 +4226,7 @@ mod tests {
         let scratchpad_path = format!(".test_checkpoint_litm_{}.json", uuid::Uuid::new_v4());
         cfg.state_scratchpad_path = Some(scratchpad_path.clone());
 
-        // Pre-fill some messages to make len > 3
+        // Pre-fill some state.messages to make len > 3
         let initial_msgs = vec![
             Message::user("Task: Do something"),
             Message::assistant("Thinking..."),

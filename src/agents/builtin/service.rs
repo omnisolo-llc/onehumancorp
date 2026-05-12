@@ -435,7 +435,7 @@ impl AgentServiceImpl {
         let mailbox = Arc::new(RwLock::new(Mailbox::default()));
         let observation_store = Arc::new(dashmap::DashMap::new());
         
-        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None, observation_store.clone());
+        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None, observation_store.clone(), None, None);
         let mut unarc_agent = Agent::new(llm, tools);
         unarc_agent.observation_store = observation_store;
         if let Some(wd) = &run_cfg.workspace_path {
@@ -500,7 +500,7 @@ impl AgentService for AgentServiceImpl {
         } else { None };
         let observation_store = Arc::new(dashmap::DashMap::new());
 
-        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, accessor, observation_store.clone());
+        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, accessor, observation_store.clone(), None, None);
         let tools = if !task_req.department.is_empty() {
             if let Ok(dep) = Department::from_str(&task_req.department) {
                 let dep_cfg = get_department_config(dep);
@@ -748,7 +748,7 @@ impl AgentService for AgentServiceImpl {
             let observation_store = Arc::new(dashmap::DashMap::new());
 
             let working_dir = if sub_req.working_dir.is_empty() { None } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
-            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir, None, observation_store.clone());
+            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir, None, observation_store.clone(), None, None);
             let mut agent = Agent::new(llm, tools);
             agent.observation_store = observation_store;
 
