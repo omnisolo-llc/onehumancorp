@@ -28,7 +28,9 @@ jobs:
       - name: Install base dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ca-certificates curl git
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libssl-dev \
+            ca-certificates curl git
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -89,7 +91,9 @@ jobs:
       - name: Install base dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ca-certificates curl git
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libssl-dev \
+            ca-certificates curl git
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -136,7 +140,9 @@ jobs:
       - name: Install base dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ca-certificates curl git
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libssl-dev \
+            ca-certificates curl git
 
       - name: Set up Go
         uses: actions/setup-go@v5
