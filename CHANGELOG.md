@@ -5,6 +5,10 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+- Scaling (Cloud): Bump version tags for Cloud environment to trigger multi-environment release workflows.
+- Privacy/Offline (Standalone): Bump standalone desktop version tags to align with hybrid semantic versioning playbook.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
