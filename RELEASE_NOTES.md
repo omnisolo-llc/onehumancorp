@@ -1,3 +1,6 @@
+## Release Notes
+### Chore
+- Cleaned up debug logging in latency benchmarks.
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements

@@ -1,3 +1,6 @@
+## [Unreleased]
+### Chore
+- Removed DEBUG logging statements from latency_bench.rs to clean up benchmark output.
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
