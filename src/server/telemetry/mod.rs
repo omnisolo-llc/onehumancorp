@@ -159,6 +159,9 @@ pub async fn buffer_metric(
     value: f32,
     labels: Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    // Unconditionally redact PII before any buffering or early returns
+    let redacted_labels = redact_interface_pii(labels);
+
     // In standalone mode, do not sync telemetry to cloud unless explicitly enabled
     let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
 
@@ -166,7 +169,6 @@ pub async fn buffer_metric(
         return Ok(());
     }
 
-    let redacted_labels = redact_interface_pii(labels);
     let labels_json = serde_json::to_string(&redacted_labels)?;
 
     query(
