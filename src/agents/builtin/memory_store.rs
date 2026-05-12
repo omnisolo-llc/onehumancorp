@@ -2750,3 +2750,2580 @@ mod override_tests_resolve {
         assert!(results[0].owner_override, "Winner should have inherited owner_override");
     }
 }
+
+#[cfg(test)]
+mod generated_tests {
+    use super::*;
+    use std::str::FromStr;
+    async fn setup_sqlite_repo() -> std::sync::Arc<VectorRepository> {
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await.unwrap();
+        std::sync::Arc::new(VectorRepository::new_sqlite(pool))
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_0() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_0".to_string(),
+            tenant_id: "org_edge_0".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_0".to_string(),
+            tenant_id: "org_edge_0".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_0", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_1() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_1".to_string(),
+            tenant_id: "org_edge_1".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_1".to_string(),
+            tenant_id: "org_edge_1".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_1", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_2() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_2".to_string(),
+            tenant_id: "org_edge_2".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_2".to_string(),
+            tenant_id: "org_edge_2".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_2", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_3() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_3".to_string(),
+            tenant_id: "org_edge_3".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_3".to_string(),
+            tenant_id: "org_edge_3".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_3", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_4() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_4".to_string(),
+            tenant_id: "org_edge_4".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_4".to_string(),
+            tenant_id: "org_edge_4".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_4", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_5() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_5".to_string(),
+            tenant_id: "org_edge_5".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_5".to_string(),
+            tenant_id: "org_edge_5".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_5", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_6() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_6".to_string(),
+            tenant_id: "org_edge_6".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_6".to_string(),
+            tenant_id: "org_edge_6".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_6", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_7() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_7".to_string(),
+            tenant_id: "org_edge_7".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_7".to_string(),
+            tenant_id: "org_edge_7".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_7", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_8() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_8".to_string(),
+            tenant_id: "org_edge_8".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_8".to_string(),
+            tenant_id: "org_edge_8".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_8", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_9() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_9".to_string(),
+            tenant_id: "org_edge_9".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_9".to_string(),
+            tenant_id: "org_edge_9".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_9", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_10() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_10".to_string(),
+            tenant_id: "org_edge_10".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_10".to_string(),
+            tenant_id: "org_edge_10".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_10", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_11() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_11".to_string(),
+            tenant_id: "org_edge_11".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_11".to_string(),
+            tenant_id: "org_edge_11".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_11", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_12() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_12".to_string(),
+            tenant_id: "org_edge_12".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_12".to_string(),
+            tenant_id: "org_edge_12".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_12", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_13() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_13".to_string(),
+            tenant_id: "org_edge_13".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_13".to_string(),
+            tenant_id: "org_edge_13".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_13", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_14() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_14".to_string(),
+            tenant_id: "org_edge_14".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_14".to_string(),
+            tenant_id: "org_edge_14".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_14", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_15() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_15".to_string(),
+            tenant_id: "org_edge_15".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_15".to_string(),
+            tenant_id: "org_edge_15".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_15", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_16() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_16".to_string(),
+            tenant_id: "org_edge_16".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_16".to_string(),
+            tenant_id: "org_edge_16".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_16", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_17() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_17".to_string(),
+            tenant_id: "org_edge_17".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_17".to_string(),
+            tenant_id: "org_edge_17".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_17", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_18() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_18".to_string(),
+            tenant_id: "org_edge_18".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_18".to_string(),
+            tenant_id: "org_edge_18".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_18", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_19() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_19".to_string(),
+            tenant_id: "org_edge_19".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_19".to_string(),
+            tenant_id: "org_edge_19".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_19", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_20() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_20".to_string(),
+            tenant_id: "org_edge_20".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_20".to_string(),
+            tenant_id: "org_edge_20".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_20", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_21() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_21".to_string(),
+            tenant_id: "org_edge_21".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_21".to_string(),
+            tenant_id: "org_edge_21".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_21", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_22() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_22".to_string(),
+            tenant_id: "org_edge_22".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_22".to_string(),
+            tenant_id: "org_edge_22".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_22", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_23() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_23".to_string(),
+            tenant_id: "org_edge_23".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_23".to_string(),
+            tenant_id: "org_edge_23".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_23", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_24() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_24".to_string(),
+            tenant_id: "org_edge_24".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_24".to_string(),
+            tenant_id: "org_edge_24".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_24", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_25() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_25".to_string(),
+            tenant_id: "org_edge_25".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_25".to_string(),
+            tenant_id: "org_edge_25".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_25", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_26() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_26".to_string(),
+            tenant_id: "org_edge_26".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_26".to_string(),
+            tenant_id: "org_edge_26".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_26", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_27() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_27".to_string(),
+            tenant_id: "org_edge_27".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_27".to_string(),
+            tenant_id: "org_edge_27".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_27", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_28() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_28".to_string(),
+            tenant_id: "org_edge_28".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_28".to_string(),
+            tenant_id: "org_edge_28".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_28", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_29() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_29".to_string(),
+            tenant_id: "org_edge_29".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_29".to_string(),
+            tenant_id: "org_edge_29".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_29", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_30() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_30".to_string(),
+            tenant_id: "org_edge_30".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_30".to_string(),
+            tenant_id: "org_edge_30".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_30", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_31() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_31".to_string(),
+            tenant_id: "org_edge_31".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_31".to_string(),
+            tenant_id: "org_edge_31".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_31", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_32() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_32".to_string(),
+            tenant_id: "org_edge_32".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_32".to_string(),
+            tenant_id: "org_edge_32".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_32", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_33() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_33".to_string(),
+            tenant_id: "org_edge_33".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_33".to_string(),
+            tenant_id: "org_edge_33".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_33", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_34() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_34".to_string(),
+            tenant_id: "org_edge_34".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_34".to_string(),
+            tenant_id: "org_edge_34".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_34", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_35() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_35".to_string(),
+            tenant_id: "org_edge_35".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_35".to_string(),
+            tenant_id: "org_edge_35".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_35", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_36() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_36".to_string(),
+            tenant_id: "org_edge_36".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_36".to_string(),
+            tenant_id: "org_edge_36".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_36", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_37() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_37".to_string(),
+            tenant_id: "org_edge_37".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_37".to_string(),
+            tenant_id: "org_edge_37".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_37", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_38() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_38".to_string(),
+            tenant_id: "org_edge_38".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_38".to_string(),
+            tenant_id: "org_edge_38".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_38", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_39() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_39".to_string(),
+            tenant_id: "org_edge_39".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_39".to_string(),
+            tenant_id: "org_edge_39".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_39", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_40() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_40".to_string(),
+            tenant_id: "org_edge_40".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_40".to_string(),
+            tenant_id: "org_edge_40".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_40", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_41() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_41".to_string(),
+            tenant_id: "org_edge_41".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_41".to_string(),
+            tenant_id: "org_edge_41".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_41", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_42() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_42".to_string(),
+            tenant_id: "org_edge_42".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_42".to_string(),
+            tenant_id: "org_edge_42".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_42", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_43() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_43".to_string(),
+            tenant_id: "org_edge_43".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_43".to_string(),
+            tenant_id: "org_edge_43".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_43", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_44() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_44".to_string(),
+            tenant_id: "org_edge_44".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_44".to_string(),
+            tenant_id: "org_edge_44".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_44", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_45() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_45".to_string(),
+            tenant_id: "org_edge_45".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_45".to_string(),
+            tenant_id: "org_edge_45".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_45", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_46() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_46".to_string(),
+            tenant_id: "org_edge_46".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_46".to_string(),
+            tenant_id: "org_edge_46".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_46", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_47() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_47".to_string(),
+            tenant_id: "org_edge_47".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_47".to_string(),
+            tenant_id: "org_edge_47".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_47", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_48() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_48".to_string(),
+            tenant_id: "org_edge_48".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_48".to_string(),
+            tenant_id: "org_edge_48".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_48", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resolve_conflicts_generated_49() {
+        let repo = setup_sqlite_repo().await;
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+        let mut v2 = vec![0.0; 10];
+        v2[0] = 0.99; // Trigger conflict
+
+        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+
+        let record_a = EmbeddingRecord {
+            id: "edge_a_49".to_string(),
+            tenant_id: "org_edge_49".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "edge_b_49".to_string(),
+            tenant_id: "org_edge_49".to_string(),
+            agent_id: "test".to_string(),
+            content: "Same stats too".to_string(),
+            embedding: v2.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1, "Should resolve 1 conflict");
+
+        let results = repo.cross_department_search("org_edge_49", &v1, 10).await.unwrap();
+        assert_eq!(results.len(), 1, "Only one record should remain");
+    }
+}
