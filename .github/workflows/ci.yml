@@ -52,10 +52,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-playwright-
 
-      - name: Install xvfb for headless Slint tests
+      - name: Install system dependencies for Tauri and Slint
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends xvfb
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libdbus-1-dev libatk1.0-dev libgtk-3-dev \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev xvfb
 
       - name: Test
         run: |
@@ -90,6 +92,13 @@ jobs:
             test --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
+
+      - name: Install system dependencies for Tauri
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libdbus-1-dev libatk1.0-dev libgtk-3-dev \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev
 
       - name: Build all artifacts
         run: |
