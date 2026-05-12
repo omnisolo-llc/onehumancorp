@@ -31,7 +31,7 @@ pub trait SandboxAdapter: Send + Sync {
 pub struct SandboxManager {
     evaluator: PermissionEvaluator,
     wrapper: BashWrapper,
-    pool: Option<PgPool>,
+    pool: Option<sqlx::postgres::PgPool>,
     violation_store: Arc<ViolationStore>,
 }
 

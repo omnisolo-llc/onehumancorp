@@ -5,7 +5,7 @@ use crate::tasks::SharedTask;
 use chrono::Utc;
 
 use opentelemetry::global;
-use opentelemetry::trace::{Tracer, TraceContextExt};
+use opentelemetry::trace::Tracer;
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,
@@ -712,7 +712,7 @@ impl TaskDecompositionService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
+
 
     #[tokio::test]
     async fn test_ml_resilience_tasks_timeout() {
@@ -777,7 +777,7 @@ mod tests {
 #[cfg(test)]
 mod chaos_tests {
     use super::*;
-    use std::sync::Arc;
+
     use tokio::time::Duration;
 
     struct ChaosMesh;
