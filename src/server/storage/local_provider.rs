@@ -112,26 +112,34 @@ impl Provider for LocalProvider {
             tokio::fs::create_dir_all(parent).await?;
         }
 
-        let final_data = data.to_vec();
+        let mut final_data = data.to_vec();
+        let original_size = data.len();
 
-        // Auto-compression to WebP mock for images
-        let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") || key.ends_with(".webp");
-        let reported_size = if is_image && data.len() > 100 {
-            let original_size = data.len();
-            // Mock compression: simulate 80% reduction for quota reporting
-            let compressed_size = original_size / 5;
-            let saved = original_size - compressed_size;
-            tracing::info!(
-                key = %key,
-                original = original_size,
-                simulated_compressed = compressed_size,
-                saved = saved,
-                "Auto-optimized image to WebP (simulated for quota)"
-            );
-            compressed_size
-        } else {
-            data.len()
-        };
+        // Auto-compression to WebP for images
+        let is_compressible_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg");
+        if is_compressible_image && data.len() > 1024 {
+            if let Ok(img) = image::load_from_memory(data) {
+                let mut webp_data = Vec::new();
+                let mut cursor = std::io::Cursor::new(&mut webp_data);
+                if img.write_to(&mut cursor, image::ImageFormat::WebP).is_ok() {
+                    if webp_data.len() < original_size {
+                        final_data = webp_data;
+                        tracing::info!(
+                            key = %key,
+                            original = original_size,
+                            compressed = final_data.len(),
+                            saved = original_size - final_data.len(),
+                            "Auto-optimized image to WebP"
+                        );
+                        if let Some(auditor) = &self.tracker.auditor {
+                            auditor.record_storage_compression(original_size as i64, final_data.len() as i64);
+                        }
+                    }
+                }
+            }
+        }
+
+        let reported_size = final_data.len();
 
         // Quota Enforcement
         let t_id = key.split('/').next().unwrap_or("default");

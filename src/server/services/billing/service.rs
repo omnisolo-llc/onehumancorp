@@ -23,6 +23,7 @@ impl BillingService for MyBillingService {
         let req = request.into_inner();
 
         let event = AuditEvent {
+            tenant_id: req.organization_id.clone(),
             agent_id: req.agent_id.clone(),
             input_tokens: req.prompt_tokens,
             output_tokens: req.completion_tokens,

@@ -7,6 +7,7 @@ use opentelemetry::KeyValue;
 
 #[derive(Clone)]
 pub struct AuditEvent {
+    pub tenant_id: String,
     pub agent_id: String,
     pub input_tokens: i64,
     pub output_tokens: i64,
@@ -88,7 +89,10 @@ impl CostAuditor {
         let current_tokens = agent_output_tokens.entry(event.agent_id.clone()).or_insert(0);
         *current_tokens += event.output_tokens;
 
-        self.llm_cost_counter.add(cost, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+        self.llm_cost_counter.add(cost, &[
+            KeyValue::new("tenant_id", event.tenant_id.clone()),
+            KeyValue::new("agent_id", event.agent_id.clone()),
+        ]);
 
         if let Some(tx) = &self.telemetry_tx {
             let _ = tx.send(event.clone());
@@ -297,6 +301,7 @@ mod tests {
         let auditor = CostAuditor::new(config);
         
         let event = AuditEvent {
+            tenant_id: "tenant1".to_string(),
             agent_id: "agent1".to_string(),
             input_tokens: 1000,
             output_tokens: 500,
@@ -330,6 +335,7 @@ mod tests {
         let auditor = CostAuditor::new(config);
 
         let event = AuditEvent {
+            tenant_id: "tenant1".to_string(),
             agent_id: "agent1".to_string(),
             input_tokens: 100,
             output_tokens: 50,

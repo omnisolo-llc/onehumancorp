@@ -70,6 +70,7 @@ impl Hub {
                 let cost = cost_auditor_clone.record_event(event.clone());
 
                 let labels = serde_json::json!({
+                    "tenant_id": event.tenant_id,
                     "agent_id": event.agent_id,
                     "input_tokens": event.input_tokens,
                     "output_tokens": event.output_tokens,
