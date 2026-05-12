@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>OneHuman - Business Setup</title>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+        <style>
+            :root {
+                --glass-bg: rgba(255, 255, 255, 0.03);
+                --glass-border: rgba(255, 255, 255, 0.1);
+                --accent: #4ecca3;
+                --accent-glow: rgba(78, 204, 163, 0.3);
+                --bg: #0f172a;
+                --text-main: #ffffff;
+                --text-muted: rgba(255, 255, 255, 0.7);
+            }
+
+            body {
+                font-family: 'Inter', sans-serif;
+                background: radial-gradient(circle at top right, #1e293b, #0f172a);
+                color: var(--text-main);
+                margin: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                overflow-x: hidden;
+            }
+
+            h1, h2, h3 { font-family: 'Outfit', sans-serif; font-weight: 700; }
+
+            .glass-card {
+                background: var(--glass-bg);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                border: 1px solid var(--glass-border);
+                border-radius: 24px;
+                padding: 40px;
+                width: 100%;
+                max-width: 480px;
+                box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+                position: relative;
+                transition: transform 0.3s ease, opacity 0.3s ease;
+            }
+
+            .nav-dots {
+                display: flex;
+                justify-content: center;
+                gap: 8px;
+                margin-bottom: 32px;
+            }
+
+            .dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--glass-border);
+                transition: all 0.3s ease;
+            }
+
+            .dot.active {
+                background: var(--accent);
+                box-shadow: 0 0 10px var(--accent-glow);
+                width: 24px;
+                border-radius: 4px;
+            }
+
+            .step-content { display: none; }
+            .step-content.active {
+                display: block;
+                animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            @keyframes slideIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            .btn-primary {
+                background: var(--accent);
+                color: #0f172a;
+                border: none;
+                padding: 14px 28px;
+                border-radius: 12px;
+                font-family: 'Outfit', sans-serif;
+                font-weight: 600;
+                font-size: 16px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                width: 100%;
+                margin-top: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+            }
+
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 20px var(--accent-glow);
+            }
+
+            .input-group { margin-bottom: 20px; }
+            label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--text-muted); }
+            input, textarea {
+                width: 100%;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid var(--glass-border);
+                border-radius: 12px;
+                padding: 12px 16px;
+                color: white;
+                font-family: inherit;
+                box-sizing: border-box;
+                transition: border-color 0.2s;
+            }
+            input:focus { outline: none; border-color: var(--accent); }
+
+            .grid-select {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                margin-top: 16px;
+            }
+
+            .selectable-tile {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid var(--glass-border);
+                border-radius: 16px;
+                padding: 16px;
+                text-align: center;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .selectable-tile:hover { background: rgba(255, 255, 255, 0.1); border-color: var(--text-muted); }
+            .selectable-tile.selected {
+                border-color: var(--accent);
+                background: var(--accent-glow);
+            }
+
+            .icon-lg { font-size: 32px; margin-bottom: 8px; display: block; }
+
+            .hero-anim {
+                width: 80px; height: 80px;
+                background: linear-gradient(45deg, var(--accent), #3498db);
+                border-radius: 20px;
+                margin: 0 auto 24px;
+                animation: pulse 2s infinite ease-in-out;
+            }
+
+            @keyframes pulse {
+                0% { transform: scale(1) rotate(0deg); border-radius: 20px; }
+                50% { transform: scale(1.1) rotate(5deg); border-radius: 30px; }
+                100% { transform: scale(1) rotate(0deg); border-radius: 20px; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="glass-card">
+            <div class="nav-dots" id="nav-dots">
+                <div class="dot active"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+
+            <div id="wizard-form">
+                <!-- Steps will be injected here -->
+            </div>
+        </div>
+
+        <script>
+            const state = {
+                step: 0,
+                data: {
+                    business_type: '',
+                    company_name: '',
+                    company_description: '',
+                    tagline: '',
+                    selling_categories: [],
+                    payment_pref: '',
+                    admin_email: '',
+                    admin_password: '',
+                    admin_name: ''
+                }
+            };
+
+            const steps = [
+                {
+                    title: "Welcome to OHC",
+                    render: () => `
+                        <div class="hero-anim"></div>
+                        <h2 style="text-align:center; margin-bottom: 8px;">Your business, live in minutes.</h2>
+                        <p style="text-align:center; color: var(--text-muted);">Let's set up your premium business environment in under 10 minutes.</p>
+                        <button class="btn-primary" onclick="nextStep()">Get Started →</button>
+                    `
+                },
+                {
+                    title: "Business Type",
+                    render: () => `
+                        <h3>What kind of business?</h3>
+                        <div class="grid-select">
+                            ${['Online Store', 'Service Business', 'Restaurant / Food', 'Creative / Portfolio', 'Local Business', 'Other'].map(type => `
+                                <div class="selectable-tile ${state.data.business_type === type ? 'selected' : ''}" onclick="selectType('${type}')">
+                                    <span class="icon-lg">${getIconForType(type)}</span>
+                                    <span style="font-size: 14px; font-weight: 500;">${type}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button class="btn-primary" onclick="nextStep()" ${!state.data.business_type ? 'disabled style="opacity:0.5"' : ''}>Continue</button>
+                    `
+                },
+                {
+                    title: "Identity",
+                    render: () => `
+                        <h3>Name & Vision</h3>
+                        <div class="input-group">
+                            <label>Business Name</label>
+                            <input type="text" id="biz-name" value="${state.data.company_name}" oninput="updateData('company_name', this.value)" placeholder="Acme Corp">
+                        </div>
+                        <div class="input-group">
+                            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <label style="margin-bottom: 0;">Description</label>
+                                <button onclick="aiSuggest()" style="background: none; border: none; color: var(--accent); font-size: 12px; cursor: pointer; padding: 0;">✨ AI Suggest</button>
+                            </div>
+                            <textarea id="biz-desc" rows="3" oninput="updateData('company_description', this.value)" placeholder="Tell us what you do...">${state.data.company_description}</textarea>
+                        </div>
+                        <p id="tagline-preview" style="font-style: italic; font-size: 13px; color: var(--accent); min-height: 1.2em;">${state.data.tagline || ''}</p>
+                        <button class="btn-primary" onclick="nextStep()">Continue</button>
+                    `
+                },
+                {
+                    title: "Offerings",
+                    render: () => `
+                        <h3>What do you sell?</h3>
+                        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px;">Select all that apply.</p>
+                        <div class="grid-select">
+                            ${[
+                                {id: 'physical', label: 'Physical products', icon: '📦'},
+                                {id: 'digital', label: 'Digital downloads', icon: '💾'},
+                                {id: 'services', label: 'Services / Appts', icon: '📅'},
+                                {id: 'food', label: 'Food & beverages', icon: '🍱'},
+                                {id: 'subscriptions', label: 'Subscriptions', icon: '🔄'}
+                            ].map(cat => `
+                                <div class="selectable-tile ${state.data.selling_categories.includes(cat.id) ? 'selected' : ''}" onclick="toggleCategory('${cat.id}')">
+                                    <span class="icon-lg">${cat.icon}</span>
+                                    <span style="font-size: 13px;">${cat.label}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button class="btn-primary" onclick="nextStep()">Continue</button>
+                    `
+                },
+                {
+                    title: "Payments",
+                    render: () => `
+                        <h3>Receiving Payments</h3>
+                        <div class="grid-select" style="grid-template-columns: 1fr;">
+                            ${[
+                                {id: 'online', label: 'Online only', sub: 'Instant setup', icon: '💳'},
+                                {id: 'pos', label: 'In-person (POS)', sub: 'Hardware available', icon: '📠'},
+                                {id: 'both', label: 'Both', sub: 'Omnichannel growth', icon: '🔄'},
+                                {id: 'skip', label: 'Skip for now', sub: 'Configure later', icon: '⏭️'}
+                            ].map(pref => `
+                                <div class="selectable-tile ${state.data.payment_pref === pref.id ? 'selected' : ''}" style="display:flex; align-items:center; text-align:left; gap:16px;" onclick="selectPayment('${pref.id}')">
+                                    <span class="icon-lg" style="margin:0;">${pref.icon}</span>
+                                    <div>
+                                        <div style="font-weight:600; font-size:15px;">${pref.label}</div>
+                                        <div style="font-size:12px; color:var(--text-muted);">${pref.sub}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button class="btn-primary" onclick="nextStep()" ${!state.data.payment_pref ? 'disabled style="opacity:0.5"' : ''}>Continue</button>
+                    `
+                },
+                {
+                    title: "Account",
+                    render: () => `
+                        <h3>Administrator</h3>
+                        <div class="input-group">
+                            <label>Full Name</label>
+                            <input type="text" value="${state.data.admin_name}" oninput="updateData('admin_name', this.value)" placeholder="Jane Doe">
+                        </div>
+                        <div class="input-group">
+                            <label>Email Address</label>
+                            <input type="email" value="${state.data.admin_email}" oninput="updateData('admin_email', this.value)" placeholder="jane@example.com">
+                        </div>
+                        <div class="input-group">
+                            <label>Password</label>
+                            <input type="password" oninput="updateData('admin_password', this.value)" placeholder="••••••••">
+                        </div>
+                        <button class="btn-primary" onclick="nextStep()">Review & Launch</button>
+                    `
+                },
+                {
+                    title: "Launch",
+                    render: () => `
+                        <h3>Review & Launch</h3>
+                        <div style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 24px; font-size: 14px;">
+                            <div style="margin-bottom: 12px;"><span style="color:var(--text-muted);">Business:</span> ${state.data.company_name}</div>
+                            <div style="margin-bottom: 12px;"><span style="color:var(--text-muted);">Type:</span> ${state.data.business_type}</div>
+                            <div style="margin-bottom: 12px;"><span style="color:var(--text-muted);">Admin:</span> ${state.data.admin_email}</div>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted); text-align: center;">Clicking launch will provision your dedicated tenant and seed your AI agents.</p>
+                        <button id="launch-btn" class="btn-primary" onclick="launchBusiness()" style="background: var(--accent); box-shadow: 0 0 20px var(--accent-glow); animation: pulseBtn 2s infinite;">Launch My Business →</button>
+                        <style>@keyframes pulseBtn { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }</style>
+                    `
+                }
+            ];
+
+            function getIconForType(type) {
+                const icons = {
+                    'Online Store': '🛍️',
+                    'Service Business': '🛠️',
+                    'Restaurant / Food': '🍳',
+                    'Creative / Portfolio': '🎨',
+                    'Local Business': '📍',
+                    'Other': '🚀'
+                };
+                return icons[type] || '✨';
+            }
+
+            function render() {
+                const container = document.getElementById('wizard-form');
+                const step = steps[state.step];
+                container.innerHTML = `<div class="step-content active">${step.render()}</div>`;
+
+                const dots = document.getElementById('nav-dots').children;
+                for (let i = 0; i < dots.length; i++) {
+                    dots[i].className = 'dot' + (i === state.step ? ' active' : '');
+                }
+            }
+
+            function nextStep() {
+                if (state.step < steps.length - 1) {
+                    state.step++;
+                    render();
+                    saveState();
+                }
+            }
+
+            function updateData(key, val) { state.data[key] = val; }
+
+            function selectType(type) {
+                state.data.business_type = type;
+                render();
+            }
+
+            function toggleCategory(id) {
+                const idx = state.data.selling_categories.indexOf(id);
+                if (idx > -1) state.data.selling_categories.splice(idx, 1);
+                else state.data.selling_categories.push(id);
+                render();
+            }
+
+            function selectPayment(id) {
+                state.data.payment_pref = id;
+                render();
+            }
+
+            async function aiSuggest() {
+                if (!state.data.company_name) return alert('Please enter a business name first');
+                const btn = event.target;
+                btn.innerText = '⌛ Thinking...';
+                try {
+                    const res = await fetch('/api/onboarding/suggest', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            name: state.data.company_name,
+                            business_type: state.data.business_type
+                        })
+                    });
+                    const json = await res.json();
+                    state.data.tagline = json.tagline;
+                    state.data.company_description = json.description;
+                    document.getElementById('biz-desc').value = json.description;
+                    document.getElementById('tagline-preview').innerText = json.tagline;
+                } catch (e) {
+                    console.error(e);
+                } finally {
+                    btn.innerText = '✨ AI Suggest';
+                }
+            }
+
+            async function saveState() {
+                try {
+                    await fetch('/api/onboarding/state', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ ...state.data, step: state.step })
+                    });
+                } catch (e) {}
+            }
+
+            async function launchBusiness() {
+                const btn = document.getElementById('launch-btn');
+                btn.innerText = 'Setting up your business...';
+                btn.disabled = true;
+
+                try {
+                    const res = await fetch('/api/onboarding/start', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(state.data)
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        document.body.innerHTML = `
+                            <div class="glass-card" style="text-align:center;">
+                                <div class="hero-anim"></div>
+                                <h2 id="status-title">Your business is setting up...</h2>
+                                <div style="width: 100%; background: var(--glass-border); height: 4px; border-radius: 2px; margin: 24px 0; overflow: hidden;">
+                                    <div id="progress-bar" style="width: 0%; height: 100%; background: var(--accent); transition: width 3s ease;"></div>
+                                </div>
+                                <p id="status-desc" style="color: var(--text-muted); font-size: 14px;">Provisioning your dedicated environment and seeding AI agents.</p>
+                            </div>
+                        `;
+                        setTimeout(() => {
+                            document.getElementById('progress-bar').style.width = '100%';
+                        }, 100);
+                        setTimeout(() => {
+                            document.getElementById('status-title').innerText = '🎉 All Systems Go!';
+                            document.getElementById('status-desc').innerText = json.message;
+                            const btn = document.createElement('button');
+                            btn.className = 'btn-primary';
+                            btn.innerText = 'Build My Website →';
+                            btn.onclick = () => window.location.href = '/website-builder';
+                            document.querySelector('.glass-card').appendChild(btn);
+
+                            const skip = document.createElement('div');
+                            skip.innerHTML = '<a href="/" style="color:var(--text-muted); font-size:12px; text-decoration:none; margin-top:12px; display:block;">Skip for now</a>';
+                            document.querySelector('.glass-card').appendChild(skip);
+                        }, 3500);
+                    } else {
+                        alert('Setup failed: ' + json.message);
+                        btn.innerText = 'Launch My Business →';
+                        btn.disabled = false;
+                    }
+                } catch (e) {
+                    alert('Error: ' + e);
+                    btn.innerText = 'Launch My Business →';
+                    btn.disabled = false;
+                }
+            }
+
+            render();
+        </script>
+    </body>
+</html>

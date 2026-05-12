@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>OneHuman Dashboard</title>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+        <style>
+            :root {
+                --glass-bg: rgba(255, 255, 255, 0.03);
+                --glass-border: rgba(255, 255, 255, 0.1);
+                --accent: #4ecca3;
+                --bg: #0f172a;
+            }
+            body { font-family: 'Outfit', sans-serif; background: var(--bg); color: white; margin: 0; }
+            nav { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); }
+            .glass { background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 16px; }
+            main { padding: 40px; }
+            .card { padding: 24px; margin-bottom: 20px; }
+            h1 { font-weight: 600; color: var(--accent); }
+            .advanced-only { display: none; }
+            body.advanced-mode .advanced-only { display: block; }
+            .toggle-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); color: white; padding: 4px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+            a { color: white; text-decoration: none; margin-right: 20px; font-size: 14px; }
+            a:hover { color: var(--accent); }
+        </style>
+    </head>
+    <body>
+        <nav class="glass">
+            <div style="display:flex; align-items:center;">
+                <a href="/" style="color: var(--accent); font-weight: bold; font-size: 18px;">OHC</a>
+                <a href="/agents">Agents</a>
+                <a href="/business-setup">Setup</a>
+                <a href="/manage-ai">Manage AI</a>
+            </div>
+            <button id="mode-toggle" class="toggle-btn" onclick="toggleAdvanced()">Simple Mode</button>
+        </nav>
+        <main>
+            <h1>OneHuman Dashboard</h1>
+            <div class="card glass">
+                <h2>Welcome back, Human.</h2>
+                <p>Your agents are working on your behalf.</p>
+
+                <div class="advanced-only" style="margin-top:20px; padding:16px; background:rgba(0,0,0,0.3); border-radius:8px; border:1px solid #e74c3c;">
+                    <h3 style="color:#e74c3c; margin-top:0;">Advanced Configuration</h3>
+                    <p style="font-size:12px; font-family:monospace;">TENANT_ID: org-debug-123<br>API_ENDPOINT: https://api.ohc.local/v1<br>RAW_STATE: {"mode": "expert", "flags": 1024}</p>
+                </div>
+            </div>
+        </main>
+        <script>
+            function toggleAdvanced() {
+                const body = document.body;
+                const btn = document.getElementById('mode-toggle');
+                const isAdv = body.classList.toggle('advanced-mode');
+                btn.innerText = isAdv ? 'Advanced Mode' : 'Simple Mode';
+                localStorage.setItem('ohc_mode', isAdv ? 'advanced' : 'simple');
+            }
+            if (localStorage.getItem('ohc_mode') === 'advanced') {
+                document.body.classList.add('advanced-mode');
+                document.getElementById('mode-toggle').innerText = 'Advanced Mode';
+            }
+        </script>
+    </body>
+</html>

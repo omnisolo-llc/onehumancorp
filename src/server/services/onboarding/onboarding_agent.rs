@@ -12,6 +12,45 @@ impl OnboardingAgent {
         OnboardingAgent { db, hub }
     }
 
+    pub async fn suggest_business_info(&self, name: &str, business_type: &str) -> Result<(String, String), String> {
+        let api_key = self.hub.minimax_api_key();
+        if api_key.is_empty() {
+            return Ok(("Empowering your vision.".to_string(), format!("A premium {} business dedicated to excellence.", business_type)));
+        }
+
+        let client = crate::minimax::MinimaxClient::new(api_key.to_string());
+        let prompt = format!(
+            "Given a business named '{}' of type '{}', suggest a catchy one-line tagline and a short professional description (max 2 sentences). Output JSON format: {{\"tagline\": \"...\", \"description\": \"...\"}}",
+            name, business_type
+        );
+
+        match client.reason(&prompt).await {
+            Ok(res) => {
+                let json_str = if let Some(start) = res.find('{') {
+                    if let Some(end) = res.rfind('}') {
+                        &res[start..=end]
+                    } else {
+                        &res[start..]
+                    }
+                } else {
+                    "{}"
+                };
+
+                match serde_json::from_str::<serde_json::Value>(json_str) {
+                    Ok(v) => {
+                        let tagline = v["tagline"].as_str().unwrap_or("Your business, live in minutes.").to_string();
+                        let description = v["description"].as_str().unwrap_or_else(|| {
+                            v["description"].as_str().unwrap_or("A premium business dedicated to excellence.")
+                        }).to_string();
+                        Ok((tagline, description))
+                    }
+                    Err(_) => Ok(("Empowering your vision.".to_string(), format!("A premium {} business dedicated to excellence.", business_type))),
+                }
+            }
+            Err(_) => Ok(("Empowering your vision.".to_string(), format!("A premium {} business dedicated to excellence.", business_type))),
+        }
+    }
+
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
 
@@ -131,7 +170,13 @@ impl OnboardingAgent {
             flags.insert("enable_subscriptions".to_string(), serde_json::json!(true));
         }
 
-        let flags_json = serde_json::Value::Object(flags);
+        let mut flags_obj = flags;
+        flags_obj.insert("company_description".to_string(), serde_json::json!(req.company_description));
+        flags_obj.insert("website_template".to_string(), serde_json::json!(req.website_template));
+        flags_obj.insert("domain_choice".to_string(), serde_json::json!(req.domain_choice));
+        flags_obj.insert("payment_pref".to_string(), serde_json::json!(req.payment_pref));
+
+        let state_json = serde_json::Value::Object(flags_obj);
 
         sqlx::query(
             "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4, $5)"
@@ -140,7 +185,7 @@ impl OnboardingAgent {
         .bind(&org_id)
         .bind(&user_id)
         .bind(1)
-        .bind(flags_json)
+        .bind(state_json)
         .execute(&self.db.pool)
         .await
         .map_err(|e| e.to_string())?;

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>OneHuman - Manage AI Team</title>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+        <style>
+            :root {
+                --glass-bg: rgba(255, 255, 255, 0.03);
+                --glass-border: rgba(255, 255, 255, 0.1);
+                --accent: #4ecca3;
+                --accent-glow: rgba(78, 204, 163, 0.3);
+                --bg: #0f172a;
+                --text-main: #ffffff;
+                --text-muted: rgba(255, 255, 255, 0.7);
+            }
+
+            body {
+                font-family: 'Inter', sans-serif;
+                background: radial-gradient(circle at top right, #1e293b, #0f172a);
+                color: var(--text-main);
+                margin: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+            }
+
+            h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+            .glass-card {
+                background: var(--glass-bg);
+                backdrop-filter: blur(20px);
+                border: 1px solid var(--glass-border);
+                border-radius: 24px;
+                padding: 40px;
+                width: 100%;
+                max-width: 900px;
+                box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            }
+
+            .agent-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                gap: 20px;
+                margin-top: 24px;
+            }
+
+            .agent-card {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid var(--glass-border);
+                border-radius: 16px;
+                padding: 24px;
+                text-align: center;
+                transition: all 0.2s;
+            }
+
+            .agent-card:hover { transform: translateY(-4px); border-color: var(--accent); }
+
+            .avatar {
+                width: 64px; height: 64px; border-radius: 50%; background: #334155;
+                margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 32px;
+            }
+
+            .btn-primary {
+                background: var(--accent);
+                color: #0f172a;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 10px;
+                font-weight: 600;
+                cursor: pointer;
+            }
+
+            .toggle-switch {
+                position: relative; display: inline-block; width: 44px; height: 24px;
+            }
+            .toggle-switch input { opacity: 0; width: 0; height: 0; }
+            .slider {
+                position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+                background-color: #334155; transition: .4s; border-radius: 24px;
+            }
+            .slider:before {
+                position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+                background-color: white; transition: .4s; border-radius: 50%;
+            }
+            input:checked + .slider { background-color: var(--accent); }
+            input:checked + .slider:before { transform: translateX(20px); }
+
+            .chip {
+                padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.05);
+                border: 1px solid var(--glass-border); font-size: 12px; cursor: pointer;
+                transition: 0.2s;
+            }
+            .chip.selected { background: var(--accent); color: #0f172a; }
+
+            .chat-sandbox {
+                background: rgba(0,0,0,0.2); border-radius: 12px; height: 300px; padding: 16px;
+                display: flex; flex-direction: column;
+            }
+
+            input, textarea {
+                width: 100%;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid var(--glass-border);
+                border-radius: 12px;
+                padding: 12px 16px;
+                color: white;
+                font-family: inherit;
+                box-sizing: border-box;
+                transition: border-color 0.2s;
+            }
+            input:focus { outline: none; border-color: var(--accent); }
+
+            /* Frequency Slider */
+            .freq-slider {
+                -webkit-appearance: none;
+                width: 100%;
+                height: 6px;
+                border-radius: 3px;
+                background: #334155;
+                outline: none;
+                margin: 20px 0;
+            }
+            .freq-slider::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                background: var(--accent);
+                cursor: pointer;
+                box-shadow: 0 0 10px var(--accent-glow);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="glass-card">
+            <div id="ai-manager-content">
+                <!-- Injected -->
+            </div>
+        </div>
+
+        <script>
+            const state = {
+                view: 'gallery',
+                selectedAgent: null,
+                agents: [
+                    { id: 'support', name: 'Customer Success', role: 'The Ambassador', icon: '🤝', active: true, capabilities: ['Reply to messages'], tone: 'Friendly & Warm', frequency: 1, examples: [{q: 'Where is my order?', a: 'I\'d be happy to check that for you! One moment.'}] },
+                    { id: 'marketing', name: 'Social Media Manager', role: 'The Promoter', icon: '📣', active: false, capabilities: ['Post to Instagram'], tone: 'Energetic', frequency: 2, examples: [] },
+                    { id: 'sales', name: 'Salesperson', role: 'The Salesperson', icon: '💰', active: false, capabilities: ['Generate leads'], tone: 'Professional', frequency: 1, examples: [] },
+                    { id: 'ops', name: 'Order Manager', role: 'The Manager', icon: '📦', active: true, capabilities: ['Update status'], tone: 'Concise', frequency: 3, examples: [] }
+                ]
+            };
+
+            const freqLabels = ['Weekly', 'Daily', 'Hourly', 'Real-time'];
+
+            function render() {
+                const container = document.getElementById('ai-manager-content');
+                if (state.view === 'gallery') {
+                    container.innerHTML = `
+                        <h2>Manage your AI Team</h2>
+                        <p style="color:var(--text-muted);">Empower your business with autonomous teammates.</p>
+                        <div class="agent-grid">
+                            ${state.agents.map(a => `
+                                <div class="agent-card">
+                                    <div class="avatar">${a.icon}</div>
+                                    <h3 style="margin-bottom:4px;">${a.name}</h3>
+                                    <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">${a.role}</p>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                                        <span style="font-size:14px;">${a.active ? 'Active' : 'Inactive'}</span>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" ${a.active ? 'checked' : ''} onchange="toggleAgent('${a.id}')">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <button class="btn-primary" style="width:100%; background:rgba(255,255,255,0.05); color:white; border:1px solid var(--glass-border);" onclick="tuneAgent('${a.id}')">Tune Agent</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button class="btn-primary" style="margin-top:32px;" onclick="window.location.href='/'">Done</button>
+                    `;
+                } else if (state.view === 'tune') {
+                    const a = state.selectedAgent;
+                    container.innerHTML = `
+                        <div style="display:flex; gap:32px;">
+                            <div style="flex:1;">
+                                <button onclick="state.view='gallery';render();" style="background:none; border:none; color:var(--accent); cursor:pointer; margin-bottom:16px;">← Back to Team</button>
+                                <h2>Tune ${a.name}</h2>
+
+                                <h3 style="font-size:16px; margin-top:24px;">Tone</h3>
+                                <div style="display:flex; gap:8px; margin-bottom:24px;">
+                                    ${['Friendly & Warm', 'Professional', 'Energetic', 'Concise'].map(t => `
+                                        <div class="chip ${a.tone === t ? 'selected' : ''}" onclick="updateTone('${t}')">${t}</div>
+                                    `).join('')}
+                                </div>
+
+                                <h3 style="font-size:16px;">How often should this agent work?</h3>
+                                <input type="range" min="0" max="3" value="${a.frequency}" class="freq-slider" oninput="updateFreq(this.value)">
+                                <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-top:-10px;">
+                                    <span>Weekly</span><span>Daily</span><span>Hourly</span><span>Real-time</span>
+                                </div>
+
+                                <h3 style="font-size:16px; margin-top:24px;">Focus Topics</h3>
+                                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px;">
+                                    ${['Product info only', 'Avoid competitors', 'Spanish support', 'Upsell focused'].map(f => `
+                                        <div class="chip">${f}</div>
+                                    `).join('')}
+                                </div>
+
+                                <h3 style="font-size:16px;">Example Interactions (Few-shot)</h3>
+                                <div id="examples-list" style="margin-bottom:16px;">
+                                    ${a.examples.map((ex, i) => `
+                                        <div style="font-size:12px; background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; margin-bottom:8px; border-left: 2px solid var(--accent);">
+                                            <b>Q:</b> ${ex.q}<br><b>A:</b> ${ex.a}
+                                        </div>
+                                    `).join('')}
+                                    ${a.examples.length < 3 ? `
+                                        <div style="display:flex; gap:8px; margin-top:8px;">
+                                            <input type="text" id="new-q" placeholder="User question" style="font-size:12px; padding:8px;">
+                                            <input type="text" id="new-a" placeholder="AI answer" style="font-size:12px; padding:8px;">
+                                            <button onclick="addExample()" class="btn-primary" style="padding:4px 12px; font-size:12px; margin:0;">Add</button>
+                                        </div>
+                                    ` : ''}
+                                </div>
+
+                                <h3 style="font-size:16px;">Capabilities</h3>
+                                ${['Reply to customer messages', 'Write product descriptions', 'Send order updates'].map(c => `
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px;">
+                                        <span>${c}</span>
+                                        <label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label>
+                                    </div>
+                                `).join('')}
+
+                                <button class="btn-primary" style="width:100%; margin-top:24px;" onclick="saveTuning()">Save Changes ✓</button>
+                            </div>
+                            <div style="width:350px;">
+                                <h3 style="font-size:16px;">Live Preview</h3>
+                                <div class="chat-sandbox">
+                                    <div style="flex:1; font-size:13px; color:var(--text-muted);">
+                                        <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; margin-bottom:8px;">
+                                            <b>User:</b> Hi, tell me about your delivery times.
+                                        </div>
+                                        <div style="background:var(--accent-glow); padding:8px; border-radius:8px; color:white;">
+                                            <b>${a.name}:</b> ${getMockResponse(a.tone)}
+                                        </div>
+                                    </div>
+                                    <input type="text" placeholder="Test the agent..." style="margin-top:16px;">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            function toggleAgent(id) {
+                const a = state.agents.find(x => x.id === id);
+                a.active = !a.active;
+                render();
+            }
+
+            function tuneAgent(id) {
+                state.selectedAgent = state.agents.find(x => x.id === id);
+                state.view = 'tune';
+                render();
+            }
+
+            function updateTone(t) {
+                state.selectedAgent.tone = t;
+                render();
+            }
+
+            function updateFreq(v) {
+                state.selectedAgent.frequency = parseInt(v);
+            }
+
+            function addExample() {
+                const q = document.getElementById('new-q').value;
+                const a = document.getElementById('new-a').value;
+                if (q && a) {
+                    state.selectedAgent.examples.push({q, a});
+                    render();
+                }
+            }
+
+            function getMockResponse(tone) {
+                if (tone === 'Friendly & Warm') return "Hello! We usually ship within 24 hours. I'd be happy to help you track an order!";
+                if (tone === 'Professional') return "Our standard processing time is 1-2 business days. Shipping confirmation will be sent via email.";
+                if (tone === 'Energetic') return "Hey there! We're super fast - your order will be on its way in no time! 🚀";
+                return "Orders process in 24h. Shipping email follows.";
+            }
+
+            function saveTuning() {
+                alert('Agent tuning saved successfully!');
+                state.view = 'gallery';
+                render();
+            }
+
+            render();
+        </script>
+    </body>
+</html>

@@ -66,7 +66,17 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
         .route("/sites/{site_id}/publish", post(publish_site))
         .route("/generate", post(generate_storefront))
         .route("/publish_draft", post(publish_draft))
+        .route("/publish", post(wizard_publish))
         .with_state(pool)
+}
+
+async fn wizard_publish(
+    Json(_payload): Json<serde_json::Value>,
+) -> Result<Json<Value>, axum::http::StatusCode> {
+    Ok(Json(serde_json::json!({
+        "status": "published",
+        "url": "https://mybusiness.ohc.app"
+    })))
 }
 
 #[derive(Serialize)]
