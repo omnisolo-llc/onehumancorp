@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
-use crate::auth::{User, UserRepository};
-use crate::utils::auth_utils::set_org_context;
+use super::{User, UserRepository};
+use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 
@@ -309,7 +309,7 @@ mod security_tests {
 
         let repo = PgUserRepository::new(pool.clone());
 
-        // Since we can't reliably override the global `crate::config::get().multitenant` inline here
+        // Since we can't reliably override the global `::server_config::get().multitenant` inline here
         // without unsafe/mocking because it returns a reference to a static OnceLock, we simulate the query generation logic.
 
         // Cloud multitenant mode should NOT allow bypassing.

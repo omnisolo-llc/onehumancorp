@@ -3,7 +3,7 @@ use std::sync::Mutex;
 pub struct BudgetManager {
     pub total_limit: f64,
     current: Mutex<f64>,
-    pub telemetry_store: Option<std::sync::Arc<crate::harness::telemetry::ViolationStore>>,
+    pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     tenant_id: Option<String>,
 }
 
@@ -17,7 +17,7 @@ impl BudgetManager {
         }
     }
 
-    pub fn with_telemetry(mut self, tenant_id: String, store: std::sync::Arc<crate::harness::telemetry::ViolationStore>) -> Self {
+    pub fn with_telemetry(mut self, tenant_id: String, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
         self.tenant_id = Some(tenant_id);
         self.telemetry_store = Some(store);
         self

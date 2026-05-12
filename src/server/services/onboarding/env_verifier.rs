@@ -93,7 +93,7 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
         }
     }
 
-    let mut is_standalone = crate::config::get().standalone;
+    let mut is_standalone = ::server_config::get().standalone;
     if config.mode == "standalone" {
         is_standalone = true;
     }
