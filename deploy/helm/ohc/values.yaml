@@ -35,10 +35,12 @@ resourceQuota:
     cpu: "20"
     memory: "20Gi"
     ephemeralStorage: "50Gi"
+    storage: "100Gi"
   limits:
     cpu: "60"
     memory: "120Gi"
     ephemeralStorage: "150Gi"
+    storage: "200Gi"
     pods: "200"
 
 # OHC Core — Rust library (settings · agent scheduler · meeting rooms · chat)
@@ -99,8 +101,8 @@ chatwoot:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 1
-    maxReplicas: 5
+    minReplicas: 3
+    maxReplicas: 50
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 90
   resources:
@@ -142,8 +144,8 @@ powersync:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 1
-    maxReplicas: 5
+    minReplicas: 3
+    maxReplicas: 50
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 90
   resources:

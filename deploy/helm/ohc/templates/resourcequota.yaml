@@ -10,6 +10,7 @@ spec:
     requests.cpu: {{ .Values.resourceQuota.requests.cpu | quote }}
     requests.memory: {{ .Values.resourceQuota.requests.memory | quote }}
     requests.ephemeral-storage: {{ .Values.resourceQuota.requests.ephemeralStorage | quote }}
+    requests.storage: {{ .Values.resourceQuota.requests.storage | quote }}
     limits.cpu: {{ .Values.resourceQuota.limits.cpu | quote }}
     limits.memory: {{ .Values.resourceQuota.limits.memory | quote }}
     limits.ephemeral-storage: {{ .Values.resourceQuota.limits.ephemeralStorage | quote }}

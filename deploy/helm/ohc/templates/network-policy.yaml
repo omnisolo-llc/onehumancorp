@@ -8,6 +8,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
+      tenant: {{ .Values.tenantId | default "default" | quote }}
       app: {{ include "ohc.fullname" . }}-backend
   policyTypes:
     - Ingress
@@ -19,6 +20,7 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
+              tenant: {{ .Values.tenantId | default "default" | quote }}
               app: {{ include "ohc.fullname" . }}-core
     - from:
         - namespaceSelector:
@@ -26,6 +28,7 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
+              tenant: {{ .Values.tenantId | default "default" | quote }}
               app: {{ .Release.Name }}-backend
       ports:
         - protocol: TCP
@@ -105,6 +108,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
+      tenant: {{ .Values.tenantId | default "default" | quote }}
       app: {{ include "ohc.fullname" . }}-core
   policyTypes:
     - Ingress
@@ -116,6 +120,7 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
+              tenant: {{ .Values.tenantId | default "default" | quote }}
               app: {{ .Release.Name }}-backend
       ports:
         - protocol: TCP
@@ -160,6 +165,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
+      tenant: {{ .Values.tenantId | default "default" | quote }}
       app: {{ include "ohc.fullname" . }}-chatwoot
   policyTypes:
     - Ingress
@@ -171,6 +177,7 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
+              tenant: {{ .Values.tenantId | default "default" | quote }}
               app: {{ .Release.Name }}-backend
       ports:
         - protocol: TCP
@@ -215,6 +222,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
+      tenant: {{ .Values.tenantId | default "default" | quote }}
       app: {{ include "ohc.fullname" . }}-powersync
   policyTypes:
     - Ingress
@@ -226,6 +234,7 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
+              tenant: {{ .Values.tenantId | default "default" | quote }}
               app: {{ .Release.Name }}-backend
       ports:
         - protocol: TCP
@@ -281,6 +290,7 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
+              tenant: {{ .Values.tenantId | default "default" | quote }}
               app: {{ include "ohc.fullname" . }}-backend
       ports:
         - protocol: TCP
@@ -321,6 +331,7 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
+              tenant: {{ .Values.tenantId | default "default" | quote }}
               app: {{ include "ohc.fullname" . }}-backend
       ports:
         - protocol: TCP

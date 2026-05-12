@@ -16,6 +16,7 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-backend
+        tenant: {{ .Values.tenantId | default "default" | quote }}
     spec:
       containers:
         - name: backend

@@ -20,6 +20,8 @@ export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
 export TOKIO_WORKER_THREADS=1
+export OHC_STANDALONE_MEMORY_LIMIT=256M
+export OHC_STANDALONE_CPU_LIMIT=1.0
 export MALLOC_ARENA_MAX=1
 export RAYON_NUM_THREADS=2
 export OHC_STANDALONE=true
@@ -91,7 +93,7 @@ if [ "$OHC_TELEMETRY_ENABLED" = "true" ]; then
     --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
     --network host \
     -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml \
-    prom/prometheus:latest --config.file=/etc/prometheus/prometheus.yml --enable-feature=agent > /dev/null 2>&1
+    prom/prometheus:latest --config.file=/etc/prometheus/prometheus.yml --enable-feature=agent --storage.agent.retention.min-time=5m --storage.agent.retention.max-time=15m > /dev/null 2>&1
   echo -e "  ${GREEN}✓ Prometheus agent started in Docker (resource constrained)${RESET}"
 fi
 
