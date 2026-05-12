@@ -1,0 +1,14 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "server_common",
+    srcs = ["auth_utils.rs", "mod.rs"],
+    crate_root = "mod.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/config:server_config",
+        "@crates//:sqlx",
+        "@crates//:serde",
+    ],
+)

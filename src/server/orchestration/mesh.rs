@@ -1,5 +1,5 @@
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
-use crate::ohc::orchestration::TeammateMeshEvent;
+use ::server_ohc::orchestration::TeammateMeshEvent;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
 use opentelemetry::trace::{Tracer, TraceContextExt};
