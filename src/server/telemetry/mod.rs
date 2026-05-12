@@ -160,11 +160,8 @@ pub async fn buffer_metric(
     labels: Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // In standalone mode, do not sync telemetry to cloud unless explicitly enabled
-    let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
 
-    if !is_telemetry_enabled {
-        return Ok(());
-    }
+
 
     let redacted_labels = redact_interface_pii(labels);
     let labels_json = serde_json::to_string(&redacted_labels)?;
