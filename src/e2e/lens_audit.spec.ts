@@ -17,6 +17,8 @@ test.describe('Lens Audit E2E Flow', () => {
 
   test('verify mock data removal and db connection', async ({ page }) => {
     // Audit check to ensure no hardcoded mock data elements are visible
+    const mockElements = page.locator('.mock-data-stub');
+    await expect(mockElements).toHaveCount(0);
   });
 
   test('verify token and responsive compliance', async ({ page }) => {
@@ -36,5 +38,30 @@ test.describe('Lens Audit E2E Flow', () => {
     // Check that elements map to the user guide specifications
     await page.goto('/help');
     await expect(page.locator('h1')).toHaveText(/User Guide/);
+  });
+
+  test('verify additional workflow 1', async ({ page }) => {
+    await page.goto('/tasks');
+    await expect(page.locator('text=Tasks')).toBeVisible();
+  });
+
+  test('verify additional workflow 2', async ({ page }) => {
+    await page.goto('/inbox');
+    await expect(page.locator('text=Inbox')).toBeVisible();
+  });
+
+  test('verify additional workflow 3', async ({ page }) => {
+    await page.goto('/agents');
+    await expect(page.locator('text=Agents')).toBeVisible();
+  });
+
+  test('verify additional workflow 4', async ({ page }) => {
+    await page.goto('/meetings');
+    await expect(page.locator('text=Meetings')).toBeVisible();
+  });
+
+  test('verify additional workflow 5', async ({ page }) => {
+    await page.goto('/users');
+    await expect(page.locator('text=Users')).toBeVisible();
   });
 });
