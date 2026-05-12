@@ -13,6 +13,8 @@ rust_library(
     deps = [
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/server:server_lib",
+        "//src/server/ohc:server_ohc",
         "//src/server/pricing:server_pricing",
         "@crates//:chrono",
         "@crates//:opentelemetry",
@@ -21,5 +23,6 @@ rust_library(
         "@crates//:sqlx",
         "@crates//:tokio",
         "@crates//:tracing",
+        "@crates//:uuid",
     ],
 )

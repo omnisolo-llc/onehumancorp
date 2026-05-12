@@ -1,6 +1,6 @@
 #[path = "store.rs"]
 pub mod store;
-use crate::db::DB;
+use ::server_lib::db::DB;
 use std::sync::Arc;
 use tracing::{info, debug};
 use sqlx::Row;
@@ -37,8 +37,8 @@ impl AutoDreamWorker {
                 }
 
                 let repository = match &db.store {
-                    crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+                    ::server_lib::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+                    ::server_lib::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
                 };
 
                 let stale_threshold = chrono::Utc::now() - chrono::Duration::days(180);
@@ -95,7 +95,7 @@ impl AutoDreamWorker {
         
         let stale_sessions = db.delete_stale_sessions(threshold).await?;
         
-        let client = crate::minimax::LocalLLMClient::new();
+        let client = ::server_lib::minimax::LocalLLMClient::new();
 
         for (id, data) in stale_sessions {
              debug!("AutoDream: pruned stale session");
@@ -148,8 +148,8 @@ impl AutoDreamWorker {
 
     async fn resolve_conflicts(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let repository = match &db.store {
-            crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
-            crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+            ::server_lib::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+            ::server_lib::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
         };
 
         let resolved_count = repository.auto_resolve_conflicts().await.map_err(|e| e.to_string())?;
@@ -164,7 +164,7 @@ impl AutoDreamWorker {
         let tasks = db.get_completed_tasks().await?;
 
         for (id, org_id, payload, table) in tasks {
-            let client = crate::minimax::LocalLLMClient::new();
+            let client = ::server_lib::minimax::LocalLLMClient::new();
             let prompt = format!("Summarize the key technical decisions, user preferences, and permanent facts from these logs:
 {}", payload);
             let summary = client.reason(&prompt).await.unwrap_or_else(|e| {
@@ -205,7 +205,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    pub async fn search_memories(&self, embedding: &str, limit: i32) -> Result<Vec<crate::ohc::orchestration::TruthSearchResult>, Box<dyn std::error::Error>> {
+    pub async fn search_memories(&self, embedding: &str, limit: i32) -> Result<Vec<::server_ohc::orchestration::TruthSearchResult>, Box<dyn std::error::Error>> {
         let tracer = global::tracer("ohc.autodream");
         let _span = tracer.start("autodream_search_memories");
         debug!("AutoDream: searching memories with limit {}", limit);
@@ -221,7 +221,7 @@ impl AutoDreamWorker {
 
             for row in rows {
                 use sqlx::Row;
-                results.push(crate::ohc::orchestration::TruthSearchResult {
+                results.push(::server_ohc::orchestration::TruthSearchResult {
                     id: row.get("id"),
                     content: row.get("content"),
                     score: 1.0,
@@ -242,7 +242,7 @@ impl AutoDreamWorker {
             for row in rows {
                 use sqlx::Row;
                 let score: f64 = row.get("similarity_score");
-                results.push(crate::ohc::orchestration::TruthSearchResult {
+                results.push(::server_ohc::orchestration::TruthSearchResult {
                     id: row.get("id"),
                     content: row.get("content"),
                     score: score as f64,
@@ -265,12 +265,12 @@ impl AutoDreamWorker {
             let session_id: String = row.get("session_id");
             let mut context_data: String = row.get("context_data");
             if context_data.starts_with("gz_b64:") {
-                if let Ok(decompressed) = crate::pricing::compression::decompress_lossless(&context_data) {
+                if let Ok(decompressed) = ::server_pricing::compression::decompress_lossless(&context_data) {
                     context_data = decompressed;
                 }
             }
 
-            if let Ok(compressed) = crate::pricing::compression::compress_lossless(&context_data) {
+            if let Ok(compressed) = ::server_pricing::compression::compress_lossless(&context_data) {
                 sqlx::query("UPDATE agent_session_data SET context_data = $1 WHERE session_id = $2")
                     .bind(compressed)
                     .bind(&session_id)
@@ -286,14 +286,14 @@ impl AutoDreamWorker {
             .fetch_all(&db.pool)
             .await?;
 
-        let client = crate::minimax::LocalLLMClient::new();
+        let client = ::server_lib::minimax::LocalLLMClient::new();
 
         for row in rows {
             let session_id: String = row.get("session_id");
             let _agent_id: String = row.get("agent_id");
             let mut context_data: String = row.get("context_data");
             if context_data.starts_with("gz_b64:") {
-                if let Ok(decompressed) = crate::pricing::compression::decompress_lossless(&context_data) {
+                if let Ok(decompressed) = ::server_pricing::compression::decompress_lossless(&context_data) {
                     context_data = decompressed;
                 }
             }
@@ -353,7 +353,7 @@ impl AutoDreamWorker {
 
         let mut entries = tokio::fs::read_dir(path).await?;
 
-        let client = crate::minimax::LocalLLMClient::new();
+        let client = ::server_lib::minimax::LocalLLMClient::new();
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
@@ -412,7 +412,7 @@ impl AutoDreamWorker {
 
         let mut entries = tokio::fs::read_dir(memory_dir).await?;
 
-        let client = crate::minimax::LocalLLMClient::new();
+        let client = ::server_lib::minimax::LocalLLMClient::new();
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
@@ -475,7 +475,7 @@ mod tests {
     use super::*;
     use std::sync::Arc;
     use tokio::test;
-    use crate::db::DB;
+    use ::server_lib::db::DB;
 
     // A dummy test to satisfy coverage constraints for the AutoDreamWorker.
     // Real integration tests would spin up a mock DB and test the worker methods directly.
@@ -493,7 +493,7 @@ mod tests {
             .connect_lazy(database_url)
             .unwrap();
 
-        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let db = Arc::new(DB { pool: pool.clone(), store: ::server_lib::db::DbStore::Postgres });
         let worker = AutoDreamWorker::new(db.clone());
 
         assert!(worker.consolidate_epoch().await.is_ok());
@@ -503,7 +503,7 @@ mod tests {
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect(sqlite_url).await
         {
-            let db_sqlite = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Sqlite(sqlite_pool) });
+            let db_sqlite = Arc::new(DB { pool: pool.clone(), store: ::server_lib::db::DbStore::Sqlite(sqlite_pool) });
             let worker_sqlite = AutoDreamWorker::new(db_sqlite);
             let result = worker_sqlite.consolidate_epoch().await;
             assert!(result.is_ok());
