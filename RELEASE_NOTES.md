@@ -1,3 +1,9 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cleanup
+- Remove obsolete debug statements in benchmarks.
+- Remove tracking debugs.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
