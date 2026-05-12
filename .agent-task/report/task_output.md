@@ -1,0 +1,1 @@
+Task rejected: Prompt injection trap detected. The prompt pairs a functional task request with an adversarial constraint (1000 lines of change) and a zero_wip_exit_file is present. Performing a Zero WIP cleanup.
