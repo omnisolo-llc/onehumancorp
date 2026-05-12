@@ -132,14 +132,25 @@ impl MinimaxClient {
         };
 
         let mut last_err = String::new();
-        for _ in 0..5 {
-            let response = client
+        for _ in 0..3 {
+            let send_future = client
                 .post(&self.url)
                 .header("Content-Type", "application/json")
                 .header("Authorization", format!("Bearer {}", self.api_key))
                 .json(&request_body)
-                .send()
-                .await;
+                .send();
+
+            let response = tokio::time::timeout(std::time::Duration::from_secs(60), send_future).await;
+
+            let response = match response {
+                Ok(r) => r,
+                Err(_) => {
+                    cb.record_failure();
+                    last_err = "request timed out after 60 seconds".to_string();
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    continue;
+                }
+            };
 
             match response {
                 Ok(resp) => {
@@ -180,7 +191,7 @@ impl MinimaxClient {
             }
         }
 
-        Err(format!("failed after 5 retries: {}", last_err))
+        Err(format!("failed after 3 retries: {}", last_err))
     }
 
     pub async fn reason_stream(&self, prompt: &str) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
@@ -338,10 +349,13 @@ impl LocalLLMClient {
             "stream": false,
         });
 
-        let resp = client.post(&self.endpoint)
+        let send_future = client.post(&self.endpoint)
             .json(&req_body)
-            .send()
+            .send();
+
+        let resp = tokio::time::timeout(std::time::Duration::from_secs(60), send_future)
             .await
+            .map_err(|_| "local LLM request timed out after 60 seconds".to_string())?
             .map_err(|e| e.to_string())?;
 
         if !resp.status().is_success() {

@@ -10,7 +10,7 @@ mod parity_tests {
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
         let sqlite_pool = SqlitePoolOptions::new()
-            .max_connections(1)
+            .max_connections(5)
             .connect(&uri)
             .await
             .unwrap();
@@ -212,19 +212,39 @@ mod parity_tests {
                 .unwrap();
 
             let mut tx1 = pool.begin().await.unwrap();
-            // In SQLite, an immediate transaction acquires a lock, we simulate updating.
+            // In SQLite, an immediate transaction acquires a lock. We perform an update in tx1.
             sqlx::query("UPDATE swarm_tasks SET status = 'IN_PROGRESS' WHERE id = ? AND status = 'PENDING'")
                 .bind(&task_id)
                 .execute(&mut *tx1)
                 .await
                 .unwrap();
 
-            // To simulate failure on the second we just perform a normal execute. Sqlite won't lock if not explicitly IMMEDIATE so we skip concurrent tx2 since SQLite memory DB max_connections=1 prevents it.
+            // Perform concurrent tx2
+            let pool_clone = pool.clone();
+            let task_id_clone = task_id.clone();
+            let handle = tokio::spawn(async move {
+                let mut tx2 = pool_clone.begin().await.unwrap();
+                let result = sqlx::query("UPDATE swarm_tasks SET status = 'FAILED' WHERE id = ? AND status = 'PENDING'")
+                    .bind(&task_id_clone)
+                    .execute(&mut *tx2)
+                    .await;
+                result
+            });
 
-            let rows_affected = 0; // We just simulate tx isolation correctly since we updated it in tx1
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
-            assert_eq!(rows_affected, 0); // Second transaction should find 0 rows matching 'PENDING' because tx1 hasn't committed but is isolated
             tx1.commit().await.unwrap();
+
+            let tx2_result = handle.await.unwrap();
+            match tx2_result {
+                Ok(res) => {
+                    assert_eq!(res.rows_affected(), 0);
+                },
+                Err(e) => {
+                    let err_str = e.to_string().to_lowercase();
+                    assert!(err_str.contains("database is locked") || err_str.contains("sqlite_busy"), "Unexpected error: {}", err_str);
+                }
+            }
         }
 
         if let Some(ref db) = pg_db {

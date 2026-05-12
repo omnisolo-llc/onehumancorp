@@ -408,7 +408,9 @@ mod tests {
                 id TEXT PRIMARY KEY,
                 organization_id TEXT NOT NULL,
                 name TEXT,
-                inventory_count INT
+                inventory_count INT,
+                supplier_name TEXT,
+                supplier_contact TEXT
             );
             CREATE TABLE IF NOT EXISTS shared_tasks (
                 id TEXT PRIMARY KEY,
@@ -458,19 +460,22 @@ mod tests {
         assert!(processed);
 
         if let DbStore::Sqlite(pool) = &db.store {
-            // Due to timing in parallel tests, wait and retry fetching the task
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
-            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
-                .fetch_optional(pool).await.unwrap();
-
-            // Ignore the test flakiness related to timing if parallel execution skipped the assert
-            if let Some(row) = row {
-                let title: String = row.get("title");
-                let approval_status: String = row.get("approval_status");
-                assert!(title.starts_with("Restock Item: Low Stock Item"));
-                assert_eq!(approval_status, "PENDING");
+            let mut row = None;
+            for _ in 0..10 {
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+                    .fetch_optional(pool).await.unwrap();
+                if row.is_some() {
+                    break;
+                }
             }
+
+            assert!(row.is_some(), "Expected shared_task to be created");
+            let r = row.unwrap();
+            let title: String = r.get("title");
+            let approval_status: String = r.get("approval_status");
+            assert!(title.starts_with("Restock Item: Low Stock Item"));
+            assert_eq!(approval_status, "PENDING");
         }
     }
 

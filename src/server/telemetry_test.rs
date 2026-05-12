@@ -260,7 +260,7 @@ mod tests {
 
         let mut violations = Vec::new();
 
-        let mut search_dirs = vec![PathBuf::from(".")];
+        let mut search_dirs = vec![PathBuf::from("."), PathBuf::from("src"), PathBuf::from("../src"), PathBuf::from("/app/src")];
         // Try multiple possible source locations
         let possible_src_roots = vec![
             PathBuf::from("src"),
@@ -393,12 +393,7 @@ mod tests {
         }
 
         let search_dirs_for_error = search_dirs.clone();
-        if checked_files == 0 {
-            // No files found to check - likely running in an environment where source files
-            // are not accessible (e.g., some bazel sandboxes). Skip the test gracefully.
-            println!("PII test skipped: Could not find any .rs files. Search dirs: {:?}", search_dirs_for_error);
-            return;
-        }
+        assert!(checked_files > 0, "PII test failed: Could not find any .rs files. Search dirs: {:?}", search_dirs_for_error);
         assert!(
             violations.is_empty(),
             "Found PII logging violations in the following lines:\n{:#?}",

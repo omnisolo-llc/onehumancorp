@@ -194,6 +194,12 @@ impl DB {
         let max_attempts = 10;
         let mut backoff = std::time::Duration::from_millis(50);
 
+        if let Ok(chaos_lag) = std::env::var("OHC_CHAOS_SQL_LAG_MS") {
+            if let Ok(ms) = chaos_lag.parse::<u64>() {
+                tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
+            }
+        }
+
         loop {
             match f().await {
                 Ok(val) => return Ok(val),
