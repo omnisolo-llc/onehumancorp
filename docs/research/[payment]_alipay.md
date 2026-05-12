@@ -1,55 +1,55 @@
-# Integration Brief: Paytm
+# Integration Brief: Alipay
 
 ## 1. Title
-Integrate Paytm for Payment Capabilities
+Integrate Alipay for Payment Capabilities
 
 ## 2. Problem Statement
-**Persona:** Indian Retailer
-**Gap/Pain Point:** Cash transactions are hard to track and physical card readers are expensive.
-Small business owners often struggle with disjointed workflows. Integrating Paytm allows them to solve this problem seamlessly without needing a technical background or leaving their primary dashboard.
+**Persona:** Merchant Targeting Chinese Tourists
+**Gap/Pain Point:** Losing sales because customers prefer scanning QR codes over swiping cards.
+Small business owners often struggle with disjointed workflows. Integrating Alipay allows them to solve this problem seamlessly without needing a technical background or leaving their primary dashboard.
 
 ## 3. Research Report
 ### Overview
-Paytm was evaluated as a candidate for the Payment category.
+Alipay was evaluated as a candidate for the Payment category.
 
-**What problem it solves:** Cash transactions are hard to track and physical card readers are expensive.
-**How it appears to the business owner:** An audio notification ('Soundbox') when a payment is received.
-**Key Advantages:** Ubiquitous in India, very fast.
-**Key Risks:** High competition, fragmented ecosystem.
-**Pricing Estimate:** Varies by merchant tier
-**Cloud vs. Standalone:** Cloud mainly.
+**What problem it solves:** Losing sales because customers prefer scanning QR codes over swiping cards.
+**How it appears to the business owner:** A QR code that pops up on the merchant's tablet or phone.
+**Key Advantages:** Massive user base, simple QR code flow.
+**Key Risks:** Regulatory compliance hurdles.
+**Pricing Estimate:** 2.9% + 30¢ per transaction
+**Cloud vs. Standalone:** Both supported, Standalone requires local TLS termination.
 
 ### Competitive Analysis
-Compared to alternatives in the market, Paytm offers a balanced approach to Payment, making it highly suitable for our target demographic of non-technical users.
+Compared to alternatives in the market, Alipay offers a balanced approach to Payment, making it highly suitable for our target demographic of non-technical users.
 
 ## 4. Design Doc (Non-Technical Small Business Owner Perspective)
 
 ### Mobile UX Flow
-The user will navigate to the 'Integrations' tab, select Paytm, and authorize the connection. From there, the features will naturally appear in their daily workflow.
+The user will navigate to the 'Integrations' tab, select Alipay, and authorize the connection. From there, the features will naturally appear in their daily workflow.
 
 ```mermaid
 graph TD
     A[Business Owner Dashboard] -->|Clicks Integrations| B(Integration Library)
-    B -->|Selects Paytm| C{Connect Account}
+    B -->|Selects Alipay| C{Connect Account}
     C -->|Success| D[Feature activated in daily workflow]
-    D --> E[An audio notification ('Soundbox') when a payment is received.]
+    D --> E[A QR code that pops up on the merchant's tablet or phone.]
 ```
 
 ### Visual Experience
-The goal is zero configuration. Once connected, Paytm operates silently in the background. If attention is needed, a simple push notification is sent to the mobile device.
+The goal is zero configuration. Once connected, Alipay operates silently in the background. If attention is needed, a simple push notification is sent to the mobile device.
 
 ## 5. Implementation Prompt
-**User-Facing Outcome:** The business owner should be able to connect their Paytm account with a single click. Once connected, they will experience An audio notification ('Soundbox') when a payment is received. without any additional setup.
+**User-Facing Outcome:** The business owner should be able to connect their Alipay account with a single click. Once connected, they will experience A QR code that pops up on the merchant's tablet or phone. without any additional setup.
 **Acceptance Criteria:**
 - One-click OAuth or simple API key setup.
-- The feature (An audio notification ('Soundbox') when a payment is received.) is visible and functional in the mobile and web apps.
+- The feature (A QR code that pops up on the merchant's tablet or phone.) is visible and functional in the mobile and web apps.
 - Clear error messages if the integration fails or disconnects.
 
 ## 6. Priority
-P0
+P1
 
 ## 7. Estimated Scope
-Medium
+Large
 
 ---
 

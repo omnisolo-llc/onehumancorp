@@ -1,48 +1,48 @@
-# Integration Brief: Paytm
+# Integration Brief: ShipStation
 
 ## 1. Title
-Integrate Paytm for Payment Capabilities
+Integrate ShipStation for Shipping Capabilities
 
 ## 2. Problem Statement
-**Persona:** Indian Retailer
-**Gap/Pain Point:** Cash transactions are hard to track and physical card readers are expensive.
-Small business owners often struggle with disjointed workflows. Integrating Paytm allows them to solve this problem seamlessly without needing a technical background or leaving their primary dashboard.
+**Persona:** Boutique Clothing Shop
+**Gap/Pain Point:** Hand-writing shipping labels is taking 3 hours every night.
+Small business owners often struggle with disjointed workflows. Integrating ShipStation allows them to solve this problem seamlessly without needing a technical background or leaving their primary dashboard.
 
 ## 3. Research Report
 ### Overview
-Paytm was evaluated as a candidate for the Payment category.
+ShipStation was evaluated as a candidate for the Shipping category.
 
-**What problem it solves:** Cash transactions are hard to track and physical card readers are expensive.
-**How it appears to the business owner:** An audio notification ('Soundbox') when a payment is received.
-**Key Advantages:** Ubiquitous in India, very fast.
-**Key Risks:** High competition, fragmented ecosystem.
-**Pricing Estimate:** Varies by merchant tier
-**Cloud vs. Standalone:** Cloud mainly.
+**What problem it solves:** Hand-writing shipping labels is taking 3 hours every night.
+**How it appears to the business owner:** A 'Print All Labels' button that spits out ready-to-stick labels.
+**Key Advantages:** Integrates with every major carrier.
+**Key Risks:** Clunky legacy UI.
+**Pricing Estimate:** $9.99/month
+**Cloud vs. Standalone:** Both supported.
 
 ### Competitive Analysis
-Compared to alternatives in the market, Paytm offers a balanced approach to Payment, making it highly suitable for our target demographic of non-technical users.
+Compared to alternatives in the market, ShipStation offers a balanced approach to Shipping, making it highly suitable for our target demographic of non-technical users.
 
 ## 4. Design Doc (Non-Technical Small Business Owner Perspective)
 
 ### Mobile UX Flow
-The user will navigate to the 'Integrations' tab, select Paytm, and authorize the connection. From there, the features will naturally appear in their daily workflow.
+The user will navigate to the 'Integrations' tab, select ShipStation, and authorize the connection. From there, the features will naturally appear in their daily workflow.
 
 ```mermaid
 graph TD
     A[Business Owner Dashboard] -->|Clicks Integrations| B(Integration Library)
-    B -->|Selects Paytm| C{Connect Account}
+    B -->|Selects ShipStation| C{Connect Account}
     C -->|Success| D[Feature activated in daily workflow]
-    D --> E[An audio notification ('Soundbox') when a payment is received.]
+    D --> E[A 'Print All Labels' button that spits out ready-to-stick labels.]
 ```
 
 ### Visual Experience
-The goal is zero configuration. Once connected, Paytm operates silently in the background. If attention is needed, a simple push notification is sent to the mobile device.
+The goal is zero configuration. Once connected, ShipStation operates silently in the background. If attention is needed, a simple push notification is sent to the mobile device.
 
 ## 5. Implementation Prompt
-**User-Facing Outcome:** The business owner should be able to connect their Paytm account with a single click. Once connected, they will experience An audio notification ('Soundbox') when a payment is received. without any additional setup.
+**User-Facing Outcome:** The business owner should be able to connect their ShipStation account with a single click. Once connected, they will experience A 'Print All Labels' button that spits out ready-to-stick labels. without any additional setup.
 **Acceptance Criteria:**
 - One-click OAuth or simple API key setup.
-- The feature (An audio notification ('Soundbox') when a payment is received.) is visible and functional in the mobile and web apps.
+- The feature (A 'Print All Labels' button that spits out ready-to-stick labels.) is visible and functional in the mobile and web apps.
 - Clear error messages if the integration fails or disconnects.
 
 ## 6. Priority

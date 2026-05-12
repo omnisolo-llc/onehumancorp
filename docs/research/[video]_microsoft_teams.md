@@ -1,55 +1,55 @@
-# Integration Brief: Paytm
+# Integration Brief: Microsoft Teams
 
 ## 1. Title
-Integrate Paytm for Payment Capabilities
+Integrate Microsoft Teams for Video Capabilities
 
 ## 2. Problem Statement
-**Persona:** Indian Retailer
-**Gap/Pain Point:** Cash transactions are hard to track and physical card readers are expensive.
-Small business owners often struggle with disjointed workflows. Integrating Paytm allows them to solve this problem seamlessly without needing a technical background or leaving their primary dashboard.
+**Persona:** B2B Consultant
+**Gap/Pain Point:** Clients expect professional meeting links that work securely in corporate environments.
+Small business owners often struggle with disjointed workflows. Integrating Microsoft Teams allows them to solve this problem seamlessly without needing a technical background or leaving their primary dashboard.
 
 ## 3. Research Report
 ### Overview
-Paytm was evaluated as a candidate for the Payment category.
+Microsoft Teams was evaluated as a candidate for the Video category.
 
-**What problem it solves:** Cash transactions are hard to track and physical card readers are expensive.
-**How it appears to the business owner:** An audio notification ('Soundbox') when a payment is received.
-**Key Advantages:** Ubiquitous in India, very fast.
-**Key Risks:** High competition, fragmented ecosystem.
-**Pricing Estimate:** Varies by merchant tier
-**Cloud vs. Standalone:** Cloud mainly.
+**What problem it solves:** Clients expect professional meeting links that work securely in corporate environments.
+**How it appears to the business owner:** A meeting link auto-added to calendar invites.
+**Key Advantages:** Enterprise trust, included in Office 365.
+**Key Risks:** Heavy client app, sometimes hard for external guests.
+**Pricing Estimate:** Included with Microsoft 365
+**Cloud vs. Standalone:** Cloud integration only.
 
 ### Competitive Analysis
-Compared to alternatives in the market, Paytm offers a balanced approach to Payment, making it highly suitable for our target demographic of non-technical users.
+Compared to alternatives in the market, Microsoft Teams offers a balanced approach to Video, making it highly suitable for our target demographic of non-technical users.
 
 ## 4. Design Doc (Non-Technical Small Business Owner Perspective)
 
 ### Mobile UX Flow
-The user will navigate to the 'Integrations' tab, select Paytm, and authorize the connection. From there, the features will naturally appear in their daily workflow.
+The user will navigate to the 'Integrations' tab, select Microsoft Teams, and authorize the connection. From there, the features will naturally appear in their daily workflow.
 
 ```mermaid
 graph TD
     A[Business Owner Dashboard] -->|Clicks Integrations| B(Integration Library)
-    B -->|Selects Paytm| C{Connect Account}
+    B -->|Selects Microsoft Teams| C{Connect Account}
     C -->|Success| D[Feature activated in daily workflow]
-    D --> E[An audio notification ('Soundbox') when a payment is received.]
+    D --> E[A meeting link auto-added to calendar invites.]
 ```
 
 ### Visual Experience
-The goal is zero configuration. Once connected, Paytm operates silently in the background. If attention is needed, a simple push notification is sent to the mobile device.
+The goal is zero configuration. Once connected, Microsoft Teams operates silently in the background. If attention is needed, a simple push notification is sent to the mobile device.
 
 ## 5. Implementation Prompt
-**User-Facing Outcome:** The business owner should be able to connect their Paytm account with a single click. Once connected, they will experience An audio notification ('Soundbox') when a payment is received. without any additional setup.
+**User-Facing Outcome:** The business owner should be able to connect their Microsoft Teams account with a single click. Once connected, they will experience A meeting link auto-added to calendar invites. without any additional setup.
 **Acceptance Criteria:**
 - One-click OAuth or simple API key setup.
-- The feature (An audio notification ('Soundbox') when a payment is received.) is visible and functional in the mobile and web apps.
+- The feature (A meeting link auto-added to calendar invites.) is visible and functional in the mobile and web apps.
 - Clear error messages if the integration fails or disconnects.
 
 ## 6. Priority
-P0
+P2
 
 ## 7. Estimated Scope
-Medium
+Large
 
 ---
 

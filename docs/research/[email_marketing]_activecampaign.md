@@ -1,55 +1,55 @@
-# Integration Brief: Paytm
+# Integration Brief: ActiveCampaign
 
 ## 1. Title
-Integrate Paytm for Payment Capabilities
+Integrate ActiveCampaign for Email Marketing Capabilities
 
 ## 2. Problem Statement
-**Persona:** Indian Retailer
-**Gap/Pain Point:** Cash transactions are hard to track and physical card readers are expensive.
-Small business owners often struggle with disjointed workflows. Integrating Paytm allows them to solve this problem seamlessly without needing a technical background or leaving their primary dashboard.
+**Persona:** E-commerce Store Owner
+**Gap/Pain Point:** Need to automatically follow up with customers who abandoned their carts.
+Small business owners often struggle with disjointed workflows. Integrating ActiveCampaign allows them to solve this problem seamlessly without needing a technical background or leaving their primary dashboard.
 
 ## 3. Research Report
 ### Overview
-Paytm was evaluated as a candidate for the Payment category.
+ActiveCampaign was evaluated as a candidate for the Email Marketing category.
 
-**What problem it solves:** Cash transactions are hard to track and physical card readers are expensive.
-**How it appears to the business owner:** An audio notification ('Soundbox') when a payment is received.
-**Key Advantages:** Ubiquitous in India, very fast.
-**Key Risks:** High competition, fragmented ecosystem.
-**Pricing Estimate:** Varies by merchant tier
-**Cloud vs. Standalone:** Cloud mainly.
+**What problem it solves:** Need to automatically follow up with customers who abandoned their carts.
+**How it appears to the business owner:** Pre-built 'recipe' templates that turn on with one click.
+**Key Advantages:** Extremely powerful automations.
+**Key Risks:** Steep learning curve.
+**Pricing Estimate:** $29/month
+**Cloud vs. Standalone:** Cloud only.
 
 ### Competitive Analysis
-Compared to alternatives in the market, Paytm offers a balanced approach to Payment, making it highly suitable for our target demographic of non-technical users.
+Compared to alternatives in the market, ActiveCampaign offers a balanced approach to Email Marketing, making it highly suitable for our target demographic of non-technical users.
 
 ## 4. Design Doc (Non-Technical Small Business Owner Perspective)
 
 ### Mobile UX Flow
-The user will navigate to the 'Integrations' tab, select Paytm, and authorize the connection. From there, the features will naturally appear in their daily workflow.
+The user will navigate to the 'Integrations' tab, select ActiveCampaign, and authorize the connection. From there, the features will naturally appear in their daily workflow.
 
 ```mermaid
 graph TD
     A[Business Owner Dashboard] -->|Clicks Integrations| B(Integration Library)
-    B -->|Selects Paytm| C{Connect Account}
+    B -->|Selects ActiveCampaign| C{Connect Account}
     C -->|Success| D[Feature activated in daily workflow]
-    D --> E[An audio notification ('Soundbox') when a payment is received.]
+    D --> E[Pre-built 'recipe' templates that turn on with one click.]
 ```
 
 ### Visual Experience
-The goal is zero configuration. Once connected, Paytm operates silently in the background. If attention is needed, a simple push notification is sent to the mobile device.
+The goal is zero configuration. Once connected, ActiveCampaign operates silently in the background. If attention is needed, a simple push notification is sent to the mobile device.
 
 ## 5. Implementation Prompt
-**User-Facing Outcome:** The business owner should be able to connect their Paytm account with a single click. Once connected, they will experience An audio notification ('Soundbox') when a payment is received. without any additional setup.
+**User-Facing Outcome:** The business owner should be able to connect their ActiveCampaign account with a single click. Once connected, they will experience Pre-built 'recipe' templates that turn on with one click. without any additional setup.
 **Acceptance Criteria:**
 - One-click OAuth or simple API key setup.
-- The feature (An audio notification ('Soundbox') when a payment is received.) is visible and functional in the mobile and web apps.
+- The feature (Pre-built 'recipe' templates that turn on with one click.) is visible and functional in the mobile and web apps.
 - Clear error messages if the integration fails or disconnects.
 
 ## 6. Priority
-P0
+P2
 
 ## 7. Estimated Scope
-Medium
+Large
 
 ---
 

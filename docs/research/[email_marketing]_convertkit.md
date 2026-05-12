@@ -1,52 +1,52 @@
-# Integration Brief: Paytm
+# Integration Brief: ConvertKit
 
 ## 1. Title
-Integrate Paytm for Payment Capabilities
+Integrate ConvertKit for Email Marketing Capabilities
 
 ## 2. Problem Statement
-**Persona:** Indian Retailer
-**Gap/Pain Point:** Cash transactions are hard to track and physical card readers are expensive.
-Small business owners often struggle with disjointed workflows. Integrating Paytm allows them to solve this problem seamlessly without needing a technical background or leaving their primary dashboard.
+**Persona:** Content Creator / Small Publisher
+**Gap/Pain Point:** Want to send newsletters but traditional tools feel too corporate and clunky.
+Small business owners often struggle with disjointed workflows. Integrating ConvertKit allows them to solve this problem seamlessly without needing a technical background or leaving their primary dashboard.
 
 ## 3. Research Report
 ### Overview
-Paytm was evaluated as a candidate for the Payment category.
+ConvertKit was evaluated as a candidate for the Email Marketing category.
 
-**What problem it solves:** Cash transactions are hard to track and physical card readers are expensive.
-**How it appears to the business owner:** An audio notification ('Soundbox') when a payment is received.
-**Key Advantages:** Ubiquitous in India, very fast.
-**Key Risks:** High competition, fragmented ecosystem.
-**Pricing Estimate:** Varies by merchant tier
-**Cloud vs. Standalone:** Cloud mainly.
+**What problem it solves:** Want to send newsletters but traditional tools feel too corporate and clunky.
+**How it appears to the business owner:** A simple 'Send Broadcast' button connected to the customer directory.
+**Key Advantages:** Creator-focused, great visual automation builder.
+**Key Risks:** Can get expensive as list grows.
+**Pricing Estimate:** Free up to 1k subscribers, then $29/mo
+**Cloud vs. Standalone:** Cloud integration is flawless. Standalone requires local SMTP relay.
 
 ### Competitive Analysis
-Compared to alternatives in the market, Paytm offers a balanced approach to Payment, making it highly suitable for our target demographic of non-technical users.
+Compared to alternatives in the market, ConvertKit offers a balanced approach to Email Marketing, making it highly suitable for our target demographic of non-technical users.
 
 ## 4. Design Doc (Non-Technical Small Business Owner Perspective)
 
 ### Mobile UX Flow
-The user will navigate to the 'Integrations' tab, select Paytm, and authorize the connection. From there, the features will naturally appear in their daily workflow.
+The user will navigate to the 'Integrations' tab, select ConvertKit, and authorize the connection. From there, the features will naturally appear in their daily workflow.
 
 ```mermaid
 graph TD
     A[Business Owner Dashboard] -->|Clicks Integrations| B(Integration Library)
-    B -->|Selects Paytm| C{Connect Account}
+    B -->|Selects ConvertKit| C{Connect Account}
     C -->|Success| D[Feature activated in daily workflow]
-    D --> E[An audio notification ('Soundbox') when a payment is received.]
+    D --> E[A simple 'Send Broadcast' button connected to the customer directory.]
 ```
 
 ### Visual Experience
-The goal is zero configuration. Once connected, Paytm operates silently in the background. If attention is needed, a simple push notification is sent to the mobile device.
+The goal is zero configuration. Once connected, ConvertKit operates silently in the background. If attention is needed, a simple push notification is sent to the mobile device.
 
 ## 5. Implementation Prompt
-**User-Facing Outcome:** The business owner should be able to connect their Paytm account with a single click. Once connected, they will experience An audio notification ('Soundbox') when a payment is received. without any additional setup.
+**User-Facing Outcome:** The business owner should be able to connect their ConvertKit account with a single click. Once connected, they will experience A simple 'Send Broadcast' button connected to the customer directory. without any additional setup.
 **Acceptance Criteria:**
 - One-click OAuth or simple API key setup.
-- The feature (An audio notification ('Soundbox') when a payment is received.) is visible and functional in the mobile and web apps.
+- The feature (A simple 'Send Broadcast' button connected to the customer directory.) is visible and functional in the mobile and web apps.
 - Clear error messages if the integration fails or disconnects.
 
 ## 6. Priority
-P0
+P1
 
 ## 7. Estimated Scope
 Medium
