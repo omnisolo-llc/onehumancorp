@@ -1,0 +1,15 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "cloud_synchronizer.rs",
+        "escalator.rs",
+        "local_repository.rs",
+        "local_repository_impl.rs",
+        "mod.rs",
+        "power_sync_orchestrator.rs",
+        "power_sync_test.rs",
+        "service.rs",
+        "telemetry_sync.rs",
+    ],
+    visibility = ["//src/server/services:__pkg__"],
+)

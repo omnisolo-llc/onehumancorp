@@ -1,0 +1,12 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "mod.rs",
+        "pg_queue.rs",
+        "queue.rs",
+        "queue_test.rs",
+        "redis_queue.rs",
+        "sqlite_queue.rs",
+    ],
+    visibility = ["//src/server/orchestration:__pkg__"],
+)

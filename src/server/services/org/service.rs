@@ -1,13 +1,13 @@
 use tonic::{Request, Response, Status};
-use crate::ohc::orchestration::*;
-use crate::ohc::orchestration::org_service_server::OrgService;
+use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::org_service_server::OrgService;
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 
 pub struct MyOrgService {
     hub: Arc<crate::hub::Hub>,
     settings: RwLock<SettingsResponse>,
-    analytics_cache: crate::utils::cache::HybridCache<AnalyticsSummaryResponse>,
+    analytics_cache: ::server_utils::cache::HybridCache<AnalyticsSummaryResponse>,
 }
 
 impl MyOrgService {
@@ -19,7 +19,7 @@ impl MyOrgService {
                 minimax_api_key: std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
                 extras: HashMap::new(),
             }),
-            analytics_cache: crate::utils::cache::HybridCache::new(redis_client),
+            analytics_cache: ::server_utils::cache::HybridCache::new(redis_client),
         }
     }
 }
@@ -71,7 +71,7 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
-        let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| crate::auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
+        let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| ::server_auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
         let cache_key = format!("org_analytics_{}", org_id);
 
         if let Some(cached) = self.analytics_cache.get(&cache_key).await {
@@ -121,7 +121,7 @@ impl OrgService for MyOrgService {
             0.0
         };
         
-        let status = self.hub.tracker().check_agent_quota(&org_id).await.unwrap_or(crate::pricing::rate_limit::RateLimitStatus {
+        let status = self.hub.tracker().check_agent_quota(&org_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
             is_allowed: true,
             soft_limit_reached: false,
             user_message: None,
