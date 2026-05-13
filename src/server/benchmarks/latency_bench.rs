@@ -328,13 +328,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        println!("DEBUG: db_url = {}", db_url);
-        if db_url == "dummy" {
-            println!("DEBUG: skipping because db_url is dummy");
-            return;
+        let mut _db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+        if _db_url == "dummy" {
+            _db_url = "sqlite::memory:".to_string();
+            unsafe { std::env::set_var("DATABASE_URL", &_db_url) };
         }
-        println!("RUNNING BENCHMARK DASHBOARD SNAPSHOT");
         bench_dashboard_snapshot().await;
     }
 
