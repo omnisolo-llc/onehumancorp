@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Agent Management', () => {
   test('should display agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.locator('h1')).toContainText('Agents');
   });
 
   test('should display hire button', async ({ page }) => {
@@ -20,7 +20,7 @@ test.describe('Agent Management', () => {
 test.describe('Dashboard', () => {
   test('should display dashboard', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.locator('h1')).toContainText('Dashboard');
   });
 
   test('should display navigation', async ({ page }) => {
@@ -30,6 +30,6 @@ test.describe('Dashboard', () => {
 
   test('should display login page', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
+    await expect(page.locator('h1')).toContainText('Login');
   });
 });

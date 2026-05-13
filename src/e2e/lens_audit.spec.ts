@@ -7,7 +7,7 @@ test.describe('Lens Audit E2E Flow', () => {
 
   test('verify Dashboard visual state and full UI lifecycle', async ({ page }) => {
     // Verify dashboard displays with expected elements
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.locator('h1')).toContainText('Dashboard');
     // Verify nav is present
     await expect(page.locator('nav')).toBeVisible();
   });
@@ -27,12 +27,12 @@ test.describe('Lens Audit E2E Flow', () => {
   test('verify chaos and error handling', async ({ page }) => {
     // Navigate to root and verify no crash - server serves dashboard for all paths
     await page.goto('/');
-    await expect(page.locator('h1').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('h1')).toBeVisible();
   });
 
   test('verify user guide sync', async ({ page }) => {
     // Check that dashboard is visible at root
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.locator('h1')).toContainText('Dashboard');
   });
 });

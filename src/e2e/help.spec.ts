@@ -6,7 +6,7 @@ test.describe('Help Center', () => {
   });
 
   test('should display dashboard with nav', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.locator('h1')).toContainText('Dashboard');
     await expect(page.locator('nav')).toBeVisible();
   });
 
@@ -37,9 +37,9 @@ test.describe('Help Center', () => {
 test.describe('Login Page', () => {
   test('should display login form', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
-    await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('h1')).toContainText('Login');
+    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.locator('input[type="password"]')).toBeVisible();
     await expect(page.locator('button:has-text("Login")')).toBeVisible();
   });
 });
@@ -47,7 +47,7 @@ test.describe('Login Page', () => {
 test.describe('Agents Page', () => {
   test('should display agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.locator('h1')).toContainText('Agents');
   });
 
   test('should show hire agent button', async ({ page }) => {
@@ -59,7 +59,7 @@ test.describe('Agents Page', () => {
 test.describe('Business Setup Page', () => {
   test('should display setup page', async ({ page }) => {
     await page.goto('/business-setup');
-    await expect(page.getByRole('heading', { name: 'OneHuman' })).toBeVisible();
+    await expect(page.locator('h1')).toContainText('OneHuman');
   });
 
   test('should show setup wizard text', async ({ page }) => {
@@ -72,6 +72,6 @@ test.describe('Dashboard', () => {
   test('should have working nav links', async ({ page }) => {
     await page.goto('/');
     await page.locator('nav a:has-text("Agents")').click();
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.locator('h1')).toContainText('Agents');
   });
 });
