@@ -9,10 +9,8 @@ pub mod ultraplan;
 pub mod autodream;
 pub mod autodream_pipeline;
 pub mod tasks;
-pub mod settings;
 pub mod scheduler;
 pub mod msgbus;
-pub mod pipeline;
 pub use ::server_oidc as oidc;
 pub mod sip;
 pub mod seeder;
@@ -1679,7 +1677,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
                         <div class="bottom-nav glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Item</button>
+                            <button class="nav-item">Add Item</button>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Messages</button>
                             <button class="nav-item">Analytics</button>
