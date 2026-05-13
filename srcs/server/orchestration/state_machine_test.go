@@ -38,7 +38,7 @@ func TestTaskStateMachine_ProcessEvent(t *testing.T) {
 	db := setupSMTestDB(t)
 	defer db.Close()
 
-	sm := NewTaskStateMachine(db)
+	sm := NewTaskStateMachine(db, nil)
 	ctx := context.Background()
 
 	// Insert parent task

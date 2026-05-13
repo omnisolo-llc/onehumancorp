@@ -249,7 +249,7 @@ func (s *DBTaskDecompositionService) ClaimTask(ctx context.Context, organization
 	// 3. Record transition
 	transID := uuid.New().String()
 	transQuery := `
-		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason, occurred_at)
+		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason, created_at)
 		VALUES ($1, $2, 'shared_tasks_decomposition', 'PENDING', 'IN_PROGRESS', $3, 'Claimed by agent', CURRENT_TIMESTAMP)
 	`
 	_, err = tx.ExecContext(ctx, transQuery, transID, candidateID, agentID)
@@ -292,7 +292,7 @@ func (s *DBTaskDecompositionService) UpdateTaskStatus(ctx context.Context, id st
 
 	transID := uuid.New().String()
 	transQuery := `
-		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason, occurred_at)
+		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason, created_at)
 		VALUES ($1, $2, 'shared_tasks_decomposition', $3, $4, $5, $6, CURRENT_TIMESTAMP)
 	`
 	_, err = tx.ExecContext(ctx, transQuery, transID, id, currentStatus, newStatus, agentID, reason)
