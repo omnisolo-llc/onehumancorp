@@ -13,7 +13,7 @@ export struct UiTask {
 export component TaskList inherits Window {
     width: 500px;
     height: 600px;
-    title: "Shared Task List";
+    title: "Team To-Do List";
 
     in property <[UiTask]> tasks;
     callback refresh();
@@ -29,7 +29,7 @@ export component TaskList inherits Window {
             padding: 24px;
 
             HorizontalBox {
-                Text { text: "Shared Task List"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                Text { text: "Team To-Do List"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
                 Rectangle {}
                 Rectangle {
                     width: 100px;
@@ -80,13 +80,13 @@ export component TaskList inherits Window {
                                     padding-right: 8px;
                                     padding-top: 4px;
                                     padding-bottom: 4px;
-                                    background: t.status == "PENDING" ? #fef3c7 : (t.status == "IN_PROGRESS" ? #dbeafe : (t.status == "COMPLETED" ? #dcfce3 : #fce7f3));
+                                    background: t.status == "To Do" ? #fef3c7 : (t.status == "Doing" ? #dbeafe : (t.status == "Done" ? #dcfce3 : #fce7f3));
                                     Text {
                                         text: t.status;
                                         font-family: "Inter";
                                         font-size: 12px;
                                         font-weight: 600;
-                                        color: t.status == "PENDING" ? #b45309 : (t.status == "IN_PROGRESS" ? #1d4ed8 : (t.status == "COMPLETED" ? #15803d : #be123c));
+                                        color: t.status == "To Do" ? #b45309 : (t.status == "Doing" ? #1d4ed8 : (t.status == "Done" ? #15803d : #be123c));
                                     }
                                 }
                             }
@@ -98,17 +98,17 @@ export component TaskList inherits Window {
                             }
                             if (t.dependencies != "") : HorizontalBox {
                                 spacing: 8px;
-                                Text { text: "Dependencies:"; font-family: "Inter"; color: #94a3b8; font-size: 13px; }
+                                Text { text: "Waiting on:"; font-family: "Inter"; color: #94a3b8; font-size: 13px; }
                                 Text { text: t.dependencies; font-family: "Inter"; color: #475569; font-size: 13px; }
                             }
                             if (t.parent_task_id != "") : HorizontalBox {
                                 spacing: 8px;
-                                Text { text: "Parent Task:"; font-family: "Inter"; color: #94a3b8; font-size: 13px; }
+                                Text { text: "Part of:"; font-family: "Inter"; color: #94a3b8; font-size: 13px; }
                                 Text { text: t.parent_task_id; font-family: "Inter"; color: #475569; font-size: 13px; }
                             }
                             if (t.workflow_state != "") : HorizontalBox {
                                 spacing: 8px;
-                                Text { text: "Workflow State:"; font-family: "Inter"; color: #94a3b8; font-size: 13px; }
+                                Text { text: "Current Step:"; font-family: "Inter"; color: #94a3b8; font-size: 13px; }
                                 Text { text: t.workflow_state; font-family: "Inter"; color: #475569; font-size: 13px; }
                             }
                         }

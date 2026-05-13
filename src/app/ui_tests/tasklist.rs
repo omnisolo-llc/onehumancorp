@@ -68,3 +68,62 @@ fn create() -> app::TaskList { crate::ui_tests::init(); app::TaskList::new().unw
 // --- Unique Scenarios with Verification ---
 
 // --- Consolidated Verified Tests ---
+
+#[test] fn tasklist_e2e_flow_1() {
+    let ui = create();
+    ui.invoke_refresh();
+}
+
+#[test] fn tasklist_e2e_flow_2() {
+    let ui = create();
+    let tasks = slint::VecModel::from(vec![
+        app::UiTask {
+            title: "T1".into(),
+            status: "To Do".into(),
+            agent_id: "a1".into(),
+            dependencies: "none".into(),
+            parent_task_id: "none".into(),
+            workflow_state: "start".into(),
+        }
+    ]);
+    ui.set_tasks(std::rc::Rc::new(tasks).into());
+    assert_eq!(ui.get_tasks().row_count(), 1);
+}
+
+#[test] fn tasklist_e2e_flow_3() {
+    let ui = create();
+    let tasks = slint::VecModel::from(vec![
+        app::UiTask {
+            title: "T1".into(),
+            status: "Doing".into(),
+            agent_id: "a1".into(),
+            dependencies: "none".into(),
+            parent_task_id: "none".into(),
+            workflow_state: "start".into(),
+        }
+    ]);
+    ui.set_tasks(std::rc::Rc::new(tasks).into());
+    assert_eq!(ui.get_tasks().row_data(0).unwrap().status, "Doing");
+}
+
+#[test] fn tasklist_e2e_flow_4() {
+    let ui = create();
+    let tasks = slint::VecModel::from(vec![
+        app::UiTask {
+            title: "T1".into(),
+            status: "Done".into(),
+            agent_id: "a1".into(),
+            dependencies: "none".into(),
+            parent_task_id: "none".into(),
+            workflow_state: "start".into(),
+        }
+    ]);
+    ui.set_tasks(std::rc::Rc::new(tasks).into());
+    assert_eq!(ui.get_tasks().row_data(0).unwrap().status, "Done");
+}
+
+#[test] fn tasklist_e2e_flow_5() {
+    let ui = create();
+    ui.invoke_refresh();
+    assert_eq!(ui.get_tasks().row_count(), 0);
+}
