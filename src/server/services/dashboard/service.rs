@@ -4,13 +4,6 @@ use crate::ohc::app::dashboard_service_server::DashboardService;
 use std::sync::Arc;
 
 
-use std::sync::OnceLock;
-use std::sync::RwLock;
-use std::collections::HashMap;
-
-static PRODUCTS_CACHE: OnceLock<RwLock<HashMap<String, Vec<crate::ohc::organization::Product>>>> = OnceLock::new();
-
-
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
     db: Arc<crate::db::DB>,
@@ -46,20 +39,27 @@ impl DashboardService for MyDashboardService {
             tokio::task::spawn_blocking(move || hub2.get_meetings()),
             tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
-                (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
+                let ca1 = cost_auditor.clone();
+                let ca2 = cost_auditor.clone();
+                let ca3 = cost_auditor.clone();
+
+                let (total_cost, total_tokens, snapshot) = std::thread::scope(|s| {
+                    let h1 = s.spawn(|| ca1.get_total_cost());
+                    let h2 = s.spawn(|| ca2.get_total_tokens());
+                    let h3 = s.spawn(|| ca3.get_agent_costs_snapshot());
+                    (h1.join().unwrap(), h2.join().unwrap(), h3.join().unwrap())
+                });
+
+                (total_cost, total_tokens, snapshot)
             }),
             tokio::task::spawn(async move {
                 let org_id = org_id1;
 
                 // Caching layer logic (Phase 4)
-
-
-                let _cache_key = format!("hub:products:{}", org_id);
-                let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(guard) = cache.read() {
-                    if let Some(products) = guard.get(&org_id) {
-                        return Ok::<_, String>(products.clone());
-                    }
+                let cache = crate::services::dashboard::cache::get_products_cache();
+                let cache_key = format!("hub:products:{}", org_id);
+                if let Some(products) = cache.get(&cache_key) {
+                    return Ok::<_, String>(products);
                 }
 
 
@@ -104,10 +104,7 @@ impl DashboardService for MyDashboardService {
                 }
 
 
-                let cache = PRODUCTS_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-                if let Ok(mut guard) = cache.write() {
-                    guard.insert(org_id, results.clone());
-                }
+                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600));
                 Ok::<_, String>(results)
             }),
 
@@ -210,6 +207,15 @@ impl DashboardService for MyDashboardService {
             }).collect()
         } else {
             products
+        };
+
+        let orders = if req.mobile_optimized {
+            orders.into_iter().map(|o| crate::ohc::app::Order {
+                status: if o.status.len() > 15 { o.status.chars().take(15).collect() } else { o.status },
+                ..o
+            }).collect()
+        } else {
+            orders
         };
 
         let mut out_meetings: Vec<crate::ohc::app::MeetingRoom> = Vec::new();

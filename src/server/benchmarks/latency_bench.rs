@@ -2,7 +2,7 @@
 
 use std::time::Instant;
 use std::sync::Arc;
-use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue};
+use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue, SqliteTaskQueue, RedisTaskQueue};
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -29,10 +29,29 @@ pub async fn bench_queue_latency() {
 
     }
 
-    // 2. Standalone Mode - Memory
+    // 2. Cloud Mode - Redis
+    tracing::info!("--- Cloud Mode (Redis) ---");
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost/".to_string());
+    if let Ok(redis_queue) = RedisTaskQueue::new(&redis_url, "benchmark_queue") {
+        let r_queue = Arc::new(redis_queue);
+        bench_queue("Redis", r_queue).await;
+    }
+
+    // 3. Standalone Mode - Memory
     tracing::info!("--- Standalone Mode (Memory) ---");
     let mem_queue = Arc::new(MemoryTaskQueue::new());
     bench_queue("Memory", mem_queue).await;
+
+    // 4. Standalone Mode - SQLite
+    tracing::info!("--- Standalone Mode (SQLite) ---");
+    let sqlite_pool_res = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:").await;
+    if let Ok(sqlite_pool) = sqlite_pool_res {
+        let sqlite_queue = SqliteTaskQueue::new(sqlite_pool);
+        let _ = sqlite_queue.init().await;
+        let s_queue = Arc::new(sqlite_queue);
+        bench_queue("SQLite", s_queue).await;
+    }
 }
 
 pub async fn bench_dashboard_snapshot() {
@@ -173,33 +192,41 @@ async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
             };
 
             let start = Instant::now();
-            q.enqueue_batch(vec![job]).await.unwrap();
+            let enqueue_res = q.enqueue_batch(vec![job]).await;
             let elapsed_enqueue = start.elapsed();
 
             let start_deq = Instant::now();
-            let _ = q.dequeue(vec!["test_agent".to_string()]).await.unwrap();
+            let deq_res = q.dequeue(vec!["test_agent".to_string()]).await;
             let elapsed_dequeue = start_deq.elapsed();
 
-            (elapsed_enqueue.as_micros(), elapsed_dequeue.as_micros())
+            (enqueue_res.is_ok(), deq_res.is_ok(), elapsed_enqueue.as_micros(), elapsed_dequeue.as_micros())
         }));
     }
 
     for handle in join_handles {
-        let (enq, deq) = handle.await.unwrap();
-        enqueue_times.push(enq);
-        dequeue_times.push(deq);
+        let (enq_ok, deq_ok, enq, deq) = handle.await.unwrap();
+        if enq_ok { enqueue_times.push(enq); }
+        if deq_ok { dequeue_times.push(deq); }
+    }
+
+    if enqueue_times.is_empty() || dequeue_times.is_empty() {
+        tracing::warn!("{}: Failed to benchmark due to queue errors", name);
+        return;
     }
 
     enqueue_times.sort();
     dequeue_times.sort();
 
-    let enq_p50 = enqueue_times[iterations / 2];
-    let enq_p95 = enqueue_times[(iterations as f32 * 0.95) as usize];
-    let enq_p99 = enqueue_times[(iterations as f32 * 0.99) as usize];
+    let enq_len = enqueue_times.len();
+    let deq_len = dequeue_times.len();
 
-    let deq_p50 = dequeue_times[iterations / 2];
-    let deq_p95 = dequeue_times[(iterations as f32 * 0.95) as usize];
-    let deq_p99 = dequeue_times[(iterations as f32 * 0.99) as usize];
+    let enq_p50 = enqueue_times[enq_len / 2];
+    let enq_p95 = enqueue_times[(enq_len as f32 * 0.95) as usize];
+    let enq_p99 = enqueue_times[(enq_len as f32 * 0.99) as usize];
+
+    let deq_p50 = dequeue_times[deq_len / 2];
+    let deq_p95 = dequeue_times[(deq_len as f32 * 0.95) as usize];
+    let deq_p99 = dequeue_times[(deq_len as f32 * 0.99) as usize];
 
     tracing::info!("{}: Batch Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
     tracing::info!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);

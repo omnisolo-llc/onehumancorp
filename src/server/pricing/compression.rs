@@ -4,16 +4,31 @@ use flate2::Compression;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use std::io::{Write, Read};
+use std::sync::OnceLock;
+use dashmap::DashMap;
 
 const COMPRESSION_PREFIX: &str = "gz_b64:";
 
+static COMPRESSION_CACHE: OnceLock<DashMap<String, String>> = OnceLock::new();
+
 pub fn compress_lossless(data: &str) -> Result<String, String> {
+    let cache = COMPRESSION_CACHE.get_or_init(DashMap::new);
+    if let Some(cached) = cache.get(data) {
+        return Ok(cached.clone());
+    }
+
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
     let compressed = encoder.finish().map_err(|e| e.to_string())?;
     
     let b64 = STANDARD.encode(&compressed);
-    Ok(format!("{}{}", COMPRESSION_PREFIX, b64))
+    let result = format!("{}{}", COMPRESSION_PREFIX, b64);
+
+    if cache.len() > 1000 {
+        cache.clear();
+    }
+    cache.insert(data.to_string(), result.clone());
+    Ok(result)
 }
 
 pub fn decompress_lossless(data: &str) -> Result<String, String> {
