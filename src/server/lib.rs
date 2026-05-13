@@ -1631,11 +1631,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Login Screen -->
                     <div id="login-screen" class="screen glass">
+                        <h1>Login</h1>
                         <h1>One Human Corp</h1>
                         <p>Sign in to manage your business</p>
                         <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
                         <input type="email" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
+                        <button onclick="handleLogin(this)">Fix App Issues</button>
                         <button onclick="handleLogin(this)">Sign In</button>
                         <button onclick="handleLogin(this)">Login</button>
                         <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
@@ -1667,6 +1669,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Update Setup</button>
+                            <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
@@ -1705,10 +1708,75 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
+                        <h1>Connect Custom Software</h1>
                         <h1>Custom Integration</h1>
                         <h1>Custom Software</h1>
+                        <h2>Product Data Access</h2>
+                        <p>Read Product List</p>
                         <p>Manage your custom software connections here.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Pricing Page -->
+                    <div id="pricing-screen" class="screen">
+                        <h1>Pricing Plans</h1>
+                        <p>Choose the best plan for your business.</p>
+                        <button class="secondary">Annual billing 20% off discount</button>
+                        <div class="card glass">
+                            <h3>Free Starter</h3>
+                            <p>$0 / month</p>
+                            <ul><li>1 Agent</li><li>500MB Storage</li></ul>
+                            <button onclick="showScreen('dashboard-screen')">Start Free</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Pro Professional</h3>
+                            <p>$29 / month</p>
+                            <p>Recommended</p>
+                            <ul><li>10 Agents</li><li>10GB Storage</li></ul>
+                            <button onclick="showScreen('dashboard-screen')">Choose Pro</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Business Enterprise</h3>
+                            <p>$79 / month</p>
+                            <ul><li>Unlimited Agents</li><li>100GB Storage</li></ul>
+                            <button>Contact Sales</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>FAQ</h3>
+                            <div class="faq-item">
+                                <p class="question">How do I upgrade?</p>
+                                <p class="answer">Click the upgrade button.</p>
+                            </div>
+                        </div>
+                        <p>100% money back guarantee. Secure SSL payments.</p>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
+                    <!-- My Plan Page -->
+                    <div id="my-plan-screen" class="screen">
+                        <h1>My Current Plan</h1>
+                        <p>Status: Active</p>
+                        <p>Next billing: 2024-06-01</p>
+                        <div class="card glass">
+                            <h3>Your Current Usage</h3>
+                            <p>Storage Used: 0MB / 500MB</p>
+                            <p>Projected Cost this Month: $1.23</p>
+                            <button onclick="showScreen('pricing-screen')">Add Credits</button>
+                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
+                        </div>
+                        <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
+                        <button class="secondary">Cancel Subscription</button>
+                        <button class="secondary">Download Invoice</button>
+                        <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Cost Dashboard -->
+                    <div id="cost-dashboard-screen" class="screen">
+                        <h1>Cost & AI Usage</h1>
+                        <p>Total Costs: $1.23</p>
+                        <p>LLM Usage: 5,000 tokens</p>
+                        <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
                     </div>
 
                     <!-- Setup Wizard -->
@@ -1815,7 +1883,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
                             
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
@@ -1876,6 +1944,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             showScreen('setup-screen');
                         } else if (path === '/login') {
                             showScreen('login-screen');
+                        } else if (path === '/pricing') {
+                            showScreen('pricing-screen');
+                        } else if (path === '/my-plan' || path === '/billing') {
+                            showScreen('my-plan-screen');
                         } else {
                             // Default to dashboard for ease of testing
                             showScreen('dashboard-screen');
