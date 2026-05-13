@@ -5,6 +5,15 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhanced multi-tenant isolation routing for improved horizontal scaling under heavy load.
+
+### Privacy/Offline Improvements
+- Implemented strict zero-trust encryption parameters for offline Standalone databases.
+
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
