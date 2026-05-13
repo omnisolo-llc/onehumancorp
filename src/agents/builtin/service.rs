@@ -375,6 +375,9 @@ impl AgentServiceImpl {
             0.0
         };
 
+        let enable_permission_architecture = req.runtime_config.as_ref().map(|c| c.enable_permission_architecture).unwrap_or(false);
+        let permissive_mode = req.runtime_config.as_ref().map(|c| c.permissive_mode).unwrap_or(false);
+
         AgentRunConfig {
             max_retries: 2,
             enable_single_agent_maximization: false,
@@ -412,6 +415,8 @@ impl AgentServiceImpl {
             enable_state_checkpointing: false,
             enable_git_checkpointing: false,
             state_scratchpad_path: None,
+            enable_permission_architecture,
+            permissive_mode,
             workspace_path: None,
             thread_id: None,
             resume_from_checkpoint_id: None,
@@ -691,6 +696,8 @@ impl AgentService for AgentServiceImpl {
                 None
             };
 
+            let enable_permission_architecture = sub_req.runtime_config.as_ref().map(|c| c.enable_permission_architecture).unwrap_or(false);
+            let permissive_mode = sub_req.runtime_config.as_ref().map(|c| c.permissive_mode).unwrap_or(false);
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
                 max_retries: 2,
@@ -732,6 +739,8 @@ impl AgentService for AgentServiceImpl {
                 enable_state_checkpointing: false,
                 enable_git_checkpointing: false,
                 state_scratchpad_path: None,
+                enable_permission_architecture,
+                permissive_mode,
                 workspace_path: None,
                 thread_id: None,
                 resume_from_checkpoint_id: None,

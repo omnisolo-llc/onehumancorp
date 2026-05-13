@@ -49,6 +49,8 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_context_compaction: bool,
     pub compaction_threshold_tokens: i32,
     pub enable_llm_judge: bool,
+    pub enable_permission_architecture: bool,
+    pub permissive_mode: bool,
     pub enable_computational_guides: bool,
     pub computational_guide_command: String,
     pub enable_visual_verification: bool,
@@ -98,6 +100,8 @@ enable_llmcompiler_plan_and_execute: false,
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
             enable_llm_judge: false,
+            enable_permission_architecture: false,
+            permissive_mode: false,
             enable_computational_guides: false,
             computational_guide_command: String::new(),
             enable_visual_verification: false,
@@ -2266,6 +2270,15 @@ impl Agent {
         // Stage 1: Trust establishment at project load
         if !cfg.project_trusted && !is_read_only {
             return Err(ToolError::Fatal("Project not trusted. Mutating tools are disabled.".to_string()));
+        }
+
+        // Architectural Decision 5: Permission Architecture: Permissive (auto-approve) vs Restrictive (require approval).
+        if cfg.enable_permission_architecture {
+            if cfg.permissive_mode {
+                // auto-approve, do nothing
+            } else if !is_read_only && !cfg.approved_tool_calls.contains(&tc.id) {
+                return Err(ToolError::UserFixable(format!("Tool '{}' is mutating and requires explicit user approval under restrictive permission architecture.", tc.name)));
+            }
         }
 
         // Stage 2: Permission check before each tool call
@@ -5265,4 +5278,130 @@ mod stream_tests {
         let rewind_emitted = events.iter().any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
+    }
+
+    #[tokio::test]
+    async fn test_permission_architecture_restrictive() {
+        use crate::tools::{Tool, ToolExecutor};
+        use crate::types::{ChatRequest, ChatResponse, Usage, ToolCall, ToolError, Message, Role};
+        struct MutatingToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for MutatingToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("Mutating tool executed".to_string())
+            }
+        }
+
+        let mutating_tool = Tool {
+            name: "mutating_tool".to_string(),
+            description: "A mutating tool".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({"type": "object"}),
+            execute: Arc::new(MutatingToolExecutor),
+        };
+
+        struct MockClient {
+            requests: tokio::sync::Mutex<Vec<ChatRequest>>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockClient {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                self.requests.lock().await.push(req.clone());
+
+                Ok(ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_1".to_string(),
+                            name: "mutating_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("id1".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("id1".to_string()),
+                })
+            }
+        }
+
+        let client = Arc::new(MockClient { requests: tokio::sync::Mutex::new(vec![]) });
+        let agent = Agent::new(client, vec![mutating_tool]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_permission_architecture = true;
+        cfg.permissive_mode = false;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Run mutating tool", &mut on_event).await;
+
+        assert!(result.is_err(), "Run should fail since user approval is required");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("USER_FIXABLE"));
+        assert!(err_msg.contains("mutating and requires explicit user approval under restrictive permission architecture"));
+    }
+
+    #[tokio::test]
+    async fn test_permission_architecture_permissive() {
+        use crate::tools::{Tool, ToolExecutor};
+        use crate::types::{ChatRequest, ChatResponse, Usage, ToolError, Message, Role};
+        struct MutatingToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for MutatingToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("Mutating tool executed".to_string())
+            }
+        }
+
+        let mutating_tool = Tool {
+            name: "mutating_tool".to_string(),
+            description: "A mutating tool".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({"type": "object"}),
+            execute: Arc::new(MutatingToolExecutor),
+        };
+
+        struct MockClient {
+            responses: tokio::sync::Mutex<Vec<ChatResponse>>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockClient {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut resps = self.responses.lock().await;
+                Ok(resps.remove(0))
+            }
+        }
+
+        let client = Arc::new(MockClient { responses: tokio::sync::Mutex::new(vec![ChatResponse {
+            message: Message {
+                role: Role::Assistant,
+                content: "".to_string(),
+                tool_calls: vec![crate::types::ToolCall {
+                    id: "call_1".to_string(),
+                    name: "mutating_tool".to_string(),
+                    arguments: serde_json::json!({}),
+                }],
+                tool_results: vec![],
+                response_id: Some("id1".to_string()),
+                previous_response_id: None,
+            },
+            usage: Usage::default(),
+            stop_reason: "tool_calls".to_string(),
+            response_id: Some("id1".to_string()),
+        }, ChatResponse { message: Message::assistant("Final Answer"), usage: Usage::default(), stop_reason: "stop".to_string(), response_id: Some("id2".to_string()) }]) });
+        let agent = Agent::new(client, vec![mutating_tool]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_permission_architecture = true;
+        cfg.permissive_mode = true;
+
+        let result = agent.run(&cfg, "Run mutating tool", &mut |_| {}).await;
+        assert!(result.is_ok(), "Run should succeed without user intervention in permissive mode");
     }
