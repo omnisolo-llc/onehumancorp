@@ -61,7 +61,12 @@ CREATE TABLE IF NOT EXISTS agent_missions (
     payload TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     synced_to_cloud BOOLEAN DEFAULT false
-);
+,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    mission_log TEXT,
+    cloud_mission_id TEXT,
+    sync_error TEXT,
+    last_synced_at TIMESTAMPTZ);
 
 CREATE TABLE IF NOT EXISTS agent_status (
     agent_id TEXT PRIMARY KEY REFERENCES agents(id) ON DELETE CASCADE,
