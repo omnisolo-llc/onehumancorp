@@ -12,15 +12,15 @@ backend:
     enabled: true
     minReplicas: 3
     maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "200m"
+      cpu: "100m"
       memory: "256Mi"
     limits:
-      cpu: "1000m"
-      memory: "2Gi"
+      cpu: "500m"
+      memory: "1Gi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -57,14 +57,14 @@ ohcCore:
     enabled: true
     minReplicas: 3
     maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "50m"
       memory: "64Mi"
     limits:
-      cpu: "200m"
+      cpu: "100m"
       memory: "256Mi"
 
 # Redis subchart (Bitnami) – used for session caching and pub/sub
@@ -101,14 +101,14 @@ chatwoot:
     enabled: true
     minReplicas: 1
     maxReplicas: 5
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "500m"
       memory: "512Mi"
     limits:
-      cpu: "1000m"
+      cpu: "500m"
       memory: "1Gi"
   # Admin credentials used by OHC backend to auto-configure the inbox.
   adminEmail: admin@ohc.local
@@ -144,8 +144,8 @@ powersync:
     enabled: true
     minReplicas: 1
     maxReplicas: 5
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "50m"
