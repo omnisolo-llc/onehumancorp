@@ -38,7 +38,7 @@ async fn test_builder_db_crud() {
     // 1. Create Site
     let site = match db::create_site(&pool, tenant_id, Some("test.com".to_string())).await {
         Ok(s) => s,
-        Err(_) => return, // Unmigrated test db
+        Err(e) => panic!("Failed to create site: {}", e), // Unmigrated test db
     };
     assert_eq!(site.domain.as_deref(), Some("test.com"));
 
@@ -87,7 +87,7 @@ async fn test_builder_jobs() {
 
     let site = match db::create_site(&pool, tenant_id, Some("job-test.com".to_string())).await {
         Ok(s) => s,
-        Err(_) => return, // Unmigrated db handling
+        Err(e) => panic!("Failed to create site: {}", e), // Unmigrated db handling
     };
 
     super::jobs::enqueue_publish_site_job(&pool, tenant_id, site.id).await.expect("Failed to enqueue job");
@@ -149,11 +149,11 @@ async fn test_builder_api() {
         .json(&serde_json::json!({"domain": "api-test.com"}))
         .send().await {
             Ok(r) => r,
-            Err(_) => return, // Avoid panic if server fails to start
+            Err(e) => panic!("Failed to create site: {}", e), // Avoid panic if server fails to start
         };
 
-    if res.status() == 500 {
-        return; // Early return if DB is not migrated
+    if res.status() == 500 { panic!("DB is not migrated");
+
     }
 
     assert_eq!(res.status(), 200);
@@ -247,7 +247,7 @@ async fn test_builder_generate_and_publish_draft() {
         .json(&serde_json::json!({"description": "I am a handyman"}))
         .send().await {
             Ok(r) => r,
-            Err(_) => return,
+            Err(e) => panic!("Failed to create site: {}", e),
         };
 
 
