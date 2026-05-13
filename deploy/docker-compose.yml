@@ -28,6 +28,7 @@ services:
       context: ..
       dockerfile: deploy/docker/ohc-core/Dockerfile
     environment:
+      LOG_FORMAT: "json"
       LOG_LEVEL: "info"
       LISTEN_ADDR: "0.0.0.0:18789"
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
@@ -56,6 +57,7 @@ services:
           memory: 64M
     image: onehumancorp/server:latest
     environment:
+      LOG_FORMAT: "json"
       LOG_LEVEL: "info"
       REDIS_ADDR: redis:6379
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
@@ -271,8 +273,11 @@ services:
         max-size: "10m"
         max-file: "3"
     image: prom/prometheus:latest
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--enable-feature=agent'
     volumes:
-      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
     deploy:
@@ -291,6 +296,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      GF_LOG_CONSOLE_FORMAT: "json"
       LOG_LEVEL: "info"
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin

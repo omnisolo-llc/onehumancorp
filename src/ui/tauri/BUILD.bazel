@@ -1,0 +1,130 @@
+# Tauri v2 Desktop Application
+# Build with: cd src/ui/tauri && cargo build --release
+# Or use: bazel run //src/ui/tauri:app
+
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+
+genrule(
+    name = "tauri_context",
+    srcs = [
+        "tauri.conf.json",
+        "capabilities/default.json",
+        "next_out/index.html",
+    ],
+    outs = [
+        "tauri_out/acl-manifests.json",
+        "tauri_out/capabilities.json",
+        "context/index.html",
+        "tauri-build-context.rs",
+        "tauri_config.json",
+    ],
+    cmd = """
+mkdir -p $(@D)/tauri_out $(@D)/context
+cp $(location capabilities/default.json) $(@D)/tauri_out/capabilities.json
+cp $(location next_out/index.html) $(@D)/context/index.html
+cp $(location tauri.conf.json) $(@D)/tauri_config.json
+cat > $(@D)/tauri_out/acl-manifests.json << 'ACL_EOF'
+{
+  "core": {
+    "default_permission": {
+      "identifier": "default",
+      "description": "Default core permissions.",
+      "permissions": ["default"]
+    },
+    "permissions": {},
+    "permission_sets": {},
+    "global_scope_schema": null
+  },
+  "shell": {
+    "default_permission": null,
+    "permissions": {},
+    "permission_sets": {},
+    "global_scope_schema": null
+  }
+}
+ACL_EOF
+cat > $(@D)/tauri-build-context.rs << 'CTX_EOF'
+use tauri::Context;
+use tauri::utils::acl::manifest::Manifest;
+use tauri::utils::config::Config;
+use std::collections::BTreeMap;
+use std::borrow::Cow;
+
+pub fn tauri_context() -> Context<tauri::Wry> {
+    let config: Config = serde_json::from_str(include_str!("tauri_config.json")).expect("failed to parse tauri_config.json");
+    let assets = TauriAssets {};
+    let package_info = tauri::PackageInfo {
+        name: "app".into(),
+        version: "0.1.0".parse().expect("invalid version"),
+        authors: "",
+        description: "",
+        crate_name: "app",
+    };
+    let pattern = tauri::Pattern::Brownfield;
+    let runtime_authority = tauri::ipc::RuntimeAuthority::new(
+        BTreeMap::new(),
+        tauri::utils::acl::resolved::Resolved::default(),
+    );
+    Context::new(
+        config,
+        Box::new(assets),
+        None,
+        None,
+        package_info,
+        pattern,
+        runtime_authority,
+        None,
+    )
+}
+
+struct TauriAssets;
+impl<R: tauri::Runtime> tauri::Assets<R> for TauriAssets {
+    fn get(&self, key: &tauri::utils::assets::AssetKey) -> Option<Cow<[u8]>> {
+        if key.as_ref() == "index.html" {
+            Some(Cow::Owned(include_bytes!("context/index.html").to_vec()))
+        } else {
+            None
+        }
+    }
+    fn iter(&self) -> Box<dyn Iterator<Item = (Cow<'_, str>, Cow<'_, [u8]>)> + '_> {
+        Box::new(std::iter::empty())
+    }
+    fn setup(&self, _app: &tauri::App<R>) {
+    }
+    fn csp_hashes(&self, _key: &tauri::utils::assets::AssetKey) -> Box<dyn Iterator<Item = tauri::utils::assets::CspHash<'_>> + '_> {
+        Box::new(std::iter::empty())
+    }
+}
+CTX_EOF
+""",
+)
+
+rust_library(
+    name = "app_lib",
+    srcs = ["src/lib.rs"],
+    edition = "2024",
+    compile_data = [
+        ":tauri_context",
+    ],
+    deps = [
+        "@crates//:tauri",
+        "@crates//:tauri-plugin-shell",
+        "@crates//:serde",
+        "@crates//:serde_json",
+    ],
+    rustc_env = {
+        "TAURI_ENV_TARGET_TRIPLE": "x86_64-unknown-linux-gnu",
+        "OUT_DIR": "bazel-out/k8-fastbuild/bin/src/ui/tauri",
+    },
+    visibility = ["//visibility:public"],
+)
+
+rust_binary(
+    name = "app",
+    srcs = ["src/main.rs"],
+    edition = "2024",
+    deps = [
+        ":app_lib",
+    ],
+    visibility = ["//visibility:public"],
+)
