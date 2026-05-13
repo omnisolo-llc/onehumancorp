@@ -41,10 +41,10 @@ impl TwilioClientWrapper for RealTwilioClient {
                 if resp.status().is_success() {
                     Ok(())
                 } else {
-                    Err(format!("Twilio API error: {}", resp.status()))
+                    Err(format!("We had trouble sending your message via Twilio (code {}). Please check your connection or try again later.", resp.status()))
                 }
             }
-            Err(e) => Err(format!("Network error: {}", e)),
+            Err(e) => Err(format!("We couldn't connect to send your message: {}", e)),
         }
     }
 }

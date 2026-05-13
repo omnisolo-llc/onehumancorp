@@ -140,8 +140,8 @@ impl MinimaxClient {
                         }
                         cb.record_failure();
                         let status = resp.status();
-                        let text = resp.text().await.unwrap_or_default();
-                        last_err = format!("API error (status {}): {}", status, text);
+                        let _text = resp.text().await.unwrap_or_default();
+                        last_err = format!("We couldn't reach our intelligence service right now (code {}). Please try again in a few moments.", status);
                         tokio::time::sleep(Duration::from_secs(1)).await;
                         continue;
                     }
@@ -203,7 +203,7 @@ impl MinimaxClient {
                             continue;
                         }
                         cb.record_failure();
-                        last_err = format!("API error (status {})", resp.status());
+                        last_err = format!("We couldn't reach our intelligence service right now (code {}). Please try again in a few moments.", resp.status());
                         tokio::time::sleep(Duration::from_secs(1)).await;
                         continue;
                     }
@@ -256,7 +256,7 @@ impl LocalLLMClient {
             .map_err(|e| e.to_string())?;
 
         if !resp.status().is_success() {
-            return Err(format!("local LLM error (status {})", resp.status()));
+            return Err(format!("We had trouble communicating with the local intelligence service (code {}). Please try again later.", resp.status()));
         }
 
         let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
@@ -278,7 +278,7 @@ impl LocalLLMClient {
             .map_err(|e| e.to_string())?;
 
         if !resp.status().is_success() {
-            return Err(format!("local LLM embedding error (status {})", resp.status()));
+            return Err(format!("We had trouble communicating with the local intelligence service for embedding (code {}). Please try again later.", resp.status()));
         }
 
         let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
