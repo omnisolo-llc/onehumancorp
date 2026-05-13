@@ -115,8 +115,26 @@ impl DB {
                 }
             }
 
+            // Always ensure the file exists beforehand so we do not pass .create_if_missing(true) to sqlx, which could bypass secure initialization.
+            if let Some(path_str) = path_str_opt {
+                let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
+                if !db_path.exists() {
+                    let _ = std::fs::File::create(&db_path);
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        if let Ok(file) = std::fs::OpenOptions::new().write(true).open(&db_path) {
+                            if let Ok(metadata) = file.metadata() {
+                                let mut perms = metadata.permissions();
+                                perms.set_mode(0o600);
+                                let _ = file.set_permissions(perms);
+                            }
+                        }
+                    }
+                }
+            }
+
             let mut conn_opts = SqliteConnectOptions::from_str(&database_url)?
-                .create_if_missing(true)
                 .extension("sqlite_vec");
 
             // Enforce SQLCipher for Standalone mode unconditionally
