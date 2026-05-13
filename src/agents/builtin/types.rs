@@ -161,3 +161,13 @@ impl std::fmt::Display for ToolError {
 }
 
 impl std::error::Error for ToolError {}
+
+/// Permission Architecture Mode
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq, Default)]
+pub enum PermissionMode {
+    /// Permissive (auto-approve): All tools, including mutating tools, are executed without explicit user approval.
+    #[default]
+    Permissive,
+    /// Restrictive (require approval): Mutating tools require explicit user approval before execution.
+    Restrictive,
+}
