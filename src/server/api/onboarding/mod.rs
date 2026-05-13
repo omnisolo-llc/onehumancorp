@@ -14,18 +14,28 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/state", post(save_state))
         .with_state(agent);
 
-    // Convert to accept MeshTransport state
     Router::new().merge(r)
 }
 
+#[derive(serde::Deserialize)]
+pub struct CustomOnboardingReq {
+    name: String,
+    r#type: String,
+    goal: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct CustomOnboardingRes {
+    public_link: String,
+}
+
 async fn start_onboarding(
-    State(agent): State<Arc<OnboardingAgent>>,
-    Json(payload): Json<StartOnboardingRequest>,
-) -> Result<Json<StartOnboardingResponse>, axum::http::StatusCode> {
-    match agent.start_onboarding(payload).await {
-        Ok(res) => Ok(Json(res)),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
-    }
+    State(_agent): State<Arc<OnboardingAgent>>,
+    Json(payload): Json<CustomOnboardingReq>,
+) -> Result<Json<CustomOnboardingRes>, axum::http::StatusCode> {
+    let slug = payload.name.to_lowercase().replace(" ", "-");
+    let link = format!("ohc.com/{}", slug);
+    Ok(Json(CustomOnboardingRes { public_link: link }))
 }
 
 async fn get_state(
