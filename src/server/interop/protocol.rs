@@ -12,6 +12,7 @@ pub mod proto {
 pub struct InteropProtocol {
     bus: Arc<dyn Bus>,
     lock: Arc<dyn DistributedLock>,
+    queue: Option<Arc<dyn crate::queue::TaskQueue>>,
     node_id: String,
 }
 
@@ -20,8 +21,14 @@ impl InteropProtocol {
         Self {
             bus,
             lock,
+            queue: None,
             node_id,
         }
+    }
+
+    pub fn with_queue(mut self, queue: Arc<dyn crate::queue::TaskQueue>) -> Self {
+        self.queue = Some(queue);
+        self
     }
 
     /// Triggers a state handoff when switching modes using protobuf on the wire
@@ -279,38 +286,89 @@ impl InteropProtocol {
     pub async fn listen_for_jobs(&self, tenant_id: &str) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let node_id = self.node_id.clone();
         let bus = self.bus.clone();
+        let queue = self.queue.clone();
 
         let handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_dispatch:") {
                 use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::JobDispatch::decode(&msg.payload[..]) {
-                    // In a real implementation, we would process the job here or send it to a worker pool
-                    // Here, we just acknowledge receipt
-                    let ack = proto::JobAck {
-                        job_id: decoded.job_id.clone(),
-                        node_id: node_id.clone(),
-                        timestamp_ms: chrono::Utc::now().timestamp_millis(),
-                    };
-                    let mut buf = Vec::new();
-                    if ack.encode(&mut buf).is_ok() {
-                        let ack_msg = Message {
-                            topic: format!("system:job_ack:{}", decoded.job_id),
-                            payload: buf,
-                        };
-                        let bus_clone = bus.clone();
+                    let job_id = decoded.job_id.clone();
+                    let tenant_id = decoded.tenant_id.clone();
+                    use base64::Engine;
+                    let payload_str = base64::engine::general_purpose::STANDARD.encode(&decoded.payload);
+
+                    let ack_node_id = node_id.clone();
+                    let ack_bus = bus.clone();
+
+                    if let Some(q) = queue.clone() {
                         tokio::spawn(async move {
-                            // Retry mechanism to ensure ACK reaches the dispatcher
-                            let mut retries = 0;
-                            let mut delay_ms = 50;
-                            while retries < 5 {
-                                if bus_clone.publish(ack_msg.clone()).await.is_ok() {
-                                    break;
+                            let job = crate::queue::Job {
+                                id: job_id.clone(),
+                                tenant_id: tenant_id,
+                                parent_task_id: "".to_string(),
+                                agent_role: "builtin".to_string(),
+                                payload: payload_str,
+                                status: "QUEUED".to_string(),
+                                attempts: 0,
+                                max_attempts: 3,
+                                run_after: chrono::Utc::now(),
+                                locked_until: None,
+                                created_at: chrono::Utc::now(),
+                                updated_at: chrono::Utc::now(),
+                            };
+
+                            // Only acknowledge if enqueue succeeds
+                            if q.enqueue(job).await.is_ok() {
+                                let ack = proto::JobAck {
+                                    job_id: job_id.clone(),
+                                    node_id: ack_node_id,
+                                    timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                                };
+                                let mut buf = Vec::new();
+                                if ack.encode(&mut buf).is_ok() {
+                                    let ack_msg = Message {
+                                        topic: format!("system:job_ack:{}", job_id),
+                                        payload: buf,
+                                    };
+                                    let mut retries = 0;
+                                    let mut delay_ms = 50;
+                                    while retries < 5 {
+                                        if ack_bus.publish(ack_msg.clone()).await.is_ok() {
+                                            break;
+                                        }
+                                        retries += 1;
+                                        tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                                        delay_ms *= 2; // Exponential backoff
+                                    }
                                 }
-                                retries += 1;
-                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                                delay_ms *= 2; // Exponential backoff
                             }
                         });
+                    } else {
+                        // Fallback behavior: just acknowledge receipt if no queue is configured
+                        let ack = proto::JobAck {
+                            job_id: job_id.clone(),
+                            node_id: ack_node_id,
+                            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                        };
+                        let mut buf = Vec::new();
+                        if ack.encode(&mut buf).is_ok() {
+                            let ack_msg = Message {
+                                topic: format!("system:job_ack:{}", job_id),
+                                payload: buf,
+                            };
+                            tokio::spawn(async move {
+                                let mut retries = 0;
+                                let mut delay_ms = 50;
+                                while retries < 5 {
+                                    if ack_bus.publish(ack_msg.clone()).await.is_ok() {
+                                        break;
+                                    }
+                                    retries += 1;
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                                    delay_ms *= 2;
+                                }
+                            });
+                        }
                     }
                 }
             }
@@ -621,6 +679,44 @@ mod tests {
         sleep(Duration::from_millis(200)).await; // longer sleep for retry publish mechanism
 
         assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_listen_for_jobs_with_queue() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let queue = Arc::new(crate::queue::MemoryTaskQueue::new());
+
+        let protocol_listener = InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string())
+            .with_queue(queue.clone());
+
+        let _cancel = protocol_listener.listen_for_jobs("tenant_x").await.unwrap();
+
+        use prost::Message as ProstMessage;
+        let dispatch = proto::JobDispatch {
+            job_id: "job_123_with_queue".to_string(),
+            tenant_id: "tenant_x".to_string(),
+            action_name: "test_action".to_string(),
+            payload: vec![1, 2, 3],
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+
+        let mut buf = Vec::new();
+        dispatch.encode(&mut buf).unwrap();
+
+        let msg = Message {
+            topic: "system:job_dispatch:tenant_x".to_string(),
+            payload: buf,
+        };
+        bus.publish(msg).await.unwrap();
+
+        sleep(Duration::from_millis(200)).await;
+
+        let dequeued_job = crate::queue::TaskQueue::dequeue(&*queue, vec!["builtin".to_string()]).await.unwrap();
+        assert!(dequeued_job.is_some());
+        let job = dequeued_job.unwrap();
+        assert_eq!(job.id, "job_123_with_queue");
+        assert_eq!(job.tenant_id, "tenant_x");
     }
 
     #[tokio::test]
