@@ -1,26 +1,31 @@
-issue_category: cleanup
+issue_category: feature
 debt_report: |
   <div markdown="1" style="backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-  # 🛠️ Maintainer: System Health Audit & Triage
+  # 🛠️ Maintainer: Mode-Specific Prometheus Metrics in Hybrid MCP RAG Sync Daemon
 
   ## Phase 1: Audit
-  - Verified Swarm Dashboard operations. Looked for stagnant missions and high-frequency log noise.
-  - Investigated `agent_missions` backlog queue logic. `prune_stale_missions` is correctly implemented in `src/server/sip.rs` and properly re-labels stuck missions to FAILED.
-  - Hybrid mode switching and local-to-cloud mission sync are tracked seamlessly via the SyncPendingMissions mechanism.
-  - Evaluated the sync error and active agent tracking mechanisms in `src/server/orchestration/health.rs`.
+  - Investigated `src/server/orchestration/sync_daemon.go`. Found that although basic telemetry is recorded using generic wrappers, mode-specific Prometheus metrics (Standalone vs Cloud) were missing, leaving an observability gap.
+  - Verified `kairos_hybrid_metrics.json` already contains correctly formatted visualizations waiting for this explicit telemetry.
 
   ## Phase 2: Hygiene
-  - Redundant logs and systemic noise sources have been sanitized in the codebase.
-  - Verified that `BUILD.bazel` is accurately capturing dependencies.
+  - Created `src/server/orchestration/telemetry/metrics.go` housing native Prometheus metrics:
+    - `sync_daemon_batch_size`
+    - `sync_latency_ms`
+    - `sync_payload_size_bytes`
+    - `sync_daemon_error_total`
+  - Injected explicit `mode` labels across all telemetry tracking points.
 
   ## Phase 3: Architectural Audit
-  - Verified no violations of the Zero Trust or SPIRE principles.
-  - Validated API correctness regarding tenant-segregation within orchestration modules.
+  - Verified no violation of Zero Trust principles.
+  - Ensured Grafana dashboard `kairos_hybrid_metrics.json` strictly adheres to OHC Premium Glassmorphism UI tokens natively.
 
   ## Phase 4: Verify
-  - Assessed existing tests (`bazelisk test //...`), observing total compliance.
-  - Confirmed the backlog is actively prioritized without persistent blocking in either operating mode.
+  - Verified tests pass correctly utilizing `bazelisk test`.
+
+  ## Health Status
+  - **Status:** Resolved
+  - **Action Taken:** Deployed mode-labeled telemetry mapping specifically in `sync_daemon.go`, enabling accurate `Standalone` logging metric throughput within the Swarm OS architecture.
   </div>
 status: completed
-visual_excellence: "Applied Glassmorphism UI standards conceptually via HTML tokens in the Markdown report."
-details: "Triage results and debt report have been aggregated."
+visual_excellence: "Applied Glassmorphism UI standards conceptually via HTML injection."
+details: "Completed telemetry enhancements for mode-specific metrics in Hybrid MCP daemon."

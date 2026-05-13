@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
+	"github.com/onehumancorp/mono/src/server/orchestration/telemetry"
 )
 
 var throttleSemaphore = make(chan struct{}, 10) // Allow up to 10 concurrent syncs
@@ -13,6 +15,7 @@ var throttleSemaphore = make(chan struct{}, 10) // Allow up to 10 concurrent syn
 type HybridMCPRAGDaemon struct {
 	db          *sql.DB
 	remoteURL   string
+	Mode        string
 }
 
 // NewHybridMCPRAGDaemon creates a new instance of HybridMCPRAGDaemon
@@ -20,14 +23,21 @@ func NewHybridMCPRAGDaemon(db *sql.DB, remoteURL string) *HybridMCPRAGDaemon {
 	return &HybridMCPRAGDaemon{
 		db:          db,
 		remoteURL:   remoteURL,
+		Mode:        "Standalone", // Default to Standalone
 	}
 }
 
 // SyncPendingMissions queries the database for agent_missions with status 'CLOUD_ESCALATION' or 'BURSTING'
 // and synced_to_cloud = false, then attempts to sync them to the remote API.
 func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
+	mode := d.Mode
+	if mode == "" {
+		mode = "Standalone"
+	}
+
 	rows, err := d.db.QueryContext(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes')) LIMIT 100")
 	if err != nil {
+		telemetry.RecordSyncDaemonError(mode, "query_error")
 		return fmt.Errorf("sync_daemon: failed to query agent_missions: %w", err)
 	}
 
@@ -53,8 +63,12 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 	rows.Close()
 
 	var syncedCount int
+	telemetry.RecordSyncDaemonBatchSize(mode, len(missions))
 
 	for _, m := range missions {
+		start := time.Now()
+		telemetry.RecordSyncPayloadSize(mode, float64(len(m.payload)))
+
 		select {
 		case throttleSemaphore <- struct{}{}:
 			// Acquired semaphore
@@ -68,9 +82,13 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		if err != nil {
 			// Release semaphore on error
 			<-throttleSemaphore
+			telemetry.RecordSyncDaemonError(mode, "api_error")
 			_, _ = d.db.ExecContext(ctx, "UPDATE agent_missions SET sync_error = $1, last_synced_at = datetime('now') WHERE id = $2", err.Error(), m.id)
 			continue
 		}
+
+		latency := float64(time.Since(start).Milliseconds())
+		telemetry.RecordSyncLatency(mode, latency)
 
 		// Mark as synced locally
 		_, err = d.db.ExecContext(ctx, "UPDATE agent_missions SET synced_to_cloud = true WHERE id = $1", m.id)
