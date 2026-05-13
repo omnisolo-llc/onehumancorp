@@ -1,0 +1,12 @@
+openapi: 3.0.0
+info:
+  title: OHC Advanced API
+  version: 1.0.0
+  description: API reference for advanced users to connect custom systems.
+paths:
+  /checkout:
+    post:
+      summary: Create a custom checkout session
+      responses:
+        '200':
+          description: OK
