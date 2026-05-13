@@ -104,9 +104,7 @@ function cleanup {
   # Resource Cleanup: Clean additional temporary artifact directories
   echo -e "${DIM}  Cleaning temporary artifacts...${RESET}"
   rm -rf "${OHC_STATUS_DIR}"/* 2>/dev/null || true
-  find "${OHC_RUNTIME_DIR}/tmp/" -type f -delete > /dev/null 2>&1 || true
-  find "${OHC_RUNTIME_DIR}/.cache/" -type f -delete > /dev/null 2>&1 || true
-  find "${OHC_RUNTIME_DIR}/downloads/" -type f -delete > /dev/null 2>&1 || true
+  rm -rf "${OHC_RUNTIME_DIR}/tmp/"* "${OHC_RUNTIME_DIR}/.cache/"* "${OHC_RUNTIME_DIR}/downloads/"* > /dev/null 2>&1 || true
 
   docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
   docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
