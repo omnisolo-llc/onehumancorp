@@ -1,0 +1,10 @@
+--- srcs/server/orchestration/sync_daemon.go
++++ srcs/server/orchestration/sync_daemon.go
+@@ -189,7 +189,7 @@
+				sanitized, err := sanitizePayload(task.Payload)
+				if err != nil {
+-					log.Printf("Error sanitizing payload for task %s: %v", task.ID, err)
++					log.Printf("Error sanitizing task data for task %s: %v", task.ID, err)
+				} else {
+					task.Payload = sanitized
+				}

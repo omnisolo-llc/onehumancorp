@@ -1,0 +1,40 @@
+--- srcs/server/tools/statesyncmcp/mcp.go
++++ srcs/server/tools/statesyncmcp/mcp.go
+@@ -62,31 +62,31 @@
+
+	provider := s.hub.StateSync()
+	if provider == nil {
+-		return nil, errors.New("StateSync provider not available in this environment")
++		return nil, errors.New("state sync provider not configured")
+	}
+
+	switch name {
+	case "sync_local_to_cloud":
+		count, err := provider.SyncUp(ctx, claims.OrganizationID)
+		if err != nil {
+-			return nil, fmt.Errorf("sync up failed: %w", err)
++			return nil, fmt.Errorf("sync_local_to_cloud failed: %w", err)
+		}
+		return map[string]interface{}{
+			"status": "success",
+-			"synced": count,
++			"synced_count": count,
+		}, nil
+	case "sync_cloud_to_local":
+		count, err := provider.SyncDown(ctx, claims.OrganizationID)
+		if err != nil {
+-			return nil, fmt.Errorf("sync down failed: %w", err)
++			return nil, fmt.Errorf("sync_cloud_to_local failed: %w", err)
+		}
+		return map[string]interface{}{
+			"status": "success",
+-			"synced": count,
++			"synced_count": count,
+		}, nil
+	case "get_sync_status":
+		status, err := provider.GetStatus(ctx, claims.OrganizationID)
+		if err != nil {
+-			return nil, fmt.Errorf("failed to get status: %w", err)
++			return nil, fmt.Errorf("get_sync_status failed: %w", err)
+		}
+		return status, nil
