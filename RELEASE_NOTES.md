@@ -1,3 +1,11 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimized Docker socket mounting for Bazel CI test environment.
+
+### Privacy/Offline Improvements
+- Enhanced local hybrid test verification.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
