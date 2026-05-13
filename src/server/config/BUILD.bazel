@@ -1,0 +1,13 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "server_config",
+    srcs = ["mod.rs"],
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:config",
+        "@crates//:serde",
+        "@crates//:tracing",
+    ],
+)
