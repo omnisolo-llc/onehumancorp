@@ -1629,21 +1629,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('api-screen')">Software</a>
                     </nav>
 
-                    <!-- Login Screen -->
-                    <div id="login-screen" class="screen glass">
-                        <h1>Login</h1>
-                        <h1>One Human Corp</h1>
-                        <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
-                        <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleLogin(this)">Fix App Issues</button>
-                        <button onclick="handleLogin(this)">Sign In</button>
-                        <button onclick="handleLogin(this)">Login</button>
-                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
-                        <button class="secondary">Use Google or Apple</button>
-                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
-                    </div>
 
                     <!-- Signup Screen -->
                     <div id="signup-screen" class="screen glass">
@@ -1669,8 +1654,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Update Setup</button>
+                            <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="toggleMenu()">Menu</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Agent Activity</h3>
+                            <div id="agent-activity-feed">
+                                <p>No recent activity.</p>
+                            </div>
+                            <button onclick="simulateOrder()">Simulate Order</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
@@ -1715,6 +1708,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Read Product List</p>
                         <p>Manage your custom software connections here.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Settings Screen -->
+                    <div id="settings-screen" class="screen">
+                        <h1>Settings</h1>
+                        <h2>General</h2>
+                        <label><input type="checkbox"> Enable Email Notifications</label>
+                        <label><input type="checkbox"> Enable Push Notifications</label>
+                        <p>Timezone</p>
+                        <select><option>UTC</option><option>EST</option></select>
+                        <p>Language</p>
+                        <select><option>English</option><option>Spanish</option></select>
+                        <p>Theme</p>
+                        <button onclick="document.body.className='dark-theme'">Dark</button>
+                        <button onclick="document.body.className='light-theme'">Light</button>
+                        <p>Date Format</p>
+                        <select><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option></select>
+                        <button onclick="alert('Settings saved!'); showScreen('dashboard-screen')">Save</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
+
+                        <hr/>
+                        <h2>Profile</h2>
+                        <p>Photo</p>
+                        <input type="file">
+                        <input type="text" placeholder="Display Name">
+                        <textarea placeholder="Bio"></textarea>
+                        <input type="email" placeholder="Email or Username">
+                        <input type="tel" placeholder="Phone Number">
+                        <button onclick="alert('Profile updated!')">Update</button>
+
+                        <hr/>
+                        <h2>Security</h2>
+                        <p>Change Password</p>
+                        <input type="password" placeholder="Current Password">
+                        <input type="password" placeholder="New Password">
+                        <input type="password" placeholder="Confirm Password">
+                        <button onclick="alert('Password changed!')">Change</button>
                     </div>
 
                     <!-- Pricing Page -->
@@ -1861,41 +1891,52 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <input type="text" placeholder="What is your business called?" />
+                            <button onclick="nextStep('generating')">Generate Description</button>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
-                            <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
-                            <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
-                            <br/><button class="secondary" onclick="nextStep(3)">Back</button>
+                            <label><input type="checkbox"> Physical Products</label>
+                            <label><input type="checkbox"> Services / Appointments</label>
+                            <label><input type="checkbox"> Subscriptions</label>
+                            <br/><button onclick="nextStep(5)">Next →</button>
+                            <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
                         <div id="step-5" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
-                            <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(4)">Back</button>
+                            <h1>Add your first product or service</h1>
+                            <input type="text" placeholder="What is the name of this product?" />
+                            <input type="text" placeholder="0.00" />
+                            <button onclick="nextStep('generating')">Generate AI Description</button>
+                            <button onclick="nextStep(6)">Next →</button>
+                            <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
                         <div id="step-6" style="display: none;">
+                            <h1>How do you want to receive payments?</h1>
+                            <button class="secondary" onclick="nextStep(7)">Online</button>
+                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
+                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
+                        </div>
+                        <div id="step-7" style="display: none;">
                             <h1>Create your account</h1>
                             <input type="text" placeholder="e.g. Maya Smith" />
                             <input type="email" placeholder="you@email.com" />
                             <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(7)">Next →</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
-                            <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
+                            <button onclick="nextStep(8)">Next →</button>
                         </div>
                         <div id="step-8" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
-                            <input type="text" placeholder="e.g. 50.00" />
-                            <button onclick="nextStep(9)">Next →</button>
+                            <h1>Choose a Template</h1>
+                            <h1>Select a Template</h1>
+                            <button class="secondary" onclick="nextStep(9)">Modern</button>
+                            <button class="secondary" onclick="nextStep(9)">Bold</button>
+                        </div>
+                        <div id="step-9" style="display: none;">
+                            <h1>Choose a Domain</h1>
+                            <h1>Choose your domain</h1>
+                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <br/><button onclick="nextStep(10)">Next →</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose a Domain</h1>
@@ -1910,8 +1951,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-100" style="display: none;">
                             <h1>CONFETTI SUCCESS</h1>
                             <p>Your business is now live!</p>
-                            <button onclick="nextStep(101)">View Welcome Checklist →</button>
+                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                        </div>
+
+                        <div id="checklist-screen" class="screen">
+                            <h1>You're set up! Here's what to do next:</h1>
+                            <p>✅ Business live</p>
+                            <p>⬜ Add 3 more products</p>
+                            <p>⬜ Connect Instagram</p>
+                            <p>⬜ Share your link with a friend</p>
+                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
                         <div id="step-101" style="display: none;">
                             <h1>You're set up! Here's what to do next:</h1>
@@ -1940,17 +1990,41 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
+                    <!-- Login Screen -->
+                    <div id="login-screen" class="screen glass">
+                        <h1>Login</h1>
+                        <h1>One Human Corp</h1>
+                        <p>Sign in to manage your business</p>
+                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
+                        <input type="email" placeholder="Email or Username" />
+                        <input type="password" placeholder="Password" />
+                        <button onclick="handleLogin(this)">Fix App Issues</button>
+                        <button onclick="handleLogin(this)">Sign In</button>
+                        <button onclick="handleLogin(this)">Login</button>
+                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
+                        <button class="secondary">Use Google or Apple</button>
+                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
+                    </div>
+
                     <script>
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
                             
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
+                        }
+
+                        function simulateOrder() {
+                            const feed = document.getElementById('agent-activity-feed');
+                            feed.innerHTML = '<p>Operations processed OrderReceived</p>';
+                            setTimeout(() => {
+                                feed.innerHTML += '<p>Customer Success drafted confirmation</p>';
+                            }, 500);
                         }
 
                         function handleLogin(btn) {
@@ -2014,6 +2088,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 showScreen('scaling-screen');
                             } else if (path === '/business-setup') {
                                 showScreen('setup-screen');
+                            } else if (path === '/settings' || path === '/settings/profile' || path === '/settings/security') {
+                                showScreen('settings-screen');
                             } else if (path === '/checkout') {
                                 showScreen('checkout-screen');
                             } else {
