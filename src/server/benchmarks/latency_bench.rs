@@ -119,14 +119,9 @@ pub async fn bench_api_response_time() {
 }
 
 pub async fn bench_dashboard_snapshot() {
-    println!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-
-    if database_url == "postgres://localhost/dummy" {
-        return;
-    }
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
@@ -328,13 +323,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        println!("DEBUG: db_url = {}", db_url);
-        if db_url == "dummy" {
-            println!("DEBUG: skipping because db_url is dummy");
-            return;
-        }
-        println!("RUNNING BENCHMARK DASHBOARD SNAPSHOT");
         bench_dashboard_snapshot().await;
     }
 
