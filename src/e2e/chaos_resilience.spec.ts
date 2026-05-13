@@ -3,8 +3,8 @@ import { test, expect } from '@playwright/test';
 test.describe('E2E Chaos Resilience', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');
-    await page.locator('input[type="email"]').fill('test@example.com');
-    await page.locator('input[type="password"]').fill('password123');
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().fill('password123');
     await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
     await page.waitForURL('**/dashboard**');
   });
@@ -80,9 +80,9 @@ test.describe('E2E Chaos Resilience', () => {
   test('should enforce tenant isolation in records during concurrent access', async ({ page, context }) => {
     // This test simulates two tenants accessing the records at the same time
     await page.goto('/login');
-    await page.locator('input[type="email"]').fill('tenant1@example.com');
-    await page.locator('input[type="password"]').fill('password123');
-    await page.locator('button:has-text("Login")').click();
+    await page.getByPlaceholder('Email or Username').first().fill('tenant1@example.com');
+    await page.locator('input[type="password"]').first().fill('password123');
+    await page.locator('button:has-text("Login")').first().click();
     await page.waitForURL('**/dashboard**');
 
     await page.locator('button:has-text("Records")').click();

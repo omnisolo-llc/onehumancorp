@@ -4,9 +4,9 @@ test('verify omnichannel inbox AI draft flow', async ({ page }) => {
     // 1. Login and navigate to Check Messages to open the unified inbox
     await page.goto('/login');
 
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.locator('button:has-text("Login")').first().click();
 
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
 
@@ -33,9 +33,9 @@ test('verify inbox mobile layout constraints', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/login');
 
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.locator('button:has-text("Login")').first().click();
 
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
 
@@ -53,9 +53,9 @@ test('verify inbox mobile layout constraints', async ({ page }) => {
 test('verify quick reply usage', async ({ page }) => {
     await page.goto('/login');
 
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.locator('button:has-text("Login")').first().click();
 
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
 
@@ -72,9 +72,9 @@ test('verify quick reply usage', async ({ page }) => {
 test('verify sending custom message clears input', async ({ page }) => {
     await page.goto('/login');
 
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.locator('button:has-text("Login")').first().click();
 
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
 
@@ -93,9 +93,9 @@ test('verify sending custom message clears input', async ({ page }) => {
 test('verify empty state when no conversation is selected', async ({ page }) => {
     await page.goto('/login');
 
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.locator('button:has-text("Login")').first().click();
 
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
 
@@ -108,9 +108,9 @@ test('verify empty state when no conversation is selected', async ({ page }) => 
 test('verify connecting social media creates inbox conversation and allows reply', async ({ page }) => {
     await page.goto('/login');
 
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.locator('button:has-text("Login")').first().click();
 
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
 

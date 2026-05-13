@@ -403,7 +403,6 @@ mod tests {
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "test-key"); }
         let db = Arc::new(crate::db::DB::new().await.unwrap());
         let transport = Arc::new(MemoryTransport::new());
         let mesh = Arc::new(CentrifugeNode::new(transport));

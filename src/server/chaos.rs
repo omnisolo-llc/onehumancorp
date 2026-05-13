@@ -475,8 +475,8 @@ mod tests {
         let sp99 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[(standalone_latencies.len() as f64 * 0.99) as usize] };
         tracing::info!("Standalone Stress Results: p50={}us, p95={}us, p99={}us", sp50, sp95, sp99);
 
-        assert!(cp50 >= 0);
-        assert!(sp50 >= 0);
+        let _ = cp50;
+        let _ = sp50;
     }
 
     #[tokio::test]
