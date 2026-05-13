@@ -71,6 +71,8 @@ impl AgentMemoryPipeline {
                         .await?;
                 }
                 DbStore::Postgres => {
+                    let mut tx = self.db.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
                     sqlx::query("INSERT INTO agent_memory_embeddings (id, organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
                         .bind(mem_id)
                         .bind("system")
@@ -78,8 +80,9 @@ impl AgentMemoryPipeline {
                         .bind("SESSION_DATA")
                         .bind(&context_data)
                         .bind(&emb_str)
-                        .execute(&self.db.pool)
+                        .execute(&mut *tx)
                         .await?;
+                    tx.commit().await?;
                 }
             }
 
@@ -124,6 +127,8 @@ impl AgentMemoryPipeline {
                                     .await?;
                             }
                             DbStore::Postgres => {
+                                let mut tx = self.db.pool.begin().await?;
+                                ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
                                 sqlx::query("INSERT INTO agent_memory_embeddings (id, organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
                                     .bind(mem_id)
                                     .bind("system")
@@ -131,8 +136,9 @@ impl AgentMemoryPipeline {
                                     .bind("FS_MEMORY")
                                     .bind(&content)
                                     .bind(&emb_str)
-                                    .execute(&self.db.pool)
+                                    .execute(&mut *tx)
                                     .await?;
+                                tx.commit().await?;
                             }
                         }
 
@@ -193,7 +199,6 @@ mod tests {
         let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
-            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) })
             .connect(database_url)
             .await;
 
