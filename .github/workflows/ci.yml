@@ -65,7 +65,7 @@ jobs:
             test --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
-            # test --sandbox_add_mount_pair=/var/run/docker.sock
+            test --sandbox_add_mount_pair=/var/run/docker.sock
 
       - name: Cache Playwright browsers
         uses: actions/cache@v5
@@ -133,7 +133,7 @@ jobs:
             test --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
-            # test --sandbox_add_mount_pair=/var/run/docker.sock
+            test --sandbox_add_mount_pair=/var/run/docker.sock
 
       - name: Build all artifacts
         run: |
@@ -184,7 +184,7 @@ jobs:
   #           test --build_metadata=ROLE=CI
   #           build --color=yes
   #           build --show_timestamps
-  #           # test --sandbox_add_mount_pair=/var/run/docker.sock
+  #           test --sandbox_add_mount_pair=/var/run/docker.sock
 
   #     - name: Build server
   #       run: bazelisk build //src/server:server --config=linux
