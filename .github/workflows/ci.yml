@@ -40,11 +40,6 @@ jobs:
         uses: actions/setup-go@v5
         env:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-          PKG_CONFIG_PATH: "/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
-          PKG_CONFIG_ALLOW_SYSTEM_LIBS: "1"
-          PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
-          DBUS_1_NO_PKG_CONFIG: "1"
-          DBUS_1_DYNAMIC: "1"
         with:
           go-version: "1.24"
 
@@ -64,9 +59,8 @@ jobs:
           bazelrc: |
             build --remote_cache=
             test --remote_cache=
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
+            build --config=local
+            test --config=local
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
@@ -82,9 +76,17 @@ jobs:
             ${{ runner.os }}-playwright-
 
       - name: Build release artifacts
+        env:
+          PKG_CONFIG_PATH: "/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
+          PKG_CONFIG_ALLOW_SYSTEM_LIBS: "1"
+          PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
         run: bazelisk build //release:all_release_artifacts --config=linux
 
       - name: Test
+        env:
+          PKG_CONFIG_PATH: "/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
+          PKG_CONFIG_ALLOW_SYSTEM_LIBS: "1"
+          PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
         run: |
           bazelisk test \
             --config=linux \
@@ -114,11 +116,6 @@ jobs:
         uses: actions/setup-go@v5
         env:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-          PKG_CONFIG_PATH: "/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
-          PKG_CONFIG_ALLOW_SYSTEM_LIBS: "1"
-          PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
-          DBUS_1_NO_PKG_CONFIG: "1"
-          DBUS_1_DYNAMIC: "1"
         with:
           go-version: "1.24"
 
@@ -138,9 +135,8 @@ jobs:
           bazelrc: |
             build --remote_cache=
             test --remote_cache=
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
+            build --config=local
+            test --config=local
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
@@ -148,6 +144,10 @@ jobs:
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
       - name: Build all artifacts
+        env:
+          PKG_CONFIG_PATH: "/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
+          PKG_CONFIG_ALLOW_SYSTEM_LIBS: "1"
+          PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
         run: |
           bazelisk build //... --config=linux
           bazelisk build //... --config=windows || echo "Warning: Windows build failed"
