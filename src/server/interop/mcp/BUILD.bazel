@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mcp",
+    srcs = ["log_tool.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/interop/mcp",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "mcp_test",
+    srcs = ["log_tool_test.go"],
+    embed = [":mcp"],
+)
