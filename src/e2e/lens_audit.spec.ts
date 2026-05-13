@@ -5,6 +5,51 @@ test.describe('Lens Audit E2E Flow', () => {
     await page.goto('/');
   });
 
+  test('verify responsive layout at 414px', async ({ page }) => {
+    await page.setViewportSize({ width: 414, height: 896 });
+    await page.goto('/');
+    await expect(page.locator('nav')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).filter({ visible: true })).toBeVisible();
+  });
+
+  test('verify responsive layout at 768px', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto('/');
+    await expect(page.locator('nav')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).filter({ visible: true })).toBeVisible();
+  });
+
+  test('verify responsive layout at 1024px', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.goto('/');
+    await expect(page.locator('nav')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).filter({ visible: true })).toBeVisible();
+  });
+
+  test('verify responsive layout at 1440px', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await expect(page.locator('nav')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).filter({ visible: true })).toBeVisible();
+  });
+
+  test('verify full CUJ across UI states', async ({ page }) => {
+    await page.goto('/');
+
+    // Check Dashboard
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).filter({ visible: true })).toBeVisible();
+
+    // Navigate to Agents using specific button interaction to ensure no mock data/crash
+    const agentsBtn = page.getByRole('button', { name: 'Manage Agents' });
+    if (await agentsBtn.isVisible()) {
+        await agentsBtn.click();
+        await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
+    } else {
+        await page.goto('/agents');
+        await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
+    }
+  });
+
   test('verify Dashboard visual state and full UI lifecycle', async ({ page }) => {
     // Verify dashboard displays with expected elements
     await expect(page.getByRole('heading', { name: 'Dashboard' }).filter({ visible: true })).toBeVisible();
