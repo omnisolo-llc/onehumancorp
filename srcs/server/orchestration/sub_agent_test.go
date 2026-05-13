@@ -271,7 +271,6 @@ func TestTaskOrchestrator_StartBackgroundWorker(t *testing.T) {
 	// Create a delegated task
 	err := store.CreateTask(context.Background(), &SharedTask{
 		ID:       "worker-delegated-1",
-		OrganizationID: "org-1",
 		Status:   "PENDING",
 		Priority: "DELEGATED",
 	})

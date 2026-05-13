@@ -22,7 +22,7 @@ func (f *faultInjectingCloudDB) CreateTask(ctx context.Context, task *SharedTask
 	return nil
 }
 
-func (f *faultInjectingCloudDB) GetTask(ctx context.Context, id string, orgID string) (*SharedTask, error) {
+func (f *faultInjectingCloudDB) GetTask(ctx context.Context, id string) (*SharedTask, error) {
 	if f.fails {
 		return nil, errors.New("simulated network failure")
 	}
@@ -114,7 +114,7 @@ func TestChaosStressVerification(t *testing.T) {
     for i := 0; i < 100; i++ {
         task := &SharedTask{
             ID:             fmt.Sprintf("task-stress-%d", i),
-            OrganizationID: "org-chaos",
+            OrganizationID: "org-stress",
             Title:          "Stress Task",
             Status:         "CLOUD_ESCALATION",
         }

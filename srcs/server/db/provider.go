@@ -16,7 +16,7 @@ type Provider struct {
 	RedisClient *redis.Client
 }
 
-func IsSQLite() bool {
+func (p *Provider) IsSQLite() bool {
 	return os.Getenv("OHC_STANDALONE") == "true"
 }
 
@@ -26,33 +26,33 @@ func (p *Provider) CreateTask(ctx context.Context, task *Task) error {
 	}
 
 	query := `
-		INSERT INTO tasks (id, tenant_id, status, created_at, updated_at)
-		VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		INSERT INTO tasks (id, status, created_at, updated_at)
+		VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 		RETURNING created_at, updated_at
 	`
 	// Handle SQLite differences
-	if IsSQLite() {
+	if p.IsSQLite() {
 		query = `
-			INSERT INTO tasks (id, tenant_id, status, created_at, updated_at)
-			VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			INSERT INTO tasks (id, status, created_at, updated_at)
+			VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 		`
-		_, err := p.DB.ExecContext(ctx, query, task.ID, task.TenantID, task.Status)
+		_, err := p.DB.ExecContext(ctx, query, task.ID, task.Status)
 		return err
 	}
 
-	return p.DB.QueryRowContext(ctx, query, task.ID, task.TenantID, task.Status).Scan(&task.CreatedAt, &task.UpdatedAt)
+	return p.DB.QueryRowContext(ctx, query, task.ID, task.Status).Scan(&task.CreatedAt, &task.UpdatedAt)
 }
 
-func (p *Provider) ClaimTask(ctx context.Context, tenantID, taskID string) error {
+func (p *Provider) ClaimTask(ctx context.Context, taskID string) error {
 	if p.DB == nil {
 		return errors.New("db connection is nil")
 	}
 
-	if IsSQLite() {
+	if p.IsSQLite() {
 		// Standalone mode: optimistic concurrency with simple SELECT + UPDATE
 		// Check if it's pending
 		var status string
-		err := p.DB.QueryRowContext(ctx, "SELECT status FROM tasks WHERE id = ? AND tenant_id = ?", taskID, tenantID).Scan(&status)
+		err := p.DB.QueryRowContext(ctx, "SELECT status FROM tasks WHERE id = ?", taskID).Scan(&status)
 		if err != nil {
 			return err
 		}
@@ -60,7 +60,7 @@ func (p *Provider) ClaimTask(ctx context.Context, tenantID, taskID string) error
 			return errors.New("task already claimed or completed")
 		}
 
-		res, err := p.DB.ExecContext(ctx, "UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ? AND status = 'PENDING'", taskID, tenantID)
+		res, err := p.DB.ExecContext(ctx, "UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'PENDING'", taskID)
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ func (p *Provider) ClaimTask(ctx context.Context, tenantID, taskID string) error
 	defer tx.Rollback()
 
 	var status string
-	err = tx.QueryRowContext(ctx, "SELECT status FROM tasks WHERE id = $1 AND tenant_id = $2 FOR UPDATE SKIP LOCKED", taskID, tenantID).Scan(&status)
+	err = tx.QueryRowContext(ctx, "SELECT status FROM tasks WHERE id = $1 FOR UPDATE SKIP LOCKED", taskID).Scan(&status)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errors.New("task not found or locked by another transaction")
@@ -110,13 +110,15 @@ func (p *Provider) ClaimTask(ctx context.Context, tenantID, taskID string) error
 		return errors.New("task already claimed or completed")
 	}
 
-	_, err = tx.ExecContext(ctx, "UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2", taskID, tenantID)
+	_, err = tx.ExecContext(ctx, "UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = $1", taskID)
 	if err != nil {
 		return err
 	}
 
 	return tx.Commit()
 }
+
+var GlobalProvider = &Provider{}
 
 func NewSqliteProvider(db *sql.DB) *Provider {
 	os.Setenv("OHC_STANDALONE", "true")

@@ -354,7 +354,7 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 	defer localDB.Unlock()
 
 	query := `
-		SELECT id, organization_id
+		SELECT id
 		FROM shared_tasks
 		WHERE status = 'CLOUD_PROCESSING'
 	`
@@ -364,42 +364,22 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 	}
 	defer rows.Close()
 
-	type taskInfo struct {
-
-		id    string
-
-		orgID string
-
-	}
-
-	var tasks []taskInfo
-
+	var taskIDs []string
 	for rows.Next() {
-
-		var info taskInfo
-
-		if err := rows.Scan(&info.id, &info.orgID); err != nil {
-
-			log.Printf("Error scanning local task ID and orgID: %v", err)
-
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			log.Printf("Error scanning local task ID: %v", err)
 			continue
-
 		}
-
-		tasks = append(tasks, info)
-
+		taskIDs = append(taskIDs, id)
 	}
-
 	if err := rows.Err(); err != nil {
-
 		return err
-
 	}
 
-
-
-	for _, t := range tasks {
-		cloudTask, err := cloudDB.GetTask(ctx, t.id, t.orgID)
+	for _, id := range taskIDs {
+		// Check cloud DB
+		cloudTask, err := cloudDB.GetTask(ctx, id, localTask.OrganizationID)
 		if err != nil {
 			if err != sql.ErrNoRows {
 				log.Printf("Error getting task from cloud DB: %v", err)
@@ -414,7 +394,7 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 			if cloudTask.Payload != nil {
 				payloadBytes = []byte(*cloudTask.Payload)
 			}
-			localDB.GetDB().ExecContext(ctx, updateQuery, payloadBytes, t.id)
+			localDB.GetDB().ExecContext(ctx, updateQuery, payloadBytes, id)
 		}
 	}
 	return nil
