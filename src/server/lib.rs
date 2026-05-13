@@ -1781,178 +1781,1140 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
-                        </div>
-                        <div id="step-2" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
-                        </div>
-                        <div id="step-4" style="display: none;">
-                            <h1>What do you sell?</h1>
-                            <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
-                            <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
-                            <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
-                            <br/><button class="secondary" onclick="nextStep(3)">Back</button>
-                        </div>
-                        <div id="step-5" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
-                            <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(4)">Back</button>
-                        </div>
-                        <div id="step-6" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(7)">Next →</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
-                            <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
-                        </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
-                            <input type="text" placeholder="e.g. 50.00" />
-                            <button onclick="nextStep(9)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                        </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
-                        </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="nextStep(101)">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                        </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
+    <div id="step-1">
+        <h1>Your business, live in minutes.</h1>
+        <p>Zero tech skills needed. We do the heavy lifting.</p>
+        <button onclick="nextStep(2)">Start Setup</button>
+        <button onclick="nextStep(2)">🚀 Start My Business</button>
+        <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+    </div>
+    <div id="step-2" style="display: none;">
+        <h1>What kind of business are you building?</h1>
+        <button class="secondary" onclick="nextStep(3)">Online Store</button>
+        <button class="secondary" onclick="nextStep(3)">Service Business</button>
+        <button class="secondary" onclick="nextStep(3)">Restaurant / Food</button>
+        <button class="secondary" onclick="nextStep(3)">Creative</button>
+        <button class="secondary" onclick="nextStep(3)">Local Business</button>
+        <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+    </div>
+    <div id="step-3" style="display: none;">
+        <h1>Give your business a name</h1>
+        <input type="text" id="business-name" placeholder="What is your business called?" />
+        <textarea id="business-description" placeholder="Business description..." rows="4"></textarea>
+        <button onclick="generateDescription()">Generate Description</button>
+        <button onclick="nextStep(4)">Next</button>
+        <button class="secondary" onclick="nextStep(2)">Back</button>
+    </div>
+    <div id="step-4" style="display: none;">
+        <h1>What do you sell?</h1>
+        <label><input type="checkbox" id="cat-physical" /> Physical Products</label><br/>
+        <label><input type="checkbox" id="cat-digital" /> Digital Downloads</label><br/>
+        <label><input type="checkbox" id="cat-services" /> Services / appointments</label><br/>
+        <label><input type="checkbox" id="cat-food" /> Food & beverages</label><br/>
+        <label><input type="checkbox" id="cat-subs" /> Subscriptions</label><br/>
+        <button onclick="nextStep(5)">Next</button>
+        <button class="secondary" onclick="nextStep(3)">Back</button>
+    </div>
+    <div id="step-5" style="display: none;">
+        <h1>Add your first product or service</h1>
+        <input type="text" id="product-name" placeholder="What is the name of this product?" />
+        <input type="text" id="product-price" placeholder="0.00" />
+        <textarea id="product-description" placeholder="Product description..." rows="3"></textarea>
+        <button onclick="generateAILogoOrDesc()">Generate AI Description</button>
+        <button onclick="nextStep(6)">Next</button>
+        <button class="secondary" onclick="nextStep(4)">Back</button>
+    </div>
+    <div id="step-6" style="display: none;">
+        <h1>How do you want to receive payments?</h1>
+        <button class="secondary" onclick="nextStep(7)">Online</button>
+        <button class="secondary" onclick="nextStep(7)">In-person (POS)</button>
+        <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
+        <br/><button class="secondary" onclick="nextStep(5)">Back</button>
+    </div>
+    <div id="step-7" style="display: none;">
+        <h1>Select a Template</h1>
+        <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
+        <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
+        <br/><button class="secondary" onclick="nextStep(6)">Back</button>
+    </div>
+    <div id="step-8" style="display: none;">
+        <h1>Create your account</h1>
+        <input type="text" placeholder="e.g. Maya Smith" />
+        <input type="email" placeholder="you@email.com" />
+        <input type="password" placeholder="Password" />
+        <button onclick="nextStep(9)">Next</button>
+    </div>
+    <div id="step-9" style="display: none;">
+        <h1>Choose your domain</h1>
+        <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
+        <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+    </div>
+    <div id="step-10" style="display: none;">
+        <h1>Review & Launch</h1>
+        <button onclick="finishWizard()">Publish my business</button>
+        <button onclick="finishWizard()">Publish</button>
+        <button onclick="finishWizard()">Launch My Business →</button>
+    </div>
+    <div id="step-100" style="display: none;">
+        <h1>🎉 Success! Your business is live! 🎉</h1>
+        <p>Your business is now live!</p>
+        <button onclick="nextStep(101)">View Welcome Checklist →</button>
+        <button onclick="showScreen('dashboard-screen')">Go to Dashboard</button>
+    </div>
+    <div id="step-101" style="display: none;">
+        <h1>Welcome Checklist</h1>
+        <p>You're set up! Here's what to do next:</p>
+        <p>✅ Business live</p>
+        <p>⬜ Add 3 more products</p>
+        <p>⬜ Connect Instagram</p>
+        <p>⬜ Share your link with a friend</p>
+        <button onclick="showScreen('dashboard-screen')">Go to Dashboard</button>
+    </div>
+    <div class="progressive-disclosure" style="margin-top: 20px;">
+        <label><input type="checkbox" id="advanced-mode-toggle" onchange="toggleAdvancedMode()" /> Advanced Mode (Show JSON/Config)</label>
+    </div>
+    <div id="advanced-mode-panel" style="display: none; background: rgba(0,0,0,0.5); padding: 10px; margin-top: 10px;">
+        <p>Raw State JSON:</p>
+        <pre id="raw-state-json">{}</pre>
+    </div>
+</div>
 
-                        <div id="step-ai" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-generating" style="display: none;">
-                            <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
-                        </div>
-                        <div id="step-launch-ai" style="display: none;">
-                            <h1>Your live storefront!</h1>
-                            <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
-                        </div>
-                    </div>
+<script>
+    let wizardState = {};
 
-                    <script>
-                        function showScreen(id) {
-                            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-                            const screen = document.getElementById(id);
-                            if (screen) screen.style.display = 'block';
-                            
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen') {
-                                document.getElementById('main-nav').style.display = 'flex';
-                            } else {
-                                document.getElementById('main-nav').style.display = 'none';
-                            }
-                        }
+    async function saveState() {
+        try {
+            await fetch('/api/onboarding/state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(wizardState)
+            });
+            document.getElementById('raw-state-json').textContent = JSON.stringify(wizardState, null, 2);
+        } catch (e) {
+            console.error('Failed to save state', e);
+        }
+    }
 
-                        function handleLogin(btn) {
-                            const email = document.querySelector('#login-screen input[type="email"]').value;
-                            btn.innerText = 'Signing in...';
-                            if (!email) {
-                                setTimeout(() => {
-                                    document.getElementById('login-error').style.display = 'block';
-                                    btn.innerText = 'Sign In';
-                                }, 500);
-                            } else {
-                                setTimeout(() => showScreen('dashboard-screen'), 500);
-                            }
-                        }
+    async function loadState() {
+        try {
+            const res = await fetch('/api/onboarding/state');
+            if (res.ok) {
+                wizardState = await res.json();
+                if (wizardState.step) {
+                    nextStep(wizardState.step, false);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load state', e);
+        }
+    }
 
-                        function handleSignup(btn) {
-                            btn.innerText = 'Creating account...';
-                            setTimeout(() => showScreen('setup-screen'), 500);
-                        }
+    function toggleAdvancedMode() {
+        const toggle = document.getElementById('advanced-mode-toggle');
+        const panel = document.getElementById('advanced-mode-panel');
+        if (toggle.checked) {
+            panel.style.display = 'block';
+        } else {
+            panel.style.display = 'none';
+        }
+    }
 
-                        function nextStep(step) {
-                            document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
-                            const target = document.getElementById('step-' + step);
-                            if (target) target.style.display = 'block';
-                        }
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+        const screen = document.getElementById(id);
+        if (screen) screen.style.display = 'block';
 
-                        function generateAI() {
-                            nextStep('generating');
-                            setTimeout(() => nextStep('launch-ai'), 1000);
-                        }
+        if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen') {
+            document.getElementById('main-nav').style.display = 'flex';
+        } else {
+            document.getElementById('main-nav').style.display = 'none';
+        }
 
-                        function toggleMenu() {
-                            const menu = document.getElementById('extra-menu');
-                            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-                        }
+        if (id === 'setup-screen') {
+            loadState();
+        }
+    }
 
-                        // Attach event listener for the grandma hint
-                        document.addEventListener('click', (e) => {
-                            if (e.target.innerText === '?') {
-                                const hint = document.getElementById('quick-actions-hint');
-                                if (hint) hint.style.display = 'block';
-                            }
-                        });
+    function handleLogin(btn) {
+        const email = document.querySelector('#login-screen input[type="email"]').value;
+        btn.innerText = 'Signing in...';
+        if (!email) {
+            setTimeout(() => {
+                document.getElementById('login-error').style.display = 'block';
+                btn.innerText = 'Sign In';
+            }, 500);
+        } else {
+            setTimeout(() => showScreen('dashboard-screen'), 500);
+        }
+    }
 
-                        // Initial routing
-                        const path = window.location.pathname;
-                        const urlParams = new URLSearchParams(window.location.search);
-                        
-                        if (urlParams.has('signup') || path === '/signup') {
-                            showScreen('signup-screen');
-                        } else if (path === '/agents') {
-                            showScreen('agents-screen');
-                        } else if (path === '/business-setup') {
-                            showScreen('setup-screen');
-                        } else if (path === '/login') {
-                            showScreen('login-screen');
-                        } else if (path === '/pricing') {
-                            showScreen('pricing-screen');
-                        } else if (path === '/my-plan' || path === '/billing') {
-                            showScreen('my-plan-screen');
-                        } else {
-                            // Default to dashboard for ease of testing
-                            showScreen('dashboard-screen');
-                        }
-                    </script>
+    function handleSignup(btn) {
+        btn.innerText = 'Creating account...';
+        setTimeout(() => showScreen('setup-screen'), 500);
+    }
+
+    function nextStep(step, doSave = true) {
+        document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
+        const target = document.getElementById('step-' + step);
+        if (target) target.style.display = 'block';
+
+        wizardState.step = step;
+        if (doSave) {
+            saveState();
+        }
+    }
+
+    function generateDescription() {
+        const name = document.getElementById('business-name').value;
+        const desc = document.getElementById('business-description');
+        desc.value = name + ' is a fantastic new business that offers premium products to amazing customers.';
+    }
+
+    function generateAILogoOrDesc() {
+        const desc = document.getElementById('product-description');
+        desc.value = 'A high-quality product tailored to your needs.';
+    }
+
+    function finishWizard() {
+        nextStep(100);
+    }
+
+    function generateAI() {
+        nextStep('generating');
+        setTimeout(() => nextStep('launch-ai'), 1000);
+    }
+
+    function toggleMenu() {
+        const menu = document.getElementById('extra-menu');
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+
+    document.addEventListener('click', (e) => {
+        if (e.target.innerText === '?') {
+            const hint = document.getElementById('quick-actions-hint');
+            if (hint) hint.style.display = 'block';
+        }
+    });
+
+    const path = window.location.pathname;
+    const urlParams = new URLSearchParams(window.location.search);
+
+    if (urlParams.has('signup') || path === '/signup') {
+        showScreen('signup-screen');
+    } else if (path === '/agents') {
+        showScreen('agents-screen');
+    } else if (path === '/business-setup') {
+        showScreen('setup-screen');
+    } else if (path === '/login') {
+        showScreen('login-screen');
+    } else if (path === '/pricing') {
+        showScreen('pricing-screen');
+    } else if (path === '/my-plan' || path === '/billing') {
+        showScreen('my-plan-screen');
+    } else {
+        showScreen('dashboard-screen');
+    }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 </body>
             </html>
         "#,
