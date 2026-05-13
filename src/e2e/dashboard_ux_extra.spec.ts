@@ -9,7 +9,7 @@ test.describe('Dashboard UX Friction Fix Verification', () => {
 
   test('should display navigation', async ({ page }) => {
     await page.goto('/?dashboard=1');
-    await expect(page.locator('nav')).toBeVisible();
+    await expect(page.locator('nav').first()).toBeVisible();
   });
 
   test('should show welcome message', async ({ page }) => {
@@ -21,7 +21,7 @@ test.describe('Dashboard UX Friction Fix Verification', () => {
 test.describe('Navigation', () => {
   test('should navigate to agents page', async ({ page }) => {
     await page.goto('/?dashboard=1');
-    await page.locator('nav a:has-text("Agents")').click();
+    await page.locator('nav').first().locator('a:has-text("Agents")').click();
     await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
   });
 

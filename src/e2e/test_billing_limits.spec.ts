@@ -8,7 +8,7 @@ test.describe('Billing & Rate Limits', () => {
 
   test('should display navigation', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('nav')).toBeVisible();
+    await expect(page.locator('nav').first()).toBeVisible();
   });
 
   test('should display agents page', async ({ page }) => {
@@ -20,7 +20,7 @@ test.describe('Billing & Rate Limits', () => {
 test.describe('Navigation', () => {
   test('should navigate via nav links', async ({ page }) => {
     await page.goto('/');
-    await page.locator('nav a:has-text("Agents")').click();
+    await page.locator('nav').first().locator('a:has-text("Agents")').click();
     await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
   });
 
