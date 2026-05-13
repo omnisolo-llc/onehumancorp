@@ -1,4 +1,9 @@
 // Automated Implementation Comment: Validating Free Tier Soft Paywalls.
+// Dummy validation comment for Growth Feature testing
+#[cfg(not(target_arch = "wasm32"))]
+use ohc::orchestration::social_posting_service_client::SocialPostingServiceClient;
+#[cfg(not(target_arch = "wasm32"))]
+use ohc::orchestration::email_marketing_service_client::EmailMarketingServiceClient;
 #[cfg(not(target_arch = "wasm32"))]
 use ohc::orchestration::hub_service_client::HubServiceClient;
 #[cfg(not(target_arch = "wasm32"))]
@@ -35,6 +40,18 @@ fn client_spiffe_interceptor(mut req: tonic::Request<()>) -> Result<tonic::Reque
 async fn connect_with_interceptor(url: String) -> Result<ohc::orchestration::hub_service_client::HubServiceClient<tonic::codegen::InterceptedService<tonic::transport::Channel, fn(tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status>>>, tonic::transport::Error> {
     let channel = tonic::transport::Endpoint::new(url)?.connect().await?;
     Ok(ohc::orchestration::hub_service_client::HubServiceClient::with_interceptor(channel, client_spiffe_interceptor))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+async fn connect_social_with_interceptor(url: String) -> Result<ohc::orchestration::social_posting_service_client::SocialPostingServiceClient<tonic::codegen::InterceptedService<tonic::transport::Channel, fn(tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status>>>, tonic::transport::Error> {
+    let channel = tonic::transport::Endpoint::new(url)?.connect().await?;
+    Ok(ohc::orchestration::social_posting_service_client::SocialPostingServiceClient::with_interceptor(channel, client_spiffe_interceptor))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+async fn connect_email_with_interceptor(url: String) -> Result<ohc::orchestration::email_marketing_service_client::EmailMarketingServiceClient<tonic::codegen::InterceptedService<tonic::transport::Channel, fn(tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status>>>, tonic::transport::Error> {
+    let channel = tonic::transport::Endpoint::new(url)?.connect().await?;
+    Ok(ohc::orchestration::email_marketing_service_client::EmailMarketingServiceClient::with_interceptor(channel, client_spiffe_interceptor))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -1515,6 +1532,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     social_posting_ui.on_connect_instagram({
         let ui_handle = social_posting_handle.clone();
         move || {
+            let ui_handle = ui_handle.clone();
+            #[cfg(not(target_arch = "wasm32"))]
+            tokio::spawn(async move {
+                if let Ok(mut sp_client) = connect_social_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let _ = sp_client.connect_social_platform(tonic::Request::new(ohc::orchestration::ConnectSocialPlatformRequest { platform: "instagram".to_string() })).await;
+                }
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ui_handle.upgrade() {
+                        ui.set_is_connected_instagram(true);
+                    }
+                }).unwrap();
+            });
+            #[cfg(target_arch = "wasm32")]
             if let Some(ui) = ui_handle.upgrade() {
                 ui.set_is_connected_instagram(true);
             }
@@ -1563,6 +1593,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     email_marketing_ui.on_generate_template({
         let ui_handle = email_marketing_handle.clone();
         move |template| {
+            let ui_handle = ui_handle.clone();
+            #[cfg(not(target_arch = "wasm32"))]
+            tokio::spawn(async move {
+                if let Ok(mut em_client) = connect_email_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let response = em_client.generate_email_template(tonic::Request::new(ohc::orchestration::GenerateEmailTemplateRequest { template_type: template.to_string() })).await;
+                    if let Ok(res) = response {
+                        slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_handle.upgrade() {
+                                ui.set_preview_text(res.into_inner().content.into());
+                            }
+                        }).unwrap();
+                    }
+                }
+            });
+            #[cfg(target_arch = "wasm32")]
             if let Some(ui) = ui_handle.upgrade() {
                 let preview = match template.as_str() {
                     "Flash sale" => "24-Hour Flash Sale!",

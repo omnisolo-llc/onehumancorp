@@ -154,3 +154,23 @@ fn share_flow_send_invite_callback() {
     ui.invoke_send_invite_message("test_link".into());
     assert!(*called.borrow());
 }
+
+#[test]
+fn share_flow_generate_new_link_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_generate_new_link(move || { *c.borrow_mut() = true; });
+    ui.invoke_generate_new_link();
+    assert!(*called.borrow());
+}
+
+#[test]
+fn share_flow_copy_link_callback() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let c = called.clone();
+    ui.on_copy_link(move || { *c.borrow_mut() = true; });
+    ui.invoke_copy_link();
+    assert!(*called.borrow());
+}

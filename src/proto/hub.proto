@@ -819,6 +819,60 @@ service GrowthService {
   rpc CreateWaitlistEntry(CreateWaitlistRequest) returns (WaitlistEntry);
 }
 
+message GenerateSocialPostRequest {
+  string prompt = 1;
+}
+
+message GenerateSocialPostResponse {
+  string content = 1;
+}
+
+message ScheduleSocialPostRequest {
+  string content = 1;
+  string platform = 2; // e.g., "instagram", "facebook", "x"
+  int64 timestamp = 3;
+}
+
+message ScheduleSocialPostResponse {
+  bool success = 1;
+}
+
+message ConnectSocialPlatformRequest {
+  string platform = 1;
+}
+
+message ConnectSocialPlatformResponse {
+  bool success = 1;
+}
+
+message GenerateEmailTemplateRequest {
+  string template_type = 1; // e.g., "New arrivals", "Flash sale", "Thank you"
+}
+
+message GenerateEmailTemplateResponse {
+  string content = 1;
+}
+
+message SendEmailCampaignRequest {
+  string content = 1;
+  string audience = 2;
+}
+
+message SendEmailCampaignResponse {
+  bool success = 1;
+}
+
+service SocialPostingService {
+  rpc GenerateSocialPost(GenerateSocialPostRequest) returns (GenerateSocialPostResponse);
+  rpc ScheduleSocialPost(ScheduleSocialPostRequest) returns (ScheduleSocialPostResponse);
+  rpc ConnectSocialPlatform(ConnectSocialPlatformRequest) returns (ConnectSocialPlatformResponse);
+}
+
+service EmailMarketingService {
+  rpc GenerateEmailTemplate(GenerateEmailTemplateRequest) returns (GenerateEmailTemplateResponse);
+  rpc SendEmailCampaign(SendEmailCampaignRequest) returns (SendEmailCampaignResponse);
+}
+
 message ApprovalRequest {
   string id = 1;
   string agent_id = 2;

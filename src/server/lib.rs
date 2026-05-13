@@ -152,6 +152,8 @@ pub mod ohc {
 
 use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
 use ohc::orchestration::growth_service_server::GrowthServiceServer;
+use ohc::orchestration::social_posting_service_server::SocialPostingServiceServer;
+use ohc::orchestration::email_marketing_service_server::EmailMarketingServiceServer;
 use ohc::billing::billing_service_server::BillingServiceServer;
 use ohc::orchestration::*;
 
@@ -1530,11 +1532,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
+    let social_posting_service = crate::services::growth::social_posting::MySocialPostingService::new();
+    let email_marketing_service = crate::services::growth::email_marketing::MyEmailMarketingService::new();
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
+        .add_service(SocialPostingServiceServer::with_interceptor(social_posting_service, spiffe_interceptor))
+        .add_service(EmailMarketingServiceServer::with_interceptor(email_marketing_service, spiffe_interceptor))
         .add_service(crate::ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
