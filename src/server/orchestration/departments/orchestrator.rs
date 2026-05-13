@@ -400,7 +400,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_orchestrator_initialization() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() || std::env::var("OHC_SQLITE_KEY").is_err() {
             return;
         }
         let db = Arc::new(crate::db::DB::new().await.unwrap());

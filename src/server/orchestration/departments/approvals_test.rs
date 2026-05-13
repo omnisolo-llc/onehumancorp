@@ -9,7 +9,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_approvals_workflow() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() || std::env::var("OHC_SQLITE_KEY").is_err() {
             return;
         }
 
