@@ -23,8 +23,6 @@ jobs:
   build-archives:
     name: Build release archives
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
@@ -88,8 +86,6 @@ jobs:
   build-flutter-android:
     name: Build Flutter Android
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
@@ -142,8 +138,6 @@ jobs:
   build-flutter-ios:
     name: Build Flutter iOS
     runs-on: macos-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v5
@@ -182,8 +176,6 @@ jobs:
   build-flutter-macos:
     name: Build Flutter macOS
     runs-on: macos-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
@@ -230,8 +222,6 @@ jobs:
   build-flutter-windows:
     name: Build Flutter Windows
     runs-on: windows-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     defaults:
       run:
@@ -280,8 +270,6 @@ jobs:
   build-flutter-linux:
     name: Build Flutter Linux
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
@@ -334,8 +322,6 @@ jobs:
   build-flutter-web:
     name: Build Flutter Web
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -379,8 +365,6 @@ jobs:
   publish-release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     needs:
       - build-archives
       - build-flutter-android
@@ -462,8 +446,6 @@ jobs:
   push-docker:
     name: Push Docker images
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
