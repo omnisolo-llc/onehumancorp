@@ -3,22 +3,22 @@ import { test, expect } from '@playwright/test';
 test.describe('E2E Chaos Resilience', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
     await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
     await page.waitForURL('**/dashboard**');
   });
 
   test('should handle network spike during website publishing', async ({ page }) => {
     // Navigate to Website Builder
-    await page.locator('button:has-text("Website"), button:has-text("Storefront")').filter({ visible: true }).first().click();
+    await page.locator('button:has-text("Website"), button:has-text("Storefront")').first().click();
     await expect(page.locator('text=/Website Builder|Design/i')).toBeVisible();
 
     // Simulate high latency / network spike
     // In a real chaos test, we might use an internal API to inject lag,
     // here we simulate the UI resilience by performing actions and asserting stability.
 
-    const publishBtn = page.locator('button:has-text("Publish"), button:has-text("Go Live")').filter({ visible: true }).first();
+    const publishBtn = page.locator('button:has-text("Publish"), button:has-text("Go Live")').first();
     await publishBtn.click();
 
     // Verify loading state or optimistic UI
@@ -28,7 +28,7 @@ test.describe('E2E Chaos Resilience', () => {
     // simulating a transient failure handling
     const errorMsg = page.locator('text=/Network Error|Timeout|Retry/i');
     if (await errorMsg.isVisible()) {
-        const retryBtn = page.locator('button:has-text("Retry")').filter({ visible: true }).first();
+        const retryBtn = page.locator('button:has-text("Retry")').first();
         if (await retryBtn.isVisible()) {
             await retryBtn.click();
         }
@@ -40,19 +40,19 @@ test.describe('E2E Chaos Resilience', () => {
 
   test('should remain functional during database lag', async ({ page }) => {
     // Navigate to Business Records
-    await page.locator('button:has-text("Records"), button:has-text("Database")').filter({ visible: true }).first().click();
+    await page.locator('button:has-text("Records"), button:has-text("Database")').first().click();
 
     // Perform a read operation
     await expect(page.locator('text=/Customer|Product|Order/i')).toBeVisible();
 
     // Verify cached data is shown if lag is high (simulated by non-blocking UI)
-    const recordList = page.locator('[class*="record-list"], [class*="table"]').filter({ visible: true }).first();
+    const recordList = page.locator('[class*="record-list"], [class*="table"]').first();
     await expect(recordList).toBeVisible();
 
     // Perform a write operation
-    await page.locator('button:has-text("Add"), button:has-text("Create")').filter({ visible: true }).first().click();
-    await page.locator('input[type="text"]').filter({ visible: true }).first().fill('Chaos Test Record');
-    await page.locator('button:has-text("Save")').filter({ visible: true }).first().click();
+    await page.locator('button:has-text("Add"), button:has-text("Create")').first().click();
+    await page.locator('input[type="text"]').first().fill('Chaos Test Record');
+    await page.locator('button:has-text("Save")').first().click();
 
     // UI should show optimistic success or "Syncing" status
     await expect(page.locator('text=/Saved|Syncing|Pending/i')).toBeVisible();
@@ -60,11 +60,11 @@ test.describe('E2E Chaos Resilience', () => {
 
   test('should handle transient agent failure with automatic retry', async ({ page }) => {
     // Navigate to AI Helpers
-    await page.locator('button:has-text("Helpers"), button:has-text("Agents")').filter({ visible: true }).first().click();
+    await page.locator('button:has-text("Helpers"), button:has-text("Agents")').first().click();
     await expect(page.locator('text=/AI Helpers|Workforce/i')).toBeVisible();
 
     // Trigger an agent task
-    await page.locator('button:has-text("Run"), button:has-text("Start")').filter({ visible: true }).first().click();
+    await page.locator('button:has-text("Run"), button:has-text("Start")').first().click();
 
     // UI should show running state
     await expect(page.locator('text=/Running|Executing/i')).toBeVisible();
@@ -80,9 +80,9 @@ test.describe('E2E Chaos Resilience', () => {
   test('should enforce tenant isolation in records during concurrent access', async ({ page, context }) => {
     // This test simulates two tenants accessing the records at the same time
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('tenant1@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator('input[type="email"]').fill('tenant1@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard**');
 
     await page.locator('button:has-text("Records")').click();
@@ -109,7 +109,7 @@ test.describe('E2E Chaos Resilience', () => {
     // await page.locator('button:has-text("Simulate LLM Outage")').click();
 
     // Trigger task
-    await page.locator('button:has-text("Run")').filter({ visible: true }).first().click();
+    await page.locator('button:has-text("Run")').first().click();
 
     // Verify "Paused" or "Service Unavailable" message
     await expect(page.locator('text=/Paused|Unavailable|Down/i')).toBeVisible();
