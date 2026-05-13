@@ -3,3 +3,8 @@ filegroup(
     srcs = glob(["*.sql"]),
     visibility = ["//src/server:__pkg__"],
 )
+
+filegroup(
+    name = "003_add_rls",
+    srcs = ["003_add_rls.sql"],
+)
