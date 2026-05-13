@@ -1,3 +1,12 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Implement multi-tenant pod autoscaling triggers to enhance concurrent cloud workloads.
+
+### Privacy/Offline Improvements
+- Bolster isolated SQLite data-sync integrity for standalone desktop deployments.
+
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
