@@ -104,6 +104,19 @@ pub async fn stripe_webhook_handler(
                 StatusCode::BAD_REQUEST.into_response()
             }
         },
+        "charge.succeeded" => {
+            let obj = &payload.data.object;
+            if let Some(amount) = obj.get("amount").and_then(|a| a.as_i64()) {
+                if amount > 50000 { // > $500.00
+                    if let Some(payment_method_details) = obj.get("payment_method_details") {
+                        if payment_method_details.get("type").and_then(|t| t.as_str()) == Some("card") {
+                            tracing::warn!("Cost Optimization Warning: High-value payment received. Consider routing to ACH to reduce fees.");
+                        }
+                    }
+                }
+            }
+            axum::http::StatusCode::OK.into_response()
+        },
         "customer.subscription.deleted" => {
             let obj = &payload.data.object;
             let tenant_id_opt = obj.get("metadata")

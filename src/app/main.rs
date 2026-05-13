@@ -2242,6 +2242,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.set_limit_storage("Unlimited".into());
                     }
 
+                    let next_tier = if plan.current_plan == "Free" { "Starter" } else if plan.current_plan == "Starter" { "Pro" } else { "Business" };
+                    let mut upgrade_msg = String::new();
+                    if let Some(limit_bytes) = plan.storage_limit_bytes {
+                        if plan.storage_used_bytes > limit_bytes {
+                            upgrade_msg.push_str(&format!("Storage limit exceeded ({:.0}MB). Upgrade to {}. ", plan.storage_used_bytes as f64 / 1_048_576.0, next_tier));
+                        }
+                    }
+                    if let Some(ai_limit) = plan.ai_actions_limit {
+                        if plan.ai_actions_used >= ai_limit {
+                            upgrade_msg.push_str(&format!("Monthly action limit reached ({}). Upgrade to {}. ", ai_limit, next_tier));
+                        }
+                    }
+                    if !upgrade_msg.is_empty() {
+                        ui.set_upgrade_prompt_message(upgrade_msg.trim().into());
+                    }
+
                     ui.set_estimated_bill(format!("${}.00", plan.next_bill_estimated).into());
                 }
             }
