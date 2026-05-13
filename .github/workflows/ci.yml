@@ -36,13 +36,21 @@ jobs:
             librsvg2-dev libsoup-3.0-dev \
             ca-certificates curl git
 
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
       - name: Set up Go
         uses: actions/setup-go@v5
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         with:
           go-version: "1.24"
 
       - name: Install Bazelisk
         run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
           go install github.com/bazelbuild/bazelisk@latest
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
@@ -104,13 +112,21 @@ jobs:
             librsvg2-dev libsoup-3.0-dev \
             ca-certificates curl git
 
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
       - name: Set up Go
         uses: actions/setup-go@v5
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         with:
           go-version: "1.24"
 
       - name: Install Bazelisk
         run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
           go install github.com/bazelbuild/bazelisk@latest
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
