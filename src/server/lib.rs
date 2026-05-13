@@ -1626,6 +1626,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
                         <a onclick="showScreen('agents-screen')">Agents</a>
                         <a onclick="showScreen('setup-screen')">Setup Wizard</a>
+                        <a onclick="showScreen('referrals-screen')">Referrals</a>
+                        <a onclick="showScreen('social-posting-screen')">Social Media</a>
+                        <a onclick="showScreen('business-manager-screen')">Business Manager</a>
                         <a onclick="showScreen('api-screen')">Software</a>
                     </nav>
 
@@ -1655,7 +1658,62 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
 
-                    <!-- Dashboard -->
+
+                    <!-- Referral Dashboard -->
+                    <div id="referrals-screen" class="screen glass">
+                        <h1>Referral Dashboard</h1>
+                        <p>Share OHC with a friend, both get 1 month free Pro.</p>
+                        <p>Your Referral Link: <strong>ohc://join?ref=DEFAULT</strong></p>
+                        <button onclick="alert('Link copied')">Copy</button>
+                        <button>Refresh</button>
+                        <br/>
+                        <button>📷 Share to Instagram</button>
+                        <button onclick="copyInviteMsg(this)">💬 Copy Invite Message</button>
+                        <button>📜 View History</button>
+                        <button>📤 Export Data</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
+                    <!-- Social Posting Screen -->
+                    <div id="social-posting-screen" class="screen glass">
+                        <h1>Social Media Autoposting</h1>
+                        <button onclick="connectFB(this)">Connect Facebook</button>
+                        <button onclick="connectIG(this)">Connect Instagram</button>
+                        <p id="ig-connected" style="display:none;">📸 Connect Instagram</p>
+                        <button onclick="alert('Next')">Next</button>
+                        <button onclick="showScreen('dashboard-screen'); document.getElementById('draft-post').style.display='block';">Launch Strategy</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Return to Dashboard</button>
+                        <br/><br/>
+                        <button>Generate Post with AI</button>
+                        <textarea id="ai-post" placeholder="Write post...">Drafted post...</textarea>
+                        <button>Schedule</button>
+                        <button>Approve & Post Now</button>
+                    </div>
+
+                    <!-- Business Manager Screen -->
+                    <div id="business-manager-screen" class="screen glass">
+                        <h1>Business Manager</h1>
+                        <button onclick="incrementOfferings(this)">+ Add New Offering</button>
+                        <button>Back to List</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Upgrade / Scale Up Modal -->
+                    <div id="upgrade-modal" class="screen glass" style="position:fixed;top:20%;left:30%;width:40%;display:none;z-index:1000;">
+                        <h1>Scale Up Your Team</h1>
+                        <p>You have reached the limit of your Free Tier.</p>
+                        <button onclick="showScreen('pricing-screen')">Upgrade to Pro</button>
+                        <button onclick="document.getElementById('upgrade-modal').style.display='none'">✕</button>
+                    </div>
+
+                    <!-- Milestone Notifications -->
+                    <div id="milestone-modal" class="screen glass" style="position:fixed;bottom:20px;right:20px;display:none;z-index:1000;background:rgba(78, 204, 163, 0.2);">
+                        <h2 id="milestone-title">🎉 Milestone!</h2>
+                        <p id="milestone-desc">You did it!</p>
+                        <button onclick="document.getElementById('milestone-modal').style.display='none'">Dismiss</button>
+                    </div>
+
+<!-- Dashboard -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
                         <div class="card glass">
@@ -1668,6 +1726,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
+                            <button onclick="showScreen('referrals-screen')">Referrals</button>
+                            <button onclick="showScreen('social-posting-screen')">Grow Business</button>
+                            <button onclick="incrementOrders()">Mark Order Ready</button>
+                            <div id="agent-activity-feed">
+                                <p id="draft-post" style="display:none;">Drafted Instagram Post: Check out our new products! <button onclick="document.getElementById('draft-post').style.display='none'">Approve & Send</button></p>
+                            </div>
                             <button onclick="showScreen('setup-screen')">Update Setup</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="toggleMenu()">Menu</button>
@@ -1766,6 +1830,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- My Plan Page -->
                     <div id="my-plan-screen" class="screen">
                         <h1>My Current Plan</h1>
+                        <p>Free Tier</p>
                         <p>Status: Active</p>
                         <p>Next billing: 2024-06-01</p>
                         <div class="card glass">
@@ -1842,7 +1907,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          </div>
                      </div>
 
-                     <!-- Setup Wizard -->
+
+                    <!-- Website Builder Screen -->
+                    <div id="website-builder-screen" class="screen glass">
+                        <h1>Website Builder</h1>
+                        <button onclick="nextBuilderStep()">Next / Continue</button>
+                    </div>
+
+                    <!-- Storefront Mock -->
+                    <div id="storefront-screen" class="screen glass">
+                        <h1>My Store</h1>
+                        <p>Welcome to my store</p>
+                        <footer>
+                            <a href="https://onehumancorp.com" target="_blank" onclick="alert('redirecting to OHC');">Built with OHC — Start your free business →</a>
+                        </footer>
+                    </div>
+<!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
@@ -1941,7 +2021,80 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+
+                        let ordersCount = 0;
+                        function incrementOrders() {
+                            ordersCount++;
+                            if (ordersCount === 1) {
+                                document.getElementById('milestone-title').innerText = 'First Sale!';
+                                document.getElementById('milestone-desc').innerText = 'You got your first order!';
+                                document.getElementById('milestone-modal').style.display = 'block';
+                            } else if (ordersCount === 3) {
+                                document.getElementById('milestone-title').innerText = '🎉 3rd Order!';
+                                document.getElementById('milestone-desc').innerText = 'You completed 3 orders!';
+                                document.getElementById('milestone-modal').style.display = 'block';
+                            } else if (ordersCount === 10) {
+                                document.getElementById('milestone-title').innerText = '🎉 10th Order!';
+                                document.getElementById('milestone-desc').innerText = 'You completed 10 orders!';
+                                document.getElementById('milestone-modal').style.display = 'block';
+                            }
+                        }
+
+                        // Simulate 100 visitors milestone
+                        setTimeout(() => {
+                            if (document.getElementById('dashboard-screen') && document.getElementById('dashboard-screen').style.display === 'block') {
+                                document.getElementById('milestone-title').innerText = '🚀 100 Visitors Today!';
+                                document.getElementById('milestone-desc').innerText = 'Traffic is booming!';
+                                document.getElementById('milestone-modal').style.display = 'block';
+                            }
+                        }, 5000);
+
+                        function copyInviteMsg(btn) {
+                            setTimeout(() => {
+                                alert('Invite message copied!');
+                                btn.innerText = 'Invite message copied!';
+                            }, 100);
+                        }
+
+                        function connectFB(btn) {
+                            btn.innerText = 'Facebook Connected';
+                        }
+
+                        function connectIG(btn) {
+                            document.getElementById('ig-connected').style.display = 'block';
+                        }
+
+                        let offeringsCount = 0;
+                        function incrementOfferings(btn) {
+                            offeringsCount++;
+                            if (offeringsCount >= 10) {
+                                document.getElementById('upgrade-modal').style.display = 'block';
+                            }
+                        }
+
+                        let builderStep = 0;
+                        function nextBuilderStep() {
+                            builderStep++;
+                            if (builderStep >= 4) {
+                                showScreen('storefront-screen');
+                            }
+                        }
+
                         function showScreen(id) {
+
+                            if (id === 'agents-screen') {
+                                setTimeout(() => {
+                                    let btns = document.querySelectorAll('#agents-screen button');
+                                    btns.forEach(b => {
+                                        if(b.innerText === 'Hire Agent') {
+                                            b.onclick = function() {
+                                                document.getElementById('upgrade-modal').style.display = 'block';
+                                            };
+                                        }
+                                    });
+                                }, 100);
+                            }
+
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
@@ -2011,6 +2164,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             } else if (path === '/services') {
                                 showScreen('services-screen');
                             } else if (path === '/scaling') {
+                                showScreen('scaling-screen');
+                            } else if (path === '/website-builder') {
+                                showScreen('website-builder-screen');
+                            } else if (path === '/business-manager') {
+                                showScreen('business-manager-screen');
+                            } else if (path === '/social-posting') {
+                                showScreen('social-posting-screen');
                                 showScreen('scaling-screen');
                             } else if (path === '/business-setup') {
                                 showScreen('setup-screen');
