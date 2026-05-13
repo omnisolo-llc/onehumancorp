@@ -36,6 +36,10 @@ jobs:
             librsvg2-dev libsoup-3.0-dev \
             ca-certificates curl git
 
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          sudo apt-get clean || true
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -104,6 +108,10 @@ jobs:
             librsvg2-dev libsoup-3.0-dev \
             ca-certificates curl git
 
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          sudo apt-get clean || true
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
