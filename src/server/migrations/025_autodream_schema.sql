@@ -7,3 +7,5 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
     source_mission_id TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE autodream_memories ENABLE ROW LEVEL SECURITY;

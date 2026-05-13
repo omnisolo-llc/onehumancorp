@@ -11,3 +11,5 @@ CREATE TABLE IF NOT EXISTS tasks (
 );
 
 CREATE INDEX idx_tasks_status ON tasks(status);
+
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;

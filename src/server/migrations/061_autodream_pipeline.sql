@@ -20,3 +20,5 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
 
 CREATE INDEX IF NOT EXISTS idx_autodream_org ON autodream_memories(organization_id);
 CREATE INDEX IF NOT EXISTS idx_autodream_memories_embedding_cosine ON autodream_memories USING ivfflat (embedding vector_cosine_ops);
+
+ALTER TABLE autodream_memories ENABLE ROW LEVEL SECURITY;

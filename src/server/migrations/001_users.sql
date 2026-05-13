@@ -39,3 +39,9 @@ CREATE TABLE IF NOT EXISTS revoked_tokens (
 
 -- GC index for periodic cleanup of expired revocations.
 CREATE INDEX IF NOT EXISTS idx_revoked_tokens_exp ON revoked_tokens (expires_at);
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE revoked_tokens ENABLE ROW LEVEL SECURITY;

@@ -44,3 +44,11 @@ CREATE TABLE IF NOT EXISTS meeting_transcripts (
 );
 
 CREATE INDEX idx_transcript_meeting ON meeting_transcripts (meeting_id);
+
+ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE agent_inbox ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE meeting_rooms ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE meeting_transcripts ENABLE ROW LEVEL SECURITY;

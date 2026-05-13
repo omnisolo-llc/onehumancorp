@@ -5,3 +5,5 @@ CREATE TABLE IF NOT EXISTS embedding_cache (
     embedding TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE embedding_cache ENABLE ROW LEVEL SECURITY;

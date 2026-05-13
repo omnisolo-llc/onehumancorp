@@ -8,3 +8,5 @@ CREATE TABLE IF NOT EXISTS local_cloud_sync_log (
     synced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (memory_id) REFERENCES swarm_memory(key) ON DELETE CASCADE
 );
+
+ALTER TABLE local_cloud_sync_log ENABLE ROW LEVEL SECURITY;

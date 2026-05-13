@@ -26,3 +26,9 @@ CREATE TABLE IF NOT EXISTS memory_conflicts (
     resolved_memory_id TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE agent_session_data ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE swarm_truth_embeddings ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE memory_conflicts ENABLE ROW LEVEL SECURITY;

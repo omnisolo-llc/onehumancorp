@@ -29,3 +29,7 @@ CREATE TABLE IF NOT EXISTS state_machine_transitions (
     agent_id TEXT,
     transitioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE shared_tasks_decomposition ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE state_machine_transitions ENABLE ROW LEVEL SECURITY;

@@ -16,3 +16,7 @@ CREATE TABLE IF NOT EXISTS swarm_dream_epochs (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMPTZ
 );
+
+ALTER TABLE swarm_ultra_plans ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE swarm_dream_epochs ENABLE ROW LEVEL SECURITY;

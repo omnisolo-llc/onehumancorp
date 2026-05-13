@@ -39,3 +39,13 @@ CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (
     source_plugin    TEXT,
     created_at       TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE swarm_memory ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE agent_missions ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE agent_status ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE capability_plugins ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE swarm_memory_embeddings ENABLE ROW LEVEL SECURITY;

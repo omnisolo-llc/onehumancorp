@@ -10,3 +10,5 @@ CREATE TABLE IF NOT EXISTS sub_agent_queue (
 );
 
 CREATE INDEX idx_sub_agent_queue_status_scheduled ON sub_agent_queue(status, scheduled_at);
+
+ALTER TABLE sub_agent_queue ENABLE ROW LEVEL SECURITY;

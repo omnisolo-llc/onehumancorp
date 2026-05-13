@@ -1,5 +1,3 @@
-DROP TABLE IF EXISTS task_dependencies;
-DROP TABLE IF EXISTS tasks;
 
 CREATE TABLE tasks (
     id TEXT PRIMARY KEY,
@@ -23,3 +21,7 @@ CREATE TABLE task_dependencies (
     FOREIGN KEY (task_id) REFERENCES tasks(id),
     FOREIGN KEY (depends_on_task_id) REFERENCES tasks(id)
 );
+
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;

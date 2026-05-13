@@ -24,3 +24,7 @@ CREATE TABLE IF NOT EXISTS swarm_long_term_memory (
     embedding VECTOR(1536),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE swarm_tasks ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE swarm_long_term_memory ENABLE ROW LEVEL SECURITY;

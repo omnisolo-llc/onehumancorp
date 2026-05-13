@@ -5,3 +5,5 @@ CREATE TABLE IF NOT EXISTS llm_completion_cache (
     response_payload BYTEA NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE llm_completion_cache ENABLE ROW LEVEL SECURITY;
