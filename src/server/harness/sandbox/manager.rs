@@ -1,11 +1,13 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use serde_json::json;
+use sqlx::PgPool;
+
+use super::ast::ASTParser;
 use super::permissions::PermissionEvaluator;
 use super::wrapper::BashWrapper;
-use crate::harness::telemetry::ViolationStore;
-use crate::telemetry::buffer_metric;
-use sqlx::PgPool;
-use serde_json::json;
-use async_trait::async_trait;
-use std::sync::Arc;
+use crate::telemetry::ViolationStore;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
 pub struct SandboxPolicy {
@@ -48,40 +50,28 @@ impl SandboxManager {
 #[async_trait]
 impl SandboxAdapter for SandboxManager {
     async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
-        // Record wrapping metrics if pool available
-        if let Some(pool) = &self.pool {
-            let labels = json!({ "command": cmd });
-            let _ = buffer_metric(
-                pool,
-                "harness.sandbox.wrapped_executions",
-                "counter",
-                1.0,
-                labels,
+        let mut ast_parser = ASTParser::new();
+        if let Err(reason) = ast_parser.parse_for_security(cmd) {
+            let details = json!({ "command": cmd, "reason": reason });
+            let _ = self.violation_store.record_violation(
+                "system",
+                "unknown_agent",
+                "unknown_session",
+                "ast_security_violation",
+                details
             ).await;
+            return Err(reason);
         }
 
         if !self.evaluator.evaluate(cmd) {
-            // Record violation via ViolationStore
             let details = json!({ "command": cmd });
             let _ = self.violation_store.record_violation(
-                "system", // Tenant ID, default to system since manager doesn't have context
-                "unknown_agent", // SandboxManager doesn't have agent context natively here yet
+                "system",
+                "unknown_agent",
                 "unknown_session",
                 "command_execution",
                 details
             ).await;
-
-            // Legacy metric (keep for backwards compatibility if needed, or remove, but we'll keep for safety)
-            if let Some(pool) = &self.pool {
-                let labels = json!({ "command": cmd });
-                let _ = buffer_metric(
-                    pool,
-                    "harness.sandbox.violations",
-                    "counter",
-                    1.0,
-                    labels,
-                ).await;
-            }
             return Err("Command execution denied by sandbox policy".to_string());
         }
 

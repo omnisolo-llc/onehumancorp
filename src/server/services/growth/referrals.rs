@@ -148,4 +148,12 @@ mod tests {
         assert_eq!(calculate_referral_tier(20), "Gold");
         assert_eq!(calculate_referral_tier(50), "Platinum");
     }
+
+    #[test]
+    fn test_calculate_tier_discount() {
+        assert_eq!(calculate_tier_discount("Platinum"), 0.20);
+        assert_eq!(calculate_tier_discount("Gold"), 0.10);
+        assert_eq!(calculate_tier_discount("Silver"), 0.05);
+        assert_eq!(calculate_tier_discount("Bronze"), 0.00);
+    }
 }

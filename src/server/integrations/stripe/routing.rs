@@ -7,17 +7,20 @@ pub enum PaymentMethod {
 pub struct PaymentRouter;
 
 impl PaymentRouter {
+    pub const CARD_FEE_PERCENTAGE: f64 = 0.029;
+    pub const CARD_FEE_FIXED: f64 = 0.30;
+    pub const ACH_FEE_PERCENTAGE: f64 = 0.008;
+    pub const ACH_FEE_CAP: f64 = 5.0;
+    pub const ACH_MIN_AMOUNT: f64 = 50.0;
+
     /// Returns the optimal payment method based on the transaction amount.
     /// Stripe Credit Card fee: 2.9% + $0.30
     /// Stripe ACH fee: 0.8%, capped at $5.00
     pub fn optimize_payment_method(amount_usd: f64) -> PaymentMethod {
-        let card_fee = (amount_usd * 0.029) + 0.30;
-        let mut ach_fee = amount_usd * 0.008;
-        if ach_fee > 5.0 {
-            ach_fee = 5.0;
-        }
+        let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
+        let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
-        if ach_fee < card_fee && amount_usd >= 50.0 {
+        if ach_fee < card_fee && amount_usd >= Self::ACH_MIN_AMOUNT {
             PaymentMethod::Ach
         } else {
             PaymentMethod::CreditCard
@@ -27,13 +30,10 @@ impl PaymentRouter {
     /// Calculates the potential savings in USD if the optimal payment method is used
     /// instead of defaulting to Credit Card.
     pub fn calculate_fee_savings(amount_usd: f64) -> f64 {
-        let card_fee = (amount_usd * 0.029) + 0.30;
-        let mut ach_fee = amount_usd * 0.008;
-        if ach_fee > 5.0 {
-            ach_fee = 5.0;
-        }
+        let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
+        let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
-        if ach_fee < card_fee && amount_usd >= 50.0 {
+        if ach_fee < card_fee && amount_usd >= Self::ACH_MIN_AMOUNT {
             let savings = card_fee - ach_fee;
             (savings * 100.0).round() / 100.0
         } else {
@@ -66,5 +66,63 @@ mod tests {
         // ACH fee: 5.00
         // Savings: 24.30
         assert_eq!(savings, 24.30);
+    }
+}
+
+#[cfg(test)]
+mod extra_tests {
+    use super::*;
+
+    #[test]
+    fn test_optimize_payment_method_medium_amount() {
+        // Card fee: 50.0 * 0.029 + 0.30 = 1.45 + 0.30 = 1.75
+        // ACH fee: 50.0 * 0.008 = 0.40
+        // Because 0.40 < 1.75 and amount is >= 50.0, ACH should be preferred.
+        assert_eq!(PaymentRouter::optimize_payment_method(50.0), PaymentMethod::Ach);
+    }
+
+    #[test]
+    fn test_optimize_payment_method_just_below_threshold() {
+        // Amount: 49.99
+        // Card fee: 49.99 * 0.029 + 0.30 = 1.44971 + 0.30 = 1.74971
+        // ACH fee: 49.99 * 0.008 = 0.39992
+        // Although ACH is cheaper, amount is < 50.0, so CreditCard is preferred.
+        assert_eq!(PaymentRouter::optimize_payment_method(49.99), PaymentMethod::CreditCard);
+    }
+
+    #[test]
+    fn test_calculate_fee_savings_small_amount() {
+        // For small amounts under 50.0, savings is 0 since we stick with CreditCard
+        assert_eq!(PaymentRouter::calculate_fee_savings(10.0), 0.0);
+    }
+
+    #[test]
+    fn test_calculate_fee_savings_medium_amount() {
+        // Amount: 50.0
+        // Card fee: 50.0 * 0.029 + 0.30 = 1.75
+        // ACH fee: 50.0 * 0.008 = 0.40
+        // Savings: 1.75 - 0.40 = 1.35
+        assert_eq!(PaymentRouter::calculate_fee_savings(50.0), 1.35);
+    }
+
+    #[test]
+    fn test_calculate_fee_savings_massive_amount() {
+        // Amount: 10_000.0
+        // Card fee: 10_000.0 * 0.029 + 0.30 = 290.30
+        // ACH fee: capped at 5.00
+        // Savings: 290.30 - 5.00 = 285.30
+        assert_eq!(PaymentRouter::calculate_fee_savings(10_000.0), 285.30);
+    }
+
+    #[test]
+    fn test_zero_amount() {
+        assert_eq!(PaymentRouter::optimize_payment_method(0.0), PaymentMethod::CreditCard);
+        assert_eq!(PaymentRouter::calculate_fee_savings(0.0), 0.0);
+    }
+
+    #[test]
+    fn test_negative_amount() {
+        assert_eq!(PaymentRouter::optimize_payment_method(-10.0), PaymentMethod::CreditCard);
+        assert_eq!(PaymentRouter::calculate_fee_savings(-10.0), 0.0);
     }
 }

@@ -31,8 +31,8 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 pkg_files(
     name = "app_files",
-    srcs = ["//src/app:app"],
-    renames = {"//src/app:app": "ohc-app"},
+    srcs = ["//src/ui/tauri:app"],
+    renames = {"//src/ui/tauri:app": "ohc-app"},
     strip_prefix = strip_prefix.from_pkg(),
 )
 
@@ -50,21 +50,29 @@ pkg_deb(
     architecture = "amd64",
     maintainer = "One Human Corp <support@onehumancorp.com>",
     package = "ohc-app",
-    version = "0.4.28+1",
+    version = "0.4.41+1",
     description = "One Human Corp Desktop Application",
     section = "utils",
     priority = "optional",
     data = ":app_tar",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 pkg_rpm(
     name = "app_rpm",
     package_name = "ohc-app",
-    version = "0.4.28+1",
+    version = "0.4.41+1",
     license = "Apache-2.0",
     summary = "One Human Corp Desktop Application",
     description = "One Human Corp Desktop Application",
     srcs = [":app_files"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 # ── Windows Packages ──────────────────────────────────────────────────────────
@@ -72,7 +80,7 @@ pkg_rpm(
 pkg_zip(
     name = "app_windows_zip",
     srcs = [":app_files"],
-    package_file_name = "ohc-app-windows-0.4.28+1.zip",
+    package_file_name = "ohc-app-windows-0.4.41+1.zip",
     visibility = ["//visibility:public"],
 )
 
@@ -83,6 +91,10 @@ oci_image(
     base = "@distroless_cc",
     entrypoint = ["/ohc-app"],
     tars = [":app_tar"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     visibility = ["//visibility:public"],
 )
 
@@ -90,6 +102,10 @@ oci_load(
     name = "app_image_tarball",
     image = ":app_image",
     repo_tags = ["ohc-app:latest"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     visibility = ["//visibility:public"],
 )
 
@@ -98,9 +114,10 @@ oci_load(
 filegroup(
     name = "all_release_artifacts",
     srcs = [
-        ":app_tar",
-        ":app_deb",
-        ":app_windows_zip",
+        # Tauri app excluded - cannot build with Bazel due to compile-time codegen incompatibility
+        # ":app_tar",
+        # ":app_deb",
+        # ":app_windows_zip",
         ":app_image_tarball",
     ],
     visibility = ["//visibility:public"],

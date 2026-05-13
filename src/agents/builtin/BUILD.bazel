@@ -10,7 +10,7 @@ rust_library(
         "budget.rs",
         "caveman.rs",
         "core.rs",
-        "memory.rs",
+
         "pubsub.rs",
         "output_parser.rs",
         "types.rs",
@@ -40,15 +40,18 @@ rust_library(
 rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
+        "auth.rs",
+        "codex_runner.rs",
         "agent.rs",
         "checkpointer.rs",
         "departments.rs",
         "guardrails.rs",
         "harness.rs",
-        "legacy_mesh.rs",
         "langgraph.rs",
+        "autogen.rs",
         "masking_tests.rs",
         "lib.rs",
+        "json_store.rs",
         "memory_store.rs",
         "mesh/mod.rs",
         "mesh/transport.rs",
@@ -58,6 +61,7 @@ rust_library(
         "ralph_loop.rs",
         "registry.rs",
         "service.rs",
+        "consolidation_worker.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",
@@ -67,10 +71,12 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "@crates//:temp-env",
         ":core",
         "//src/proto:agent_service_tonic",
         "//src/proto:common_prost",
         "//src/proto:hub_prost",
+        "//src/proto:interop_prost",
         "//src/agents/builtin/llm",
         "//src/agents/builtin/tools",
     ] + [
@@ -159,11 +165,13 @@ rust_test(
     name = "unit_tests",
     crate = ":ohc_builtin_agent_lib",
     edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 exports_files([
-    "autodream.rs",
-    "autodream/store.rs",
     "worker.rs",
     "mcp/mod.rs",
     "mcp/client.rs",

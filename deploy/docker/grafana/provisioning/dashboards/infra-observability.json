@@ -166,7 +166,8 @@
         }
       ],
       "title": "API Request Rate (5m avg)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -256,7 +257,8 @@
         }
       ],
       "title": "API Request Latency (5m avg)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     }
   ],
   "refresh": "10s",

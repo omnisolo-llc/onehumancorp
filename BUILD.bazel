@@ -20,6 +20,9 @@ filegroup(
 # gazelle:prefix github.com/onehumancorp/mono
 exports_files([
     "pubspec.yaml",
+    "playwright.config.ts",
+    "package.json",
+    "package-lock.json",
 ])
 
 
@@ -92,3 +95,7 @@ alias(
     actual = "//src/examples/hello-world-agent:hello-world",
     tags = ["manual"],
 )
+
+load("@gazelle//:def.bzl", "gazelle")
+# gazelle:prefix onehumancorp
+gazelle(name = "gazelle")

@@ -1,3 +1,58 @@
+## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
+
+### Privacy/Offline Improvements
+- Implement offline-first local vector embeddings cache for the OHC Swarm.
+
+## v0.4.39 (Cloud) / v0.4.39+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Add auto-scaling limits for Sub-Agent Queue and Teammate Mesh APIs to handle increased load spikes.
+
+### Privacy/Offline Improvements
+- Enforce full local SIPDB SQLite encryption parity for Standalone builds to protect sensitive user telemetry.
+
+## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhance multi-tenant onboarding flow tests for the Welcome Checklist to ensure reliable scaling.
+
+### Privacy/Offline Improvements
+- Bolster Standalone Wizard state test coverage for improved offline reliability and progressive disclosure validation.
+
+## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
+
+- Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
+- Privacy/Offline (Standalone): Ensured local agents leverage Teammate Mesh gracefully with local-only fallback and zero-trust isolated environments.
+
+## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
+
+- Scaling (Cloud): Fix orchestration mesh tests that failed due to multiple declarations and invalid imports.
+- Privacy/Offline (Standalone): Add missing `RedactInterfacePII` to fix backend telemetry data sync crashes.
+
+## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
+
+- Scaling (Cloud): update api routing to use axum 0.8 style path variables (#11553).
+
+- Privacy/Offline (Standalone): No specific privacy/offline changes in this release.
+
+## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
+
+- Scaling (Cloud): Refactored GrowthReferralWidget to use GlassCard for premium aesthetic (#11347).
+
+- Privacy/Offline (Standalone): Refactored GrowthReferralWidget to use GlassCard for premium aesthetic (#11347).
+
+## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🔗 Link: Implemented Teammate Mesh Communication Layer and Distributed Locks (#11313)
+
+### Privacy/Offline Improvements
+- 🔗 Link: Ensured mesh communication layer degrades gracefully into isolated standalone instances (#11313)
+
+
 ## [0.4.27] (Cloud) / v0.4.27+1 (Standalone) - 2024-05-06
 
 ### Cloud
@@ -20,6 +75,12 @@
 
 
 # Release Notes
+
+## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
+
+- Scaling (Cloud): Add dual-mode caching layer to dashboard service to optimize latency (#11871).
+- Privacy/Offline (Standalone): Ensure dual-mode caching layer supports offline persistence securely (#11871).
+
 
 ## v0.4.25 (Cloud) / v0.4.25+1 (Standalone)
 - Scaling (Cloud): Fix IpcTransport races, gRPC UI Interceptor, and MaintenanceWorker fixes (#734b, #9cb3, #33a8).

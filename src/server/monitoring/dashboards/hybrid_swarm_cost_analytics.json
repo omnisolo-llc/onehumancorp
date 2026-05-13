@@ -23,53 +23,77 @@
       "title": "Swarm Throughput",
       "type": "timeseries",
       "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
       "targets": [
         {
           "expr": "rate(ohc_agent_cost_total[5m])",
           "legendFormat": "{{entity}}",
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "title": "Entity Latency",
       "type": "timeseries",
       "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
       "targets": [
         {
           "expr": "rate(ohc_swarm_job_latency_by_entity_seconds_sum[5m]) / rate(ohc_swarm_job_latency_by_entity_seconds_count[5m])",
           "legendFormat": "{{entity}}",
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "title": "Contention Heatmap",
       "type": "heatmap",
       "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
       "targets": [
         {
           "expr": "sum by(operation) (rate(ohc_sqlite_lock_contention_total[5m]))",
           "legendFormat": "{{operation}}",
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "title": "Cost Analytics Breakdown",
       "type": "barchart",
       "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
       "targets": [
         {
           "expr": "sum by(entity) (increase(ohc_agent_cost_total[1h]))",
           "legendFormat": "{{entity}}",
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     }
   ],
   "refresh": "5s",

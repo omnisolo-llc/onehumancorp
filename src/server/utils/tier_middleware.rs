@@ -7,41 +7,41 @@ use axum::{
 };
 use std::sync::Arc;
 use serde_json::json;
-use crate::pricing::rate_limit::RedisRateLimiter;
+use ::server_pricing::rate_limit::RedisRateLimiter;
 
 pub async fn tier_middleware(
     State(rate_limiter): State<Arc<RedisRateLimiter>>,
     req: Request,
     next: Next,
 ) -> Response {
-    let tenant_id = match req.extensions().get::<crate::auth::Claims>() {
+    let tenant_id = match req.extensions().get::<::server_auth::common::Claims>() {
         Some(claims) => claims.organization_id.clone().unwrap_or_else(|| "system".to_string()),
         None => "system".to_string(), // In tests or unauth paths
     };
 
     // Very simple placeholder: in a real system we might inspect the request path to determine the action cost
     // For this example, we just simulate a 1-action check for protected paths
+    let mut warning_msg = None;
     if req.uri().path().starts_with("/api/v1/protected") || req.uri().path().starts_with("/api/v1/autodream") {
         match rate_limiter.record_action(&tenant_id, "default_agent").await {
             Ok(status) => {
                 if status.soft_limit_reached {
-                    let msg = status.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string());
-                    return (
-                        StatusCode::PAYMENT_REQUIRED,
-                        Json(json!({ "error": "TierLimitExceeded", "message": msg })),
-                    ).into_response();
+                    warning_msg = Some(status.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string()));
                 }
             }
             Err(e) => {
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(json!({ "error": "RateLimitError", "message": e })),
-                ).into_response();
+                tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
             }
         }
     }
 
-    next.run(req).await
+    let mut res = next.run(req).await;
+    if let Some(msg) = warning_msg {
+        if let Ok(header_value) = axum::http::HeaderValue::from_str(&msg) {
+            res.headers_mut().insert("x-ratelimit-warning", header_value);
+        }
+    }
+    res
 }
 
 #[cfg(test)]
@@ -50,7 +50,7 @@ mod tests {
     use axum::{routing::get, Router};
     use axum::http::StatusCode;
     use std::sync::Arc;
-    use crate::pricing::rate_limit::{RedisRateLimiter, PlanTier};
+    use ::server_pricing::rate_limit::{RedisRateLimiter, PlanTier};
     use redis::AsyncCommands;
 
     async fn setup_test_router(rate_limiter: Arc<RedisRateLimiter>) -> Router {
@@ -114,7 +114,8 @@ mod tests {
                     .await
                     .unwrap();
 
-                assert_eq!(res2.status(), StatusCode::PAYMENT_REQUIRED);
+                assert_eq!(res2.status(), StatusCode::OK);
+                assert!(res2.headers().contains_key("x-ratelimit-warning"));
             }
         }
     }

@@ -1,5 +1,5 @@
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
-use crate::ohc::orchestration::TeammateMeshEvent;
+use ::server_ohc::orchestration::TeammateMeshEvent;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
 use opentelemetry::trace::{Tracer, TraceContextExt};
@@ -80,17 +80,17 @@ impl TeammateMesh for CentrifugeNode {
         let msg_id = uuid::Uuid::new_v4().to_string();
         let ack_topic = format!("mesh:ack:{}", msg_id);
 
-        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
         let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
-            let _ = tx.try_send(());
+            let _ = tx.send(());
         })).await?;
 
         let mut retries = 0;
         let mut backoff = 200;
 
         loop {
-            if retries > 5 {
+            if retries > 10 {
                 cancel();
                 return Err("Failed to receive ack after retries".to_string());
             }
@@ -114,7 +114,7 @@ impl TeammateMesh for CentrifugeNode {
             }
 
             retries += 1;
-            backoff *= 2;
+            backoff = std::cmp::min(backoff * 2, 2000);
         }
     }
 
@@ -314,15 +314,26 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                             return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
                         }
                         Err(e) => {
-                            eprintln!("Failed to initialize PgTransport fallback: {}", e);
+                            tracing::error!("Failed to initialize PgTransport fallback: {}", e);
                             // Fallback to memory
                         }
                     }
                 }
             }
 
-            let transport = ohc_builtin_agent::mesh::transport::MemoryTransport::new();
-            Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
+            match ohc_builtin_agent::mesh::transport::SqliteTransport::new(pool.clone()).await {
+                Ok(transport) => {
+                    let t_clone = transport.clone();
+                    tokio::spawn(async move { t_clone.start_worker().await; });
+                    Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
+                }
+                Err(e) => {
+                    tracing::error!("Failed to initialize SqliteTransport: {}. Falling back to MemoryTransport.", e);
+                    let transport = ohc_builtin_agent::mesh::transport::MemoryTransport::new();
+                    Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
+                }
+            }
         }
     }
 }
+// dummy validation comment

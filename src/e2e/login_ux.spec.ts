@@ -1,21 +1,34 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Login Screen Visual Audit', () => {
-  test('should display canonical design elements and actions', async ({ page }) => {
+  test('should display login page', async ({ page }) => {
     await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
+    await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
+  });
 
-    // Canonical Text check
-    const headerText = page.locator('text=One Human Corp').first();
-    await expect(headerText).toBeVisible();
+  test('should display dashboard', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  });
 
-    // Verify critical buttons
-    const startBusinessBtn = page.locator('button:has-text("🚀 Start Business Setup")');
-    await expect(startBusinessBtn).toBeVisible();
+  test('should display agents page', async ({ page }) => {
+    await page.goto('/agents');
+    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+  });
+});
 
-    const settingsBtn = page.locator('button:has-text("⚙ Advanced Options")');
-    await expect(settingsBtn).toBeVisible();
+test.describe('Navigation', () => {
+  test('should navigate via nav links', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('nav')).toBeVisible();
+    await page.locator('nav a:has-text("Agents")').click();
+    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+  });
 
-    const oauthBtn = page.locator('button:has-text("Continue with Google/Apple")');
-    await expect(oauthBtn).toBeVisible();
+  test('should show welcome message', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('text=Welcome back')).toBeVisible();
   });
 });

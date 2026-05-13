@@ -2,6 +2,10 @@ use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
+use ::server_pricing::prompt_caching::PromptCache;
+use ::server_pricing::compression::{minify_json_prompt, truncate_by_word_count};
+use tokio_stream::Stream;
+use std::pin::Pin;
 
 struct CircuitBreaker {
     failures: Mutex<usize>,
@@ -56,12 +60,15 @@ fn get_circuit_breaker() -> &'static CircuitBreaker {
 pub struct MinimaxClient {
     api_key: String,
     url: String,
+    cache: PromptCache,
 }
 
 #[derive(Debug, Serialize)]
 struct MinimaxRequest {
     model: String,
     messages: Vec<MinimaxMessage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -90,14 +97,28 @@ impl MinimaxClient {
         MinimaxClient {
             api_key,
             url: "https://api.minimax.chat/v1/chat/completions".to_string(),
+            cache: PromptCache::new(Duration::from_secs(300)), // 5 minute TTL
         }
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+        // 1. Check Cache
+        if let Some(cached) = self.cache.get(prompt) {
+            tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
+            return Ok(cached.text);
+        }
+
         let cb = get_circuit_breaker();
         if !cb.allow() {
             return Err("circuit breaker open".to_string());
         }
+
+        // 2. Optimize Prompt
+        let optimized_prompt = if prompt.starts_with('{') {
+            minify_json_prompt(prompt)
+        } else {
+            truncate_by_word_count(prompt, 2000) // Safety truncation
+        };
 
         let client = reqwest::Client::new();
 
@@ -105,8 +126,9 @@ impl MinimaxClient {
             model: "MiniMax-M2.7".to_string(),
             messages: vec![MinimaxMessage {
                 role: "user".to_string(),
-                content: prompt.to_string(),
+                content: optimized_prompt,
             }],
+            stream: Some(false),
         };
 
         let mut last_err = String::new();
@@ -125,7 +147,10 @@ impl MinimaxClient {
                         let result: MinimaxResponse = resp.json().await.map_err(|e| e.to_string())?;
                         cb.record_success();
                         if let Some(choice) = result.choices.first() {
-                            return Ok(choice.message.content.clone());
+                            let content = choice.message.content.clone();
+                            // 3. Update Cache
+                            self.cache.set(prompt, &content, prompt.len() / 4); // rough token estimate
+                            return Ok(content);
                         } else {
                             last_err = "empty response from minimax".to_string();
                             cb.record_failure();
@@ -156,6 +181,70 @@ impl MinimaxClient {
         }
 
         Err(format!("failed after 5 retries: {}", last_err))
+    }
+
+    pub async fn reason_stream(&self, prompt: &str) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
+        let api_key = self.api_key.clone();
+        let url = self.url.clone();
+        let optimized_prompt = truncate_by_word_count(prompt, 2000);
+
+        let (tx, rx) = tokio::sync::mpsc::channel(100);
+
+        tokio::spawn(async move {
+            let client = reqwest::Client::new();
+            let request_body = MinimaxRequest {
+                model: "MiniMax-M2.7".to_string(),
+                messages: vec![MinimaxMessage {
+                    role: "user".to_string(),
+                    content: optimized_prompt,
+                }],
+                stream: Some(true),
+            };
+
+            let response = client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .header("Authorization", format!("Bearer {}", api_key))
+                .json(&request_body)
+                .send()
+                .await;
+
+            match response {
+                Ok(resp) => {
+                    if resp.status().is_success() {
+                        let mut stream = resp.bytes_stream();
+                        use tokio_stream::StreamExt;
+                        while let Some(chunk_res) = stream.next().await {
+                            match chunk_res {
+                                Ok(chunk) => {
+                                    let text = String::from_utf8_lossy(&chunk).to_string();
+                                    // Parse SSE data: data: {"choices": [{"delta": {"content": "..."}}]}
+                                    // Note: lossy conversion might corrupt characters split across chunks.
+                                    // Ideally use a stateful UTF-8 decoder.
+                                    for line in text.lines() {
+                                        if line.starts_with("data: ") {
+                                            let json_str = &line[6..];
+                                            if json_str == "[DONE]" { break; }
+                                            if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_str) {
+                                                if let Some(content) = val["choices"][0]["delta"]["content"].as_str() {
+                                                    let _ = tx.send(Ok(content.to_string())).await;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                Err(e) => { let _ = tx.send(Err(e.to_string())).await; }
+                            }
+                        }
+                    } else {
+                        let _ = tx.send(Err(format!("Stream error: {}", resp.status()))).await;
+                    }
+                }
+                Err(e) => { let _ = tx.send(Err(e.to_string())).await; }
+            }
+        });
+
+        Box::pin(tokio_stream::wrappers::ReceiverStream::new(rx))
     }
 
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {

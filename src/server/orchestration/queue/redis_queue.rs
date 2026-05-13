@@ -4,6 +4,7 @@ use async_trait::async_trait;
 pub struct RedisTaskQueue {
     client: redis::Client,
     queue_name: String,
+    connection: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
 }
 
 impl RedisTaskQueue {
@@ -12,14 +13,34 @@ impl RedisTaskQueue {
         Ok(Self {
             client,
             queue_name: queue_name.to_string(),
+            connection: tokio::sync::OnceCell::new(),
         })
+    }
+
+    async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
+        let conn = self.connection.get_or_try_init(|| async {
+            self.client.get_multiplexed_tokio_connection().await
+        }).await.map_err(|e| e.to_string())?;
+        Ok(conn.clone())
     }
 }
 
 #[async_trait]
 impl TaskQueue for RedisTaskQueue {
+    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+        if jobs.is_empty() { return Ok(()); }
+        let mut conn = self.get_connection().await?;
+        let mut pipe = redis::pipe();
+        for job in jobs {
+            let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
+            pipe.cmd("RPUSH").arg(&self.queue_name).arg(payload_json);
+        }
+        let _: () = pipe.query_async(&mut conn).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     async fn enqueue(&self, job: Job) -> Result<(), String> {
-        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
         let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
 
         let _: () = redis::cmd("RPUSH")
@@ -33,7 +54,7 @@ impl TaskQueue for RedisTaskQueue {
     }
 
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
-        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.get_connection().await?;
 
         let result: Option<(String, String)> = redis::cmd("BLPOP")
             .arg(&self.queue_name)

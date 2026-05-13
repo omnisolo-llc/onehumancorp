@@ -1,7 +1,7 @@
 use super::server::ReverseTunnelServer;
 use super::client::LocalProxyClient;
-use crate::ohc::mcp_proxy::mcp_reverse_tunnel_service_server::{McpReverseTunnelService, McpReverseTunnelServiceServer};
-use crate::ohc::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnelServiceClient;
+use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::{McpReverseTunnelService, McpReverseTunnelServiceServer};
+use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnelServiceClient;
 use tonic::transport::{Server, Endpoint};
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -9,7 +9,7 @@ use tokio_stream::wrappers::TcpListenerStream;
 
 #[tokio::test]
 async fn test_proxy_tunnel() {
-    let pool = sqlx::postgres::PgPoolOptions::new()
+    let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
         .max_connections(1)
         .acquire_timeout(std::time::Duration::from_millis(1))
         .connect_lazy("postgres://invalid:invalid@localhost:1/test")

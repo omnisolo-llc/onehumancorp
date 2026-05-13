@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 )
 
 var throttleSemaphore = make(chan struct{}, 10) // Allow up to 10 concurrent syncs
@@ -27,7 +26,7 @@ func NewHybridMCPRAGDaemon(db *sql.DB, remoteURL string) *HybridMCPRAGDaemon {
 // SyncPendingMissions queries the database for agent_missions with status 'CLOUD_ESCALATION' or 'BURSTING'
 // and synced_to_cloud = false, then attempts to sync them to the remote API.
 func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
-	rows, err := d.db.QueryContext(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') LIMIT 100")
+	rows, err := d.db.QueryContext(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes')) LIMIT 100")
 	if err != nil {
 		return fmt.Errorf("sync_daemon: failed to query agent_missions: %w", err)
 	}
@@ -42,7 +41,6 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 	for rows.Next() {
 		var m mission
 		if err := rows.Scan(&m.id, &m.status, &m.payload); err != nil {
-			log.Printf("sync_daemon: [DEBUG] failed to scan row: %v", err)
 			continue
 		}
 		missions = append(missions, m)
@@ -70,7 +68,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		if err != nil {
 			// Release semaphore on error
 			<-throttleSemaphore
-			log.Printf("sync_daemon: [DEBUG] failed to sync mission %s: %v", m.id, err)
+			_, _ = d.db.ExecContext(ctx, "UPDATE agent_missions SET sync_error = $1, last_synced_at = datetime('now') WHERE id = $2", err.Error(), m.id)
 			continue
 		}
 
@@ -80,14 +78,12 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		// Release semaphore after db transaction
 		<-throttleSemaphore
 		if err != nil {
-			log.Printf("sync_daemon: [DEBUG] failed to update synced_to_cloud flag for mission %s: %v", m.id, err)
 			continue
 		}
 
 		syncedCount++
 	}
 
-	// log.Printf("sync_daemon: successfully synced %d agent_missions", syncedCount)
 	return nil
 }
 

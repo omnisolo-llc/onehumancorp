@@ -1,4 +1,100 @@
+## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
+
+- Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
+- Privacy/Offline (Standalone): Ensured local agents leverage Teammate Mesh gracefully with local-only fallback and zero-trust isolated environments.
+
 # OHC Hybrid Agentic OS - Changelog
+
+## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
+
+### Privacy/Offline Improvements
+- Implement offline-first local vector embeddings cache for the OHC Swarm.
+
+
+## v0.4.39 (Cloud) / v0.4.39+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Add auto-scaling limits for Sub-Agent Queue and Teammate Mesh APIs to handle increased load spikes.
+
+### Privacy/Offline Improvements
+- Enforce full local SIPDB SQLite encryption parity for Standalone builds to protect sensitive user telemetry.
+
+
+## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhance multi-tenant onboarding flow tests for the Welcome Checklist to ensure reliable scaling.
+
+### Privacy/Offline Improvements
+- Bolster Standalone Wizard state test coverage for improved offline reliability and progressive disclosure validation.
+
+
+## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
+### Cloud Scaling Improvements
+- Fix orchestration mesh tests that failed due to multiple declarations and invalid imports.
+### Privacy/Offline Improvements
+- Add missing `RedactInterfacePII` to fix backend telemetry data sync crashes.
+
+## v0.4.35 (Cloud) / v0.4.35+1 (Standalone)
+### Cloud Scaling Improvements
+- 🔨 Forge: Sub-Agent Orchestration Queue Test Fixes (#12202)
+
+### Privacy/Offline Improvements
+- (No specific privacy/offline improvements in this patch)
+
+## v0.4.34 (Cloud) / v0.4.34+2 (Standalone)
+
+- Scaling (Cloud): Fix compiler warnings in UI tests and app main to improve reliability and multi-tenant scaling (#11933).
+- Privacy/Offline (Standalone): Improve UI tests and standalone app reliability (#11933).
+
+## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
+
+- Scaling (Cloud): Add dual-mode caching layer to dashboard service to optimize latency (#11871).
+- Privacy/Offline (Standalone): Ensure dual-mode caching layer supports offline persistence securely (#11871).
+
+
+## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🛡️ Sentry: Health Guardianship /api/v1/health improvements for multi-tenant state sync
+
+### Privacy/Offline Improvements
+- 🛡️ Sentry: Health Guardianship /api/v1/health improvements for standalone isolated node switching
+
+### Cloud Scaling Improvements
+- 🧹 Maintainer: Ensure multitenant K8s compliance for all pods (#11546)
+
+### Privacy/Offline Improvements
+- 🧹 Maintainer: Centralize PII compliance guardrails and enforce hybrid privacy audit (#11546)
+
+
+## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
+### Cloud Scaling Improvements
+- 🔗 Link: update api routing to use axum 0.8 style path variables (#11553)
+
+### Privacy/Offline Improvements
+- No specific privacy/offline changes in this release.
+
+
+## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
+### Cloud Scaling Improvements
+- 🔨 Forge: Refactor GrowthReferralWidget to use GlassCard for premium aesthetic (#11347)
+
+### Privacy/Offline Improvements
+- 🔨 Forge: Refactor GrowthReferralWidget to use GlassCard for premium aesthetic (#11347)
+
+## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🔗 Link: Implemented Teammate Mesh Communication Layer and Distributed Locks (#11313)
+
+### Privacy/Offline Improvements
+- 🔗 Link: Ensured mesh communication layer degrades gracefully into isolated standalone instances (#11313)
+
+
 
 ## v0.4.28 (Cloud) / v0.4.28+1 (Standalone)
 ### Cloud Scaling Improvements

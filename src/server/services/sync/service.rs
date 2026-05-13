@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use crate::ohc::orchestration::*;
-use crate::ohc::orchestration::sync_service_server::SyncService;
+use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::sync_service_server::SyncService;
 use crate::sip::SipDB;
 
 pub struct MySyncService {
@@ -85,7 +85,7 @@ impl SyncService for MySyncService {
         tracing::debug!("PowerSync received push request.");
 
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
         let mut tenant_id = parsed.0;
         if tenant_id.is_empty() {
             tenant_id = "system".to_string();
@@ -99,7 +99,7 @@ impl SyncService for MySyncService {
         }
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         for item in items {
             if item["table"].as_str() == Some("agent_missions") {
@@ -162,14 +162,14 @@ impl SyncService for MySyncService {
 
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
         let mut tenant_id = parsed.0;
         if tenant_id.is_empty() {
             tenant_id = "system".to_string();
         }
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let rows = match sqlx::query(
             "SELECT id, status, payload, organization_id, updated_at, version FROM agent_missions WHERE _sync_status = 'pending'"
@@ -234,7 +234,7 @@ impl SyncService for MySyncService {
         let deltas = req.deltas;
 
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
         let tenant_id = parsed.0;
 
         if tenant_id.is_empty() {
@@ -250,7 +250,7 @@ impl SyncService for MySyncService {
         }
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut synced_count = 0;
 
@@ -298,7 +298,7 @@ impl SyncService for MySyncService {
     ) -> Result<Response<SyncEscalationResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
         let tenant_id = if parsed.0.is_empty() { "system".to_string() } else { parsed.0 };
 
         let req = request.into_inner();
@@ -361,7 +361,7 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_sync_missions_empty() {
         // We can test empty payloads without DB!
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(HybridSyncMissionsRequest { payloads: vec![] });
@@ -372,7 +372,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_power_sync_push() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPushRequest { payload: "[]".to_string() });
@@ -382,15 +382,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_power_sync_pull() {
-        return; // Skip test to avoid timeout
-
-        #[allow(unreachable_code)]
-
         // Will fail to fetch if table doesn't exist, so this will only pass with empty payload if error happens, but we actually check the fallback.
         // In the mock we expect error from the query, but we don't have migrations applied.
         // This is safe since we only check that it doesn't panic.
         #[allow(unused_variables)]
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPullRequest {});
@@ -407,7 +403,7 @@ mod tests {
             return;
         }
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
 
             .connect(&database_url).await.unwrap();
@@ -450,18 +446,18 @@ mod tests {
     }
     #[tokio::test]
     async fn test_sync_mcp_deltas_empty() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let mut req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
-        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://ohc/org/org1/agent/agent1".parse().unwrap());
         let resp = service.sync_mcp_deltas(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
         assert_eq!(resp.get_ref().synced_count, 0);
     }
     #[tokio::test]
     async fn test_sync_escalation_empty() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(SyncEscalationRequest { payloads: vec![] });
@@ -471,7 +467,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_vector_sync() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(VectorSyncRequest {});

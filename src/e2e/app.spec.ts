@@ -15,7 +15,7 @@ test.describe('Dashboard', () => {
 test.describe('Business Setup Wizard', () => {
   test('should show welcome step', async ({ page }) => {
     await page.goto('/business-setup');
-    await expect(page.locator('text=Welcome')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
   });
 
   test('should navigate through wizard steps', async ({ page }) => {
@@ -26,11 +26,11 @@ test.describe('Business Setup Wizard', () => {
     await nextButton.click();
 
     // Step 1: Business type
-    await page.locator('input[type="text"]').first().fill('Online Store');
+    await page.locator('input[type="text"]').filter({ visible: true }).first().fill('Online Store');
     await nextButton.click();
 
     // Step 2: Company name
-    await page.locator('input[type="text"]').first().fill('Test Company');
+    await page.locator('input[type="text"]').filter({ visible: true }).first().fill('Test Company');
     await nextButton.click();
 
     // Verify we can proceed through steps
@@ -41,13 +41,13 @@ test.describe('Business Setup Wizard', () => {
 test.describe('Login', () => {
   test('should show login form', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.locator('input[type="password"]')).toBeVisible();
+    await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
   });
 
   test('should allow password visibility toggle', async ({ page }) => {
     await page.goto('/login');
-    const passwordInput = page.locator('input[type="password"]');
+    const passwordInput = page.locator('input[type="password"]').filter({ visible: true }).first();
     const toggleButton = page.locator('button:has-text("Show")');
     await expect(toggleButton).toBeVisible();
   });

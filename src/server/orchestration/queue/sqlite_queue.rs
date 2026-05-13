@@ -15,16 +15,46 @@ impl SQLiteTaskQueue {
 
 #[async_trait]
 impl TaskQueue for SQLiteTaskQueue {
+    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+        if jobs.is_empty() { return Ok(()); }
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+        let mut query_str = String::from("INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id) VALUES ");
+        let mut values = Vec::new();
+
+        for _ in 0..jobs.len() {
+            values.push("(?, ?, ?, ?, 'QUEUED', ?, ?)");
+        }
+        query_str.push_str(&values.join(", "));
+
+        let mut query = sqlx::query(&query_str);
+
+        for job in jobs {
+            query = query
+                .bind(job.id)
+                .bind(job.parent_task_id)
+                .bind(job.agent_role)
+                .bind(job.payload)
+                .bind(job.run_after)
+                .bind(job.tenant_id);
+        }
+
+        query.execute(&mut *tx).await.map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         sqlx::query(
-            "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after)
-             VALUES (?, ?, ?, ?, 'QUEUED', ?)"
+            "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id)
+             VALUES (?, ?, ?, ?, 'QUEUED', ?, ?)"
         )
         .bind(&job.id)
         .bind(&job.parent_task_id)
         .bind(&job.agent_role)
         .bind(&job.payload)
         .bind(job.run_after)
+        .bind(&job.tenant_id)
         .execute(&*self.pool)
         .await
         .map_err(|e| e.to_string())?;
@@ -41,7 +71,7 @@ impl TaskQueue for SQLiteTaskQueue {
 
         let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query_str = format!(
-            "SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at
+            "SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, organization_id
              FROM sub_agent_jobs
              WHERE status = 'QUEUED' AND agent_role IN ({})
              LIMIT 1",
@@ -68,6 +98,7 @@ impl TaskQueue for SQLiteTaskQueue {
                 locked_until: row.try_get("locked_until").unwrap_or(None),
                 created_at: row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()),
                 updated_at: row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+                tenant_id: row.try_get("organization_id").unwrap_or_default(),
             };
 
             sqlx::query("UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")

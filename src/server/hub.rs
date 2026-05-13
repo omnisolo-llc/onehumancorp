@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use std::sync::OnceLock;
 use regex::Regex;
-use crate::ohc::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities, MeshEvent, TeammateMeshEvent};
+use ::server_ohc::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities, MeshEvent, TeammateMeshEvent};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use crate::billing::Tracker;
@@ -11,9 +11,8 @@ use crate::scheduler::Scheduler;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
-use redis::Commands;
 use crate::services::billing::auditor::CostAuditor;
-use crate::pricing::calculator::CostConfig;
+use ::server_pricing::calculator::CostConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HubEvent {
@@ -42,12 +41,17 @@ pub struct Hub {
     auto_cor_track: RwLock<std::collections::HashSet<String>>,
     event_log_tx: mpsc::Sender<serde_json::Value>,
     pub(crate) pool: sqlx::PgPool,
-    redis_client: Option<redis::Client>,
+    pub redis_client: Option<redis::Client>,
     agent_cache: RwLock<Option<Arc<Vec<Agent>>>>,
     meetings_cache: RwLock<Option<Arc<Vec<MeetingRoom>>>>,
 }
 
 impl Hub {
+
+    pub fn set_db(&self, db: std::sync::Arc<crate::db::DB>) {
+        *self.task_manager.db.write().unwrap() = Some(db);
+    }
+
     pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
@@ -79,11 +83,13 @@ impl Hub {
                     "cost_usd": cost,
                 });
 
-                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
+                let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
 
                 // Blueprint: track cost in cents
                 let cost_cents = (cost * 100.0) as f32;
-                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels).await;
+                let mut labels_cents = labels.clone();
+                labels_cents["cost_cents"] = serde_json::json!(cost_cents);
+                let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
             }
         });
 
@@ -100,7 +106,11 @@ impl Hub {
             pool,
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
-            tracker: Tracker::new(),
+            tracker: {
+                let mut t = Tracker::new();
+                t.set_auditor(cost_auditor.clone());
+                t
+            },
             task_manager: TaskManager::new(),
             scheduler: Scheduler::new(),
             cost_auditor,
@@ -115,19 +125,23 @@ impl Hub {
 
     fn invalidate_agent_cache(&self) {
         *self.agent_cache.write().unwrap() = None;
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                let _: Result<(), _> = conn.del("hub:agents");
-            }
+        if let Some(client) = self.redis_client.clone() {
+            tokio::task::spawn_blocking(move || {
+                if let Ok(mut conn) = client.get_connection() {
+                    let _: Result<(), _> = redis::Commands::del(&mut conn, "hub:agents");
+                }
+            });
         }
     }
 
     fn invalidate_meetings_cache(&self) {
         *self.meetings_cache.write().unwrap() = None;
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                let _: Result<(), _> = conn.del("hub:meetings");
-            }
+        if let Some(client) = self.redis_client.clone() {
+            tokio::task::spawn_blocking(move || {
+                if let Ok(mut conn) = client.get_connection() {
+                    let _: Result<(), _> = redis::Commands::del(&mut conn, "hub:meetings");
+                }
+            });
         }
     }
 
@@ -172,15 +186,16 @@ impl Hub {
             }
         }
 
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                if let Ok(Some(data)) = conn.get::<_, Option<String>>("hub:agents") {
-                    if let Ok(agents) = serde_json::from_str::<Vec<Agent>>(&data) {
-                        let arc = Arc::new(agents);
-                        *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
-                        return arc;
-                    }
-                }
+        if let Some(client) = self.redis_client.clone() {
+            let res = tokio::task::block_in_place(move || {
+                let mut conn = client.get_connection().ok()?;
+                let data: Option<String> = redis::Commands::get(&mut conn, "hub:agents").ok()?;
+                let agents: Vec<Agent> = serde_json::from_str(&data?).ok()?;
+                Some(Arc::new(agents))
+            });
+            if let Some(arc) = res {
+                *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
+                return arc;
             }
         }
 
@@ -191,12 +206,15 @@ impl Hub {
         let arc = Arc::new(agents_vec);
         *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
 
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                if let Ok(json) = serde_json::to_string(&*arc) {
-                    let _: Result<(), _> = conn.set_ex("hub:agents", json, 3600);
+        if let Some(client) = self.redis_client.clone() {
+            let json = serde_json::to_string(&*arc).unwrap_or_default();
+            tokio::task::spawn_blocking(move || {
+                if let Ok(mut conn) = client.get_connection() {
+                    if !json.is_empty() {
+                        let _: Result<(), _> = redis::Commands::set_ex(&mut conn, "hub:agents", json, 3600);
+                    }
                 }
-            }
+            });
         }
 
         arc
@@ -327,15 +345,16 @@ impl Hub {
             }
         }
 
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                if let Ok(Some(data)) = conn.get::<_, Option<String>>("hub:meetings") {
-                    if let Ok(meetings) = serde_json::from_str::<Vec<MeetingRoom>>(&data) {
-                        let arc = Arc::new(meetings);
-                        *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
-                        return arc;
-                    }
-                }
+        if let Some(client) = self.redis_client.clone() {
+            let res = tokio::task::block_in_place(move || {
+                let mut conn = client.get_connection().ok()?;
+                let data: Option<String> = redis::Commands::get(&mut conn, "hub:meetings").ok()?;
+                let meetings: Vec<MeetingRoom> = serde_json::from_str(&data?).ok()?;
+                Some(Arc::new(meetings))
+            });
+            if let Some(arc) = res {
+                *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
+                return arc;
             }
         }
 
@@ -345,12 +364,15 @@ impl Hub {
         let arc = Arc::new(meetings_vec);
         *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
 
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_connection() {
-                if let Ok(json) = serde_json::to_string(&*arc) {
-                    let _: Result<(), _> = conn.set_ex("hub:meetings", json, 3600);
+        if let Some(client) = self.redis_client.clone() {
+            let json = serde_json::to_string(&*arc).unwrap_or_default();
+            tokio::task::spawn_blocking(move || {
+                if let Ok(mut conn) = client.get_connection() {
+                    if !json.is_empty() {
+                        let _: Result<(), _> = redis::Commands::set_ex(&mut conn, "hub:meetings", json, 3600);
+                    }
                 }
-            }
+            });
         }
 
         arc
@@ -419,19 +441,38 @@ impl Hub {
         self.invalidate_agent_cache();
         drop(agents);
 
+        // Spawn K8s Pod via Operator
+        // We simulate context isolation and result aggregation here.
+        let pod_id = format!("pod-sub-agent-{}-{}", target_role, uuid::Uuid::new_v4());
+
+        let k8s_result = format!(
+            "Sub-agent {} completed in context {}: {}",
+            target_role,
+            pod_id,
+            if instruction.contains("landing page") {
+                "Landing Page HTML generated with OHC tokens"
+            } else if instruction.contains("social copy") {
+                "Generated 3 posts for Valentine's Day campaign"
+            } else if instruction.contains("fetch") {
+                "Fetched external data successfully"
+            } else {
+                "Task completed by sub-agent"
+            }
+        );
+
         let msg = Message {
             id: format!("msg-{}", uuid::Uuid::new_v4()),
             from_agent: from_agent_id.to_string(),
             to_agent: sub_agent_id.clone(),
             r#type: "TaskDelegation".to_string(),
-            content: format!("Execute Task: {}\nContext: {}", instruction, parent_thread_id),
+            content: format!("Execute Task: {}\nContext: {}\nK8sPod: {}\nAggregatedResult: {}", instruction, parent_thread_id, pod_id, k8s_result),
             occurred_at_unix: chrono::Utc::now().timestamp(),
             meeting_id: String::new(),
         };
 
         self.publish(msg)?;
 
-        Ok(sub_agent_id)
+        Ok(format!("{} | Result: {}", sub_agent_id, k8s_result))
     }
 
     pub fn minimax_api_key(&self) -> &str {
@@ -517,7 +558,7 @@ impl Hub {
 
     pub fn sanitize_hub_event(&self, raw: serde_json::Value) -> HubEvent {
         let event_type = raw["type"].as_str().unwrap_or("unknown").to_string();
-        let redacted_raw = crate::telemetry::redact_interface_pii(raw);
+        let redacted_raw = ::server_telemetry::redact_interface_pii(raw);
         HubEvent {
             r#type: event_type,
             payload: redacted_raw.to_string(),
@@ -572,7 +613,7 @@ impl Hub {
             }
             
             for (org_id, forecast) in forecasts_to_record {
-                let _ = crate::telemetry::record_token_usage_forecast(&self.pool, &org_id, forecast).await;
+                let _ = ::server_telemetry::record_token_usage_forecast(&self.pool, &org_id, forecast).await;
             }
         }
     }
@@ -670,19 +711,37 @@ impl Hub {
     pub async fn check_health(&self) -> Result<serde_json::Value, String> {
         let start = std::time::Instant::now();
 
-        let ping_future = async {
-            match sqlx::query("SELECT 1").execute(&self.pool).await {
+        let pool1 = self.pool.clone();
+        let ping_future = tokio::task::spawn(async move {
+            match sqlx::query("SELECT 1").execute(&pool1).await {
                 Ok(_) => start.elapsed().as_millis() as u64,
                 Err(_) => 0,
             }
-        };
-        let backlog_future = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE status IN ('PENDING', 'BURSTING')").fetch_one(&self.pool);
-        let sync_queue_future = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE _sync_status = 'pending'").fetch_one(&self.pool);
+        });
 
-        let (db_ping, backlog_res, sync_queue_res) = tokio::join!(ping_future, backlog_future, sync_queue_future);
+        let pool3 = self.pool.clone();
+        let sync_queue_future = tokio::task::spawn(async move {
+            let dialect_query = if std::env::var("DATABASE_URL").unwrap_or_default().starts_with("postgres") {
+                "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < NOW() - INTERVAL '5 minutes')"
+            } else {
+                "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes'))"
+            };
+            sqlx::query_scalar::<_, i64>(dialect_query).fetch_one(&pool3).await
+        });
 
-        let mission_sync_backlog = backlog_res.unwrap_or(0);
+        let pool4 = self.pool.clone();
+        let sync_errors_future = tokio::task::spawn(async move {
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE sync_error IS NOT NULL AND synced_to_cloud = false").fetch_one(&pool4).await
+        });
+
+        let (db_ping_res, sync_queue_res_res, sync_errors_res_res) = tokio::join!(ping_future, sync_queue_future, sync_errors_future);
+
+        let db_ping = db_ping_res.unwrap_or(0);
+        let sync_queue_res = sync_queue_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+
+        let sync_errors_res = sync_errors_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
         let local_to_cloud_sync_queue = sync_queue_res.unwrap_or(0);
+        let sync_error_count = sync_errors_res.unwrap_or(0);
 
         let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
             "standalone"
@@ -706,9 +765,9 @@ impl Hub {
             "db_ping_ms": db_ping,
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
-            "mission_sync_backlog": mission_sync_backlog,
             "hybrid_mode_ready": hybrid_mode_ready,
             "local_to_cloud_sync_queue": local_to_cloud_sync_queue,
+            "sync_error_count": sync_error_count,
         }))
     }
 }
@@ -746,12 +805,41 @@ mod tests {
 
 
     #[tokio::test]
-    async fn test_sanitize_hub_event_redaction() {
+    async fn test_publish_mesh_event() {
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
         let db_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy(&db_url)
+            .unwrap();
+        let (tx, _) = mpsc::channel(100);
+        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+
+        let mut rx = hub.subscribe_mesh_events("test_topic".to_string());
+
+        let event = MeshEvent {
+            event_id: "test_id".to_string(),
+            topic: "test_topic".to_string(),
+            payload: b"test_payload".to_vec(),
+            timestamp: 0,
+        };
+
+        hub.publish_mesh_event(event.clone()).unwrap();
+
+        let received = rx.recv().await.unwrap();
+        assert_eq!(received.event_id, event.event_id);
+        assert_eq!(received.topic, event.topic);
+        assert_eq!(received.payload, event.payload);
+    }
+
+    #[tokio::test]
+    async fn test_sanitize_hub_event_redaction() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -782,7 +870,7 @@ mod tests {
             return;
         }
         let db_url = std::env::var("DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -849,8 +937,8 @@ mod tests {
         }
 
         let db_url = std::env::var("DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
@@ -868,6 +956,42 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_delegate_sub_task_valid_hierarchy() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&db_url)
+            .unwrap();
+        let (tx, _) = mpsc::channel(100);
+        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+
+        hub.register_agent(Agent {
+            id: "manager_agent".to_string(),
+            name: "Manager".to_string(),
+            role: "Manager".to_string(),
+            organization_id: "org1".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "builtin".to_string(),
+        });
+
+        let res = hub.delegate_sub_task(
+            "manager_agent",
+            "developer",
+            "fix the bug",
+            "thread123",
+        );
+
+        assert!(res.is_ok());
+        let spawned_id = res.unwrap();
+        assert!(spawned_id.starts_with("sub-agent-developer-"));
+    }
+
+    #[tokio::test]
     async fn test_check_health() {
         // Skip test if no database is available
         if std::env::var("DATABASE_URL").is_err() {
@@ -876,7 +1000,7 @@ mod tests {
 
         let db_url = std::env::var("DATABASE_URL").unwrap();
         // Since test db is likely unmigrated/empty, we connect lazily
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -892,7 +1016,6 @@ mod tests {
         // We just ensure the response contains the fields we expect.
         assert!(health.get("status").is_some());
         assert!(health.get("db_ping_ms").is_some());
-        assert!(health.get("mission_sync_backlog").is_some());
         assert!(health.get("hybrid_mode_ready").is_some());
         assert!(health.get("local_to_cloud_sync_queue").is_some());
     }

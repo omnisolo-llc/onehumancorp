@@ -1,5 +1,29 @@
 # Release Notes
 
+## v0.4.32 (Cloud) / v0.4.32+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🛡️ Sentry: Health Guardianship /api/v1/health improvements for multi-tenant state sync
+
+### Privacy/Offline Improvements
+- 🛡️ Sentry: Health Guardianship /api/v1/health improvements for standalone isolated node switching
+
+## v0.4.30 (Cloud) / v0.4.30+1 (Standalone)
+### Cloud Scaling Improvements
+- 🔨 Forge: Refactor GrowthReferralWidget to use GlassCard for premium aesthetic (#11347)
+
+### Privacy/Offline Improvements
+- 🔨 Forge: Refactor GrowthReferralWidget to use GlassCard for premium aesthetic (#11347)
+
+## v0.4.29 (Cloud) / v0.4.29+1 (Standalone)
+
+### Cloud Scaling Improvements
+- 🔗 Link: Implemented Teammate Mesh Communication Layer and Distributed Locks (#11313)
+
+### Privacy/Offline Improvements
+- 🔗 Link: Ensured mesh communication layer degrades gracefully into isolated standalone instances (#11313)
+
+
 ## v0.4.28 (Cloud) / v0.4.28+1 (Standalone)
 ### Cloud Scaling Improvements
 - ✍️ Scribe: Scaled the Help Center & Tooltip Documentation System for multi-tenant cloud environments (#11267)

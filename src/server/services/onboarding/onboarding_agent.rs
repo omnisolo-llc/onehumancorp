@@ -1,13 +1,15 @@
 use serde_json::json;
-use crate::ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
+use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
 
+#[derive(Clone)]
 pub struct OnboardingAgent {
     db: std::sync::Arc<crate::db::DB>,
+    hub: std::sync::Arc<crate::hub::Hub>,
 }
 
 impl OnboardingAgent {
-    pub fn new(db: std::sync::Arc<crate::db::DB>) -> Self {
-        OnboardingAgent { db }
+    pub fn new(db: std::sync::Arc<crate::db::DB>, hub: std::sync::Arc<crate::hub::Hub>) -> Self {
+        OnboardingAgent { db, hub }
     }
 
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
@@ -29,18 +31,23 @@ impl OnboardingAgent {
         let org_id_clone2 = org_id.clone();
         let business_type_clone = business_type.clone();
 
-        let product_future = async {
+        let agent_clone_product = self.clone();
+        let product_future = tokio::task::spawn(async move {
             if !req_first_product_name.is_empty() {
-                self.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, &business_type_clone).await
+                agent_clone_product.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, &business_type_clone).await
             } else {
-                self.generate_initial_products(&org_id_clone1, &business_type_clone).await
+                agent_clone_product.generate_initial_products(&org_id_clone1, &business_type_clone).await
             }
-        };
+        });
 
-        let seed_future = self.seed_default_agents(&org_id_clone2);
+        let agent_clone_seed = self.clone();
+        let seed_future = tokio::task::spawn(async move {
+            agent_clone_seed.seed_default_agents(&org_id_clone2).await
+        });
 
         let org_id_clone3 = org_id.clone();
-        let publish_events_future = async move {
+        let pool = self.db.pool.clone();
+        let publish_events_future = tokio::task::spawn(async move {
             // Subscribe default AI Agents to specific tenant events dynamically
             let event_topics = vec![
                 ("The Manager", "tenant.booking.created"),
@@ -58,13 +65,13 @@ impl OnboardingAgent {
                     .bind(&org_id_clone3)
                     .bind(agent_role)
                     .bind(topic)
-                    .execute(&self.db.pool)
+                    .execute(&pool)
                     .await;
             }
             Ok::<(), String>(())
-        };
+        });
 
-        let hash_future = async {
+        let hash_future = tokio::task::spawn(async move {
             if !password.is_empty() {
                 tokio::task::spawn_blocking(move || {
                     bcrypt::hash(&password, if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST }).map_err(|e| format!("Failed to hash password: {}", e))
@@ -72,9 +79,13 @@ impl OnboardingAgent {
             } else {
                 Ok("".to_string())
             }
-        };
+        });
 
-        let (product_res, seed_res, _events_res, hash_res) = tokio::join!(product_future, seed_future, publish_events_future, hash_future);
+        let (product_res_res, seed_res_res, _events_res_res, hash_res_res) = tokio::join!(product_future, seed_future, publish_events_future, hash_future);
+
+        let product_res = product_res_res.unwrap_or_else(|e| Err(e.to_string()));
+        let seed_res = seed_res_res.unwrap_or_else(|e| Err(e.to_string()));
+        let hash_res = hash_res_res.unwrap_or_else(|e| Err(e.to_string()));
 
         product_res?;
         seed_res?;
@@ -150,7 +161,7 @@ impl OnboardingAgent {
 
         let id = format!("prod-{}", uuid::Uuid::new_v4());
         sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
-            .bind(id)
+            .bind(&id)
             .bind(org_id)
             .bind(name)
             .bind("Added during onboarding")
@@ -160,6 +171,22 @@ impl OnboardingAgent {
             .execute(&self.db.pool)
             .await
             .map_err(|e| e.to_string())?;
+
+        let event_payload = json!({
+            "product_id": id,
+            "name": name,
+            "organization_id": org_id,
+        });
+
+        let event = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "system".to_string(),
+            action: "ProductCreated".to_string(),
+            status: "success".to_string(),
+            payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+
+        let _ = self.hub.publish_teammate_event("products_inbox".to_string(), event);
 
         Ok(())
     }
@@ -192,17 +219,35 @@ impl OnboardingAgent {
             let strategy = strategy.to_string();
             let pool = self.db.pool.clone();
 
+            let hub = self.hub.clone();
             futures.push(tokio::spawn(async move {
                 sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
-                    .bind(id)
-                    .bind(org_id)
-                    .bind(name)
-                    .bind(desc)
+                    .bind(&id)
+                    .bind(&org_id)
+                    .bind(&name)
+                    .bind(&desc)
                     .bind(price)
-                    .bind(strategy)
+                    .bind(&strategy)
                     .bind(json!({}))
                     .execute(&pool)
-                    .await
+                    .await?;
+
+                let event_payload = json!({
+                    "product_id": id,
+                    "name": name,
+                    "organization_id": org_id,
+                });
+
+                let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                    agent_id: "system".to_string(),
+                    action: "ProductCreated".to_string(),
+                    status: "success".to_string(),
+                    payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
+                    msg_id: uuid::Uuid::new_v4().to_string(),
+                };
+
+                let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
+                Ok::<_, sqlx::Error>(())
             }));
         }
 
@@ -248,7 +293,7 @@ mod tests {
     use super::*;
     use std::sync::Arc;
     use crate::db::DB;
-    use crate::ohc::orchestration::StartOnboardingRequest;
+    use ::server_ohc::orchestration::StartOnboardingRequest;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
         let _ = std::env::var("DATABASE_URL").ok()?;
@@ -265,7 +310,9 @@ mod tests {
             Some(db) => db,
             None => return,
         };
-        let agent = OnboardingAgent::new(db);
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let agent = OnboardingAgent::new(db, hub);
 
         let req = StartOnboardingRequest {
             business_type: "Online Store".to_string(),
@@ -321,12 +368,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_start_onboarding_feature_flags_service_and_food_cart() {
+    async fn test_start_onboarding_service_and_food_cart() {
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
         };
-        let agent = OnboardingAgent::new(db.clone());
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let agent = OnboardingAgent::new(db.clone(), hub);
 
         // Test Service Business
         let req_service = StartOnboardingRequest {

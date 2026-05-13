@@ -101,6 +101,24 @@ curl -X POST "http://localhost:8080/api/mesh/v2/broadcast" \
     "event_type": "PING",
     "data": {}
   }'
+
+# Claim a PENDING task
+curl -X POST "http://localhost:8080/api/v1/tasks/claim" \
+  -H "Content-Type: application/json" \
+  -H "X-OHC-Dev-Token: <your_dev_token>" \
+  -d '{
+    "agent_id": "agent_swe_007",
+    "role": "swe"
+  }'
+
+# Complete a task
+curl -X POST "http://localhost:8080/api/v1/tasks/123e4567-e89b-12d3-a456-426614174000/complete" \
+  -H "Content-Type: application/json" \
+  -H "X-OHC-Dev-Token: <your_dev_token>" \
+  -d '{
+    "agent_id": "agent_swe_007",
+    "outcome_summary": "Successfully implemented the memory consolidation logic."
+  }'
 ```
 
 **Interactive Swagger Docs:**
@@ -181,7 +199,7 @@ Queues a new task for sub-agents to claim.
 
 ### 7.2 Claim a Task
 **Endpoint:** `POST /api/v1/tasks/claim`
-Claims a `PENDING` task from the shared task queue. Behind the scenes, KAIROS uses `FOR UPDATE SKIP LOCKED` (Cloud) or explicit transaction locking (Standalone).
+Claims a `PENDING` task from the shared task queue. Behind the scenes, KAIROS uses `FOR UPDATE SKIP LOCKED` (Cloud) or explicit transaction locking (Standalone). This ensures that only one agent can work on a task at any given time, preventing race conditions in the distributed swarm.
 
 **Payload:**
 ```json
@@ -203,15 +221,40 @@ Claims a `PENDING` task from the shared task queue. Behind the scenes, KAIROS us
 }
 ```
 
+#### Task Claiming Workflow
+```mermaid
+sequenceDiagram
+    participant Agent as Worker Agent
+    participant Hub as Orchestration Hub
+    participant DB as Shared Task DB
+
+    Agent->>Hub: POST /api/v1/tasks/claim
+    Note over Hub,DB: Uses FOR UPDATE SKIP LOCKED (Postgres)
+    Hub->>DB: Query for next PENDING task
+    DB-->>Hub: Return Task & Row Lock
+    Hub-->>Agent: Task Payload + Context
+    Note right of Agent: Agent begins execution
+```
+
 ### 7.3 Complete a Task
 **Endpoint:** `POST /api/v1/tasks/{task_id}/complete`
-Marks a task as `COMPLETED` and unlocks dependent tasks in the DAG structure.
+Marks a task as `COMPLETED`. This transition triggers the KAIROS DAG engine to evaluate downstream dependencies, potentially unlocking new tasks for the swarm.
 
 **Payload:**
 ```json
 {
   "agent_id": "agent_swe_007",
   "outcome_summary": "Successfully merged PR #124."
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "status": "success",
+  "task_id": "123e4567-e89b-12d3-a456-426614174000",
+  "new_status": "COMPLETED",
+  "unlocked_tasks": ["task_125", "task_126"]
 }
 ```
 
