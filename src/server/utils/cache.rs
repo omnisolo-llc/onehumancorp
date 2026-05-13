@@ -48,6 +48,10 @@ where
     }
 
     pub async fn get(&self, key: &str) -> Option<T> {
+        self.get_with_ttl(key, Duration::from_secs(60)).await
+    }
+
+    pub async fn get_with_ttl(&self, key: &str, populate_ttl: Duration) -> Option<T> {
         // 1. Check local cache
         {
             let guard = self.get_local().read().ok()?;
@@ -65,7 +69,7 @@ where
             if let Ok(Some(data)) = res {
                 if let Ok(val) = serde_json::from_str::<T>(&data) {
                     // Populate local cache
-                    self.set_local(key, val.clone(), Duration::from_secs(60));
+                    self.set_local(key, val.clone(), populate_ttl);
                     return Some(val);
                 }
             }

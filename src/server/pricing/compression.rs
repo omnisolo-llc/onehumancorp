@@ -131,3 +131,9 @@ mod tests {
         assert_eq!(minify_json_prompt(invalid), invalid);
     }
 }
+
+pub fn aggressive_token_compression(data: &str) -> String {
+    let mut result = reduce_tokens(data);
+    result = truncate_by_word_count(&result, 500); // Guard against massive runaway prompts
+    minify_json_prompt(&result)
+}

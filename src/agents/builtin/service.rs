@@ -382,7 +382,7 @@ impl AgentServiceImpl {
             enable_lazy_tool_loading: false,
             agent_id: self.agent_id.clone(),
             model,
-            server_system_message,
+            server_system_message: ::server_pricing::compression::reduce_tokens(&server_system_message),
             developer_instructions,
             user_instructions,
             max_tokens,

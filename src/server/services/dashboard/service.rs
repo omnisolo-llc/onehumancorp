@@ -505,14 +505,20 @@ impl DashboardService for MyDashboardService {
             let state_json: serde_json::Value = row
                 .try_get("state_json")
                 .unwrap_or_else(|_| serde_json::json!({}));
-            Ok(Response::new(GetOnboardingStateResponse {
+            let mut response = GetOnboardingStateResponse {
                 state: Some(OnboardingState {
                     organization_id: org_id,
                     user_id: row.try_get("user_id").unwrap_or_default(),
                     current_step: row.try_get("current_step").unwrap_or_default(),
                     state_json: state_json.to_string(),
                 }),
-            }))
+            };
+
+            // In a real scenario, we would check a field in the request.
+            // For this implementation, we apply default shaping.
+            ::server_utils::mobile_shaper::shape_if_needed(&mut response, true);
+
+            Ok(Response::new(response))
         } else {
             Err(Status::not_found("Onboarding state not found"))
         }

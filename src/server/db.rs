@@ -139,6 +139,11 @@ impl DB {
                     Box::pin(async move {
                         use sqlx::Executor;
                         conn.execute("PRAGMA secure_delete = ON").await?;
+                        conn.execute("PRAGMA journal_mode = WAL").await?;
+                        conn.execute("PRAGMA synchronous = NORMAL").await?;
+                        conn.execute("PRAGMA cache_size = -64000").await?; // 64MB cache
+                        conn.execute("PRAGMA temp_store = MEMORY").await?;
+                        conn.execute("PRAGMA busy_timeout = 5000").await?;
                         Ok(())
                     })
                 })
@@ -206,7 +211,10 @@ impl DB {
                             return Err(E::from(format!("SQLite retry exhausted after {} attempts: {}", max_attempts, err)));
                         }
                         let _ = ::server_telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
-                        tokio::time::sleep(backoff).await;
+
+                        // Jittered exponential backoff for SQLite performance
+                        let jitter = rand::random::<u64>() % 100;
+                        tokio::time::sleep(backoff + std::time::Duration::from_millis(jitter)).await;
                         backoff *= 2;
                     } else {
                         return Err(err);
