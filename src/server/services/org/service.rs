@@ -71,7 +71,7 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
-        let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| ::server_auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
+        let org_id = ::server_auth::extract_spiffe_id_from_metadata(_request.metadata()).ok().and_then(|v| ::server_auth::parse_spiffe_id(&v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
         let cache_key = format!("org_analytics_{}", org_id);
 
         if let Some(cached) = self.analytics_cache.get(&cache_key).await {

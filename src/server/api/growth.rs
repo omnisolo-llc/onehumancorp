@@ -1,14 +1,11 @@
 use axum::{
-    extract::{Path, State},
+    extract::Path,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router, Extension,
+    Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use sqlx::PgPool;
-use crate::hub::Hub;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostRequest {
@@ -61,7 +58,7 @@ pub struct MilestonesResponse {
     pub milestones: Vec<Milestone>,
 }
 
-pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
+pub fn router<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
@@ -70,17 +67,10 @@ where
         .route("/campaign/send", post(handle_send_campaign))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/milestones/check", get(handle_check_milestones))
-        .layer(Extension(GrowthState { pool, hub }))
 }
 
-#[derive(Clone)]
-struct GrowthState {
-    pool: PgPool,
-    hub: Arc<Hub>,
-}
 
 async fn handle_social_post(
-    Extension(_state): Extension<GrowthState>,
     Json(_req): Json<SocialPostRequest>,
 ) -> impl IntoResponse {
     Json(SocialPostResponse {
@@ -90,7 +80,6 @@ async fn handle_social_post(
 }
 
 async fn handle_send_campaign(
-    Extension(_state): Extension<GrowthState>,
     Json(_req): Json<CampaignRequest>,
 ) -> impl IntoResponse {
     Json(CampaignResponse {
@@ -100,14 +89,12 @@ async fn handle_send_campaign(
 }
 
 async fn handle_track_visitor(
-    Extension(_state): Extension<GrowthState>,
     Json(_req): Json<TrackVisitorRequest>,
 ) -> impl IntoResponse {
     Json(TrackVisitorResponse { tracked: true })
 }
 
 async fn handle_check_milestones(
-    Extension(_state): Extension<GrowthState>,
 ) -> impl IntoResponse {
     let milestones = vec![
         Milestone {

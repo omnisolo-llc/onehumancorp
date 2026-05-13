@@ -84,8 +84,8 @@ impl SyncService for MySyncService {
         let req = request.into_inner();
         tracing::debug!("PowerSync received push request.");
 
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(&md).unwrap_or_else(|_| "".to_string());
+        let parsed = ::server_auth::parse_spiffe_id(&spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
         let mut tenant_id = parsed.0;
         if tenant_id.is_empty() {
             tenant_id = "system".to_string();
@@ -161,8 +161,8 @@ impl SyncService for MySyncService {
         tracing::debug!("PowerSync received pull request");
 
         let md = request.metadata().clone();
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(&md).unwrap_or_else(|_| "".to_string());
+        let parsed = ::server_auth::parse_spiffe_id(&spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
         let mut tenant_id = parsed.0;
         if tenant_id.is_empty() {
             tenant_id = "system".to_string();
@@ -233,8 +233,8 @@ impl SyncService for MySyncService {
         let req = request.into_inner();
         let deltas = req.deltas;
 
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(&md).unwrap_or_else(|_| "".to_string());
+        let parsed = ::server_auth::parse_spiffe_id(&spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
         let tenant_id = parsed.0;
 
         if tenant_id.is_empty() {
@@ -297,8 +297,8 @@ impl SyncService for MySyncService {
         request: Request<SyncEscalationRequest>,
     ) -> Result<Response<SyncEscalationResponse>, Status> {
         let md = request.metadata().clone();
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(&md).unwrap_or_else(|_| "".to_string());
+        let parsed = ::server_auth::parse_spiffe_id(&spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
         let tenant_id = if parsed.0.is_empty() { "system".to_string() } else { parsed.0 };
 
         let req = request.into_inner();

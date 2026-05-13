@@ -3,7 +3,6 @@ filegroup(
     srcs = [
         "catalog.rs",
         "chat.rs",
-        "chatwoot.rs",
         "githubissues.rs",
         "imessage.rs",
         "jira.rs",

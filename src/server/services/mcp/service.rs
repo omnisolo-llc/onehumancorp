@@ -78,7 +78,7 @@ impl McpService for MyMcpService {
         request: Request<McpInvokeRequest>,
     ) -> Result<Response<McpInvokeResponse>, Status> {
         let md = request.metadata().clone();
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(&md).unwrap_or_else(|_| "".to_string());
 
         let mut req = request.into_inner();
         // OVERRIDE the request body's spiffe_id with the one from the authenticated session
@@ -226,8 +226,8 @@ impl McpService for MyMcpService {
         request: Request<SyncMissionsRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
         let md = request.metadata().clone();
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(&md).unwrap_or_else(|_| "".to_string());
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
@@ -271,8 +271,8 @@ impl McpService for MyMcpService {
         request: Request<SyncContextRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
         let md = request.metadata().clone();
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(&md).unwrap_or_else(|_| "".to_string());
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
