@@ -1,3 +1,4 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
@@ -173,3 +174,11 @@ exports_files([
     "Cargo.toml",
     "Cargo.lock",
 ])
+
+sh_test(
+    name = "pii_linter_test",
+    srcs = ["pii_linter_test.sh"],
+
+    data = ["//src/server:pii_linter_test.py"] + glob(["**/*.rs"], allow_empty=True) + glob(["**/*.go"], allow_empty=True) + glob(["**/*.ts"], allow_empty=True),
+)
+exports_files(["pii_linter_test.py"])
