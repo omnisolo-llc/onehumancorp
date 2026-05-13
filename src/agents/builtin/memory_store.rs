@@ -24,7 +24,7 @@ pub enum VectorMemoryStore {
 }
 
 pub struct VectorRepository {
-    store: VectorMemoryStore,
+    pub store: VectorMemoryStore,
 }
 
 impl VectorRepository {

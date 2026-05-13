@@ -635,12 +635,21 @@ impl AgentService for AgentServiceImpl {
                         if err_str.contains("unavailable") || err_str.contains("rate-limited") || err_str.contains("paused") {
                              // Transition to persistent PAUSED state
                              let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
-                             if let Some(store) = &memory {
-                                 let _ = store.pool.execute(
-                                     sqlx::query("UPDATE agent_missions SET status = 'PAUSED' WHERE id = $1 AND tenant_id = $2")
-                                     .bind(&task_req.task_id)
-                                     .bind(&org_id)
-                                 ).await;
+                             if let Some(repo) = &memory {
+                                 match &repo.store {
+                                     crate::memory_store::VectorMemoryStore::Postgres(pool) => {
+                                         let _ = sqlx::query("UPDATE agent_missions SET status = 'PAUSED' WHERE id = $1 AND tenant_id = $2")
+                                             .bind(&task_req.task_id)
+                                             .bind(&org_id)
+                                             .execute(pool).await;
+                                     }
+                                     crate::memory_store::VectorMemoryStore::Sqlite(pool) => {
+                                         let _ = sqlx::query("UPDATE agent_missions SET status = 'PAUSED' WHERE id = $1 AND tenant_id = $2")
+                                             .bind(&task_req.task_id)
+                                             .bind(&org_id)
+                                             .execute(pool).await;
+                                     }
+                                 }
                              }
                              last_result = Err(e);
                              break;
@@ -1142,5 +1151,68 @@ mod memory_tests {
             std::env::remove_var("OHC_ANTHROPIC_MEMORY_DIR");
         }
         let _ = tokio::fs::remove_dir_all(".test-agent-memory").await;
+    }
+
+    #[tokio::test]
+    async fn test_run_task_retry_logic() {
+        use tokio_stream::StreamExt;
+        use ohc_builtin_agent_llm::LlmClient;
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
+
+        struct FailingLlm {
+            pub count: Arc<tokio::sync::Mutex<usize>>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for FailingLlm {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut c = self.count.lock().await;
+                *c += 1;
+                // Fail twice, succeed on 3rd attempt
+                if *c <= 2 {
+                    return Err("timeout".into());
+                }
+                Ok(ChatResponse {
+                    message: Message::assistant("Success on attempt 3"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id".to_string()),
+                })
+            }
+        }
+
+        let fail_count = Arc::new(tokio::sync::Mutex::new(0));
+        let llm = Arc::new(FailingLlm { count: fail_count.clone() });
+        let mut svc = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
+        svc.llm_override = Some(llm);
+        let svc = Arc::new(svc);
+
+        let req = RunTaskRequest {
+            task_id: "test-task".to_string(),
+            task: "Do something".to_string(),
+            ..Default::default()
+        };
+
+        let (tx_kill, rx_kill) = tokio::sync::oneshot::channel();
+        let svc_clone = svc.clone();
+        tokio::spawn(async move {
+            let resp = svc_clone.run_task(tonic::Request::new(req)).await.unwrap();
+            let mut stream = resp.into_inner();
+
+            let mut success = false;
+            while let Some(res) = stream.next().await {
+                if let Ok(evt) = res {
+                    if evt.r#type == EventType::TaskComplete as i32 && evt.content.contains("Success on attempt 3") {
+                        success = true;
+                        break;
+                    }
+                }
+            }
+            let _ = tx_kill.send(success);
+        });
+
+        let success = tokio::time::timeout(Duration::from_secs(15), rx_kill).await.unwrap().unwrap();
+
+        assert!(success);
+        assert_eq!(*fail_count.lock().await, 3);
     }
 }
