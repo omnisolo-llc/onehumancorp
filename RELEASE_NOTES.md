@@ -1,3 +1,11 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Auto-provision horizontal scaling limits for the new orchestration pipelines.
+
+### Privacy/Offline Improvements
+- Integrate vector embeddings cache encryption logic to local SQLite.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
