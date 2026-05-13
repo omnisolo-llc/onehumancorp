@@ -3,7 +3,13 @@ filegroup(
     srcs = [
         "mod.rs",
         "protocol.rs",
-
+        "state_sync.rs",
+        "health_monitor.rs",
+        "job_queue.rs",
+        "crdt.rs",
+        "routing.rs",
+        "auth.rs",
+        "partition_healer.rs",
     ],
     visibility = ["//src/server:__pkg__"],
 )
