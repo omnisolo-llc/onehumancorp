@@ -42,7 +42,7 @@ func (w *Worker) processTasks(ctx context.Context) {
 	// Try to claim a task related to Onboarding using SKIP LOCKED
 	query := `
 		SELECT id, title
-		FROM shared_tasks
+		FROM tasks
 		WHERE status = 'PENDING' AND title = 'Generate Storefront'
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED
@@ -62,7 +62,7 @@ func (w *Worker) processTasks(ctx context.Context) {
 
 	// Update status to COMPLETED
 	updateQuery := `
-		UPDATE shared_tasks
+		UPDATE tasks
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`

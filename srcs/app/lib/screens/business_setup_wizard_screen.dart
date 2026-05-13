@@ -354,6 +354,13 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   _nextStep();
                   // Simulate AI generation process and finish
                   Future.delayed(const Duration(seconds: 3), () {
+                    // MOCK: Generate storefront UI layout and suggested products
+                    ref.read(wizardProvider.notifier).updateBusinessProfile(
+                      productName: "AI Generated Product",
+                      productPrice: "25.00",
+                      productDescription: "An amazing product designed by AI.",
+                    );
+
                     ref.read(wizardProvider.notifier).submitWizard();
                     if (mounted) {
                       setState(() {
