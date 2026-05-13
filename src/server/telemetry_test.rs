@@ -382,7 +382,7 @@ mod tests {
                                current_log_block.contains("billing") ||
                                current_log_block.contains("ip_address") ||
                                current_log_block.contains("mac_address") ||
-                               current_log_block.contains("geolocation") {
+                               current_log_block.contains("geolocation") || current_log_block.contains("name") || current_log_block.contains("address") || current_log_block.contains("contact") || current_log_block.contains("phone") {
                                 violations.push(format!("{}:{} (block starting here): {}", entry.path().display(), block_start_line, current_log_block.trim()));
                             }
                             current_log_block.clear();

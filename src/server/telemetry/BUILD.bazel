@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_telemetry",
@@ -14,4 +14,9 @@ rust_library(
         "@crates//:tracing",
         "@crates//:opentelemetry",
     ],
+)
+
+rust_test(
+    name = "server_telemetry_test",
+    crate = ":server_telemetry",
 )
