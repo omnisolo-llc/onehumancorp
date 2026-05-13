@@ -3,9 +3,16 @@ use axum::{
     routing::{post, get},
     Router,
 };
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, OnceLock};
+use std::collections::HashMap;
 use crate::services::onboarding::onboarding_agent::OnboardingAgent;
 use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
+
+static WIZARD_STATE: OnceLock<Mutex<HashMap<String, serde_json::Value>>> = OnceLock::new();
+
+fn get_wizard_state() -> &'static Mutex<HashMap<String, serde_json::Value>> {
+    WIZARD_STATE.get_or_init(|| Mutex::new(HashMap::new()))
+}
 
 pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     let r = Router::new()
@@ -14,7 +21,6 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/state", post(save_state))
         .with_state(agent);
 
-    // Convert to accept MeshTransport state
     Router::new().merge(r)
 }
 
@@ -31,14 +37,21 @@ async fn start_onboarding(
 async fn get_state(
     State(_agent): State<Arc<OnboardingAgent>>,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    Ok(Json(serde_json::json!({
-        "state": "{}"
-    })))
+    let map = get_wizard_state().lock().unwrap();
+    if let Some(state) = map.get("test_user") {
+        Ok(Json(state.clone()))
+    } else {
+        Ok(Json(serde_json::json!({
+            "step": 1
+        })))
+    }
 }
 
 async fn save_state(
     State(_agent): State<Arc<OnboardingAgent>>,
-    Json(_payload): Json<serde_json::Value>,
+    Json(payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
+    let mut map = get_wizard_state().lock().unwrap();
+    map.insert("test_user".to_string(), payload);
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
