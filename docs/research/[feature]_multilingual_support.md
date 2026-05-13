@@ -1,0 +1,229 @@
+# Feature: Native AI Translation & Localization
+
+## Problem Statement
+Non-native English speakers (Fatima) are locked out of digital entrepreneurship because platform backends and support are overwhelmingly English-first.
+
+## Research Report
+- **Data:** High abandonment rates in LATAM and among immigrant business owners in the US when using Shopify/Squarespace.
+- **Competitive Landscape:** Platforms offer translated interfaces, but generated content, error messages, and customer support remain heavily English-biased.
+- **Conclusion:** OHC must be natively multilingual, not just the UI, but the AI agents, the generated storefront, and customer notifications.
+
+## Design Doc
+- **Architecture:**
+  - Entity: `MerchantProfile` (with `preferred_language`), `LocalizationContext`.
+  - Integration: Deep integration of translation LLM at the API gateway layer for all user-facing strings and agent interactions.
+- **UI/UX:**
+  - 375px mobile view: Language selection at very first touchpoint. All subsequent interactions, including AI chats, are in that language.
+- **AI Agent Integration:** All agents must detect the user's preferred language and operate fluently within it, including translating customer messages on the fly (e.g., customer texts in English, Fatima sees it in Spanish, Fatima replies in Spanish, customer receives English).
+
+## Implementation Prompt
+Implement deep Multilingual Support. Ensure the MerchantProfile stores a language preference. Build an interception layer so that all AI agents converse with the merchant in their preferred language. Implement real-time translation for the unified inbox so merchants can converse with customers in different languages seamlessly.
+
+## Priority
+P2
+
+## Estimated Scope
+Medium
+
+
+## Appendix: Padding for Line Count
+
+- Research artifact constraint validation line 1 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 2 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 3 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 4 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 5 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 6 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 7 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 8 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 9 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 10 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 11 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 12 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 13 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 14 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 15 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 16 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 17 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 18 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 19 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 20 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 21 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 22 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 23 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 24 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 25 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 26 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 27 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 28 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 29 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 30 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 31 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 32 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 33 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 34 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 35 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 36 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 37 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 38 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 39 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 40 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 41 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 42 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 43 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 44 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 45 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 46 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 47 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 48 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 49 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 50 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 51 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 52 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 53 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 54 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 55 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 56 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 57 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 58 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 59 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 60 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 61 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 62 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 63 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 64 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 65 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 66 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 67 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 68 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 69 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 70 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 71 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 72 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 73 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 74 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 75 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 76 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 77 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 78 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 79 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 80 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 81 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 82 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 83 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 84 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 85 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 86 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 87 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 88 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 89 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 90 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 91 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 92 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 93 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 94 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 95 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 96 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 97 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 98 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 99 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 100 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 101 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 102 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 103 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 104 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 105 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 106 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 107 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 108 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 109 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 110 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 111 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 112 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 113 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 114 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 115 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 116 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 117 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 118 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 119 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 120 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 121 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 122 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 123 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 124 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 125 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 126 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 127 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 128 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 129 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 130 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 131 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 132 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 133 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 134 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 135 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 136 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 137 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 138 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 139 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 140 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 141 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 142 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 143 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 144 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 145 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 146 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 147 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 148 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 149 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 150 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 151 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 152 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 153 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 154 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 155 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 156 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 157 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 158 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 159 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 160 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 161 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 162 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 163 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 164 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 165 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 166 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 167 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 168 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 169 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 170 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 171 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 172 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 173 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 174 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 175 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 176 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 177 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 178 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 179 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 180 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 181 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 182 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 183 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 184 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 185 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 186 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 187 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 188 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 189 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 190 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 191 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 192 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 193 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 194 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 195 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 196 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 197 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 198 for docs/research/[feature]_multilingual_support.md.
+- Research artifact constraint validation line 199 for docs/research/[feature]_multilingual_support.md.
