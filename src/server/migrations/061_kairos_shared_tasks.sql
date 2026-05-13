@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_shared_tasks ON shared_tasks USING (tenant_id = current_setting('app.current_tenant', true));
 
 CREATE TABLE IF NOT EXISTS task_dependencies (
     task_id TEXT NOT NULL,
@@ -18,3 +20,5 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
     FOREIGN KEY (task_id) REFERENCES shared_tasks(id),
     FOREIGN KEY (depends_on_task_id) REFERENCES shared_tasks(id)
 );
+ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_task_dependencies ON task_dependencies USING (tenant_id = current_setting('app.current_tenant', true));

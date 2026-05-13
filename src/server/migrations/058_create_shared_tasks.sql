@@ -13,6 +13,8 @@ CREATE TABLE tasks (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (parent_task_id) REFERENCES tasks(id)
 );
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_tasks ON tasks USING (organization_id = current_setting('app.current_tenant', true));
 
 CREATE INDEX IF NOT EXISTS idx_tasks_organization_id ON tasks(organization_id);
 

@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_shared_tasks ON shared_tasks USING (organization_id = current_setting('app.current_tenant', true));
 
 CREATE TABLE IF NOT EXISTS task_dependencies (
     task_id UUID REFERENCES shared_tasks(id) ON DELETE CASCADE,
@@ -29,3 +31,5 @@ CREATE TABLE IF NOT EXISTS agent_memories (
     embedding vector(1536),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE agent_memories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_agent_memories ON agent_memories USING (organization_id = current_setting('app.current_tenant', true));

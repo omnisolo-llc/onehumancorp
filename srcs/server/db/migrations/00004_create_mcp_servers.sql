@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS mcp_servers (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE mcp_servers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_mcp_servers ON mcp_servers USING (tenant_id = current_setting('app.current_tenant', true));
 
 CREATE INDEX IF NOT EXISTS idx_mcp_servers_tenant ON mcp_servers(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_mcp_servers_user ON mcp_servers(user_id);

@@ -15,3 +15,5 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_shared_tasks ON shared_tasks USING (organization_id = current_setting('app.current_tenant', true));

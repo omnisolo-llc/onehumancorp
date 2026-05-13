@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS usage_events (
     cost_usd          DOUBLE PRECISION NOT NULL DEFAULT 0,
     occurred_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE usage_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_usage_events ON usage_events USING (organization_id = current_setting('app.current_tenant', true));
 
 CREATE INDEX idx_usage_events_org ON usage_events (organization_id);
 CREATE INDEX idx_usage_events_agent ON usage_events (agent_id);

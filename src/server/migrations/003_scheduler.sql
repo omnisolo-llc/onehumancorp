@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS scheduled_tasks (
     last_run_at     TIMESTAMPTZ,
     next_run_at     TIMESTAMPTZ
 );
+ALTER TABLE scheduled_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_scheduled_tasks ON scheduled_tasks USING (organization_id = current_setting('app.current_tenant', true));
 
 CREATE INDEX idx_sched_tasks_org ON scheduled_tasks (organization_id);
 CREATE INDEX idx_sched_tasks_due ON scheduled_tasks (next_run_at)

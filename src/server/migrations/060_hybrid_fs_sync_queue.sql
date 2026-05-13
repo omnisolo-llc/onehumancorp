@@ -7,3 +7,5 @@ CREATE TABLE IF NOT EXISTS hybrid_fs_sync_queue (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE hybrid_fs_sync_queue ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_hybrid_fs_sync_queue ON hybrid_fs_sync_queue USING (organization_id = current_setting('app.current_tenant', true));

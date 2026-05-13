@@ -12,5 +12,7 @@ CREATE TABLE IF NOT EXISTS consolidated_memory (
     task_id TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE consolidated_memory ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_consolidated_memory ON consolidated_memory USING (tenant_id = current_setting('app.current_tenant', true));
 
 CREATE INDEX IF NOT EXISTS idx_consolidated_memory_embedding_cosine ON consolidated_memory USING ivfflat (embedding vector_cosine_ops);

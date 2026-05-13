@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_users ON users USING (organization_id = current_setting('app.current_tenant', true));
 
 CREATE INDEX idx_users_username ON users (username);
 CREATE INDEX idx_users_email ON users (email);

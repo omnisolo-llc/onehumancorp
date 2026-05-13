@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS kairos_shared_tasks (
     status TEXT NOT NULL,
     payload JSONB
 );
+ALTER TABLE kairos_shared_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_kairos_shared_tasks ON kairos_shared_tasks USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE TABLE IF NOT EXISTS kairos_state_transitions (
     id UUID PRIMARY KEY,
@@ -63,6 +65,8 @@ CREATE TABLE IF NOT EXISTS autodream_vector_memories (
     embedding vector(1536),
     metadata JSONB
 );
+ALTER TABLE autodream_vector_memories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_autodream_vector_memories ON autodream_vector_memories USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
 -- +goose StatementEnd
 
 -- +goose Down

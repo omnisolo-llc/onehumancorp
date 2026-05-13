@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS sub_agent_queue (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE sub_agent_queue ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_sub_agent_queue ON sub_agent_queue USING (organization_id = current_setting('app.current_tenant', true));
 
 -- +goose Down
 DROP TABLE IF EXISTS sub_agent_queue;

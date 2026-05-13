@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_shared_tasks ON shared_tasks USING (organization_id = current_setting('app.current_tenant', true));
 CREATE INDEX IF NOT EXISTS idx_shared_tasks_org_status ON shared_tasks(organization_id, status);
 
 -- AutoDream Data Pipelines
@@ -26,4 +28,6 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
     source_type TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE autodream_memories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_autodream_memories ON autodream_memories USING (organization_id = current_setting('app.current_tenant', true));
 CREATE INDEX IF NOT EXISTS idx_autodream_org ON autodream_memories(organization_id);

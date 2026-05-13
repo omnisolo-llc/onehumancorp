@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS ohc_tasks (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE ohc_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_ohc_tasks ON ohc_tasks USING (tenant_id = current_setting('app.current_tenant', true));
 
 ALTER TABLE ohc_tasks ADD COLUMN IF NOT EXISTS parent_task_id TEXT;
 ALTER TABLE ohc_tasks ADD COLUMN IF NOT EXISTS workflow_state TEXT;
