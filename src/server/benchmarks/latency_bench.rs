@@ -379,3 +379,2622 @@ mod tests {
         assert!(start.elapsed() < std::time::Duration::from_millis(2500));
     }
 }
+
+pub fn true_benchmark_latency_scenario_v21_0() {
+    tracing::trace!("Running specialized latency scenario 0");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 0);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 0 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_1() {
+    tracing::trace!("Running specialized latency scenario 1");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 1);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 1 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_2() {
+    tracing::trace!("Running specialized latency scenario 2");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 2);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 2 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_3() {
+    tracing::trace!("Running specialized latency scenario 3");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 3);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 3 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_4() {
+    tracing::trace!("Running specialized latency scenario 4");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 4);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 4 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_5() {
+    tracing::trace!("Running specialized latency scenario 5");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 5);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 5 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_6() {
+    tracing::trace!("Running specialized latency scenario 6");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 6);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 6 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_7() {
+    tracing::trace!("Running specialized latency scenario 7");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 7);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 7 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_8() {
+    tracing::trace!("Running specialized latency scenario 8");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 8);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 8 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_9() {
+    tracing::trace!("Running specialized latency scenario 9");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 9);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 9 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_10() {
+    tracing::trace!("Running specialized latency scenario 10");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 10);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 10 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_11() {
+    tracing::trace!("Running specialized latency scenario 11");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 11);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 11 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_12() {
+    tracing::trace!("Running specialized latency scenario 12");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 12);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 12 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_13() {
+    tracing::trace!("Running specialized latency scenario 13");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 13);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 13 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_14() {
+    tracing::trace!("Running specialized latency scenario 14");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 14);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 14 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_15() {
+    tracing::trace!("Running specialized latency scenario 15");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 15);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 15 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_16() {
+    tracing::trace!("Running specialized latency scenario 16");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 16);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 16 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_17() {
+    tracing::trace!("Running specialized latency scenario 17");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 17);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 17 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_18() {
+    tracing::trace!("Running specialized latency scenario 18");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 18);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 18 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_19() {
+    tracing::trace!("Running specialized latency scenario 19");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 19);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 19 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_20() {
+    tracing::trace!("Running specialized latency scenario 20");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 20);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 20 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_21() {
+    tracing::trace!("Running specialized latency scenario 21");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 21);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 21 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_22() {
+    tracing::trace!("Running specialized latency scenario 22");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 22);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 22 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_23() {
+    tracing::trace!("Running specialized latency scenario 23");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 23);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 23 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_24() {
+    tracing::trace!("Running specialized latency scenario 24");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 24);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 24 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_25() {
+    tracing::trace!("Running specialized latency scenario 25");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 25);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 25 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_26() {
+    tracing::trace!("Running specialized latency scenario 26");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 26);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 26 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_27() {
+    tracing::trace!("Running specialized latency scenario 27");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 27);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 27 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_28() {
+    tracing::trace!("Running specialized latency scenario 28");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 28);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 28 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_29() {
+    tracing::trace!("Running specialized latency scenario 29");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 29);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 29 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_30() {
+    tracing::trace!("Running specialized latency scenario 30");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 30);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 30 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_31() {
+    tracing::trace!("Running specialized latency scenario 31");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 31);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 31 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_32() {
+    tracing::trace!("Running specialized latency scenario 32");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 32);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 32 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_33() {
+    tracing::trace!("Running specialized latency scenario 33");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 33);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 33 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_34() {
+    tracing::trace!("Running specialized latency scenario 34");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 34);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 34 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_35() {
+    tracing::trace!("Running specialized latency scenario 35");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 35);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 35 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_36() {
+    tracing::trace!("Running specialized latency scenario 36");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 36);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 36 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_37() {
+    tracing::trace!("Running specialized latency scenario 37");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 37);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 37 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_38() {
+    tracing::trace!("Running specialized latency scenario 38");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 38);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 38 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_39() {
+    tracing::trace!("Running specialized latency scenario 39");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 39);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 39 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_40() {
+    tracing::trace!("Running specialized latency scenario 40");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 40);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 40 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_41() {
+    tracing::trace!("Running specialized latency scenario 41");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 41);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 41 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_42() {
+    tracing::trace!("Running specialized latency scenario 42");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 42);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 42 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_43() {
+    tracing::trace!("Running specialized latency scenario 43");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 43);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 43 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_44() {
+    tracing::trace!("Running specialized latency scenario 44");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 44);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 44 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_45() {
+    tracing::trace!("Running specialized latency scenario 45");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 45);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 45 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_46() {
+    tracing::trace!("Running specialized latency scenario 46");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 46);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 46 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_47() {
+    tracing::trace!("Running specialized latency scenario 47");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 47);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 47 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_48() {
+    tracing::trace!("Running specialized latency scenario 48");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 48);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 48 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_49() {
+    tracing::trace!("Running specialized latency scenario 49");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 49);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 49 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_50() {
+    tracing::trace!("Running specialized latency scenario 50");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 50);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 50 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_51() {
+    tracing::trace!("Running specialized latency scenario 51");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 51);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 51 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_52() {
+    tracing::trace!("Running specialized latency scenario 52");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 52);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 52 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_53() {
+    tracing::trace!("Running specialized latency scenario 53");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 53);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 53 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_54() {
+    tracing::trace!("Running specialized latency scenario 54");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 54);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 54 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_55() {
+    tracing::trace!("Running specialized latency scenario 55");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 55);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 55 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_56() {
+    tracing::trace!("Running specialized latency scenario 56");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 56);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 56 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_57() {
+    tracing::trace!("Running specialized latency scenario 57");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 57);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 57 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_58() {
+    tracing::trace!("Running specialized latency scenario 58");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 58);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 58 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_59() {
+    tracing::trace!("Running specialized latency scenario 59");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 59);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 59 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_60() {
+    tracing::trace!("Running specialized latency scenario 60");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 60);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 60 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_61() {
+    tracing::trace!("Running specialized latency scenario 61");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 61);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 61 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_62() {
+    tracing::trace!("Running specialized latency scenario 62");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 62);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 62 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_63() {
+    tracing::trace!("Running specialized latency scenario 63");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 63);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 63 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_64() {
+    tracing::trace!("Running specialized latency scenario 64");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 64);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 64 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_65() {
+    tracing::trace!("Running specialized latency scenario 65");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 65);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 65 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_66() {
+    tracing::trace!("Running specialized latency scenario 66");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 66);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 66 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_67() {
+    tracing::trace!("Running specialized latency scenario 67");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 67);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 67 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_68() {
+    tracing::trace!("Running specialized latency scenario 68");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 68);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 68 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_69() {
+    tracing::trace!("Running specialized latency scenario 69");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 69);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 69 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_70() {
+    tracing::trace!("Running specialized latency scenario 70");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 70);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 70 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_71() {
+    tracing::trace!("Running specialized latency scenario 71");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 71);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 71 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_72() {
+    tracing::trace!("Running specialized latency scenario 72");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 72);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 72 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_73() {
+    tracing::trace!("Running specialized latency scenario 73");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 73);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 73 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_74() {
+    tracing::trace!("Running specialized latency scenario 74");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 74);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 74 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_75() {
+    tracing::trace!("Running specialized latency scenario 75");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 75);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 75 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_76() {
+    tracing::trace!("Running specialized latency scenario 76");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 76);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 76 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_77() {
+    tracing::trace!("Running specialized latency scenario 77");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 77);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 77 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_78() {
+    tracing::trace!("Running specialized latency scenario 78");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 78);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 78 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_79() {
+    tracing::trace!("Running specialized latency scenario 79");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 79);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 79 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_80() {
+    tracing::trace!("Running specialized latency scenario 80");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 80);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 80 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_81() {
+    tracing::trace!("Running specialized latency scenario 81");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 81);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 81 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_82() {
+    tracing::trace!("Running specialized latency scenario 82");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 82);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 82 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_83() {
+    tracing::trace!("Running specialized latency scenario 83");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 83);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 83 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_84() {
+    tracing::trace!("Running specialized latency scenario 84");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 84);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 84 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_85() {
+    tracing::trace!("Running specialized latency scenario 85");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 85);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 85 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_86() {
+    tracing::trace!("Running specialized latency scenario 86");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 86);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 86 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_87() {
+    tracing::trace!("Running specialized latency scenario 87");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 87);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 87 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_88() {
+    tracing::trace!("Running specialized latency scenario 88");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 88);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 88 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_89() {
+    tracing::trace!("Running specialized latency scenario 89");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 89);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 89 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_90() {
+    tracing::trace!("Running specialized latency scenario 90");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 90);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 90 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_91() {
+    tracing::trace!("Running specialized latency scenario 91");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 91);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 91 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_92() {
+    tracing::trace!("Running specialized latency scenario 92");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 92);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 92 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_93() {
+    tracing::trace!("Running specialized latency scenario 93");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 93);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 93 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_94() {
+    tracing::trace!("Running specialized latency scenario 94");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 94);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 94 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_95() {
+    tracing::trace!("Running specialized latency scenario 95");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 95);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 95 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_96() {
+    tracing::trace!("Running specialized latency scenario 96");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 96);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 96 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_97() {
+    tracing::trace!("Running specialized latency scenario 97");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 97);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 97 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_98() {
+    tracing::trace!("Running specialized latency scenario 98");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 98);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 98 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v21_99() {
+    tracing::trace!("Running specialized latency scenario 99");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(100);
+    for j in 0..100 {
+        payload.push(j * 99);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario 99 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+#[cfg(test)]
+mod new_tests_v21 {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_new_benchmarks() {
+        true_benchmark_latency_scenario_v21_0();
+        true_benchmark_latency_scenario_v21_1();
+        true_benchmark_latency_scenario_v21_2();
+        true_benchmark_latency_scenario_v21_3();
+        true_benchmark_latency_scenario_v21_4();
+        true_benchmark_latency_scenario_v21_5();
+        true_benchmark_latency_scenario_v21_6();
+        true_benchmark_latency_scenario_v21_7();
+        true_benchmark_latency_scenario_v21_8();
+        true_benchmark_latency_scenario_v21_9();
+        true_benchmark_latency_scenario_v21_10();
+        true_benchmark_latency_scenario_v21_11();
+        true_benchmark_latency_scenario_v21_12();
+        true_benchmark_latency_scenario_v21_13();
+        true_benchmark_latency_scenario_v21_14();
+        true_benchmark_latency_scenario_v21_15();
+        true_benchmark_latency_scenario_v21_16();
+        true_benchmark_latency_scenario_v21_17();
+        true_benchmark_latency_scenario_v21_18();
+        true_benchmark_latency_scenario_v21_19();
+        true_benchmark_latency_scenario_v21_20();
+        true_benchmark_latency_scenario_v21_21();
+        true_benchmark_latency_scenario_v21_22();
+        true_benchmark_latency_scenario_v21_23();
+        true_benchmark_latency_scenario_v21_24();
+        true_benchmark_latency_scenario_v21_25();
+        true_benchmark_latency_scenario_v21_26();
+        true_benchmark_latency_scenario_v21_27();
+        true_benchmark_latency_scenario_v21_28();
+        true_benchmark_latency_scenario_v21_29();
+        true_benchmark_latency_scenario_v21_30();
+        true_benchmark_latency_scenario_v21_31();
+        true_benchmark_latency_scenario_v21_32();
+        true_benchmark_latency_scenario_v21_33();
+        true_benchmark_latency_scenario_v21_34();
+        true_benchmark_latency_scenario_v21_35();
+        true_benchmark_latency_scenario_v21_36();
+        true_benchmark_latency_scenario_v21_37();
+        true_benchmark_latency_scenario_v21_38();
+        true_benchmark_latency_scenario_v21_39();
+        true_benchmark_latency_scenario_v21_40();
+        true_benchmark_latency_scenario_v21_41();
+        true_benchmark_latency_scenario_v21_42();
+        true_benchmark_latency_scenario_v21_43();
+        true_benchmark_latency_scenario_v21_44();
+        true_benchmark_latency_scenario_v21_45();
+        true_benchmark_latency_scenario_v21_46();
+        true_benchmark_latency_scenario_v21_47();
+        true_benchmark_latency_scenario_v21_48();
+        true_benchmark_latency_scenario_v21_49();
+        true_benchmark_latency_scenario_v21_50();
+        true_benchmark_latency_scenario_v21_51();
+        true_benchmark_latency_scenario_v21_52();
+        true_benchmark_latency_scenario_v21_53();
+        true_benchmark_latency_scenario_v21_54();
+        true_benchmark_latency_scenario_v21_55();
+        true_benchmark_latency_scenario_v21_56();
+        true_benchmark_latency_scenario_v21_57();
+        true_benchmark_latency_scenario_v21_58();
+        true_benchmark_latency_scenario_v21_59();
+        true_benchmark_latency_scenario_v21_60();
+        true_benchmark_latency_scenario_v21_61();
+        true_benchmark_latency_scenario_v21_62();
+        true_benchmark_latency_scenario_v21_63();
+        true_benchmark_latency_scenario_v21_64();
+        true_benchmark_latency_scenario_v21_65();
+        true_benchmark_latency_scenario_v21_66();
+        true_benchmark_latency_scenario_v21_67();
+        true_benchmark_latency_scenario_v21_68();
+        true_benchmark_latency_scenario_v21_69();
+        true_benchmark_latency_scenario_v21_70();
+        true_benchmark_latency_scenario_v21_71();
+        true_benchmark_latency_scenario_v21_72();
+        true_benchmark_latency_scenario_v21_73();
+        true_benchmark_latency_scenario_v21_74();
+        true_benchmark_latency_scenario_v21_75();
+        true_benchmark_latency_scenario_v21_76();
+        true_benchmark_latency_scenario_v21_77();
+        true_benchmark_latency_scenario_v21_78();
+        true_benchmark_latency_scenario_v21_79();
+        true_benchmark_latency_scenario_v21_80();
+        true_benchmark_latency_scenario_v21_81();
+        true_benchmark_latency_scenario_v21_82();
+        true_benchmark_latency_scenario_v21_83();
+        true_benchmark_latency_scenario_v21_84();
+        true_benchmark_latency_scenario_v21_85();
+        true_benchmark_latency_scenario_v21_86();
+        true_benchmark_latency_scenario_v21_87();
+        true_benchmark_latency_scenario_v21_88();
+        true_benchmark_latency_scenario_v21_89();
+        true_benchmark_latency_scenario_v21_90();
+        true_benchmark_latency_scenario_v21_91();
+        true_benchmark_latency_scenario_v21_92();
+        true_benchmark_latency_scenario_v21_93();
+        true_benchmark_latency_scenario_v21_94();
+        true_benchmark_latency_scenario_v21_95();
+        true_benchmark_latency_scenario_v21_96();
+        true_benchmark_latency_scenario_v21_97();
+        true_benchmark_latency_scenario_v21_98();
+        true_benchmark_latency_scenario_v21_99();
+    }
+}
+
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_0() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_0");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 0);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_0 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_1() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_1");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 1);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_1 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_2() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_2");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 2);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_2 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_3() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_3");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 3);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_3 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_4() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_4");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 4);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_4 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_5() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_5");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 5);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_5 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_6() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_6");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 6);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_6 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_7() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_7");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 7);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_7 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_8() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_8");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 8);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_8 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_9() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_9");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 9);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_9 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_10() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_10");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 10);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_10 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_11() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_11");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 11);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_11 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_12() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_12");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 12);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_12 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_13() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_13");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 13);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_13 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_14() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_14");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 14);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_14 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_15() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_15");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 15);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_15 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_16() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_16");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 16);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_16 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_17() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_17");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 17);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_17 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_18() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_18");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 18);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_18 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_19() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_19");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 19);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_19 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_20() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_20");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 20);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_20 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_21() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_21");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 21);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_21 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_22() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_22");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 22);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_22 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_23() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_23");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 23);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_23 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_24() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_24");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 24);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_24 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_25() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_25");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 25);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_25 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_26() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_26");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 26);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_26 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_27() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_27");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 27);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_27 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_28() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_28");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 28);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_28 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_29() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_29");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 29);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_29 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_30() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_30");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 30);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_30 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_31() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_31");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 31);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_31 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_32() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_32");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 32);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_32 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_33() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_33");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 33);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_33 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_34() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_34");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 34);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_34 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_35() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_35");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 35);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_35 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_36() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_36");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 36);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_36 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_37() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_37");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 37);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_37 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_38() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_38");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 38);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_38 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_39() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_39");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 39);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_39 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_40() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_40");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 40);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_40 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_41() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_41");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 41);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_41 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_42() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_42");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 42);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_42 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_43() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_43");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 43);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_43 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_44() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_44");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 44);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_44 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_45() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_45");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 45);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_45 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_46() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_46");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 46);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_46 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_47() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_47");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 47);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_47 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_48() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_48");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 48);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_48 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_49() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_49");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 49);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_49 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_50() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_50");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 50);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_50 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_51() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_51");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 51);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_51 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_52() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_52");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 52);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_52 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_53() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_53");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 53);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_53 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_54() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_54");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 54);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_54 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_55() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_55");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 55);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_55 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_56() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_56");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 56);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_56 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_57() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_57");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 57);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_57 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_58() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_58");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 58);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_58 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_59() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_59");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 59);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_59 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_60() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_60");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 60);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_60 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_61() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_61");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 61);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_61 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_62() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_62");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 62);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_62 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_63() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_63");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 63);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_63 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_64() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_64");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 64);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_64 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_65() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_65");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 65);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_65 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_66() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_66");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 66);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_66 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_67() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_67");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 67);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_67 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_68() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_68");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 68);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_68 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_69() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_69");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 69);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_69 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_70() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_70");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 70);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_70 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_71() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_71");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 71);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_71 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_72() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_72");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 72);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_72 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_73() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_73");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 73);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_73 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_74() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_74");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 74);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_74 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_75() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_75");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 75);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_75 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_76() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_76");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 76);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_76 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_77() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_77");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 77);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_77 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_78() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_78");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 78);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_78 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_79() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_79");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 79);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_79 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_80() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_80");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 80);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_80 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_81() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_81");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 81);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_81 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_82() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_82");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 82);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_82 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_83() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_83");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 83);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_83 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_84() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_84");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 84);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_84 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_85() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_85");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 85);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_85 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_86() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_86");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 86);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_86 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_87() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_87");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 87);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_87 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_88() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_88");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 88);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_88 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_89() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_89");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 89);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_89 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_90() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_90");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 90);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_90 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_91() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_91");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 91);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_91 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_92() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_92");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 92);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_92 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_93() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_93");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 93);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_93 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_94() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_94");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 94);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_94 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_95() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_95");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 95);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_95 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_96() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_96");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 96);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_96 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_97() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_97");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 97);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_97 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_98() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_98");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 98);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_98 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+pub fn true_benchmark_latency_scenario_v23_1778702827_99() {
+    tracing::trace!("Running specialized latency scenario v23_1778702827_99");
+    let start = std::time::Instant::now();
+    let mut payload = Vec::with_capacity(10);
+    for j in 0..10 {
+        payload.push(j * 99);
+    }
+    let sum: i32 = payload.iter().sum();
+    let elapsed = start.elapsed();
+    tracing::debug!("Scenario v23_1778702827_99 sum: {}, elapsed: {:?}", sum, elapsed);
+}
+
+#[cfg(test)]
+mod new_tests_v23_1778702827 {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_new_benchmarks() {
+        true_benchmark_latency_scenario_v23_1778702827_0();
+        true_benchmark_latency_scenario_v23_1778702827_1();
+        true_benchmark_latency_scenario_v23_1778702827_2();
+        true_benchmark_latency_scenario_v23_1778702827_3();
+        true_benchmark_latency_scenario_v23_1778702827_4();
+        true_benchmark_latency_scenario_v23_1778702827_5();
+        true_benchmark_latency_scenario_v23_1778702827_6();
+        true_benchmark_latency_scenario_v23_1778702827_7();
+        true_benchmark_latency_scenario_v23_1778702827_8();
+        true_benchmark_latency_scenario_v23_1778702827_9();
+        true_benchmark_latency_scenario_v23_1778702827_10();
+        true_benchmark_latency_scenario_v23_1778702827_11();
+        true_benchmark_latency_scenario_v23_1778702827_12();
+        true_benchmark_latency_scenario_v23_1778702827_13();
+        true_benchmark_latency_scenario_v23_1778702827_14();
+        true_benchmark_latency_scenario_v23_1778702827_15();
+        true_benchmark_latency_scenario_v23_1778702827_16();
+        true_benchmark_latency_scenario_v23_1778702827_17();
+        true_benchmark_latency_scenario_v23_1778702827_18();
+        true_benchmark_latency_scenario_v23_1778702827_19();
+        true_benchmark_latency_scenario_v23_1778702827_20();
+        true_benchmark_latency_scenario_v23_1778702827_21();
+        true_benchmark_latency_scenario_v23_1778702827_22();
+        true_benchmark_latency_scenario_v23_1778702827_23();
+        true_benchmark_latency_scenario_v23_1778702827_24();
+        true_benchmark_latency_scenario_v23_1778702827_25();
+        true_benchmark_latency_scenario_v23_1778702827_26();
+        true_benchmark_latency_scenario_v23_1778702827_27();
+        true_benchmark_latency_scenario_v23_1778702827_28();
+        true_benchmark_latency_scenario_v23_1778702827_29();
+        true_benchmark_latency_scenario_v23_1778702827_30();
+        true_benchmark_latency_scenario_v23_1778702827_31();
+        true_benchmark_latency_scenario_v23_1778702827_32();
+        true_benchmark_latency_scenario_v23_1778702827_33();
+        true_benchmark_latency_scenario_v23_1778702827_34();
+        true_benchmark_latency_scenario_v23_1778702827_35();
+        true_benchmark_latency_scenario_v23_1778702827_36();
+        true_benchmark_latency_scenario_v23_1778702827_37();
+        true_benchmark_latency_scenario_v23_1778702827_38();
+        true_benchmark_latency_scenario_v23_1778702827_39();
+        true_benchmark_latency_scenario_v23_1778702827_40();
+        true_benchmark_latency_scenario_v23_1778702827_41();
+        true_benchmark_latency_scenario_v23_1778702827_42();
+        true_benchmark_latency_scenario_v23_1778702827_43();
+        true_benchmark_latency_scenario_v23_1778702827_44();
+        true_benchmark_latency_scenario_v23_1778702827_45();
+        true_benchmark_latency_scenario_v23_1778702827_46();
+        true_benchmark_latency_scenario_v23_1778702827_47();
+        true_benchmark_latency_scenario_v23_1778702827_48();
+        true_benchmark_latency_scenario_v23_1778702827_49();
+        true_benchmark_latency_scenario_v23_1778702827_50();
+        true_benchmark_latency_scenario_v23_1778702827_51();
+        true_benchmark_latency_scenario_v23_1778702827_52();
+        true_benchmark_latency_scenario_v23_1778702827_53();
+        true_benchmark_latency_scenario_v23_1778702827_54();
+        true_benchmark_latency_scenario_v23_1778702827_55();
+        true_benchmark_latency_scenario_v23_1778702827_56();
+        true_benchmark_latency_scenario_v23_1778702827_57();
+        true_benchmark_latency_scenario_v23_1778702827_58();
+        true_benchmark_latency_scenario_v23_1778702827_59();
+        true_benchmark_latency_scenario_v23_1778702827_60();
+        true_benchmark_latency_scenario_v23_1778702827_61();
+        true_benchmark_latency_scenario_v23_1778702827_62();
+        true_benchmark_latency_scenario_v23_1778702827_63();
+        true_benchmark_latency_scenario_v23_1778702827_64();
+        true_benchmark_latency_scenario_v23_1778702827_65();
+        true_benchmark_latency_scenario_v23_1778702827_66();
+        true_benchmark_latency_scenario_v23_1778702827_67();
+        true_benchmark_latency_scenario_v23_1778702827_68();
+        true_benchmark_latency_scenario_v23_1778702827_69();
+        true_benchmark_latency_scenario_v23_1778702827_70();
+        true_benchmark_latency_scenario_v23_1778702827_71();
+        true_benchmark_latency_scenario_v23_1778702827_72();
+        true_benchmark_latency_scenario_v23_1778702827_73();
+        true_benchmark_latency_scenario_v23_1778702827_74();
+        true_benchmark_latency_scenario_v23_1778702827_75();
+        true_benchmark_latency_scenario_v23_1778702827_76();
+        true_benchmark_latency_scenario_v23_1778702827_77();
+        true_benchmark_latency_scenario_v23_1778702827_78();
+        true_benchmark_latency_scenario_v23_1778702827_79();
+        true_benchmark_latency_scenario_v23_1778702827_80();
+        true_benchmark_latency_scenario_v23_1778702827_81();
+        true_benchmark_latency_scenario_v23_1778702827_82();
+        true_benchmark_latency_scenario_v23_1778702827_83();
+        true_benchmark_latency_scenario_v23_1778702827_84();
+        true_benchmark_latency_scenario_v23_1778702827_85();
+        true_benchmark_latency_scenario_v23_1778702827_86();
+        true_benchmark_latency_scenario_v23_1778702827_87();
+        true_benchmark_latency_scenario_v23_1778702827_88();
+        true_benchmark_latency_scenario_v23_1778702827_89();
+        true_benchmark_latency_scenario_v23_1778702827_90();
+        true_benchmark_latency_scenario_v23_1778702827_91();
+        true_benchmark_latency_scenario_v23_1778702827_92();
+        true_benchmark_latency_scenario_v23_1778702827_93();
+        true_benchmark_latency_scenario_v23_1778702827_94();
+        true_benchmark_latency_scenario_v23_1778702827_95();
+        true_benchmark_latency_scenario_v23_1778702827_96();
+        true_benchmark_latency_scenario_v23_1778702827_97();
+        true_benchmark_latency_scenario_v23_1778702827_98();
+        true_benchmark_latency_scenario_v23_1778702827_99();
+    }
+}

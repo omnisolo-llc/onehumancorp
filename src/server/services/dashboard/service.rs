@@ -324,13 +324,32 @@ impl DashboardService for MyDashboardService {
         let mut original_prompts_len = 0;
         let mut compressed_prompts_len = 0;
 
-        let stop_words: std::collections::HashSet<&str> = [
-            "a", "an", "the", "is", "are", "and", "or", "but", "in", "on", "at", "to",
-            "for", "with", "by", "about", "as", "of",
-        ]
-        .iter()
-        .cloned()
-        .collect();
+        // AI Token Efficiency (Phase 5): We precompute the hashset as a static variable
+        // to avoid allocating on every request.
+        static STOP_WORDS_ONCE: std::sync::OnceLock<std::collections::HashSet<&'static str>> = std::sync::OnceLock::new();
+        let stop_words_set = STOP_WORDS_ONCE.get_or_init(|| {
+            let mut m = std::collections::HashSet::new();
+            m.insert("a"); m.insert("an"); m.insert("the"); m.insert("is");
+            m.insert("are"); m.insert("and"); m.insert("or"); m.insert("but");
+            m.insert("in"); m.insert("on"); m.insert("at"); m.insert("to");
+            m.insert("for"); m.insert("with"); m.insert("by"); m.insert("about");
+            m.insert("as"); m.insert("of"); m.insert("this"); m.insert("that");
+            m.insert("it"); m.insert("then"); m.insert("there"); m.insert("their");
+            m.insert("they"); m.insert("them"); m.insert("will"); m.insert("would");
+            m.insert("should"); m.insert("could"); m.insert("can"); m.insert("has");
+            m.insert("have"); m.insert("had"); m.insert("not"); m.insert("no");
+            m.insert("from"); m.insert("which"); m.insert("who"); m.insert("whom");
+            m.insert("whose"); m.insert("what"); m.insert("when"); m.insert("where");
+            m.insert("why"); m.insert("how"); m.insert("all"); m.insert("any");
+            m.insert("both"); m.insert("each"); m.insert("few"); m.insert("more");
+            m.insert("most"); m.insert("other"); m.insert("some"); m.insert("such");
+            m.insert("no"); m.insert("nor"); m.insert("not"); m.insert("only");
+            m.insert("own"); m.insert("same"); m.insert("so"); m.insert("than");
+            m.insert("too"); m.insert("very"); m.insert("s"); m.insert("t");
+            m.insert("can"); m.insert("will"); m.insert("just"); m.insert("don");
+            m.insert("should"); m.insert("now");
+            m
+        });
 
         let org_agents: Vec<_> = agents
             .iter()
@@ -350,7 +369,7 @@ impl DashboardService for MyDashboardService {
                     .split_whitespace()
                     .filter(|word| {
                         let clean_word = word.to_lowercase();
-                        !stop_words.contains(clean_word.as_str())
+                        !stop_words_set.contains(clean_word.as_str())
                     })
                     .collect::<Vec<&str>>()
                     .join(" ");
@@ -368,7 +387,7 @@ impl DashboardService for MyDashboardService {
                     .split_whitespace()
                     .filter(|word| {
                         let clean_word = word.to_lowercase();
-                        !stop_words.contains(clean_word.as_str())
+                        !stop_words_set.contains(clean_word.as_str())
                     })
                     .collect::<Vec<&str>>()
                     .join(" ");
@@ -410,7 +429,7 @@ impl DashboardService for MyDashboardService {
                     .split_whitespace()
                     .filter(|word| {
                         let clean_word = word.to_lowercase();
-                        !stop_words.contains(clean_word.as_str())
+                        !stop_words_set.contains(clean_word.as_str())
                     })
                     .collect::<Vec<&str>>()
                     .join(" ");
