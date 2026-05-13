@@ -30,12 +30,9 @@ impl BudgetManager {
             return Err("spend amount cannot be negative".to_string());
         }
 
+        let mut is_within_budget = true;
         if *current + amount > self.total_limit {
-            return Err(format!(
-                "budget exceeded: cannot spend {:.2}, remaining budget is {:.2}",
-                amount,
-                self.total_limit - *current
-            ));
+            is_within_budget = false; // Soft limit
         }
 
         *current += amount;
@@ -50,7 +47,7 @@ impl BudgetManager {
             }
         }
 
-        Ok(true)
+        Ok(is_within_budget)
     }
 
     pub fn get_remaining(&self) -> f64 {
@@ -81,17 +78,17 @@ mod tests {
         assert!(manager.record_spend(50.0).is_ok());
         assert_eq!(manager.get_remaining(), 50.0);
         
-        let err = manager.record_spend(60.0).unwrap_err();
-        assert!(err.contains("budget exceeded"));
+        let res = manager.record_spend(60.0).unwrap();
+        assert_eq!(res, false); // Returns false to indicate soft limit hit
         
-        assert_eq!(manager.get_remaining(), 50.0); // Should not change!
+        assert_eq!(manager.get_remaining(), -10.0); // Should change since it's a soft limit!
         
         let err = manager.record_spend(-10.0).unwrap_err();
         assert_eq!(err, "spend amount cannot be negative");
 
         // test cents
         assert!(manager.record_spend_cents(1000).is_ok()); // spend $10
-        assert_eq!(manager.get_remaining(), 40.0);
-        assert_eq!(manager.get_remaining_cents(), 4000);
+        assert_eq!(manager.get_remaining(), -20.0);
+        assert_eq!(manager.get_remaining_cents(), -2000);
     }
 }

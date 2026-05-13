@@ -204,8 +204,10 @@ impl DepartmentOrchestrator {
         _action_payload: serde_json::Value,
     ) -> Result<ApprovalRequest, String> {
         let cost = 1;
-        if !self.check_ai_budget(&tenant_id, cost).await.unwrap_or(false) {
-            return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
+        let is_within_budget = self.check_ai_budget(&tenant_id, cost).await.unwrap_or(true);
+        let mut final_description = description.clone();
+        if !is_within_budget {
+            final_description = format!("{} [Soft Limit Reached: Please upgrade your plan for full capacity]", description);
         }
 
         match risk {
@@ -214,7 +216,7 @@ impl DepartmentOrchestrator {
                     id: Uuid::new_v4().to_string(),
                     tenant_id,
                     department,
-                    description: format!("{} | Payload: {}", description, _action_payload.to_string()),
+                    description: format!("{} | Payload: {}", final_description, _action_payload.to_string()),
                     status: ApprovalStatus::Approved,
                     action_risk: "LOW".to_string(),
                 };
@@ -226,7 +228,7 @@ impl DepartmentOrchestrator {
                     id: Uuid::new_v4().to_string(),
                     tenant_id,
                     department,
-                    description: format!("{} | Payload: {}", description, _action_payload.to_string()),
+                    description: format!("{} | Payload: {}", final_description, _action_payload.to_string()),
                     status: ApprovalStatus::Pending,
                     action_risk: "HIGH".to_string(),
                 };
