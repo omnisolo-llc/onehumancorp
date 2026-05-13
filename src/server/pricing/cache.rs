@@ -31,14 +31,15 @@ impl LocalEmbeddingCache {
 
     pub fn get(&self, prompt: &str) -> Option<String> {
         let key = self.hash_prompt(prompt);
-        if let Some(entry) = self.entries.get(&key) {
-            if Instant::now() > entry.expires_at {
-                return None;
-            }
-            Some(entry.response.clone())
-        } else {
-            None
+        let entry_ref = self.entries.get(&key)?;
+
+        if Instant::now() > entry_ref.expires_at {
+            drop(entry_ref);
+            self.entries.remove(&key);
+            return None;
         }
+
+        Some(entry_ref.response.clone())
     }
 
     pub fn set(&self, prompt: &str, response: &str) {
@@ -89,19 +90,20 @@ impl CompressedEmbeddingCache {
 
     pub fn get(&self, prompt: &str) -> Option<String> {
         let key = self.hash_prompt(prompt);
-        if let Some(entry) = self.entries.get(&key) {
-            if Instant::now() > entry.expires_at {
-                return None;
+        let entry_ref = self.entries.get(&key)?;
+
+        if Instant::now() > entry_ref.expires_at {
+            drop(entry_ref);
+            self.entries.remove(&key);
+            return None;
+        }
+
+        match compression::decompress_lossless(&entry_ref.response) {
+            Ok(decompressed) => Some(decompressed),
+            Err(e) => {
+                tracing::error!("Failed to decompress cached response: {}", e);
+                None
             }
-            match compression::decompress_lossless(&entry.response) {
-                Ok(decompressed) => Some(decompressed),
-                Err(e) => {
-                    tracing::error!("Failed to decompress cached response: {}", e);
-                    None
-                }
-            }
-        } else {
-            None
         }
     }
 
@@ -154,11 +156,15 @@ mod tests {
         
         // Wait for expiration
         thread::sleep(Duration::from_millis(150));
-        assert_eq!(cache.get("prompt1"), None);
         
-        // Prune
+        // Prune - Note we don't call get() before prune() to ensure prune clears it,
+        // because our optimized get() now deletes expired items inline!
         cache.set("prompt3", "response3");
-        assert_eq!(cache.prune(), 1); // Should prune prompt1
+        let pruned = cache.prune();
+
+        // Since get() was not called on "prompt1" after expiry, it should still be in the DashMap
+        // and therefore prune() should clear exactly 1 item.
+        assert_eq!(pruned, 1);
     }
 
     #[test]
