@@ -374,20 +374,147 @@ impl DashboardService for MyDashboardService {
         _request: Request<GetVideoTutorialsRequest>,
     ) -> Result<Response<GetVideoTutorialsResponse>, Status> {
         let videos = vec![
+
             VideoMetadata {
+
                 title: "How to add your first product".to_string(),
+
                 description: "A quick 60-second guide to listing items in your store.".to_string(),
+
                 duration_sec: 60,
+
                 url: "https://ohc-video.example.com/tutorials/add_product.mp4".to_string(),
+
                 thumbnail_url: "https://ohc-video.example.com/thumbnails/add_product.jpg".to_string(),
+
             },
+
             VideoMetadata {
-                title: "Setting up AI Helpers".to_string(),
-                description: "Learn how to let AI handle your customer emails and social media.".to_string(),
-                duration_sec: 120,
-                url: "https://ohc-video.example.com/tutorials/ai_helpers.mp4".to_string(),
-                thumbnail_url: "https://ohc-video.example.com/thumbnails/ai_helpers.jpg".to_string(),
+
+                title: "Setting up payments".to_string(),
+
+                description: "Accept Apple Pay and credit cards.".to_string(),
+
+                duration_sec: 60,
+
+                url: "https://ohc-video.example.com/tutorials/setup_payments.mp4".to_string(),
+
+                thumbnail_url: "https://ohc-video.example.com/thumbnails/setup_payments.jpg".to_string(),
+
             },
+
+            VideoMetadata {
+
+                title: "Connect your Instagram".to_string(),
+
+                description: "Link your social media easily.".to_string(),
+
+                duration_sec: 45,
+
+                url: "https://ohc-video.example.com/tutorials/connect_instagram.mp4".to_string(),
+
+                thumbnail_url: "https://ohc-video.example.com/thumbnails/connect_instagram.jpg".to_string(),
+
+            },
+
+            VideoMetadata {
+
+                title: "Create a discount code".to_string(),
+
+                description: "Boost sales with a promo code.".to_string(),
+
+                duration_sec: 50,
+
+                url: "https://ohc-video.example.com/tutorials/discount_code.mp4".to_string(),
+
+                thumbnail_url: "https://ohc-video.example.com/thumbnails/discount_code.jpg".to_string(),
+
+            },
+
+            VideoMetadata {
+
+                title: "Managing orders".to_string(),
+
+                description: "How to fulfill and ship orders.".to_string(),
+
+                duration_sec: 75,
+
+                url: "https://ohc-video.example.com/tutorials/managing_orders.mp4".to_string(),
+
+                thumbnail_url: "https://ohc-video.example.com/thumbnails/managing_orders.jpg".to_string(),
+
+            },
+
+            VideoMetadata {
+
+                title: "Setting up AI Helpers".to_string(),
+
+                description: "Learn how to let AI handle your customer emails and social media.".to_string(),
+
+                duration_sec: 85,
+
+                url: "https://ohc-video.example.com/tutorials/ai_helpers.mp4".to_string(),
+
+                thumbnail_url: "https://ohc-video.example.com/thumbnails/ai_helpers.jpg".to_string(),
+
+            },
+
+            VideoMetadata {
+
+                title: "Customize your storefront".to_string(),
+
+                description: "Change colors and fonts.".to_string(),
+
+                duration_sec: 89,
+
+                url: "https://ohc-video.example.com/tutorials/customize_storefront.mp4".to_string(),
+
+                thumbnail_url: "https://ohc-video.example.com/thumbnails/customize_storefront.jpg".to_string(),
+
+            },
+
+            VideoMetadata {
+
+                title: "View your analytics".to_string(),
+
+                description: "Track your sales and visitors.".to_string(),
+
+                duration_sec: 55,
+
+                url: "https://ohc-video.example.com/tutorials/view_analytics.mp4".to_string(),
+
+                thumbnail_url: "https://ohc-video.example.com/thumbnails/view_analytics.jpg".to_string(),
+
+            },
+
+            VideoMetadata {
+
+                title: "Set up a custom domain".to_string(),
+
+                description: "Use your own website address.".to_string(),
+
+                duration_sec: 80,
+
+                url: "https://ohc-video.example.com/tutorials/custom_domain.mp4".to_string(),
+
+                thumbnail_url: "https://ohc-video.example.com/thumbnails/custom_domain.jpg".to_string(),
+
+            },
+
+            VideoMetadata {
+
+                title: "Invite your team".to_string(),
+
+                description: "Add staff members to your store.".to_string(),
+
+                duration_sec: 40,
+
+                url: "https://ohc-video.example.com/tutorials/invite_team.mp4".to_string(),
+
+                thumbnail_url: "https://ohc-video.example.com/thumbnails/invite_team.jpg".to_string(),
+
+            },
+
         ];
 
         Ok(Response::new(GetVideoTutorialsResponse { videos }))

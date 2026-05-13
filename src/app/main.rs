@@ -477,37 +477,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             if let Some(ui) = video_tutorials_handle.upgrade() {
                                                 // Ideally, we'd fetch these from the backend here. For now, since Slint UI tests run without backend, we populate it synchronously if empty or we could make a gRPC call.
                                                 // Assuming we make a grpc call
-                                                #[cfg(not(target_arch = "wasm32"))]
-                                                {
-                                                    let ui_weak = ui.as_weak();
-                                                    tokio::spawn(async move {
-                                                        use ohc::api::v1::dashboard_service_client::DashboardServiceClient;
-                                                        use ohc::api::v1::GetVideoTutorialsRequest;
-                                                        let channel = tonic::transport::Channel::from_static("http://127.0.0.1:18789").connect().await;
-                                                        if let Ok(channel) = channel {
-                                                            let mut client = DashboardServiceClient::new(channel);
-                                                            if let Ok(response) = client.get_video_tutorials(tonic::Request::new(GetVideoTutorialsRequest{})).await {
-                                                                let resp = response.into_inner();
-                                                                let mut models: Vec<app::VideoMetadata> = Vec::new();
-                                                                for v in resp.videos {
-                                                                    models.push(app::VideoMetadata {
-                                                                        title: v.title.into(),
-                                                                        description: v.description.into(),
-                                                                        duration_sec: v.duration_sec,
-                                                                        url: v.url.into(),
-                                                                        thumbnail_url: v.thumbnail_url.into(),
-                                                                    });
-                                                                }
-                                                                let _ = slint::invoke_from_event_loop(move || {
-                                                                    let model_rc = std::rc::Rc::new(slint::VecModel::from(models));
-                                                                    if let Some(ui) = ui_weak.upgrade() {
-                                                                        ui.set_videos(model_rc.into());
-                                                                    }
-                                                                });
-                                                            }
-                                                        }
-                                                    });
-                                                }
+                                                load_video_tutorials(ui.as_weak());
                                                 let _ = ui.show();
                                             }
                                         });
@@ -659,6 +629,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         let video_tutorials_handle = video_tutorials_ui.as_weak();
                                         dashboard.on_open_video_tutorials(move || {
                                             if let Some(ui) = video_tutorials_handle.upgrade() {
+                                                load_video_tutorials(ui.as_weak());
                                                 let _ = ui.show();
                                             }
                                         });
@@ -2217,10 +2188,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 dashboard.on_open_video_tutorials(move || {
-                    if let Some(ui) = video_tutorials_handle.upgrade() {
-                        let _ = ui.show();
-                    }
-                });
+                                            if let Some(ui) = video_tutorials_handle.upgrade() {
+                                                load_video_tutorials(ui.as_weak());
+                                                let _ = ui.show();
+                                            }
+                                        });
 
                 dashboard.on_open_api_docs(move || {
                     if let Some(ui) = api_docs_handle.upgrade() {
@@ -7584,4 +7556,71 @@ fn test_scribe_feature_dashboard_functionality() {
     dashboard.on_open_walkthrough(move || { *wt_clone.borrow_mut() = true; });
     dashboard.invoke_open_walkthrough();
     assert!(*walkthrough_opened.borrow());
+}
+
+
+#[cfg(not(target_arch = "wasm32"))]
+async fn fetch_video_tutorials() -> Result<Vec<app::VideoMetadata>, Box<dyn std::error::Error>> {
+    use ohc::api::v1::dashboard_service_client::DashboardServiceClient;
+    use ohc::api::v1::GetVideoTutorialsRequest;
+
+    let api_url = std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+
+    let channel = tonic::transport::Endpoint::from_shared(api_url)?.connect().await?;
+    let mut client = DashboardServiceClient::new(channel);
+
+    let response = client.get_video_tutorials(tonic::Request::new(GetVideoTutorialsRequest{})).await?;
+    let resp = response.into_inner();
+
+    let mut models = Vec::new();
+    for v in resp.videos {
+        models.push(app::VideoMetadata {
+            title: v.title.into(),
+            description: v.description.into(),
+            duration_sec: v.duration_sec,
+            url: v.url.into(),
+            thumbnail_url: v.thumbnail_url.into(),
+        });
+    }
+
+    Ok(models)
+}
+
+fn load_video_tutorials(ui_weak: slint::Weak<app::VideoTutorials>) {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = slint::spawn_local(async move {
+            match fetch_video_tutorials().await {
+                Ok(models) => {
+                    let _ = slint::invoke_from_event_loop(move || {
+                        let model_rc = std::rc::Rc::new(slint::VecModel::from(models));
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.set_videos(model_rc.into());
+                        }
+                    });
+                }
+                Err(e) => {
+                    eprintln!("Failed to fetch video tutorials: {}", e);
+                }
+            }
+        });
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        // WASM Mock Data for web preview
+        let _ = slint::invoke_from_event_loop(move || {
+            let mut models = Vec::new();
+            models.push(app::VideoMetadata {
+                title: "How to add your first product (WASM)".into(),
+                description: "A quick 60-second guide to listing items in your store.".into(),
+                duration_sec: 60,
+                url: "https://ohc-video.example.com/tutorials/add_product.mp4".into(),
+                thumbnail_url: "https://ohc-video.example.com/thumbnails/add_product.jpg".into(),
+            });
+            let model_rc = std::rc::Rc::new(slint::VecModel::from(models));
+            if let Some(ui) = ui_weak.upgrade() {
+                ui.set_videos(model_rc.into());
+            }
+        });
+    }
 }
