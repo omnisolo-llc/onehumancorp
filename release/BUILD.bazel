@@ -53,6 +53,7 @@ pkg_deb(
     version = "0.4.41+1",
     description = "One Human Corp Desktop Application",
     release = "1",
+    release = "1",
     section = "utils",
     priority = "optional",
     data = ":app_tar",
@@ -69,6 +70,7 @@ pkg_rpm(
     license = "Apache-2.0",
     summary = "One Human Corp Desktop Application",
     description = "One Human Corp Desktop Application",
+    release = "1",
     release = "1",
     srcs = [":app_files"],
     target_compatible_with = select({
