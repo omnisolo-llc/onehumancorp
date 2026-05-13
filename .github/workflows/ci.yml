@@ -18,6 +18,9 @@ defaults:
   run:
     shell: bash
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   bazel-test:
     runs-on: oci-runner # ubuntu-latest
@@ -40,6 +43,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
+          cache-dependency-path: "src/server/orchestration/go.sum"
 
       - name: Install Bazelisk
         run: |
@@ -107,6 +111,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
+          cache-dependency-path: "src/server/orchestration/go.sum"
 
       - name: Install Bazelisk
         run: |
