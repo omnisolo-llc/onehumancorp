@@ -50,7 +50,7 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: false
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+          disk-cache: false
           repository-cache: true
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
@@ -118,7 +118,7 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: false
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+          disk-cache: false
           repository-cache: true
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
@@ -172,7 +172,7 @@ jobs:
   #       uses: bazel-contrib/setup-bazel@0.19.0
   #       with:
   #         bazelisk-cache: false
-  #         disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+  #         disk-cache: false
   #         repository-cache: true
   #         external-cache: true
   #         cache-save: ${{ github.event_name != 'pull_request' }}
