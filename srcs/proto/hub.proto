@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package hub;
+
+option go_package = "github.com/onehumancorp/ohc/srcs/proto/hub";
+
+message Capability {
+    string name = 1;
+    string version = 2;
+    map<string, string> metadata = 3;
+}
+
+message AdvertiseCapabilitiesRequest {
+    string agent_id = 1;
+    repeated Capability capabilities = 2;
+    string status = 3;
+}
+
+message AdvertiseCapabilitiesResponse {
+    bool success = 1;
+}
+
+message DiscoverAgentsRequest {
+    repeated string required_capabilities = 1;
+}
+
+message AgentInfo {
+    string agent_id = 1;
+    repeated Capability capabilities = 2;
+    string status = 3;
+    int64 last_seen = 4;
+}
+
+message DiscoverAgentsResponse {
+    repeated AgentInfo agents = 1;
+}
+
+message MeshEvent {
+    string id = 1;
+    string type = 2;
+    string source_agent_id = 3;
+    string target_agent_id = 4;
+    bytes payload = 5;
+    int64 timestamp = 6;
+}
+
+message StreamMeshEventsRequest {
+    string agent_id = 1;
+}
+
+message StreamMeshEventsResponse {
+    MeshEvent event = 1;
+}
+
+service HubService {
+    rpc AdvertiseCapabilities(AdvertiseCapabilitiesRequest) returns (AdvertiseCapabilitiesResponse);
+    rpc DiscoverAgents(DiscoverAgentsRequest) returns (DiscoverAgentsResponse);
+    rpc StreamMeshEvents(StreamMeshEventsRequest) returns (stream StreamMeshEventsResponse);
+}
