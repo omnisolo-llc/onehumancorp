@@ -58,6 +58,8 @@ rust_library(
         "plane.rs",
         "proto.rs",
         "provider.rs",
+        "orchestration.rs",
+        "orchestrator.rs",
         "ralph_loop.rs",
         "registry.rs",
         "service.rs",
