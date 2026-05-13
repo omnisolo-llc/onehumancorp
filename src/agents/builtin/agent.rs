@@ -358,10 +358,49 @@ impl Agent {
                 let session_tools_clone = session_tools.to_vec();
                 let messages_clone = messages.clone();
                 read_only_futures.push(async move {
-                    let r = match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
-                        Ok(res) => res,
-                        Err(e) => format!("Error: {:?}", e),
-                    };
+                    let handler = crate::error_handling::ErrorHandler::new(crate::error_handling::ErrorHandlerConfig::default());
+                    let mut attempt = 0;
+                    let mut final_res = String::new();
+                    loop {
+                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
+                            Ok(res) => {
+                                final_res = res;
+                                break;
+                            }
+                            Err(e) => {
+                                let e_str = format!("{:?}", e);
+                                let category = crate::error_handling::ErrorHandler::categorize_error(&e_str);
+                                let exec_err = crate::error_handling::ExecutionError {
+                                    category,
+                                    message: e_str.clone(),
+                                    tool_name: Some(tc_clone.name.clone()),
+                                    attempt,
+                                    original_error: None,
+                                    telemetry_id: "agent_ro".to_string(),
+                                    timestamp_ms: 0,
+                                };
+                                match handler.handle_error(&exec_err) {
+                                    crate::error_handling::ErrorResolution::ReturnToLlm(msg) => {
+                                        final_res = msg;
+                                        break;
+                                    }
+                                    crate::error_handling::ErrorResolution::BubbleUp(msg) => {
+                                        final_res = format!("Error: {}", msg);
+                                        break;
+                                    }
+                                    crate::error_handling::ErrorResolution::RetryWithBackoff(duration) => {
+                                        tokio::time::sleep(duration).await;
+                                        attempt += 1;
+                                    }
+                                    crate::error_handling::ErrorResolution::InterruptForUserInput(msg) => {
+                                        final_res = format!("Error: {}", msg);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    let r = final_res;
                     (tc_clone, r)
                 });
             }
@@ -384,10 +423,49 @@ impl Agent {
             }
 
             for tc in &mutating_calls {
-                let r = match self.execute_tool(tc, session_tools, &messages).await {
-                    Ok(res) => res,
-                    Err(e) => format!("Error: {:?}", e),
-                };
+                let handler = crate::error_handling::ErrorHandler::new(crate::error_handling::ErrorHandlerConfig::default());
+                let mut attempt = 0;
+                let mut final_res = String::new();
+                loop {
+                    match self.execute_tool(tc, session_tools, &messages).await {
+                        Ok(res) => {
+                            final_res = res;
+                            break;
+                        }
+                        Err(e) => {
+                            let e_str = format!("{:?}", e);
+                            let category = crate::error_handling::ErrorHandler::categorize_error(&e_str);
+                            let exec_err = crate::error_handling::ExecutionError {
+                                category,
+                                message: e_str.clone(),
+                                tool_name: Some(tc.name.clone()),
+                                attempt,
+                                original_error: None,
+                                telemetry_id: "agent_mut".to_string(),
+                                timestamp_ms: 0,
+                            };
+                            match handler.handle_error(&exec_err) {
+                                crate::error_handling::ErrorResolution::ReturnToLlm(msg) => {
+                                    final_res = msg;
+                                    break;
+                                }
+                                crate::error_handling::ErrorResolution::BubbleUp(msg) => {
+                                    final_res = format!("Error: {}", msg);
+                                    break;
+                                }
+                                crate::error_handling::ErrorResolution::RetryWithBackoff(duration) => {
+                                    tokio::time::sleep(duration).await;
+                                    attempt += 1;
+                                }
+                                crate::error_handling::ErrorResolution::InterruptForUserInput(msg) => {
+                                    final_res = format!("Error: {}", msg);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                let r = final_res;
 
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
 
