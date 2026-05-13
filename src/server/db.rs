@@ -857,7 +857,7 @@ pub async fn insert_autodream_memory(
             }
         };
         if affected > 0 {
-            tracing::info!("Cleaned up {} stagnant missions older than {} seconds", affected, timeout_secs);
+            tracing::trace!("Cleaned up {} stagnant missions older than {} seconds", affected, timeout_secs);
         }
         Ok(affected)
     }

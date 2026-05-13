@@ -23,3 +23,33 @@ impl MaintenanceWorker {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::{DB, DbStore};
+
+    #[tokio::test]
+    async fn test_maintenance_worker_starts() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: DbStore::Sqlite(pool),
+
+        });
+
+        let worker = Arc::new(MaintenanceWorker::new(db.clone()));
+        worker.start();
+
+        // Let it run for a moment to ensure it doesn't immediately crash
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+    }
+}

@@ -1,5 +1,5 @@
 use sqlx::PgPool;
-use sqlx::Row;
+
 use chrono::Utc;
 use std::sync::OnceLock;
 use tokio::sync::Semaphore;
@@ -270,6 +270,7 @@ impl SipDB {
 
 #[cfg(test)]
 mod tests {
+    use sqlx::Row;
     use super::*;
     use std::fs::File;
     use std::io::Write;
@@ -474,7 +475,9 @@ mod tests {
                 .await
                 .unwrap();
 
+
             let status: String = row.get("status");
+
             let log: String = row.get("mission_log");
 
             assert_eq!(status, "blocked");
@@ -488,6 +491,7 @@ mod tests {
                 .fetch_one(&pool)
                 .await
                 .unwrap();
+
 
             let log2: String = row2.get("mission_log");
             assert!(log2.contains("Missing dependencies\nAnother blocker"));
@@ -512,5 +516,64 @@ mod tests {
         // Should error out gracefully with our dummy pool timeout instead of panicking
         assert!(res.is_err());
     }
-}
 
+    #[tokio::test]
+    async fn test_prune_stale_missions_logic_success() {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(val) => val,
+            Err(_) => return,
+        };
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .max_connections(1)
+            .connect(&database_url)
+            .await;
+
+        if let Ok(pool) = pool {
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_missions (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    tenant_id TEXT,
+                    mission_log TEXT
+                )"
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            // Insert initial record that should be pruned
+            let past = chrono::Utc::now() - chrono::Duration::hours(2);
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at, created_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING")
+                .bind("stale_mission_1")
+                .bind("PENDING")
+                .bind("{}")
+                .bind("test_org")
+                .bind(past)
+                .bind(past)
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
+            assert!(res.is_ok());
+
+            let row = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stale_mission_1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+
+            let status: String = row.get("status");
+            assert_eq!(status, "FAILED");
+
+            sqlx::query("DELETE FROM agent_missions WHERE id = 'stale_mission_1'").execute(&pool).await.unwrap();
+        }
+    }
+}
