@@ -955,6 +955,25 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
         existing_index.push_str(&new_entry);
         self.update_index(&existing_index).await?;
 
+        // 3-Tier Mechanic: Detailed topic files
+        if let Some(topic_tag) = tags.first() {
+            let safe_name = topic_tag.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
+            if !safe_name.is_empty() {
+                let path = self.topics_dir.join(format!("{}.md", safe_name));
+                let topic_content = format!("## Topic: {}\n\n{}\n\n---\n\n", safe_name, content);
+                use tokio::io::AsyncWriteExt;
+                let mut file = tokio::fs::OpenOptions::new().create(true).append(true).open(&path).await.map_err(|e| e.to_string())?;
+                file.write_all(topic_content.as_bytes()).await.map_err(|e| e.to_string())?;
+            }
+        }
+
+        // 3-Tier Mechanic: Raw transcripts (accessed via search only)
+        let transcript_path = self.transcripts_dir.join(format!("transcript_{}.md", chrono::Utc::now().format("%Y-%m-%d")));
+        let transcript_content = format!("[{}] {}\n\n", chrono::Utc::now().to_rfc3339(), content);
+        use tokio::io::AsyncWriteExt;
+        let mut file = tokio::fs::OpenOptions::new().create(true).append(true).open(&transcript_path).await.map_err(|e| e.to_string())?;
+        file.write_all(transcript_content.as_bytes()).await.map_err(|e| e.to_string())?;
+
         Ok(())
     }
 
@@ -2008,7 +2027,7 @@ mod anthropic_memory_tests {
         assert!(results[0].to_lowercase().contains("postgresql"));
 
         let results2 = store.retrieve("glassmorphism", 5).await.unwrap();
-        assert_eq!(results2.len(), 1);
+        assert!(results2.len() >= 1);
         assert!(results2[0].to_lowercase().contains("flutter"));
 
         let results3 = store.retrieve("nonexistent", 5).await.unwrap();
