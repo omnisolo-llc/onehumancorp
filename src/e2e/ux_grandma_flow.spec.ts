@@ -1,16 +1,17 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Grandmother UX End-to-End Flow Validation', () => {
   test.use({ viewport: { width: 375, height: 800 } });
 
   test('Flow 1: First-time user logs in and sees plain language headers', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     // Verify login screen uses the friendly start button text
     await expect(page.locator('button:has-text("🚀 Start Business Setup")')).toBeVisible();
 
     await page.getByPlaceholder('Email or Username').first().fill( 'grandma@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.locator('input[type="password"]').first().fill( TEST_DATA.PASSWORD);
+    await page.click(SELECTORS.SIGN_IN_BTN);
     await page.waitForURL('**/*');
 
     await expect(page.locator('text=My Business').first()).toBeVisible();
@@ -18,10 +19,10 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
   });
 
   test('Flow 2: User opens Quick Actions helper for guidance', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').first().fill( 'grandma@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.locator('input[type="password"]').first().fill( TEST_DATA.PASSWORD);
+    await page.click(SELECTORS.SIGN_IN_BTN);
     await page.waitForURL('**/*');
 
     const questionMarkBtn = page.locator('text="Quick Actions"').locator('..').locator('button:has-text("?")');
@@ -33,10 +34,10 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
   });
 
   test('Flow 3: User accesses Menu and sees simple connection labels', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').first().fill( 'grandma@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.locator('input[type="password"]').first().fill( TEST_DATA.PASSWORD);
+    await page.click(SELECTORS.SIGN_IN_BTN);
     await page.waitForURL('**/*');
 
     const menuBtn = page.locator('button:has-text("Menu")');
@@ -49,10 +50,10 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
   });
 
   test('Flow 4: User navigates to Connect Custom Software to review available connections', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').first().fill( 'grandma@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.locator('input[type="password"]').first().fill( TEST_DATA.PASSWORD);
+    await page.click(SELECTORS.SIGN_IN_BTN);
     await page.waitForURL('**/*');
 
     await page.click('button:has-text("Menu")');
@@ -63,7 +64,7 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
   });
 
   test('Flow 5: User initiates guided setup process from login screen', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     const startBusinessBtn = page.locator('button:has-text("🚀 Start Business Setup")');
     await expect(startBusinessBtn).toBeVisible();
     await startBusinessBtn.click();

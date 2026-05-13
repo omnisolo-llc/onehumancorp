@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Business Manager UI', () => {
   test('should display dashboard with nav', async ({ page }) => {
@@ -8,16 +9,16 @@ test.describe('Business Manager UI', () => {
   });
 
   test('should navigate to agents page', async ({ page }) => {
-    await page.goto('/agents');
+    await page.goto(ROUTES.AGENTS);
     await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
   });
 
   test('should display login page', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     await expect(page.getByRole('heading', { name: 'Login' }).filter({ visible: true })).toBeVisible();
     await expect(page.getByPlaceholder('Email or Username').first()).toBeVisible();
     await expect(page.locator('input[type="password"]').first()).toBeVisible();
-    await expect(page.locator('button:has-text("Login")')).toBeVisible();
+    await expect(page.locator(SELECTORS.LOGIN_BTN)).toBeVisible();
   });
 
   test('should display business setup page', async ({ page }) => {
@@ -34,7 +35,7 @@ test.describe('Navigation', () => {
   });
 
   test('should navigate to dashboard from nav', async ({ page }) => {
-    await page.goto('/agents');
+    await page.goto(ROUTES.AGENTS);
     await page.locator('nav a:has-text("Dashboard")').click();
     await expect(page.getByRole('heading', { name: 'Dashboard' }).filter({ visible: true })).toBeVisible();
   });

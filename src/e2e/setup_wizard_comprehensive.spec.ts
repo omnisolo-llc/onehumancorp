@@ -1,12 +1,13 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
   // dummy validation comment
   test('should traverse the complete business setup wizard successfully', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').first().fill('founder@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.locator('input[type="password"]').first().fill(TEST_DATA.PASSWORD);
+    await page.locator(SELECTORS.LOGIN_BTN).first().click();
 
     await page.waitForURL('**/dashboard');
 
@@ -20,40 +21,40 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     // Step 1: Business Type
     await expect(page.locator('text=What kind of business are you building?')).toBeVisible();
     await page.locator('text=Online Store').click();
-    await page.locator('button:has-text("Next")').first().click();
+    await page.locator(SELECTORS.NEXT_BTN).first().click();
 
     // Step 2: Company Info
     await expect(page.locator('text=What is your business called?')).toBeVisible();
     await page.locator('input[placeholder="e.g. Maya\'s Cakes"]').fill('Comprehensive Bakery');
     await page.locator('button:has-text("Auto-suggest Description")').click();
     await page.waitForTimeout(1000); // Wait for auto-generation
-    await page.locator('button:has-text("Next")').first().click();
+    await page.locator(SELECTORS.NEXT_BTN).first().click();
 
     // Step 3: Selling Categories
     await expect(page.locator('text=What do you sell?')).toBeVisible();
     await page.locator('text=Physical products').click();
-    await page.locator('button:has-text("Next")').first().click();
+    await page.locator(SELECTORS.NEXT_BTN).first().click();
 
     // Step 4: First Product (skipped if service, but we chose Physical)
     await expect(page.locator('text=Add your first product')).toBeVisible();
     await page.locator('input[placeholder="What is the name of this product?"]').fill('Chocolate Chip Cookie');
     await page.locator('input[placeholder="0.00"]').fill('12.99');
-    await page.locator('button:has-text("Next")').first().click();
+    await page.locator(SELECTORS.NEXT_BTN).first().click();
 
     // Step 5: Payments
     await expect(page.locator('text=How do you want to receive payments?')).toBeVisible();
     await page.locator('text=Online only').click();
-    await page.locator('button:has-text("Next")').first().click();
+    await page.locator(SELECTORS.NEXT_BTN).first().click();
 
     // Step 6: Choose Template
     await expect(page.locator('text=Choose a Template')).toBeVisible();
     await page.locator('text=Modern').click();
-    await page.locator('button:has-text("Next")').first().click();
+    await page.locator(SELECTORS.NEXT_BTN).first().click();
 
     // Step 7: Domain
     await expect(page.locator('text=Choose a Domain')).toBeVisible();
     await page.locator('text=Free OHC Domain').click();
-    await page.locator('button:has-text("Next")').first().click();
+    await page.locator(SELECTORS.NEXT_BTN).first().click();
 
     // Step 8: Admin Account
     await expect(page.locator('text=Administrator account')).toBeVisible();

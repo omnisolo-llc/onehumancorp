@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Viral Referral Loop', () => {
   test('should navigate to user management and interact with the viral referral loop widget', async ({ page }) => {
     // 1. start from the home page after user login with no pre-authenticated shortcuts
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.goto(ROUTES.LOGIN);
+    await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().first().fill(TEST_DATA.PASSWORD);
     await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
     await page.waitForURL('**/dashboard');
 
@@ -42,9 +43,9 @@ test.describe('Viral Referral Loop', () => {
   });
 
   test('should verify widget hover state micro-animations and layout resilience', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.goto(ROUTES.LOGIN);
+    await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().first().fill(TEST_DATA.PASSWORD);
     await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
     await page.waitForURL('**/dashboard');
 
@@ -69,9 +70,9 @@ test.describe('Viral Referral Loop', () => {
   });
 
   test('should assert glassmorphism background token on referral widget', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.goto(ROUTES.LOGIN);
+    await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().first().fill(TEST_DATA.PASSWORD);
     await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
     await page.waitForURL('**/dashboard');
 
@@ -86,9 +87,9 @@ test.describe('Viral Referral Loop', () => {
   });
 
   test('should assert proper typography and text colors on referral widget', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.goto(ROUTES.LOGIN);
+    await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().first().fill(TEST_DATA.PASSWORD);
     await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
     await page.waitForURL('**/dashboard');
 
@@ -105,9 +106,9 @@ test.describe('Viral Referral Loop', () => {
     // Mobile-first: All screens must be 100% usable at 375px width
     await page.setViewportSize({ width: 375, height: 812 });
 
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.goto(ROUTES.LOGIN);
+    await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().first().fill(TEST_DATA.PASSWORD);
     await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
     await page.waitForURL('**/dashboard');
 

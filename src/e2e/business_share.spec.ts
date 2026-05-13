@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Business Share & Embed', () => {
   test('should display dashboard with nav links', async ({ page }) => {
@@ -16,7 +17,7 @@ test.describe('Business Share & Embed', () => {
   });
 
   test('should display login page', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     await expect(page.getByRole('heading', { name: 'Login' }).filter({ visible: true })).toBeVisible();
     await expect(page.getByPlaceholder('Email or Username').first()).toBeVisible();
     await expect(page.locator('input[type="password"]').first()).toBeVisible();
@@ -30,13 +31,13 @@ test.describe('Business Share & Embed', () => {
 
 test.describe('Agents Page', () => {
   test('should show agents list', async ({ page }) => {
-    await page.goto('/agents');
+    await page.goto(ROUTES.AGENTS);
     await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
     await expect(page.locator('text=Marketing Pro')).toBeVisible();
   });
 
   test('should show hire agent button', async ({ page }) => {
-    await page.goto('/agents');
+    await page.goto(ROUTES.AGENTS);
     await expect(page.locator('button:has-text("Hire Agent")')).toBeVisible();
   });
 });

@@ -1,11 +1,9 @@
+import { loginUser } from './helpers';
 import { test, expect } from '@playwright/test';
 
 test.describe('User Management', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
     await page.goto('/users');
   });
@@ -123,10 +121,7 @@ test.describe('User Management', () => {
 
 test.describe('Role Management', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
     await page.goto('/users/roles');
   });

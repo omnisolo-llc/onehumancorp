@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('E2E Chaos Resilience', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
+    await page.goto(ROUTES.LOGIN);
+    await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().fill(TEST_DATA.PASSWORD);
     await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
     await page.waitForURL('**/dashboard**');
   });
@@ -79,10 +80,10 @@ test.describe('E2E Chaos Resilience', () => {
 
   test('should enforce tenant isolation in records during concurrent access', async ({ page, context }) => {
     // This test simulates two tenants accessing the records at the same time
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').first().fill('tenant1@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.locator('input[type="password"]').first().fill(TEST_DATA.PASSWORD);
+    await page.locator(SELECTORS.LOGIN_BTN).first().click();
     await page.waitForURL('**/dashboard**');
 
     await page.locator('button:has-text("Records")').click();
@@ -90,10 +91,10 @@ test.describe('E2E Chaos Resilience', () => {
     await expect(page.locator('text=/Tenant 2 Record/i')).not.toBeVisible();
 
     const page2 = await context.newPage();
-    await page2.goto('/login');
+    await page2.goto(ROUTES.LOGIN);
     await page2.locator('input[type="email"]').fill('tenant2@example.com');
-    await page2.locator('input[type="password"]').fill('password123');
-    await page2.locator('button:has-text("Login")').click();
+    await page2.locator('input[type="password"]').fill(TEST_DATA.PASSWORD);
+    await page2.locator(SELECTORS.LOGIN_BTN).click();
     await page2.waitForURL('**/dashboard**');
 
     await page2.locator('button:has-text("Records")').click();

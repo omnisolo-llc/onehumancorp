@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test('lens audit: fully verify login error states', async ({ page }) => {
     await page.goto('/');
@@ -7,7 +8,7 @@ test('lens audit: fully verify login error states', async ({ page }) => {
     await expect(page.locator('text="Sign in to manage your business"').first()).toBeVisible();
 
     // Try to login with empty credentials
-    await page.click('button:has-text("Sign In")');
+    await page.click(SELECTORS.SIGN_IN_BTN);
 
     // Wait for the simulated network delay/error
     await page.waitForTimeout(1500);
@@ -37,7 +38,7 @@ test('lens audit: fully verify login mode toggling', async ({ page }) => {
 
     await page.click('button:has-text("Have an account? Sign In")');
     await expect(page.locator('text="Sign in to manage your business"').first()).toBeVisible();
-    await expect(page.locator('button:has-text("Sign In")').first()).toBeVisible();
+    await expect(page.locator(SELECTORS.SIGN_IN_BTN).first()).toBeVisible();
 });
 
 test('lens audit: fully verify login input states', async ({ page }) => {
@@ -47,7 +48,7 @@ test('lens audit: fully verify login input states', async ({ page }) => {
     await page.fill('input[placeholder="Password"]', 'secretpassword');
 
     // Submit
-    await page.click('button:has-text("Sign In")');
+    await page.click(SELECTORS.SIGN_IN_BTN);
     await expect(page.locator('button:has-text("Signing in...")')).toBeVisible();
 });
 

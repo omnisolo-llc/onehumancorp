@@ -1,14 +1,15 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('🎨 Canvas: AutoDream Memory Pipeline UI Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to login page
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
 
     // Fill in credentials and sign in
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.getByPlaceholder('Email or Username').first().fill( TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().fill( TEST_DATA.PASSWORD);
+    await page.click(SELECTORS.SIGN_IN_BTN);
 
     // Wait for Dashboard to load
     await page.waitForURL('**/dashboard*');

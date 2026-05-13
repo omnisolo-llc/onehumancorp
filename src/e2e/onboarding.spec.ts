@@ -1,16 +1,17 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Onboarding Wizard', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
 
     // Login
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.getByPlaceholder('Email or Username').first().fill( TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().fill( TEST_DATA.PASSWORD);
+    await page.locator(SELECTORS.LOGIN_BTN).first().click();
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Welcome back, Human."')).toBeVisible({ timeout: 10000 });
   });
 
   test('Test 1: Sign-Up & Account Creation to Wizard auto-redirect', async ({ page }) => {
@@ -24,27 +25,27 @@ test.describe('Onboarding Wizard', () => {
     await page.click('button:has-text("Start Setup")');
     await expect(page.locator('text="Setup Wizard"')).toBeVisible();
 
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 1: Business Type -> 2
     await page.click('text="Online Store"');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
     await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 3: Selling Categories -> 4
     await page.check('text="Physical Products"');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
 
     // Test cross device resume -> Reload page
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     // Re login and check if it still works
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.getByPlaceholder('Email or Username').first().fill( TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().fill( TEST_DATA.PASSWORD);
+    await page.locator(SELECTORS.LOGIN_BTN).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Welcome back, Human."')).toBeVisible({ timeout: 10000 });
     await page.click('button:has-text("Start Setup")');
     await expect(page.locator('text="Setup Wizard"')).toBeVisible();
   });
@@ -53,18 +54,18 @@ test.describe('Onboarding Wizard', () => {
     await page.click('button:has-text("Start Setup")');
 
     // Step 0 -> Step 1
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 1: Business Type -> 2
     await page.click('text="Online Store"');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'AI Desc Store');
     await page.click('button:has-text("Generate Description")');
     await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 3: Selling Categories -> 4
     await page.check('text="Physical Products"');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 4: First Product -> 5
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
@@ -73,33 +74,33 @@ test.describe('Onboarding Wizard', () => {
     await page.click('button:has-text("Generate AI Description")');
     await page.waitForTimeout(1000);
 
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
   });
 
   test('Test 4: Domain & Go-Live', async ({ page }) => {
     await page.click('button:has-text("Start Setup")');
 
     // Step 0 -> Step 1
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 1: Business Type -> 2
     await page.click('text="Online Store"');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'Launch Store');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 3: Selling Categories -> 4
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 4: First Product -> 5
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 5: Payments -> 6
     await page.click('text="Online"');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 6: Theme -> 7
     await page.click('text="Modern"');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 7: Domain -> 8
     await page.click('text="🌐 Free OHC Domain"');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 8: Review & Launch -> 9
     await page.click('button:has-text("Publish my business")');
 
@@ -112,31 +113,31 @@ test.describe('Onboarding Wizard', () => {
 
     // Proceed to last step in wizard to see the checklist
     // Step 0 -> Step 1
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 1: Business Type -> 2
     await page.click('text="Online Store"');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
     await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 3: Selling Categories -> 4
     await page.check('text="Physical Products"');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 4: First Product -> 5
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 5: Payments -> 6
     await page.click('text="Online"');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 6: Theme -> 7
     await page.click('text="Modern"');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 7: Domain -> 8
     await page.click('text="🌐 Free OHC Domain"');
-    await page.click('button:has-text("Next")');
+    await page.click(SELECTORS.NEXT_BTN);
     // Step 8: Review & Launch -> 9
     await page.click('button:has-text("Publish my business")');
 

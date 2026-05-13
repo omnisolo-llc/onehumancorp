@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Wizard Refinement E2E', () => {
 
   test('Full Setup Wizard journey (Day One)', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     // Simulate navigation to Setup Wizard
     await page.locator('button:has-text("🚀 Start My Business")').first().click();
 
@@ -13,25 +14,25 @@ test.describe('Wizard Refinement E2E', () => {
 
     // Step 2: Name & Description
     await page.fill('input[placeholder*="Maya\'s Cakes"]', 'E2E Bakery');
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
 
     // Step 3: What do you sell
     await page.locator('text=Physical products').first().click();
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
 
     // Step 4: Payments
     await page.locator('text=Online only').first().click();
 
     // Step 5: Admin Account
     await page.fill('input[placeholder*="you@email.com"]', 'admin@e2e.test');
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
 
     // Step 6: Template
     await page.locator('text=Modern').first().click();
 
     // Step 7: Product
     await page.fill('input[placeholder*="Birthday Cake"]', 'Test Cake');
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
 
     // Step 8: Domain
     await page.locator('text=Free OHC Domain').first().click();
@@ -52,22 +53,22 @@ test.describe('Wizard Refinement E2E', () => {
 
   test('Zero to Live - Full Journey & Dashboard Verification', async ({ page }) => {
     // 1. Onboarding
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     await page.locator('button:has-text("🚀 Start My Business")').first().click();
 
     // Setup Wizard steps
     await expect(page.locator('text=/What kind of business/i')).toBeVisible();
     await page.locator('text=Online Store').first().click();
     await page.fill('input[placeholder*="Maya\'s Cakes"]', 'My New Bakery');
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
     await page.locator('text=Physical products').first().click();
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
     await page.locator('text=Online only').first().click();
     await page.fill('input[placeholder*="you@email.com"]', 'founder@bakery.test');
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
     await page.locator('text=Modern').first().click();
     await page.fill('input[placeholder*="Birthday Cake"]', 'Signature Cake');
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
     await page.locator('text=Free OHC Domain').first().click();
 
     // Review & Launch
@@ -105,14 +106,14 @@ test.describe('Wizard Refinement E2E', () => {
     await expect(page.locator('text=The Salesperson')).toBeVisible();
 
     await page.locator('text=The Ambassador').click();
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
 
     // Capabilities
     await page.locator('text=Reply to customer messages').click();
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
 
     // Frequency
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
 
     // Review
     await expect(page.locator('text=Helper: Customer Support')).toBeVisible();
@@ -134,15 +135,15 @@ test.describe('Wizard Refinement E2E', () => {
     await page.locator('text=Energetic').click();
     await expect(page.locator('text=/Let\'s get things moving/')).toBeVisible();
 
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
 
     // Focus
     await page.locator('text=Only discuss business').click();
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
 
     // Examples
     await page.locator('button:has-text("Add Example Interaction")').click();
-    await page.locator('button:has-text("Next")').click();
+    await page.locator(SELECTORS.NEXT_BTN).click();
 
     // Save
     await page.locator('button:has-text("Save")').click();

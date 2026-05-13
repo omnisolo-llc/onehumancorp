@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Dashboard UX Friction Fix Verification', () => {
   test('should display dashboard', async ({ page }) => {
@@ -26,7 +27,7 @@ test.describe('Navigation', () => {
   });
 
   test('should display login page', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     await expect(page.getByRole('heading', { name: 'Login' }).filter({ visible: true })).toBeVisible();
   });
 });

@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Integrations Page', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     const loginLink = page.locator('text=/Login/i');
     await loginLink.click();
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.getByPlaceholder('Email or Username').first().fill( TEST_DATA.EMAIL);
     await page.locator('input[type="password"]').first().fill( 'password');
     await page.click('button[type="submit"]');
     await page.waitForTimeout(500); // give some time
@@ -223,10 +224,10 @@ test.describe('Integrations Page', () => {
 
 test.describe('Pipeline Management', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     const loginLink = page.locator('text=/Login/i');
     await loginLink.click();
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.getByPlaceholder('Email or Username').first().fill( TEST_DATA.EMAIL);
     await page.locator('input[type="password"]').first().fill( 'password');
     await page.click('button[type="submit"]');
     await page.waitForTimeout(500); // give some time

@@ -1,12 +1,10 @@
+import { loginUser } from './helpers';
 import { test, expect } from '@playwright/test';
 
 test.describe('Success Milestones Notifications', () => {
   test('should verify milestone functionality when order threshold is reached', async ({ page }) => {
     // 1. Authenticate and navigate to dashboard
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/*');
 
     // 2. Wait for the dashboard to load and show the "Mark Order Ready" button
@@ -35,10 +33,7 @@ test.describe('Success Milestones Notifications', () => {
   });
 
   test('should verify 1st order milestone', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
 
     const markReadyBtn = page.locator('button:has-text("Mark Order Ready")');
@@ -49,10 +44,7 @@ test.describe('Success Milestones Notifications', () => {
   });
 
   test('should verify 10th order milestone', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
 
     const markReadyBtn = page.locator('button:has-text("Mark Order Ready")');
@@ -70,10 +62,7 @@ test.describe('Success Milestones Notifications', () => {
   });
 
   test('should verify 100 visitors milestone', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
 
     // Our test framework has a single-shot timer for 5s that triggers 100 visitors milestone
@@ -81,10 +70,7 @@ test.describe('Success Milestones Notifications', () => {
   });
 
   test('should verify milestone dismissal', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
 
     const markReadyBtn = page.locator('button:has-text("Mark Order Ready")');

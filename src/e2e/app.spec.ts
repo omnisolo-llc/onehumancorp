@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Dashboard', () => {
   test('should load dashboard page', async ({ page }) => {
@@ -22,7 +23,7 @@ test.describe('Business Setup Wizard', () => {
     await page.goto('/business-setup');
 
     // Step 0: Welcome -> Next
-    const nextButton = page.locator('button:has-text("Next")');
+    const nextButton = page.locator(SELECTORS.NEXT_BTN);
     await nextButton.click();
 
     // Step 1: Business type
@@ -40,13 +41,13 @@ test.describe('Business Setup Wizard', () => {
 
 test.describe('Login', () => {
   test('should show login form', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     await expect(page.getByPlaceholder('Email or Username').first()).toBeVisible();
     await expect(page.locator('input[type="password"]').first()).toBeVisible();
   });
 
   test('should allow password visibility toggle', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
     const passwordInput = page.locator('input[type="password"]').first();
     const toggleButton = page.locator('button:has-text("Show")');
     await expect(toggleButton).toBeVisible();
@@ -55,12 +56,12 @@ test.describe('Login', () => {
 
 test.describe('Agent Management', () => {
   test('should show agents list', async ({ page }) => {
-    await page.goto('/agents');
+    await page.goto(ROUTES.AGENTS);
     await expect(page.locator('h1:has-text("Agents")')).toBeVisible();
   });
 
   test('should show hire agent button', async ({ page }) => {
-    await page.goto('/agents');
+    await page.goto(ROUTES.AGENTS);
     await expect(page.locator('button:has-text("Hire Agent")')).toBeVisible();
   });
 });

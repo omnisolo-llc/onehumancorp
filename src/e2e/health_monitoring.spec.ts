@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 // Real E2E tests executing against the actual backend API/app stack
 test.describe('Health Monitoring Resilience E2E', () => {
@@ -11,7 +12,7 @@ test.describe('Health Monitoring Resilience E2E', () => {
         // If login button is visible, perform login
         if (await loginBtn.isVisible({ timeout: 1000 })) {
             await loginBtn.click();
-            await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+            await page.getByPlaceholder('Email or Username').first().fill( TEST_DATA.EMAIL);
             await page.locator('input[type="password"]').first().fill( 'password');
             await page.click('button[type="submit"]');
             await page.waitForURL('**/dashboard*');

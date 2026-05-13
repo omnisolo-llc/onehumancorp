@@ -1,21 +1,22 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Dashboard UX', () => {
   test.use({ viewport: { width: 375, height: 800 } });
 
   test('should display correctly on mobile and verify plain language labels', async ({ page }) => {
     // Navigate to login page
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
 
     // Fill in credentials and sign in
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().first().fill(TEST_DATA.PASSWORD);
     await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
 
     // Wait for Dashboard to load
     await page.waitForURL('**/*');
 
-    // Some apps navigate to '/' or '/dashboard', we will just wait for navigation
+    // Some apps navigate to '/' or ROUTES.DASHBOARD, we will just wait for navigation
     // and verify the labels.
     await expect(page.locator('text=My Business').first()).toBeVisible();
     await expect(page.locator('text=Today\'s Sales')).toBeVisible();
@@ -29,9 +30,9 @@ test.describe('Dashboard UX', () => {
 });
 
 test('should display Quick Actions on mobile', async ({ page }) => {
-  await page.goto('/login');
-  await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-  await page.locator('input[type="password"]').first().first().fill('password123');
+  await page.goto(ROUTES.LOGIN);
+  await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+  await page.locator('input[type="password"]').first().first().fill(TEST_DATA.PASSWORD);
   await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
   await page.waitForURL('**/*');
 
@@ -83,9 +84,9 @@ test('should display Quick Actions on mobile', async ({ page }) => {
 });
 
 test('should display Menu toggle on mobile and have expected links', async ({ page }) => {
-  await page.goto('/login');
-  await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-  await page.locator('input[type="password"]').first().first().fill('password123');
+  await page.goto(ROUTES.LOGIN);
+  await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+  await page.locator('input[type="password"]').first().first().fill(TEST_DATA.PASSWORD);
   await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
   await page.waitForURL('**/*');
 
@@ -105,11 +106,11 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
 test.describe('Dashboard Flow Completeness UX', () => {
   test('Grandmother test: complete critical journey starting from login', async ({ page }) => {
     // Navigate to login page per constraints
-    await page.goto('/login');
+    await page.goto(ROUTES.LOGIN);
 
     // Fill in credentials and sign in
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().first().fill(TEST_DATA.PASSWORD);
     await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
 
     // Wait for Dashboard to load
@@ -124,9 +125,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
   });
 
   test('Grandmother test: Check Orders from login', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.goto(ROUTES.LOGIN);
+    await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().first().fill(TEST_DATA.PASSWORD);
     await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
     await page.waitForURL('**/*');
 
@@ -135,9 +136,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
   });
 
   test('Grandmother test: Check Messages from login', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.goto(ROUTES.LOGIN);
+    await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().first().fill(TEST_DATA.PASSWORD);
     await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
     await page.waitForURL('**/*');
 
@@ -146,9 +147,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
   });
 
   test('Grandmother test: Check Analytics from login', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.goto(ROUTES.LOGIN);
+    await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().first().fill(TEST_DATA.PASSWORD);
     await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
     await page.waitForURL('**/*');
 
@@ -157,9 +158,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
   });
 
   test('Grandmother test: Share Store from login', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.goto(ROUTES.LOGIN);
+    await page.getByPlaceholder('Email or Username').first().fill(TEST_DATA.EMAIL);
+    await page.locator('input[type="password"]').first().first().fill(TEST_DATA.PASSWORD);
     await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
     await page.waitForURL('**/*');
 

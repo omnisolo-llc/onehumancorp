@@ -1,12 +1,11 @@
+import { loginUser } from './helpers';
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Social Media Autoposting Flow', () => {
   test('user can connect Instagram and receive an automated post approval task', async ({ page }) => {
     // 1. Authenticate and navigate to dashboard
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
 
     // Wait for the Dashboard
     await page.waitForURL('**/dashboard');
@@ -31,7 +30,7 @@ test.describe('Social Media Autoposting Flow', () => {
     await expect(page.locator('text=📸 Connect Instagram').first()).toBeVisible();
 
     // Move to next step
-    const nextBtn = page.locator('button:has-text("Next")');
+    const nextBtn = page.locator(SELECTORS.NEXT_BTN);
     await expect(nextBtn).toBeVisible();
     await nextBtn.click();
 
@@ -63,10 +62,7 @@ test.describe('Social Media Autoposting Flow', () => {
   });
 
   test('user can connect Facebook', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
 
     await page.goto('/social-posting');
@@ -79,10 +75,7 @@ test.describe('Social Media Autoposting Flow', () => {
   });
 
   test('user can edit an AI draft', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
 
     await page.goto('/social-posting');
@@ -99,10 +92,7 @@ test.describe('Social Media Autoposting Flow', () => {
   });
 
   test('user can schedule a post', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
 
     await page.goto('/social-posting');
@@ -113,10 +103,7 @@ test.describe('Social Media Autoposting Flow', () => {
   });
 
   test('user can approve a post', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
 
     await page.goto('/social-posting');

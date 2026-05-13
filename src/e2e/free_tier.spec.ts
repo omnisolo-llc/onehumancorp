@@ -1,11 +1,10 @@
+import { loginUser } from './helpers';
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Free Tier & Upgrade Funnel', () => {
   test('should display product limit soft paywall', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
 
     // Assuming we have a mock in Rust that triggers the limit after a certain action
@@ -26,13 +25,10 @@ test.describe('Free Tier & Upgrade Funnel', () => {
   });
 
   test('should display agent limits soft paywall', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
 
-    await page.goto('/agents');
+    await page.goto(ROUTES.AGENTS);
 
     // Click "Hire Agent"
     const hireBtn = page.locator('button:has-text("Hire Agent")').first();
@@ -44,13 +40,10 @@ test.describe('Free Tier & Upgrade Funnel', () => {
   });
 
   test('should verify upgrade prompt dismissal', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
 
-    await page.goto('/agents');
+    await page.goto(ROUTES.AGENTS);
 
     // Click "Hire Agent"
     const hireBtn = page.locator('button:has-text("Hire Agent")').first();
@@ -66,13 +59,10 @@ test.describe('Free Tier & Upgrade Funnel', () => {
   });
 
   test('should verify upgrade CTA navigation', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
 
-    await page.goto('/agents');
+    await page.goto(ROUTES.AGENTS);
 
     // Click "Hire Agent"
     const hireBtn = page.locator('button:has-text("Hire Agent")').first();
@@ -85,10 +75,7 @@ test.describe('Free Tier & Upgrade Funnel', () => {
   });
 
   test('should verify free tier text indication on my plan', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await loginUser(page);
     await page.waitForURL('**/dashboard');
 
     await page.goto('/my-plan');

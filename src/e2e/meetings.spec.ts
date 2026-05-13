@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ROUTES, SELECTORS, TEST_DATA } from './constants';
 
 test.describe('Meetings Page', () => {
   test('should display meetings page', async ({ page }) => {
@@ -62,7 +63,7 @@ test.describe('Meetings Page', () => {
       await scheduleBtn.click();
       const participantInput = page.locator('input[placeholder*="email" i], input[placeholder*="participant"]').first();
       if (await participantInput.isVisible()) {
-        await participantInput.fill('test@example.com');
+        await participantInput.fill(TEST_DATA.EMAIL);
         await page.locator('button:has-text("Add")').click();
       }
     }
