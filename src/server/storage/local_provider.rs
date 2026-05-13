@@ -10,13 +10,14 @@ use super::provider::{BlobMetadata, Provider};
 pub struct LocalProvider {
     base_path: PathBuf,
     tracker: Tracker,
+    pub pool: Option<sqlx::PgPool>,
 }
 
 impl LocalProvider {
     pub fn new<P: AsRef<Path>>(base_path: P) -> io::Result<Self> {
         let abs_path = fs::canonicalize(base_path)?;
         fs::create_dir_all(&abs_path)?;
-        Ok(LocalProvider { base_path: abs_path, tracker: Tracker::new() })
+        Ok(LocalProvider { base_path: abs_path, tracker: Tracker::new(), pool: None })
     }
 
     fn get_local_path(&self, key: &str) -> io::Result<PathBuf> {
@@ -160,7 +161,7 @@ impl Provider for LocalProvider {
         let res = tokio::fs::write(path, &final_data).await;
         if res.is_ok() {
             let _ = ::server_telemetry::record_storage_rw_cost(
-                &crate::db::get_pool(),
+                if let Some(p) = &self.pool { p } else { return Ok(()) },
                 t_id,
                 "write",
                 final_data.len() as i64

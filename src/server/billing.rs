@@ -19,10 +19,10 @@ impl Tracker {
     }
 
     pub fn new_with_redis(redis_url: &str) -> Self {
-        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| Arc::new(MercadoPagoClient::new(token)));
+        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| Arc::new(MercadoPagoClient::new(token, None)));
         let stripe_client = std::env::var("STRIPE_API_KEY")
             .ok()
-            .map(|key| Arc::new(StripeClient::new(key)));
+            .map(|key| Arc::new(StripeClient::new(key, None)));
         if let Ok(client) = Client::open(redis_url) {
             Tracker {
                 rate_limiter: Some(Arc::new(RedisRateLimiter::new(client))),

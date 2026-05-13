@@ -11,7 +11,7 @@ pub struct TwilioProvider {
 
 impl TwilioProvider {
     pub fn new(account_sid: String, auth_token: String) -> Self {
-        let client = RealTwilioClient::new(account_sid, auth_token);
+        let client = RealTwilioClient::new(account_sid, auth_token, None);
 
         Self {
             client: Arc::new(client),

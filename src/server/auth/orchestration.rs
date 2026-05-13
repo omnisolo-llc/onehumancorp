@@ -1,5 +1,6 @@
 use tonic::{Request, Status};
 use super::parse_spiffe_id;
+use super::{auth_mode_from_env, AuthMode};
 use ::server_ohc::orchestration::*;
 
 #[derive(Debug, Clone)]
@@ -17,6 +18,12 @@ pub fn interceptor(req: Request<()>) -> Result<Request<()>, Status> {
         .to_str()
         .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))?
         .to_string();
+
+    if let AuthMode::Spiffe { allowed_id } = auth_mode_from_env() {
+        if !allowed_id.is_empty() && allowed_id != spiffe_id_str {
+            return Err(Status::permission_denied("SPIFFE ID mismatch"));
+        }
+    }
 
     let (org_id, agent_id) = parse_spiffe_id(&spiffe_id_str)?;
 
@@ -114,4 +121,20 @@ mod tests {
         
         assert!(authorize_register_agent(&auth, &req2).is_err());
     }
+
+    #[test]
+    fn test_interceptor_rejects_spoofed_spiffe_id() {
+        use tonic::metadata::MetadataValue;
+        let mut req = Request::new(());
+        req.metadata_mut().insert("x-spiffe-id", MetadataValue::try_from("spiffe://onehumancorp.io/org-1/agent-malicious").unwrap());
+
+        std::env::set_var("OHC_AGENT_SPIFFE_ID", "spiffe://onehumancorp.io/org-1/agent-1");
+
+        let res = interceptor(req);
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code(), tonic::Code::PermissionDenied);
+
+        std::env::remove_var("OHC_AGENT_SPIFFE_ID");
+    }
+
 }
