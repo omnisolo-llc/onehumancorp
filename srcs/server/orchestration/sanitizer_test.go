@@ -32,6 +32,21 @@ func TestSanitizePayload(t *testing.T) {
 			payload:  "",
 			expected: "",
 		},
+		{
+			name:     "email",
+			payload:  "Contact us at admin@onehumancorp.com for support.",
+			expected: "Contact us at [EMAIL_REDACTED] for support.",
+		},
+		{
+			name:     "credit card",
+			payload:  "My card is 1234-5678-9012-3456.",
+			expected: "My card is [CC_REDACTED].",
+		},
+		{
+			name:     "mixed PII",
+			payload:  "User foo@bar.com has card 1111222233334444 and [PRIVATE:secret_note]",
+			expected: "User [EMAIL_REDACTED] has card [CC_REDACTED] and [REDACTED]",
+		},
 	}
 
 	for _, tt := range tests {
