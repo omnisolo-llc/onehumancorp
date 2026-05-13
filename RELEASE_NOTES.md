@@ -1,3 +1,7 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+- Scaling (Cloud): refactor: simplify Playwright locators by removing redundant visible filters
+- Privacy/Offline (Standalone): refactor: simplify Playwright locators by removing redundant visible filters
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
