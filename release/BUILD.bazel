@@ -1,23 +1,4 @@
 # Cross-platform release packaging.
-#
-# Binary archives (ohc server):
-#   bazelisk build //release:ohc-x86_64-unknown-linux-gnu
-#   bazelisk build //release:all_ohc_archives
-#
-# Flutter mobile / desktop apps (require Flutter SDK on PATH):
-#   bazelisk run  //release:flutter-build-android-apk
-#   bazelisk run  //release:flutter-build-android-aab
-#   bazelisk run  //release:flutter-build-ios          # macOS only
-#   bazelisk run  //release:flutter-build-macos        # macOS only
-#   bazelisk run  //release:flutter-build-windows      # Windows only
-#   bazelisk run  //release:flutter-build-linux
-#   bazelisk run  //release:flutter-build-web
-#
-# All Flutter targets at once:
-#   bazelisk run  //release:flutter-build-all
-#
-# The GitHub Actions release workflow (`.github/workflows/release.yml`) uses
-# these targets to produce artifacts that are uploaded to GitHub Releases.
 
 load("@rules_pkg//pkg:mappings.bzl", "pkg_files", "strip_prefix")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
@@ -25,7 +6,8 @@ load("@rules_pkg//pkg:zip.bzl", "pkg_zip")
 load("@rules_pkg//pkg:deb.bzl", "pkg_deb")
 load("@rules_pkg//pkg:rpm.bzl", "pkg_rpm")
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+package(default_visibility = ["//visibility:public"])
 
 # ── Universal App Files ───────────────────────────────────────────────────────
 
@@ -36,13 +18,30 @@ pkg_files(
     strip_prefix = strip_prefix.from_pkg(),
 )
 
+# ── IronClaw Archives ─────────────────────────────────────────────────────────
+# These targets are expected by the release workflow.
+
+[
+    pkg_tar(
+        name = "ironclaw-" + target,
+        srcs = ["//src/server:server"],
+        extension = "tar.gz",
+    )
+    for target in [
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu",
+        "x86_64-apple-darwin",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc",
+    ]
+]
+
 # ── Linux Packages ────────────────────────────────────────────────────────────
 
 pkg_tar(
     name = "app_tar",
     srcs = [":app_files"],
     extension = "tar.gz",
-    visibility = ["//visibility:public"],
 )
 
 pkg_deb(
@@ -81,7 +80,6 @@ pkg_zip(
     name = "app_windows_zip",
     srcs = [":app_files"],
     package_file_name = "ohc-app-windows-0.4.42+1.zip",
-    visibility = ["//visibility:public"],
 )
 
 # ── OCI Docker Image ──────────────────────────────────────────────────────────
@@ -95,7 +93,6 @@ oci_image(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    visibility = ["//visibility:public"],
 )
 
 oci_load(
@@ -106,7 +103,6 @@ oci_load(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    visibility = ["//visibility:public"],
 )
 
 # ── Convenience Groups ───────────────────────────────────────────────────────
@@ -114,11 +110,6 @@ oci_load(
 filegroup(
     name = "all_release_artifacts",
     srcs = [
-        # Tauri app excluded - cannot build with Bazel due to compile-time codegen incompatibility
-        # ":app_tar",
-        # ":app_deb",
-        # ":app_windows_zip",
         ":app_image_tarball",
     ],
-    visibility = ["//visibility:public"],
 )
