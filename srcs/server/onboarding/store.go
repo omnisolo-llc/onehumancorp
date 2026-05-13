@@ -112,3 +112,83 @@ func (s *SqliteTenantStore) UpdateTenantState(ctx context.Context, id string, st
 	_, err := s.db.ExecContext(ctx, query, state, id)
 	return err
 }
+
+type PgTenantStore struct {
+	db *sql.DB
+}
+
+func NewPgTenantStore(db *sql.DB) *PgTenantStore {
+	return &PgTenantStore{db: db}
+}
+
+func (s *PgTenantStore) CreateTenant(ctx context.Context, tenant *Tenant) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if tenant.ID == "" {
+		tenant.ID = "id-" + time.Now().Format("20060102150405.000000") // Mock UUID
+	}
+	if tenant.Status == "" {
+		tenant.Status = "PENDING"
+	}
+	if tenant.Tier == "" {
+		tenant.Tier = "free"
+	}
+
+	query := `
+		INSERT INTO tenants (id, name, category, description, status, owner_email, tier, state, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	`
+	_, err = tx.ExecContext(ctx, query,
+		tenant.ID, tenant.Name, tenant.Category, tenant.Description, tenant.Status,
+		tenant.OwnerEmail, tenant.Tier, tenant.State,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	tenant.CreatedAt = time.Now()
+	tenant.UpdatedAt = time.Now()
+	return nil
+}
+
+func (s *PgTenantStore) GetTenant(ctx context.Context, id string) (*Tenant, error) {
+	query := `
+		SELECT id, name, category, description, status, created_at, updated_at, owner_email, tier, COALESCE(state, '')
+		FROM tenants
+		WHERE id = $1
+	`
+	row := s.db.QueryRowContext(ctx, query, id)
+
+	tenant := &Tenant{}
+	err := row.Scan(
+		&tenant.ID, &tenant.Name, &tenant.Category, &tenant.Description, &tenant.Status,
+		&tenant.CreatedAt, &tenant.UpdatedAt, &tenant.OwnerEmail, &tenant.Tier, &tenant.State,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, errors.New("tenant not found")
+	} else if err != nil {
+		return nil, err
+	}
+	return tenant, nil
+}
+
+func (s *PgTenantStore) UpdateTenantStatus(ctx context.Context, id string, status string) error {
+	query := `UPDATE tenants SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+	_, err := s.db.ExecContext(ctx, query, status, id)
+	return err
+}
+
+func (s *PgTenantStore) UpdateTenantState(ctx context.Context, id string, state string) error {
+	query := `UPDATE tenants SET state = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+	_, err := s.db.ExecContext(ctx, query, state, id)
+	return err
+}

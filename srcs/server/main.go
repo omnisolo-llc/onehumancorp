@@ -110,8 +110,15 @@ func main() {
 	// Block forever (or implement graceful shutdown)
 
 	// Initialize Onboarding
-	tenantStore := onboarding.NewSqliteTenantStore(db)
 	taskStore := orchestration.NewSqliteTaskStore(db)
+	var tenantStore onboarding.TenantStore
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		tenantStore = onboarding.NewSqliteTenantStore(db)
+	} else {
+		tenantStore = onboarding.NewPgTenantStore(db)
+		worker := onboarding.NewWorker(db)
+		worker.Start(context.Background())
+	}
 	onboardingService := onboarding.NewService(tenantStore, taskStore)
 	onboardingAPI := onboarding.NewAPIHandler(onboardingService)
 

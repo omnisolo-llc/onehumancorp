@@ -17,6 +17,7 @@ class WizardState {
   final String? productDescription;
   final String? productPrice;
   final String? domainChoice;
+  final String? uploadedImagePath;
 
   WizardState({
     this.currentStep = 0,
@@ -33,6 +34,7 @@ class WizardState {
     this.productDescription,
     this.productPrice,
     this.domainChoice,
+    this.uploadedImagePath,
   });
 
   WizardState copyWith({
@@ -50,6 +52,7 @@ class WizardState {
     String? productDescription,
     String? productPrice,
     String? domainChoice,
+    String? uploadedImagePath,
   }) {
     return WizardState(
       currentStep: currentStep ?? this.currentStep,
@@ -66,6 +69,7 @@ class WizardState {
       productDescription: productDescription ?? this.productDescription,
       productPrice: productPrice ?? this.productPrice,
       domainChoice: domainChoice ?? this.domainChoice,
+      uploadedImagePath: uploadedImagePath ?? this.uploadedImagePath,
     );
   }
 
@@ -85,6 +89,7 @@ class WizardState {
       'productDescription': productDescription,
       'productPrice': productPrice,
       'domainChoice': domainChoice,
+      'uploadedImagePath': uploadedImagePath,
     };
   }
 
@@ -104,6 +109,7 @@ class WizardState {
       productDescription: json['productDescription'],
       productPrice: json['productPrice'],
       domainChoice: json['domainChoice'],
+      uploadedImagePath: json['uploadedImagePath'] as String?,
     );
   }
 }
@@ -211,6 +217,11 @@ class WizardNotifier extends Notifier<WizardState> {
 
   void setDomainChoice(String? domain) {
     state = state.copyWith(domainChoice: domain);
+    _saveCurrentState();
+  }
+
+  void setUploadedImagePath(String val) {
+    state = state.copyWith(uploadedImagePath: val);
     _saveCurrentState();
   }
 
