@@ -1619,6 +1619,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
                         button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
                         .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
+                        @keyframes pulse {
+                            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(78, 204, 163, 0.7); }
+                            50% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(78, 204, 163, 0); }
+                            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(78, 204, 163, 0); }
+                        }
+                        @keyframes spin { 100% { transform: rotate(360deg); } }
+                        .wizard-step { animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+                        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
                     </style>
                 </head>
                 <body>
@@ -1844,102 +1852,135 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                      <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                        <!-- Step 1: Welcome -->
+                        <div id="step-1" class="wizard-step">
+                            <h1 style="animation: pulse 2s infinite; color: #4ecca3; text-align: center;">Welcome to OneHumanCorp</h1>
+                            <p style="text-align: center; font-size: 1.2rem; color: #cbd5e1;">Your business, live in minutes.</p>
+                            <div style="display: flex; justify-content: center; margin-top: 2rem;">
+                                <button onclick="nextStep(2)" style="font-size: 1.2rem; padding: 15px 30px; border-radius: 12px; background: linear-gradient(135deg, #4ecca3 0%, #3bb992 100%); color: #0f172a; border: none; cursor: pointer; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 15px rgba(78, 204, 163, 0.3);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">🚀 Let's Go</button>
+                            </div>
                         </div>
-                        <div id="step-2" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
+
+                        <!-- Step 2: Business type -->
+                        <div id="step-2" class="wizard-step" style="display: none;">
+                            <h1 style="text-align: center;">What kind of business are you building?</h1>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px;">
+                                <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
+                                <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
+                                <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
+                                <button class="secondary" onclick="nextStep(3)">🎨 Creative / Portfolio</button>
+                                <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
+                                <button class="secondary" onclick="nextStep(3)">✨ Other</button>
+                            </div>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
-                        <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
-                            <button onclick="nextStep(4)">Next →</button>
+
+                        <!-- Step 3: Business name & description -->
+                        <div id="step-3" class="wizard-step" style="display: none;">
+                            <h1 style="text-align: center;">Give your business a name</h1>
+                            <input type="text" id="business-name" placeholder="e.g. Maya's Cakes" style="font-size: 1.2rem; padding: 15px;" oninput="suggestTagline()" />
+                            <div id="ai-suggestion" style="display: none; margin-top: 15px; padding: 15px; background: rgba(78, 204, 163, 0.1); border: 1px solid #4ecca3; border-radius: 8px;">
+                                <p style="margin: 0 0 10px 0; color: #4ecca3; font-weight: bold;">✨ AI Suggestion</p>
+                                <input type="text" id="business-tagline" placeholder="Tagline" style="margin-bottom: 10px;" />
+                                <textarea id="business-description" placeholder="Description" rows="3" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; box-sizing: border-box; font-family: 'Inter', sans-serif; resize: vertical;"></textarea>
+                            </div>
+                            <button onclick="nextStep(4)" style="margin-top: 15px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
-                        <div id="step-4" style="display: none;">
-                            <h1>What do you sell?</h1>
-                            <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
-                            <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
-                            <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
-                            <br/><button class="secondary" onclick="nextStep(3)">Back</button>
+
+                        <!-- Step 4: What do you sell? -->
+                        <div id="step-4" class="wizard-step" style="display: none;">
+                            <h1 style="text-align: center;">What do you sell?</h1>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+                                <label class="card glass" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" style="width: auto; margin: 0;" /> 📦 Physical products
+                                </label>
+                                <label class="card glass" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" style="width: auto; margin: 0;" /> 💻 Digital downloads
+                                </label>
+                                <label class="card glass" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" style="width: auto; margin: 0;" /> 📅 Services / appointments
+                                </label>
+                                <label class="card glass" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" style="width: auto; margin: 0;" /> 🍔 Food & beverages
+                                </label>
+                                <label class="card glass" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" style="width: auto; margin: 0;" /> 🔁 Subscriptions
+                                </label>
+                            </div>
+                            <button onclick="nextStep(5)" style="margin-top: 20px;">Next →</button>
+                            <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
-                        <div id="step-5" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
-                            <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
+
+                        <!-- Step 5: How do you want to receive payments? -->
+                        <div id="step-5" class="wizard-step" style="display: none;">
+                            <h1 style="text-align: center;">How do you want to receive payments?</h1>
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px;">
+                                <button class="secondary" onclick="nextStep(6)" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; text-align: left;">
+                                    <span>🌐 Online only</span>
+                                    <span style="font-size: 0.8rem; opacity: 0.7;">Ready in 5 mins</span>
+                                </button>
+                                <button class="secondary" onclick="nextStep(6)" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; text-align: left;">
+                                    <span>💳 In-person (POS)</span>
+                                    <span style="font-size: 0.8rem; opacity: 0.7;">Hardware ships in 2-3 days</span>
+                                </button>
+                                <button class="secondary" onclick="nextStep(6)" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; text-align: left;">
+                                    <span>🌍 Both</span>
+                                    <span style="font-size: 0.8rem; opacity: 0.7;">Best of both worlds</span>
+                                </button>
+                                <button class="secondary" onclick="nextStep(6)" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; text-align: left; opacity: 0.7;">
+                                    <span>⏭️ Skip for now</span>
+                                </button>
+                            </div>
                             <br/><button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
-                        <div id="step-6" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(7)">Next →</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
-                            <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
-                        </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
-                            <input type="text" placeholder="e.g. 50.00" />
-                            <button onclick="nextStep(9)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                        </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
-                        </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="nextStep(101)">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                        </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+
+                        <!-- Step 6: Administrator account -->
+                        <div id="step-6" class="wizard-step" style="display: none;">
+                            <h1 style="text-align: center;">Create your administrator account</h1>
+                            <div style="max-width: 400px; margin: 0 auto; margin-top: 20px;">
+                                <input type="text" placeholder="Full Name" />
+                                <input type="email" placeholder="Email Address" />
+                                <input type="password" id="admin-password" placeholder="Password" onkeyup="checkPasswordStrength()" />
+                                <div id="password-strength" style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 15px; overflow: hidden; display: none;">
+                                    <div id="password-strength-bar" style="height: 100%; width: 0%; background: #ff6b6b; transition: all 0.3s ease;"></div>
+                                </div>
+                                <button onclick="nextStep(7)" style="width: 100%; margin-bottom: 15px;">Review & Launch →</button>
+                                <div style="text-align: center; margin: 15px 0; color: rgba(255,255,255,0.5);">OR</div>
+                                <button class="secondary" onclick="nextStep(7)" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 10px;">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path fill='#fff' d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
+                                    Continue with Google
+                                </button>
+                                <button class="secondary" onclick="nextStep(7)" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 10px;">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path fill='#fff' d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V15.33H7.898v-3.33h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.876h2.773l-.443 3.33h-2.33v6.549C18.343 21.128 22 16.991 22 12c0-5.523-4.477-10-10-10z"/></svg>
+                                    Continue with Apple
+                                </button>
+                                <br/><button class="secondary" onclick="nextStep(5)" style="width: 100%; margin-top: 15px;">Back</button>
+                            </div>
                         </div>
 
-                        <div id="step-ai" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-generating" style="display: none;">
-                            <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
-                        </div>
-                        <div id="step-launch-ai" style="display: none;">
-                            <h1>Your live storefront!</h1>
-                            <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+                        <!-- Step 7: Review & Launch -->
+                        <div id="step-7" class="wizard-step" style="display: none;">
+                            <h1 style="text-align: center;">Review & Launch</h1>
+                            <div class="card glass" style="max-width: 500px; margin: 0 auto; text-align: left;">
+                                <h3 style="margin-top: 0;">Business Setup Summary</h3>
+                                <p><strong>Name:</strong> <span id="summary-name">Your Business</span></p>
+                                <p><strong>Type:</strong> <span id="summary-type">Selected Type</span></p>
+                                <p><strong>Selling:</strong> <span id="summary-selling">Selected Products</span></p>
+                                <p><strong>Payments:</strong> <span id="summary-payments">Selected Method</span></p>
+                                <p><strong>Admin:</strong> <span id="summary-admin">Configured</span></p>
+                            </div>
+                            <div style="display: flex; justify-content: center; margin-top: 30px;">
+                                <button onclick="launchBusiness()" id="launch-btn" style="font-size: 1.5rem; padding: 20px 40px; border-radius: 16px; background: linear-gradient(135deg, #4ecca3 0%, #3bb992 100%); color: #0f172a; border: none; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 20px rgba(78, 204, 163, 0.6); animation: pulse 2s infinite;">Launch My Business →</button>
+                            </div>
+                            <div id="launching-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); z-index: 1000; justify-content: center; align-items: center; flex-direction: column;">
+                                <div style="width: 50px; height: 50px; border: 5px solid rgba(78, 204, 163, 0.3); border-top-color: #4ecca3; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                <h2 style="color: #4ecca3; margin-top: 20px;">Your business is setting up…</h2>
+                                <p style="color: #cbd5e1;">Provisioning tenant & AI agents</p>
+                            </div>
+                            <br/><div style="text-align: center; margin-top: 20px;"><button class="secondary" onclick="nextStep(6)">Back</button></div>
                         </div>
                     </div>
-
                     <script>
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
@@ -1971,8 +2012,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             setTimeout(() => showScreen('setup-screen'), 500);
                         }
 
+                                                function suggestTagline() {
+                            const name = document.getElementById('business-name').value;
+                            if (name.length > 2) {
+                                document.getElementById('ai-suggestion').style.display = 'block';
+                                document.getElementById('business-tagline').value = "The best " + name + " in town";
+                                document.getElementById('business-description').value = "Welcome to " + name + ", your premier destination for top-quality products and services.";
+                                document.getElementById('summary-name').innerText = name;
+                            } else {
+                                document.getElementById('ai-suggestion').style.display = 'none';
+                                document.getElementById('summary-name').innerText = "Your Business";
+                            }
+                        }
+
+                        function checkPasswordStrength() {
+                            const pw = document.getElementById('admin-password').value;
+                            const bar = document.getElementById('password-strength-bar');
+                            const container = document.getElementById('password-strength');
+                            if (pw.length > 0) {
+                                container.style.display = 'block';
+                                if (pw.length < 5) { bar.style.width = '33%'; bar.style.background = '#ff6b6b'; }
+                                else if (pw.length < 8) { bar.style.width = '66%'; bar.style.background = '#ffd93d'; }
+                                else { bar.style.width = '100%'; bar.style.background = '#4ecca3'; }
+                            } else {
+                                container.style.display = 'none';
+                            }
+                        }
+
+                        function launchBusiness() {
+                            document.getElementById('launching-overlay').style.display = 'flex';
+                            setTimeout(() => {
+                                document.getElementById('launching-overlay').style.display = 'none';
+                                showScreen('dashboard-screen');
+                            }, 3000);
+                        }
+
                         function nextStep(step) {
-                            document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
+                            document.querySelectorAll('.wizard-step').forEach(d => d.style.display = 'none');
                             const target = document.getElementById('step-' + step);
                             if (target) target.style.display = 'block';
                         }
