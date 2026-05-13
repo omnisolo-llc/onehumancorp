@@ -40,14 +40,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-          cache-dependency-path: "**/go.sum"
+          cache-dependency-path: "**/*go.sum"
           cache: true
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: "npm"
+          cache: false
 
       - name: Install dependencies
         run: npm ci
@@ -69,14 +69,11 @@ jobs:
           external-cache: true
           cache-save: false
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
+            build --config=local
+            test --config=local
             build --color=yes
             build --show_timestamps
             test --sandbox_add_mount_pair=/var/run/docker.sock
@@ -122,14 +119,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-          cache-dependency-path: "**/go.sum"
+          cache-dependency-path: "**/*go.sum"
           cache: true
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: "npm"
+          cache: false
 
       - name: Install dependencies
         run: npm ci
@@ -148,14 +145,11 @@ jobs:
           external-cache: true
           cache-save: false
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
+            build --config=local
+            test --config=local
             build --color=yes
             build --show_timestamps
             test --sandbox_add_mount_pair=/var/run/docker.sock
@@ -187,14 +181,14 @@ jobs:
   #       uses: actions/setup-go@v5
   #       with:
   #         go-version: "1.24"
-  #         cache-dependency-path: "**/go.sum"
+  #         cache-dependency-path: "**/*go.sum"
   #         cache: true
 
   #     - name: Set up Node
   #       uses: actions/setup-node@v4
   #       with:
   #         node-version: "24"
-  #         cache: "npm"
+  #         cache: false
 
   #     - name: Install dependencies
   #       run: npm ci
@@ -213,11 +207,10 @@ jobs:
   #         external-cache: true
   #         cache-save: false
   #         bazelrc: |
-  #           common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-  #           build --config=buildbuddy
-  #           test --config=buildbuddy
   #           build --build_metadata=ROLE=CI
   #           test --build_metadata=ROLE=CI
+  #           build --config=local
+  #           test --config=local
   #           build --color=yes
   #           build --show_timestamps
   #           test --sandbox_add_mount_pair=/var/run/docker.sock
