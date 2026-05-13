@@ -1,3 +1,4 @@
+use server_common::auth_utils::set_org_context;
 use crate::db::{DB, DbStore};
 use std::sync::Arc;
 use async_trait::async_trait;
@@ -72,7 +73,7 @@ impl AgentMemoryPipeline {
                 }
                 DbStore::Postgres => {
                     let mut tx = self.db.pool.begin().await?;
-                    ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
+                    set_org_context(&mut *tx, "system").await?;
                     sqlx::query("INSERT INTO agent_memory_embeddings (id, organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
                         .bind(mem_id)
                         .bind("system")
@@ -128,7 +129,7 @@ impl AgentMemoryPipeline {
                             }
                             DbStore::Postgres => {
                                 let mut tx = self.db.pool.begin().await?;
-                                ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
+                                set_org_context(&mut *tx, "system").await?;
                                 sqlx::query("INSERT INTO agent_memory_embeddings (id, organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
                                     .bind(mem_id)
                                     .bind("system")
