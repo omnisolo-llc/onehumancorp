@@ -123,3 +123,58 @@ go_repository(
     sum = "h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYK4Q=",
     version = "v1.8.4",
 )
+http_archive(
+    name = "io_bazel_rules_go",
+    sha256 = "6b65cb7917b4d1709f9410ffe00ecf36761ab22dbdf000b12c6a0c02c25345d1",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.39.0/rules_go-v0.39.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.39.0/rules_go-v0.39.0.zip",
+    ],
+)
+
+load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies", "go_register_toolchains")
+
+go_rules_dependencies()
+
+go_register_toolchains(version = "1.20.4")
+
+load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies", "go_register_toolchains")
+
+# Fix missing gazelle
+http_archive(
+    name = "bazel_gazelle",
+    sha256 = "ecba0f04f96b49cb9460e1ce8446a811568205f0dffdc3dbaf03d42c38d82d49",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.33.0/bazel-gazelle-v0.33.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.33.0/bazel-gazelle-v0.33.0.tar.gz",
+    ],
+)
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+
+go_repository(
+    name = "com_github_jmoiron_sqlx",
+    importpath = "github.com/jmoiron/sqlx",
+    sum = "h1:11w2g5GkHnt3o7rQpL3386k4W1sWJm442Gv2YI7j/gI=",
+    version = "v1.4.0",
+)
+
+go_repository(
+    name = "com_github_lib_pq",
+    importpath = "github.com/lib/pq",
+    sum = "h1:XF7+y8R8xQvKqUjS7wQ30iS4qXn4B5wP5b8bE31C6/E=",
+    version = "v1.10.9",
+)
+
+go_repository(
+    name = "com_github_mattn_go_sqlite3",
+    importpath = "github.com/mattn/go-sqlite3",
+    sum = "h1:a/KjZgYQ+V1NqfS1rB2sH2B6G4S5G9+kZ4Z5hR5pA/c=",
+    version = "v1.14.22",
+)
+
+go_repository(
+    name = "com_github_data_dog_go_sqlmock",
+    importpath = "github.com/DATA-DOG/go-sqlmock",
+    sum = "h1:5b+p20v2+v2A2xSj9X3H4D1gHwM11xTjYhC2D4O3nO0=",
+    version = "v1.5.2",
+)

@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "orchestration",
+    srcs = ["scheduler.go"],
+    importpath = "github.com/onehumancorp/ohc/srcs/server/orchestration",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_jmoiron_sqlx//:sqlx",
+        "@com_github_lib_pq//:pq",
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
+    ],
+)
+
+go_test(
+    name = "orchestration_test",
+    srcs = ["scheduler_test.go"],
+    embed = [":orchestration"],
+    deps = [
+        "@com_github_data_dog_go_sqlmock//:go-sqlmock",
+        "@com_github_jmoiron_sqlx//:sqlx",
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
+    ],
+)
