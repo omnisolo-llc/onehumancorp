@@ -1,8 +1,15 @@
-CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
-    id VARCHAR PRIMARY KEY,
-    organization_id VARCHAR NOT NULL,
-    title VARCHAR NOT NULL,
-    status VARCHAR NOT NULL DEFAULT 'PENDING',
-    dependencies TEXT NOT NULL DEFAULT '[]'
+CREATE TABLE IF NOT EXISTS agent_missions (
+    id TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    organization_id TEXT,
+    mission_log TEXT
 );
-ALTER TABLE shared_tasks_v4 ENABLE ROW LEVEL SECURITY;
+
+INSERT INTO agent_missions (id, status, payload, mission_log) VALUES ('m_handoff', 'blocked', '{"task":"drain"}', 'I cannot finish an OHC product mission. Handover required.
+Blockers:
+- The user prompt provides only role and protocol definitions.
+- No specific issue, bug, feature request, or concrete task to implement was described.
+- As an Implementer, I require a defined mission to execute.');

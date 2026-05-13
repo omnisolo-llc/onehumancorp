@@ -1,8 +1,0 @@
-CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
-    id VARCHAR PRIMARY KEY,
-    organization_id VARCHAR NOT NULL,
-    title VARCHAR NOT NULL,
-    status VARCHAR NOT NULL DEFAULT 'PENDING',
-    dependencies TEXT NOT NULL DEFAULT '[]'
-);
-ALTER TABLE shared_tasks_v4 ENABLE ROW LEVEL SECURITY;
