@@ -41,17 +41,11 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v5
-        env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           go-version: "1.24"
 
       - name: Set up Node
         uses: actions/setup-node@v4
-        env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           node-version: "24"
           cache: "npm"
@@ -127,17 +121,11 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v5
-        env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           go-version: "1.24"
 
       - name: Set up Node
         uses: actions/setup-node@v4
-        env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           node-version: "24"
           cache: "npm"
@@ -196,17 +184,11 @@ jobs:
 
   #     - name: Set up Go
   #       uses: actions/setup-go@v5
-        env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   #       with:
   #         go-version: "1.24"
 
   #     - name: Set up Node
   #       uses: actions/setup-node@v4
-        env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   #       with:
   #         node-version: "24"
   #         cache: "npm"
