@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "ohc.fullname" . }}-backend
+  name: {{ .Release.Name }}-backend
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "ohc.fullname" . }}-backend
+    name: {{ .Release.Name }}-backend
   minReplicas: {{ .Values.backend.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.backend.autoscaling.maxReplicas }}
   metrics:
@@ -31,14 +31,14 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "ohc.fullname" . }}-core
+  name: {{ .Release.Name }}-ohc-core
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "ohc.fullname" . }}-core
+    name: {{ .Release.Name }}-ohc-core
   minReplicas: {{ .Values.ohcCore.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.ohcCore.autoscaling.maxReplicas }}
   metrics:
@@ -60,14 +60,14 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "ohc.fullname" . }}-chatwoot
+  name: {{ .Release.Name }}-chatwoot
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "ohc.fullname" . }}-chatwoot
+    name: {{ .Release.Name }}-chatwoot
   minReplicas: {{ .Values.chatwoot.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.chatwoot.autoscaling.maxReplicas }}
   metrics:
@@ -91,14 +91,14 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "ohc.fullname" . }}-powersync
+  name: {{ .Release.Name }}-powersync
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "ohc.fullname" . }}-powersync
+    name: {{ .Release.Name }}-powersync
   minReplicas: {{ .Values.powersync.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.powersync.autoscaling.maxReplicas }}
   metrics:
