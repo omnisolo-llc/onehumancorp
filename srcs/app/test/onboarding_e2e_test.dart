@@ -50,7 +50,7 @@ void main() {
     await tester.tap(find.text('Next').last);
     await tester.pump(const Duration(milliseconds: 500));
 
-    await tester.tap(find.text('Launch My AI Team'));
+    await tester.tap(find.text('Publish'));
     await tester.pump(const Duration(seconds: 3));
 
     expect(find.text("You're set up!"), findsOneWidget);
@@ -70,7 +70,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
     }
 
-    await tester.tap(find.text('Launch My AI Team'));
+    await tester.tap(find.text('Publish'));
     await tester.pump(const Duration(seconds: 3));
 
     expect(find.text("You're set up!"), findsOneWidget);
@@ -133,7 +133,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Cake'), findsOneWidget);
-    await tester.tap(find.text('Launch My AI Team'));
+    await tester.tap(find.text('Publish'));
     await tester.pump(const Duration(seconds: 3));
     expect(find.text("You're set up!"), findsOneWidget);
   });
@@ -165,7 +165,7 @@ void main() {
     expect(find.text('Resumed Product'), findsOneWidget);
     expect(find.text('Acme Resumed'), findsOneWidget);
 
-    await tester.tap(find.text('Launch My AI Team'));
+    await tester.tap(find.text('Publish'));
     await tester.pump(const Duration(seconds: 3));
     expect(find.text("You're set up!"), findsOneWidget);
   });

@@ -4,6 +4,8 @@ import '../providers/wizard_provider.dart';
 import '../main.dart'; // For GlassContainer
 import '../widgets/contextual_tooltip.dart';
 import '../widgets/walkthrough_overlay.dart';
+import '../widgets/confetti.dart';
+import 'package:flutter/services.dart';
 import 'help/help_center_screen.dart';
 
 enum EnvironmentMode { cloud, standaloneDesktop }
@@ -20,7 +22,10 @@ class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
   ConsumerState<BusinessSetupWizardScreen> createState() => _BusinessSetupWizardScreenState();
 }
 
+const bool isTesting = bool.fromEnvironment('FLUTTER_TEST_ENV', defaultValue: false);
+
 class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardScreen> with TickerProviderStateMixin {
+  bool _showConfetti = false;
   final _companyNameController = TextEditingController();
   final _adminNameController = TextEditingController();
   final _adminEmailController = TextEditingController();
@@ -45,7 +50,10 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     _heroAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
+    );
+    if (!isTesting) {
+      _heroAnimationController.repeat(reverse: true);
+    }
 
     _heroAnimation = Tween<double>(begin: -10, end: 10).animate(
       CurvedAnimation(parent: _heroAnimationController, curve: Curves.easeInOut),
@@ -54,7 +62,10 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     _pulseAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
-    )..repeat(reverse: true);
+    );
+    if (!isTesting) {
+      _pulseAnimationController.repeat(reverse: true);
+    }
 
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
       CurvedAnimation(parent: _pulseAnimationController, curve: Curves.easeInOut),
@@ -92,6 +103,13 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       backgroundColor: const Color(0xFF0F172A),
       body: Stack(
         children: [
+          if (_showConfetti)
+            Positioned.fill(
+              child: ConfettiWidget(
+                isPlaying: _showConfetti && !isTesting,
+                child: Container(),
+              ),
+            ),
           Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
@@ -973,7 +991,29 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 },
                 child: ElevatedButton(
                   onPressed: () async {
-                    await ref.read(wizardProvider.notifier).submitWizard();
+                    final domain = ref.read(wizardProvider).domainChoice ?? '${state.companyName?.toLowerCase().replaceAll(' ', '') ?? "mybusiness"}.ohc.app';
+                    ref.read(wizardProvider.notifier).setDomainChoice(domain);
+
+                    if (!isTesting) {
+                      await Clipboard.setData(ClipboardData(text: 'https://$domain'));
+                    }
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Link copied to clipboard!')),
+                      );
+                      setState(() {
+                        _showConfetti = true;
+                      });
+
+                      if (!isTesting) {
+                        await Future.delayed(const Duration(seconds: 2));
+                      }
+
+                      if (mounted) {
+                        await ref.read(wizardProvider.notifier).submitWizard();
+                      }
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF22C55E),
@@ -982,7 +1022,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
-                  key: const Key('launchAIBtn'), child: const Text('Launch My AI Team', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                  key: const Key('launchAIBtn'), child: const Text('Publish', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ),
