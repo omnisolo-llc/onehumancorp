@@ -8,6 +8,7 @@ js_library(
         "MarkdownText.tsx",
         "PromptInput.tsx",
         "ToolProgress.tsx",
+        "Wizard.tsx",
     ],
     visibility = ["//visibility:public"],
     deps = [
