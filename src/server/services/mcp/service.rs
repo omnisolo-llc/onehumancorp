@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::mcp_service_server::McpService;
+use crate::ohc::orchestration::*;
+use crate::ohc::orchestration::mcp_service_server::McpService;
 use std::sync::{Arc, RwLock};
 use crate::integrations::registry::IntegrationsRegistry;
 use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
@@ -227,7 +227,7 @@ impl McpService for MyMcpService {
     ) -> Result<Response<EmptyResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
@@ -253,7 +253,7 @@ impl McpService for MyMcpService {
         };
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         for m in req.missions {
             sip_db.delegate_mission_with_tx(&mut tx, &m.id, &m.status, &m.payload, m.force_local, &grounding_content)
@@ -272,7 +272,7 @@ impl McpService for MyMcpService {
     ) -> Result<Response<EmptyResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
@@ -287,7 +287,7 @@ impl McpService for MyMcpService {
         };
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let query = "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, organization_id) \
                      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5) \
@@ -315,7 +315,7 @@ impl McpService for MyMcpService {
 mod tests {
     use super::*;
     use tonic::Request;
-    use ::server_ohc::orchestration::{SyncMissionsRequest, SyncContextRequest};
+    use crate::ohc::orchestration::{SyncMissionsRequest, SyncContextRequest};
 
     #[tokio::test]
     async fn test_sync_missions_unauthenticated() {

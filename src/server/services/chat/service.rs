@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::chat_service_server::ChatService;
+use crate::ohc::orchestration::*;
+use crate::ohc::orchestration::chat_service_server::ChatService;
 use crate::integrations::registry::IntegrationsRegistry;
 
 pub struct MyChatService {

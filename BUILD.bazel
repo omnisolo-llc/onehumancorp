@@ -20,9 +20,6 @@ filegroup(
 # gazelle:prefix github.com/onehumancorp/mono
 exports_files([
     "pubspec.yaml",
-    "playwright.config.ts",
-    "package.json",
-    "package-lock.json",
 ])
 
 

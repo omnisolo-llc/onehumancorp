@@ -1,0 +1,114 @@
+import {  Button, VerticalBox, HorizontalBox  } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component MyPlan inherits Window {
+    preferred-width: 500px;
+    min-width: 375px;
+    height: 400px;
+    title: "My Plan";
+
+    in-out property <string> tier: "Pro Tier";
+    in-out property <string> total_actions: "1200";
+    in-out property <string> action_limit: "Unlimited";
+    in-out property <string> used_storage: "150.5 MB";
+    in-out property <string> limit_storage: "10.0 GB";
+    in-out property <string> estimated_bill: "$124.50";
+    in-out property <string> renewal_date: "Oct 25, 2025";
+    in-out property <string> plan_status: "Active Status";
+    in-out property <string> upgrade_prompt_message: "";
+    in-out property <bool> show_hint: false;
+
+    callback upgrade();
+    callback view_details();
+    callback view_history();
+    callback cancel_subscription();
+    callback update_payment();
+    callback download_invoice();
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            alignment: start;
+            spacing: 8px;
+            Text { text: "My Plan"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            Button { text: "?"; width: 44px; height: 44px; clicked => { show_hint = !show_hint; } }
+        }
+
+        if (show_hint) : Text { text: "Manage your subscription, check your AI usage limits, and update your payment details here."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+
+        if upgrade_prompt_message != "" : GlassCard {
+            border-color: #ef4444;
+            border-width: 1px;
+            border-radius: 8px;
+
+            VerticalBox {
+                padding: 16px;
+                spacing: 8px;
+                Text { text: "Action Required"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: #ef4444; }
+                Text { text: upgrade_prompt_message; color: white; wrap: word-wrap; }
+                Button { text: "Upgrade Now"; height: 44px; clicked => { upgrade(); } }
+            }
+        }
+
+        GlassCard {
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+
+            VerticalBox {
+                padding: 16px;
+                spacing: 8px;
+                Text { text: "Current Plan"; font-family: "Inter"; color: #94a3b8; }
+                Text { text: tier; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; }
+                Text { text: plan_status; color: #22c55e; }
+                Text { text: "Renews on: " + renewal_date; color: #94a3b8; }
+
+                HorizontalBox {
+                    spacing: 8px;
+                    Button { text: "Upgrade"; height: 44px; clicked => { upgrade(); } }
+                    Button { text: "Cancel"; height: 44px; clicked => { cancel_subscription(); } }
+                }
+            }
+        }
+
+        GlassCard {
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+
+            VerticalBox {
+                padding: 16px;
+                spacing: 8px;
+                Text { text: "Usage This Month"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
+                Text { text: "AI Actions: " + total_actions + " / " + action_limit; color: white; }
+                Text { text: "Storage Used: " + used_storage + " / " + limit_storage; color: white; }
+                Text { text: "Estimated Next Bill: " + estimated_bill; color: white; }
+
+                Button { text: "View Cost Details"; height: 44px; clicked => { view_details(); } }
+            }
+        }
+
+        GlassCard {
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+
+            VerticalBox {
+                padding: 16px;
+                spacing: 8px;
+                Text { text: "Billing Information"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
+
+                HorizontalBox {
+                    spacing: 8px;
+                    Button { text: "History"; height: 44px; clicked => { view_history(); } }
+                    Button { text: "Update Payment"; height: 44px; clicked => { update_payment(); } }
+                    Button { text: "Download Invoice"; height: 44px; clicked => { download_invoice(); } }
+                }
+            }
+        }
+    }
+}

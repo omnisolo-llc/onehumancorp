@@ -118,7 +118,7 @@ mod tests {
         let hub = Arc::new(Hub::new(tx, pg_pool));
 
         // Register an idle agent
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(crate::ohc::orchestration::Agent {
             id: "agent_idle".to_string(),
             name: "Idle Agent".to_string(),
             role: "test".to_string(),
@@ -128,7 +128,7 @@ mod tests {
         });
 
         // Register a busy agent
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(crate::ohc::orchestration::Agent {
             id: "agent_busy".to_string(),
             name: "Busy Agent".to_string(),
             role: "test".to_string(),
@@ -178,7 +178,7 @@ mod tests {
         let (tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(tx, pg_pool));
 
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(crate::ohc::orchestration::Agent {
             id: "agent_cloud".to_string(),
             name: "Cloud Agent".to_string(),
             role: "test".to_string(),

@@ -1,4 +1,4 @@
-use ::server_ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
+use crate::ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
 use tracing::Instrument;
 
 pub struct LocalProxyServer {
