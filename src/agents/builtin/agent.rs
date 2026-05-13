@@ -1818,7 +1818,7 @@ impl Agent {
             }
 
             if final_cfg.enable_observation_masking {
-                // JetBrains Observation Masking: Hide the raw output of old tools from the prompt,
+                // Context Management: JetBrains Observation Masking. Hide the raw output of old tools from the prompt,
                 // but keep the `tool_calls` themselves visible so the model remembers what it did.
                 // Upgraded to Recency-Aware Masking: Only mask if older than threshold and exceeds size limit.
                 let msg_count = messages.len();

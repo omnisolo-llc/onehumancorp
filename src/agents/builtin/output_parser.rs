@@ -75,7 +75,7 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
                 // Fallback mechanic: Legacy RetryWithErrorOutputParser
                 // Feed the original prompt, the failed completion, and the parsing error back to the model.
                 current_req.messages.push(Message::assistant(completion));
-                let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON without markdown formatting.", e);
+                let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON string without markdown formatting.", e);
                 current_req.messages.push(Message::user(error_msg));
             }
         }
