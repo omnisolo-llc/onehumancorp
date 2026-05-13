@@ -158,7 +158,7 @@ use ::server_ohc::orchestration::*;
 pub struct MyHubService {
     hub: Arc<Hub>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
-    viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
+    referral_score_tracker: Arc<crate::services::growth::referral_score::ReferralScoreTracker>,
     onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
     publish_counter: opentelemetry::metrics::Counter<u64>,
     stream_counter: opentelemetry::metrics::Counter<u64>,
@@ -168,14 +168,14 @@ impl MyHubService {
     pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>) -> Self {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
-        let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+        let referral_score_tracker = Arc::new(crate::services::growth::referral_score::ReferralScoreTracker::new());
         let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db, hub.clone());
 
         let meter = opentelemetry::global::meter("ohc.orchestration.hub");
         let publish_counter = meter.u64_counter("hub.mesh_events.published").build();
         let stream_counter = meter.u64_counter("hub.mesh_events.stream_started").build();
 
-        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent, publish_counter, stream_counter }
+        MyHubService { hub, invite_tracker, referral_score_tracker, onboarding_agent, publish_counter, stream_counter }
     }
 }
 
@@ -1178,7 +1178,7 @@ impl HubService for MyHubService {
         self.invite_tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await
             .map_err(|e| Status::internal(format!("Failed to record invite: {}", e)))?;
 
-        self.viral_loop_tracker.record_invite_sent(&req.inviter_id);
+        self.referral_score_tracker.record_invite_sent(&req.inviter_id);
 
         Ok(Response::new(InviteResponse { success: true }))
     }
@@ -1193,7 +1193,7 @@ impl HubService for MyHubService {
             return Err(Status::invalid_argument("Missing invitee_id"));
         }
 
-        self.viral_loop_tracker.record_invite_accepted(&req.invitee_id);
+        self.referral_score_tracker.record_invite_accepted(&req.invitee_id);
 
         Ok(Response::new(AcceptInviteResponse { success: true }))
     }
