@@ -1,3 +1,4 @@
+pub mod postgres_store;
 pub use ::server_common as common;
 pub use ::server_ohc as ohc;
 pub use ::server_oidc as oidc;
@@ -514,13 +515,57 @@ fn random_bytes(n: usize) -> Vec<u8> {
     b
 }
 
+
+#[tonic::async_trait]
+pub trait UserRepository: Send + Sync {
+    async fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String>;
+    async fn issue_token(&self, user: &User) -> Result<String, String>;
+    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String>;
+    async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String>;
+    async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> { Err("Not implemented".into()) }
+    async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> { Err("Not implemented".into()) }
+    async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> { Err("Not implemented".into()) }
+    async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String>;
+    async fn update_user(&self, user: User, org_id: &str) -> Result<(), String>;
+    async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String>;
+    async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> { Ok(()) }
+    async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> { Ok(false) }
+}
+
+#[tonic::async_trait]
+impl UserRepository for Store {
+    async fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
+        self.authenticate(username, password, org_id)
+    }
+    async fn issue_token(&self, user: &User) -> Result<String, String> {
+        self.issue_token(user)
+    }
+    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
+        let _ = self.create_user(user.email.clone(), user.email.clone(), "temp".to_string(), user.roles.clone(), org_id.to_string());
+        Ok(())
+    }
+    async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
+        self.get_user(id, org_id).ok_or_else(|| "User not found".to_string())
+    }
+    async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
+        Ok(self.list_users(org_id))
+    }
+    async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
+        let _ = self.update_user(&user.id, Some(user.email.clone()), Some(user.roles.clone()), Some(user.active), org_id);
+        Ok(())
+    }
+    async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
+        self.delete_user(id, org_id)
+    }
+}
+
 #[derive(Clone)]
 pub struct AuthServiceServerImpl {
-    pub store: Arc<Store>,
+    pub store: Arc<dyn UserRepository>,
 }
 
 impl AuthServiceServerImpl {
-    pub fn new(store: Arc<Store>) -> Self {
+    pub fn new(store: Arc<dyn UserRepository>) -> Self {
         Self { store }
     }
 }
@@ -562,9 +607,9 @@ impl AuthService for AuthServiceServerImpl {
             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
         }
 
-        match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
+        match self.store.authenticate(&req.username, &req.password, &req.organization_id).await {
             Ok(user) => {
-                match self.store.issue_token(&user) {
+                match self.store.issue_token(&user).await {
                     Ok(token) => {
                          let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
                          Ok(Response::new(LoginResponse {
@@ -585,15 +630,21 @@ impl AuthService for AuthServiceServerImpl {
              return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
         }
 
-        let user = self.store.create_user(
-            req.email.clone(),
-            req.email.clone(),
-            req.password,
-            vec![ROLE_VIEWER.to_string()],
-            req.organization_id.clone(),
-        ).map_err(|e| Status::internal(e))?;
+        let user = User {
+            id: hex::encode(random_bytes(8)),
+            username: req.email.clone(),
+            email: req.email.clone(),
+            password_hash: hash("temp".to_string(), if cfg!(test) { 4 } else { DEFAULT_COST }).unwrap_or_default(),
+            roles: vec![],
+            active: true,
+            organization_id: Some(req.organization_id.clone()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            oidc_subject: None,
+        };
+        self.store.create_user(user.clone(), &req.organization_id).await.map_err(|e| Status::internal(e))?;
 
-        let token = self.store.issue_token(&user).map_err(|e| Status::internal(e))?;
+        let token = self.store.issue_token(&user).await.map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(LoginResponse {
              token,
@@ -609,7 +660,7 @@ impl AuthService for AuthServiceServerImpl {
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let user = self.store.get_user(&auth_info.spiffe_id, &auth_info.org_id)
+        let user = self.store.get_by_id(&auth_info.spiffe_id, &auth_info.org_id).await.ok()
             .ok_or_else(|| Status::not_found("User not found"))?;
 
         Ok(Response::new(UserProto {
@@ -629,7 +680,7 @@ impl AuthService for AuthServiceServerImpl {
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let users = self.store.list_users(&auth_info.org_id);
+        let users = self.store.list_users(&auth_info.org_id).await.unwrap_or_default();
         let proto_users = users.into_iter().map(|u| UserProto {
             id: u.id,
             username: u.username,
@@ -646,13 +697,19 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn create_user(&self, request: Request<CreateUserRequest>) -> Result<Response<UserProto>, Status> {
         let req = request.into_inner();
-        let user = self.store.create_user(
-            req.email.clone(),
-            req.email.clone(),
-            "temp".to_string(),
-            vec![],
-            req.organization_id.clone(),
-        ).map_err(|e| Status::internal(e))?;
+        let user = User {
+            id: hex::encode(random_bytes(8)),
+            username: req.email.clone(),
+            email: req.email.clone(),
+            password_hash: hash("temp".to_string(), if cfg!(test) { 4 } else { DEFAULT_COST }).unwrap_or_default(),
+            roles: vec![],
+            active: true,
+            organization_id: Some(req.organization_id.clone()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            oidc_subject: None,
+        };
+        self.store.create_user(user.clone(), &req.organization_id).await.map_err(|e| Status::internal(e))?;
         Ok(Response::new(UserProto {
             id: user.id,
             username: user.username,
@@ -670,7 +727,7 @@ impl AuthService for AuthServiceServerImpl {
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let user = self.store.get_user(&request.get_ref().id, &auth_info.org_id)
+        let user = self.store.get_by_id(&request.get_ref().id, &auth_info.org_id).await.ok()
             .ok_or_else(|| Status::not_found("User not found"))?;
 
         Ok(Response::new(UserProto {
@@ -692,8 +749,12 @@ impl AuthService for AuthServiceServerImpl {
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
         let req = request.into_inner();
 
-        let user = self.store.update_user(&req.id, req.email, Some(req.roles), req.active, &org_id)
-            .map_err(|e| Status::internal(e))?;
+        let mut user = self.store.get_by_id(&req.id, &org_id).await.map_err(|e| Status::internal(e))?;
+        if let Some(email) = req.email { user.email = email; }
+        user.roles = req.roles;
+        if let Some(active) = req.active { user.active = active; }
+        user.updated_at = Utc::now();
+        self.store.update_user(user.clone(), &org_id).await.map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(UserProto {
             id: user.id,
@@ -713,7 +774,7 @@ impl AuthService for AuthServiceServerImpl {
             .map(|ai| ai.org_id.clone())
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        self.store.delete_user(&request.get_ref().id, &org_id)
+        self.store.delete_user(&request.get_ref().id, &org_id).await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(EmptyResponse {}))

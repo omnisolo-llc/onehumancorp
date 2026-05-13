@@ -5,6 +5,7 @@ rust_library(
     srcs = [
         "grpc.rs",
         "mod.rs",
+        "postgres_store.rs",
         "orchestration.rs",
     ],
     edition = "2024",
