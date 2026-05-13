@@ -1604,21 +1604,110 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <!DOCTYPE html>
             <html>
                 <head>
-                    <title>OneHuman Corp</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+                    <title>OneHuman Corp | Onboarding</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+                    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
                     <style>
-                        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
-                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
-                        nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.8); position: sticky; top: 0; z-index: 100; }
-                        nav a { color: #4ecca3; text-decoration: none; font-weight: 600; cursor: pointer; }
-                        main { padding: 40px; }
-                        .screen { display: none; padding: 40px; max-width: 800px; margin: 40px auto; }
-                        .card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-                        h1, h2 { color: #4ecca3; }
-                        input { width: 100%; padding: 12px; margin-bottom: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; box-sizing: border-box; }
-                        button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
-                        button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
-                        .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
+                        :root {
+                            --primary-gold: #D4AF37;
+                            --bg-deep: #0A0A0A;
+                            --surface-glass: rgba(255, 255, 255, 0.03);
+                            --text-main: #FFFFFF;
+                            --text-dim: rgba(255, 255, 255, 0.6);
+                            --border-glass: rgba(255, 255, 255, 0.1);
+                        }
+                        body {
+                            font-family: 'Outfit', 'Inter', sans-serif;
+                            background: var(--bg-deep);
+                            color: var(--text-main);
+                            margin: 0;
+                            min-height: 100vh;
+                            display: flex;
+                            flex-direction: column;
+                        }
+                        .glass {
+                            background: var(--surface-glass);
+                            backdrop-filter: blur(20px) saturate(180%);
+                            border: 1px solid var(--border-glass);
+                            border-radius: 24px;
+                        }
+                        nav {
+                            padding: 16px 24px;
+                            display: flex;
+                            gap: 24px;
+                            border-bottom: 1px solid var(--border-glass);
+                            background: rgba(10, 10, 10, 0.8);
+                            position: sticky;
+                            top: 0;
+                            z-index: 100;
+                            backdrop-filter: blur(10px);
+                        }
+                        nav a { color: var(--primary-gold); text-decoration: none; font-weight: 600; cursor: pointer; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+                        main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
+                        .screen { display: none; width: 100%; max-width: 480px; padding: 40px; box-sizing: border-box; }
+                        .card { background: rgba(255,255,255,0.02); padding: 24px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--border-glass); }
+                        h1 { color: var(--text-main); font-size: 32px; font-weight: 600; margin-bottom: 8px; line-height: 1.2; }
+                        h2 { color: var(--primary-gold); font-size: 18px; font-weight: 500; margin-top: 0; }
+                        p { color: var(--text-dim); font-size: 16px; line-height: 1.5; margin-bottom: 24px; }
+                        input, select, textarea {
+                            width: 100%;
+                            padding: 14px 16px;
+                            margin-bottom: 16px;
+                            background: rgba(255,255,255,0.05);
+                            border: 1px solid var(--border-glass);
+                            border-radius: 12px;
+                            color: white;
+                            box-sizing: border-box;
+                            font-family: 'Inter', sans-serif;
+                            font-size: 16px;
+                            transition: all 0.2s ease;
+                        }
+                        input:focus { outline: none; border-color: var(--primary-gold); background: rgba(255,255,255,0.08); }
+                        button {
+                            width: 100%;
+                            padding: 16px 24px;
+                            background: var(--primary-gold);
+                            border: none;
+                            border-radius: 12px;
+                            color: #000;
+                            font-weight: 700;
+                            cursor: pointer;
+                            font-size: 16px;
+                            transition: transform 0.2s, opacity 0.2s;
+                            margin-bottom: 12px;
+                        }
+                        button:hover { transform: translateY(-2px); opacity: 0.9; }
+                        button:active { transform: translateY(0); }
+                        button.secondary { background: transparent; border: 1px solid var(--border-glass); color: var(--text-main); }
+                        button.secondary:hover { background: rgba(255,255,255,0.05); }
+                        .error { color: #FF4B4B; background: rgba(255,75,75,0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px; display: none; font-size: 14px; border: 1px solid rgba(255,75,75,0.2); }
+
+                        .step-indicator { display: flex; gap: 8px; margin-bottom: 32px; }
+                        .step-dot { flex: 1; height: 4px; background: var(--border-glass); border-radius: 2px; }
+                        .step-dot.active { background: var(--primary-gold); }
+
+                        .template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+                        .template-item {
+                            border: 2px solid transparent;
+                            border-radius: 12px;
+                            overflow: hidden;
+                            cursor: pointer;
+                            background: var(--surface-glass);
+                            transition: all 0.2s;
+                        }
+                        .template-item.selected { border-color: var(--primary-gold); background: rgba(212, 175, 55, 0.1); }
+                        .template-preview { height: 80px; background: #222; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #444; }
+                        .template-name { padding: 8px; text-align: center; font-weight: 600; font-size: 14px; }
+
+                        .checklist-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border-glass); }
+                        .checklist-check { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border-glass); display: flex; align-items: center; justify-content: center; font-size: 12px; }
+                        .checklist-check.done { background: #4CAF50; border-color: #4CAF50; color: white; }
+
+                        @media (max-width: 480px) {
+                            .screen { padding: 24px; }
+                            h1 { font-size: 28px; }
+                        }
                     </style>
                 </head>
                 <body>
@@ -1629,60 +1718,66 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('api-screen')">Software</a>
                     </nav>
 
-                    <!-- Login Screen -->
-                    <div id="login-screen" class="screen glass">
-                        <h1>One Human Corp</h1>
-                        <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
-                        <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleLogin(this)">Sign In</button>
-                        <button onclick="handleLogin(this)">Login</button>
-                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
-                        <button class="secondary">Use Google or Apple</button>
-                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
-                    </div>
-
-                    <!-- Signup Screen -->
-                    <div id="signup-screen" class="screen glass">
-                        <h1>Create an account</h1>
-                        <p>Create an account to start your business</p>
-                        <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleSignup(this)">Sign Up</button>
-                        <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
-                    </div>
-
-                    <!-- Dashboard -->
-                    <div id="dashboard-screen" class="screen">
-                        <h1>Dashboard</h1>
-                        <div class="card glass">
-                            <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
-                            <p>My Business: <strong>Active</strong></p>
-                            <button onclick="showScreen('inbox-screen')">Check Messages</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
-                            <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
-                            <button onclick="showScreen('setup-screen')">Update Setup</button>
-                            <button onclick="toggleMenu()">Menu</button>
-                        </div>
-                        <div id="extra-menu" class="card glass" style="display: none;">
-                            <button onclick="showScreen('api-screen')">Connect Custom Software</button>
-                            <button>Video Tutorials</button>
+                    <main>
+                        <!-- Login Screen -->
+                        <div id="login-screen" class="screen glass">
+                            <h1>One Human Corp</h1>
+                            <p>Sign in to manage your business with AI agents.</p>
+                            <div id="login-error" class="error">Invalid credentials. Please try again.</div>
+                            <input type="email" placeholder="Email or Username" />
+                            <input type="password" placeholder="Password" />
+                            <button onclick="handleLogin(this)">Sign In</button>
+                            <button onclick="handleLogin(this)">Login</button>
+                            <button class="secondary" onclick="showScreen('signup-screen')">Create New Account</button>
+                            <button class="secondary">Continue with Google</button>
+                            <button class="secondary" onclick="showScreen('setup-screen')">🚀 Instant Business Setup</button>
                         </div>
 
-                        <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <div class="bottom-nav glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Messages</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Share Store</button>
+                        <!-- Signup Screen -->
+                        <div id="signup-screen" class="screen glass">
+                            <h1>Join OHC</h1>
+                            <p>Start your journey to autonomous business ownership.</p>
+                            <input type="email" placeholder="Email or Username" />
+                            <input type="password" placeholder="Password" />
+                            <button onclick="handleSignup(this)">Create Account</button>
+                            <button class="secondary" onclick="showScreen('login-screen')">Already have an account? Sign In</button>
                         </div>
-                    </div>
+
+                        <!-- Dashboard -->
+                        <div id="dashboard-screen" class="screen">
+                            <h1>Dashboard</h1>
+                            <div class="card glass">
+                                <h2>Welcome back, Human.</h2>
+                                <p>Your agents are currently optimized and executing tasks.</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>Status: <strong>Active</strong></span>
+                                    <button style="width: auto; margin-bottom: 0;" onclick="showScreen('inbox-screen')">Messages</button>
+                                </div>
+                            </div>
+                            <div class="card glass">
+                                <h3>Quick Actions <button class="secondary" style="width: auto; padding: 4px 10px; margin: 0;">?</button></h3>
+                                <p id="quick-actions-hint" style="display: none; font-size: 14px;">Shortcuts to common daily tasks managed by your AI team.</p>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <button class="secondary" onclick="showScreen('agents-screen')">Agents</button>
+                                    <button class="secondary" onclick="showScreen('setup-screen')">Setup</button>
+                                </div>
+                                <button class="secondary" style="margin-top: 10px;" onclick="toggleMenu()">More Options</button>
+                            </div>
+                            <div id="extra-menu" class="card glass" style="display: none;">
+                                <button class="secondary" onclick="showScreen('api-screen')">Integrations</button>
+                                <button class="secondary">Tutorials</button>
+                            </div>
+
+                            <!-- Bottom Nav -->
+                            <div class="bottom-nav glass" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; padding: 12px; margin-top: 24px;">
+                                <button class="nav-item" style="font-size: 10px; padding: 8px 4px;" onclick="console.log('action_add_product')">Product</button>
+                                <button class="nav-item" style="font-size: 10px; padding: 8px 4px;">Orders</button>
+                                <button class="nav-item" style="font-size: 10px; padding: 8px 4px;">Chat</button>
+                                <button class="nav-item" style="font-size: 10px; padding: 8px 4px;">Data</button>
+                                <button class="nav-item" style="font-size: 10px; padding: 8px 4px;">Share</button>
+                            </div>
+                        </div>
+                    </main>
 
                     <!-- Inbox Screen -->
                     <div id="inbox-screen" class="screen glass">
@@ -1713,82 +1808,164 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
+                        <div class="step-indicator">
+                            <div class="step-dot active"></div>
+                            <div class="step-dot"></div>
+                            <div class="step-dot"></div>
+                            <div class="step-dot"></div>
+                            <div class="step-dot"></div>
+                            <div class="step-dot"></div>
+                            <div class="step-dot"></div>
+                            <div class="step-dot"></div>
+                            <div class="step-dot"></div>
+                        </div>
+
                         <div id="step-1">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
+                            <h1>Build your dream business.</h1>
+                            <p>Go from idea to live in under 10 minutes. No code, no stress.</p>
                             <button onclick="nextStep(2)">🚀 Start My Business</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                            <button class="secondary" onclick="nextStep('ai')">⚡ AI Instant Build →</button>
                         </div>
+
                         <div id="step-2" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                            <h1>What are you building?</h1>
+                            <p>We'll tailor the experience to your business type.</p>
+                            <select name="business_type" onchange="onboardingState.state.business_type = this.value">
+                                <option value="">Select a type...</option>
+                                <option value="Online Store">🛒 Online Store</option>
+                                <option value="Service Business">🛠️ Service Business</option>
+                                <option value="Restaurant / Food">🍕 Restaurant / Food</option>
+                                <option value="Creative">🎨 Creative</option>
+                                <option value="Local Business">🏠 Local Business</option>
+                            </select>
+                            <button onclick="nextStep(3)">Next →</button>
+                            <button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
+
                         <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <h1>Name your business</h1>
+                            <p>Don't worry, you can change this later.</p>
+                            <input type="text" name="company_name" placeholder="e.g. Maya's Cakes" oninput="updateLivePreview()" />
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
+
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
-                            <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
-                            <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
-                            <br/><button class="secondary" onclick="nextStep(3)">Back</button>
+                            <div style="display: grid; gap: 10px;">
+                                <label class="checklist-item">
+                                    <input type="checkbox" name="sell_physical" style="width: auto; margin: 0;"> 📦 Physical products
+                                </label>
+                                <label class="checklist-item">
+                                    <input type="checkbox" name="sell_services" style="width: auto; margin: 0;"> 📅 Services / appointments
+                                </label>
+                                <label class="checklist-item">
+                                    <input type="checkbox" name="sell_subscriptions" style="width: auto; margin: 0;"> 🔁 Subscriptions
+                                </label>
+                            </div>
+                            <button onclick="nextStep(5)" style="margin-top: 20px;">Next →</button>
+                            <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
+
                         <div id="step-5" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
-                            <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(4)">Back</button>
+                            <h1>Payment preferences</h1>
+                            <select name="payment_pref">
+                                <option value="online">🌐 Online only</option>
+                                <option value="both">🌍 Both Online & In-person</option>
+                            </select>
+                            <button onclick="nextStep(6)">Next →</button>
+                            <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
+
                         <div id="step-6" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
+                            <h1>Create your admin account</h1>
+                            <input type="text" name="admin_name" placeholder="Full Name" />
+                            <input type="email" name="admin_email" placeholder="you@email.com" />
+                            <input type="password" name="admin_password" placeholder="Secure Password" />
                             <button onclick="nextStep(7)">Next →</button>
+                            <button class="secondary" onclick="nextStep(5)">Back</button>
                         </div>
+
                         <div id="step-7" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
-                            <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
+                            <h1>Pick a Template</h1>
+                            <p>A live preview of your business name applied:</p>
+
+                            <div class="template-grid">
+                                <div class="template-item selected" onclick="selectTemplate('Modern', this)">
+                                    <div class="template-preview glass" style="flex-direction: column;">
+                                        <div style="font-size: 14px; color: var(--primary-gold);" class="preview-name">Maya's Cakes</div>
+                                        <div style="font-size: 8px; opacity: 0.5;">Modern • Clean • Minimal</div>
+                                    </div>
+                                    <div class="template-name">✨ Modern</div>
+                                </div>
+                                <div class="template-item" onclick="selectTemplate('Bold', this)">
+                                    <div class="template-preview" style="background: #D4AF37; color: #000; flex-direction: column;">
+                                        <div style="font-size: 14px; font-weight: 800;" class="preview-name">MAYA'S CAKES</div>
+                                        <div style="font-size: 8px; font-weight: 600;">BOLD • LOUD • IMPACT</div>
+                                    </div>
+                                    <div class="template-name">🔥 Bold</div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="website_template" value="Modern" />
+                            <button onclick="nextStep(8)">Next →</button>
+                            <button class="secondary" onclick="nextStep(6)">Back</button>
                         </div>
                         <div id="step-8" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
-                            <input type="text" placeholder="e.g. 50.00" />
+                            <h1>Add your first product</h1>
+                            <p>Add one thing you want to sell today.</p>
+                            <input type="text" name="first_product_name" placeholder="Product Name" />
+                            <textarea name="first_product_description" placeholder="Description" rows="3"></textarea>
+                            <button class="secondary" onclick="generateAIDescription(this)" style="padding: 8px 16px; font-size: 14px; width: auto;">✨ Generate AI Description</button>
+                            <div style="display: flex; gap: 10px; margin-top: 16px;">
+                                <input type="text" name="first_product_price" placeholder="0.00" style="flex: 2;" />
+                                <select name="currency" style="flex: 1;">
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="GBP">GBP</option>
+                                </select>
+                            </div>
                             <button onclick="nextStep(9)">Next →</button>
+                            <button class="secondary" onclick="nextStep(7)">Back</button>
                         </div>
+
                         <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <p>Where will people find you online?</p>
+                            <button class="secondary" onclick="selectDomain('subdomain', this)" id="domain-subdomain">🌐 Free OHC Domain (mybusiness.ohc.app)</button>
+                            <button class="secondary" onclick="selectDomain('custom', this)" id="domain-custom">🔗 Connect Custom Domain</button>
+                            <input type="hidden" name="domain_choice" value="subdomain" />
+                            <button onclick="publishBusiness(this)" style="margin-top: 24px;">Publish my business →</button>
+                            <button class="secondary" onclick="nextStep(8)">Back</button>
                         </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
-                        </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
+
+                        <div id="step-100" style="display: none; text-align: center;">
+                            <div style="font-size: 64px; margin-bottom: 24px;">🎉</div>
+                            <h1>Success! Your business is live!</h1>
+                            <p>Congratulations, you are now a business owner. Your AI agents are standing by.</p>
                             <button onclick="nextStep(101)">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                            <button class="secondary" onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
+
                         <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                            <h1>Welcome Checklist</h1>
+                            <p>You're set up! Here's what to do next:</p>
+                            <div class="checklist-item">
+                                <div class="checklist-check done">✓</div>
+                                <span>✅ Business live</span>
+                            </div>
+                            <div class="checklist-item">
+                                <div class="checklist-check"></div>
+                                <span>⬜ Add 3 more products</span>
+                            </div>
+                            <div class="checklist-item">
+                                <div class="checklist-check"></div>
+                                <span>⬜ Connect Instagram</span>
+                            </div>
+                            <div class="checklist-item">
+                                <div class="checklist-check"></div>
+                                <span>⬜ Share your link with a friend</span>
+                            </div>
+                            <button onclick="showScreen('dashboard-screen')" style="margin-top: 24px;">Go to Dashboard →</button>
                         </div>
 
                         <div id="step-ai" style="display: none;">
@@ -1840,10 +2017,134 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             setTimeout(() => showScreen('setup-screen'), 500);
                         }
 
-                        function nextStep(step) {
+                        let onboardingState = {
+                            tenant_id: 'default',
+                            org_id: 'default',
+                            user_id: 'default',
+                            step: 1,
+                            state: {}
+                        };
+
+                        async function loadOnboardingState() {
+                            try {
+                                const resp = await fetch('/api/onboarding/state?tenant_id=default&org_id=default');
+                                if (resp.ok) {
+                                    const data = await resp.json();
+                                    if (data.current_step > 0) {
+                                        onboardingState.step = data.current_step;
+                                        onboardingState.state = data.state || {};
+                                        // Update UI fields from state
+                                        for (const [key, value] of Object.entries(onboardingState.state)) {
+                                            const input = document.querySelector(`[name="${key}"]`);
+                                            if (input) input.value = value;
+                                        }
+                                        if (window.location.pathname === '/business-setup') {
+                                            nextStep(onboardingState.step, false);
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Failed to load onboarding state', e);
+                            }
+                        }
+
+                        async function saveOnboardingState(step) {
+                            onboardingState.step = step;
+                            // Collect all inputs from the current step
+                            const stepDiv = document.getElementById('step-' + step);
+                            if (stepDiv) {
+                                const inputs = stepDiv.querySelectorAll('input, select, textarea');
+                                inputs.forEach(input => {
+                                    if (input.name) {
+                                        onboardingState.state[input.name] = input.value;
+                                    }
+                                });
+                            }
+
+                            try {
+                                await fetch('/api/onboarding/state', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(onboardingState)
+                                });
+                            } catch (e) {
+                                console.error('Failed to save onboarding state', e);
+                            }
+                        }
+
+                        function nextStep(step, save = true) {
                             document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
                             const target = document.getElementById('step-' + step);
-                            if (target) target.style.display = 'block';
+                            if (target) {
+                                target.style.display = 'block';
+                                updateStepIndicator(step);
+                                if (save) saveOnboardingState(step);
+                            }
+                        }
+
+                        function updateStepIndicator(step) {
+                            const indicators = document.querySelectorAll('.step-dot');
+                            indicators.forEach((dot, index) => {
+                                if (index < step) dot.classList.add('active');
+                                else dot.classList.remove('active');
+                            });
+                        }
+
+                        function selectTemplate(name, el) {
+                            document.querySelectorAll('.template-item').forEach(item => item.classList.remove('selected'));
+                            el.classList.add('selected');
+                            document.querySelector('input[name="website_template"]').value = name;
+                            onboardingState.state.website_template = name;
+                        }
+
+                        function updateLivePreview() {
+                            const name = document.querySelector('input[name="company_name"]').value || "My Business";
+                            document.querySelectorAll('.preview-name').forEach(el => {
+                                el.innerText = name;
+                            });
+                        }
+
+                        async function generateAIDescription(btn) {
+                            const productName = document.querySelector('input[name="first_product_name"]').value;
+                            const businessType = document.querySelector('select[name="business_type"]').value || "General";
+                            if (!productName) return alert("Please enter a product name first.");
+
+                            btn.innerText = "Thinking...";
+                            try {
+                                const resp = await fetch('/api/onboarding/suggest', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ product_name: productName, business_type: businessType })
+                                });
+                                if (resp.ok) {
+                                    const data = await resp.json();
+                                    document.querySelector('textarea[name="first_product_description"]').value = data.description;
+                                }
+                            } catch (e) {
+                                console.error(e);
+                            }
+                            btn.innerText = "✨ Generate AI Description";
+                        }
+
+                        function selectDomain(choice, el) {
+                            document.querySelectorAll('#step-9 button.secondary').forEach(btn => btn.classList.remove('selected'));
+                            el.classList.add('selected');
+                            document.querySelector('input[name="domain_choice"]').value = choice;
+                            onboardingState.state.domain_choice = choice;
+                        }
+
+                        async function publishBusiness(btn) {
+                            btn.innerText = "Publishing...";
+                            // Simulate backend call
+                            await new Promise(r => setTimeout(r, 1500));
+
+                            confetti({
+                                particleCount: 150,
+                                spread: 70,
+                                origin: { y: 0.6 },
+                                colors: ['#D4AF37', '#FFFFFF', '#000000']
+                            });
+                            nextStep(100);
                         }
 
                         function generateAI() {
@@ -1880,6 +2181,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             // Default to dashboard for ease of testing
                             showScreen('dashboard-screen');
                         }
+
+                        loadOnboardingState();
                     </script>
                 </body>
             </html>

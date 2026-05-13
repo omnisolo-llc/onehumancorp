@@ -286,6 +286,64 @@ impl OnboardingAgent {
 
         Ok(())
     }
+
+    pub async fn save_onboarding_state(&self, tenant_id: &str, org_id: &str, user_id: &str, step: i32, state: serde_json::Value) -> Result<(), String> {
+        sqlx::query(
+            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
+             VALUES ($1, $2, $3, $4, $5) \
+             ON CONFLICT (tenant_id, organization_id) DO UPDATE \
+             SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
+                 current_step = EXCLUDED.current_step, \
+                 updated_at = CURRENT_TIMESTAMP"
+        )
+        .bind(tenant_id)
+        .bind(org_id)
+        .bind(user_id)
+        .bind(step)
+        .bind(state)
+        .execute(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub async fn get_onboarding_state(&self, tenant_id: &str, org_id: &str) -> Result<serde_json::Value, String> {
+        let row = sqlx::query(
+            "SELECT current_step, state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+        )
+        .bind(tenant_id)
+        .bind(org_id)
+        .fetch_optional(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        if let Some(record) = row {
+            use sqlx::Row;
+            let step: i32 = record.get("current_step");
+            let state_json: serde_json::Value = record.get("state_json");
+            Ok(json!({
+                "current_step": step,
+                "state": state_json
+            }))
+        } else {
+            Ok(json!({
+                "current_step": 0,
+                "state": {}
+            }))
+        }
+    }
+
+    pub async fn suggest_product_description(&self, product_name: &str, business_type: &str) -> Result<String, String> {
+        let api_key = self.hub.minimax_api_key();
+        if api_key.is_empty() {
+            return Ok(format!("A high-quality {} for your {} business.", product_name, business_type));
+        }
+
+        let client = crate::minimax::MinimaxClient::new(api_key.to_string());
+        let prompt = format!("Write a short, engaging, 1-sentence product description for a product named '{}' in a '{}' business. DO NOT include any other text or quotes.", product_name, business_type);
+
+        client.reason(&prompt).await
+    }
 }
 
 #[cfg(test)]
