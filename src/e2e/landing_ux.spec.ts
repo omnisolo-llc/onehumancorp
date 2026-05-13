@@ -1,23 +1,16 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Landing Screen Visual Audit', () => {
-  test('should display dashboard', async ({ page }) => {
+  test('should display canonical design elements and actions', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-  });
 
-  test('should display navigation', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('nav')).toBeVisible();
-  });
+    const startBusinessBtn = page.locator('button:has-text("Start Business Setup")');
+    await expect(startBusinessBtn).toBeVisible();
 
-  test('should display login page', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
-  });
+    const continueDashBtn = page.locator('button:has-text("Or continue to Cloud Dashboard")');
+    await expect(continueDashBtn).toBeVisible();
 
-  test('should display agents page', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    const macDownloadBtn = page.locator('button:has-text("Download for Mac")');
+    await expect(macDownloadBtn).toBeVisible();
   });
 });

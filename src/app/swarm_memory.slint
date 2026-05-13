@@ -1,0 +1,102 @@
+import { GlassCard } from "glass_card.slint";
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { VectorMemoryVisualizer } from "vector_memory_visualizer.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component SwarmMemory inherits Window {
+    width: 900px;
+    height: 600px;
+    title: "System Memory";
+
+    callback view_walkthrough();
+    in-out property <string> mesh_activity: "None";
+    in-out property <string> durable_memory: "Empty";
+    in-out property <int> velocity_score: 0;
+
+    background: #f8fafc;
+
+    HorizontalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        // Left Column: Live Mesh
+        VerticalBox {
+            spacing: 10px;
+            width: 270px;
+
+            Text { text: "Live Activity"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Live updates"; color: #64748b; }
+
+            VectorMemoryVisualizer {
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 10px;
+                    alignment: start;
+
+                    VectorMemoryVisualizer {
+                        background: #f1f5f9;
+
+                        VerticalBox {
+                            padding: 8px;
+                            Text { text: "Helper Alice"; font-weight: 700; color: #a855f7; }
+                            Text { text: "Processed task 123"; color: #1e293b; }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Center Column: Durable Memory
+        VerticalBox {
+            spacing: 10px;
+            width: 270px;
+
+            Text { text: "Saved Information"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Cloud Backup"; color: #64748b; }
+
+            VectorMemoryVisualizer {
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 10px;
+                    alignment: start;
+
+                    VectorMemoryVisualizer {
+                        background: #f1f5f9;
+
+                        VerticalBox {
+                            padding: 8px;
+                            Text { text: "Project goal defined"; color: #1e293b; }
+                            Text { text: "2026-04-25 12:00"; color: #64748b; font-size: 12px; }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Right Column: AutoDream
+        VerticalBox {
+            spacing: 10px;
+            width: 270px;
+
+            Text { text: "AutoDream Memory Pipeline"; font-size: 20px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Text { text: "Long-Term Context Engine"; color: #64748b; font-family: "Inter"; }
+
+            VectorMemoryVisualizer {
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 16px;
+
+                    VectorMemoryVisualizer {
+                        memories_saved: 142;
+                        memories_searched: 56;
+                    }
+
+                    Button { text: "What is AutoDream?"; clicked => { view_walkthrough(); } }
+                }
+            }
+        }
+    }
+}

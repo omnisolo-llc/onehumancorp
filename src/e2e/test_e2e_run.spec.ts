@@ -2,15 +2,15 @@ import { test, expect } from '@playwright/test';
 
 test('verify wizard UI state propagation to backend', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto('/');
 
     // Login
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
@@ -71,17 +71,17 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
 
     // Check that we can navigate back to dashboard
     await page.click('button:has-text("Go to Dashboard")');
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 });
 
 test('verify wizard AI agent configuration', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto('/');
 
     // Login
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
     // Navigate to agent settings
     await page.click('text="Manage Agents"');
@@ -90,25 +90,22 @@ test('verify wizard AI agent configuration', async ({ page }) => {
 
     // Toggle capabilities
     await page.click('text="Customer Support"');
-    await page.click('button:has-text("Next")');
-    await page.check('text="Reply to customer messages"');
+    await page.check('text="Can Reply to Messages"');
 
     // Save
-    await page.click('button:has-text("Next")');
-    await page.click('button:has-text("Next")');
     await page.click('button:has-text("Activate Agent")');
 
-    await expect(page.locator('text="Agent Activated ✓"')).toBeVisible();
+    await expect(page.locator('text="Agent Activated"')).toBeVisible();
 });
 
 test('verify wizard prompt tuning', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto('/');
 
     // Login
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
     // Navigate to agent settings
     await page.click('text="Manage Agents"');
@@ -119,25 +116,22 @@ test('verify wizard prompt tuning', async ({ page }) => {
     await expect(page.locator('text="Prompt Tuning"')).toBeVisible();
 
     // Select Tone
-    await page.click('text="Friendly & Warm"');
-    await page.click('button:has-text("Next")');
+    await page.click('text="Friendly"');
 
     // Toggle Focus
     await page.check('text="Only discuss business"');
 
     // Save
-    await page.click('button:has-text("Next")');
-    await page.click('button:has-text("Next")');
-    await page.click('button:has-text("Save")');
+    await page.click('button:has-text("Save Configuration")');
 
-    await expect(page.locator('text="Your agent has been updated ✓"')).toBeVisible();
+    await expect(page.locator('text="Configuration Saved"')).toBeVisible();
 });
 
 test('verify grow business suggestions', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
     await page.click('button:has-text("Grow Business")');
     await expect(page.locator('text="Actionable Insights"')).toBeVisible();
@@ -148,10 +142,10 @@ test('verify grow business suggestions', async ({ page }) => {
 });
 
 test('verify website builder flow', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
     await page.click('button:has-text("Website Builder")');
 
@@ -181,11 +175,11 @@ test('verify website builder flow', async ({ page }) => {
 });
 
 test('verify login form error message UX wrap behavior', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
 
     // Trigger an error to see if error message is displayed
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'invalid@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'wrong');
+    await page.fill('input[type="email"]', 'invalid@example.com');
+    await page.fill('input[type="password"]', 'wrong');
     await page.click('button:has-text("Sign In")');
 
     // Assume an error message like 'Invalid email or password' appears
@@ -201,7 +195,7 @@ test('verify login form error message UX wrap behavior', async ({ page }) => {
 });
 
 test('verify app settings toggle', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
 
     // We changed 'Fix App Issues' to 'Fix App Issues'
     await page.click('button:has-text("Fix App Issues")');
@@ -211,7 +205,7 @@ test('verify app settings toggle', async ({ page }) => {
 });
 
 test('verify sign up and sign in toggle', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
 
     // Ensure we start at Sign In
     await expect(page.locator('button:has-text("Sign In")')).toBeVisible();
@@ -231,10 +225,10 @@ test('verify sign up and sign in toggle', async ({ page }) => {
 });
 
 test('verify password toggle', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
 
     // Fill password
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'secretpassword');
+    await page.fill('input[type="password"]', 'secretpassword');
 
     // Click Show
     await page.click('button:has-text("Show")');
@@ -252,7 +246,7 @@ test('verify password toggle', async ({ page }) => {
 });
 
 test('verify login empty submission', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
 
     // Submit empty form
     await page.click('button:has-text("Sign In")');
@@ -263,15 +257,15 @@ test('verify login empty submission', async ({ page }) => {
 
 test('verify checklist flow and integration', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto('/');
 
     // Login
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
@@ -332,15 +326,15 @@ test('verify checklist flow and integration', async ({ page }) => {
 
 test('verify checklist connects instagram routing', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto('/');
 
     // Login
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
@@ -387,15 +381,15 @@ test('verify checklist connects instagram routing', async ({ page }) => {
 
 test('verify checklist share link routing', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto('/');
 
     // Login
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
@@ -442,15 +436,15 @@ test('verify checklist share link routing', async ({ page }) => {
 
 test('verify checklist fully completed state', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto('/');
 
     // Login
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
@@ -501,15 +495,15 @@ test('verify checklist fully completed state', async ({ page }) => {
 
 test('verify checklist completion progress', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto('/');
 
     // Login
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');

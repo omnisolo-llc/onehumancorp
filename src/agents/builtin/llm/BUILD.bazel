@@ -2,18 +2,14 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
     name = "llm",
-    srcs = [
-        "anthropic.rs",
-        "gemini.rs",
-        "mod.rs",
-        "ollama.rs",
-        "openai.rs",
-    ],
-    crate_root = "mod.rs",
+    srcs = glob(["**/*.rs"]),
     crate_name = "ohc_builtin_agent_llm",
-
+    crate_root = "mod.rs",
     edition = "2024",
-    visibility = ["//visibility:public"],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    visibility = ["//src/agents/builtin:__subpackages__"],
     deps = [
         "//src/agents/builtin:core",
         "@crates//:reqwest",
@@ -22,8 +18,4 @@ rust_library(
         "@crates//:tokio",
         "@crates//:tracing",
     ],
-    proc_macro_deps = [
-        "@crates//:async-trait",
-    ],
-
 )

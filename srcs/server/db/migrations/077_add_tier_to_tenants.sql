@@ -1,0 +1,5 @@
+-- +goose Up
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS tier VARCHAR NOT NULL DEFAULT 'free';
+
+-- +goose Down
+ALTER TABLE tenants DROP COLUMN IF EXISTS tier;

@@ -1,6 +1,6 @@
 use crate::integrations::mercadopago::client::MercadoPagoClient;
 // Billing module stub - provides Tracker struct used by hub.rs
-use ::server_pricing::rate_limit::{RedisRateLimiter, RateLimitStatus};
+use crate::pricing::rate_limit::{RedisRateLimiter, RateLimitStatus};
 use crate::integrations::stripe::client::StripeClient;
 use redis::Client;
 use std::sync::Arc;
@@ -162,11 +162,11 @@ impl Tracker {
         }
     }
 
-    pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<::server_pricing::rate_limit::PlanTier, String> {
+    pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<crate::pricing::rate_limit::PlanTier, String> {
         if let Some(ref limiter) = self.rate_limiter {
             limiter.get_tenant_tier(tenant_id).await
         } else {
-            Ok(::server_pricing::rate_limit::PlanTier::Free)
+            Ok(crate::pricing::rate_limit::PlanTier::Free)
         }
     }
 

@@ -1,9 +1,0 @@
-filegroup(
-    name = "srcs",
-    srcs = [
-        "approvals.rs",
-        "hire.rs",
-        "mod.rs",
-    ],
-    visibility = ["//src/server/api:__pkg__"],
-)

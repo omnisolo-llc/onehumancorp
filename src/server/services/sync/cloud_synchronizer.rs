@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use crate::services::sync::local_repository::LocalRepository;
 use sqlx::PgPool;
-use ::server_telemetry::{record_sync_escalation, record_sync_daemon_batch_size, record_sync_latency, record_sync_payload_size, record_sync_daemon_error_total};
+use crate::telemetry::{record_sync_escalation, record_sync_daemon_batch_size, record_sync_latency, record_sync_payload_size, record_sync_daemon_error_total};
 use std::time::Instant;
 
 #[async_trait::async_trait]
