@@ -11,5 +11,5 @@ spec:
     limits.cpu: {{ .Values.backend.resourceQuota.limits.cpu | default "8" }}
     limits.memory: {{ .Values.backend.resourceQuota.limits.memory | default "16Gi" }}
     limits.ephemeral-storage: {{ .Values.backend.resourceQuota.limits.ephemeralStorage | default "20Gi" }}
-    pods: {{ .Values.backend.resourceQuota.limits.pods | default "50" | quote }}
+    pods: {{ .Values.backend.resourceQuota.limits.pods | default "100" | quote }}
 {{- end }}
