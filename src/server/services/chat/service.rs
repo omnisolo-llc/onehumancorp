@@ -42,7 +42,7 @@ impl ChatService for MyChatService {
     ) -> Result<Response<ChatMessage>, Status> {
         let req = request.into_inner();
         
-        match self.registry.send_chat_message(&req.integration_id, &req.channel, &req.from_agent, &req.content, &req.thread_id) {
+        match self.registry.send_chat_message(&req.integration_id, &req.channel, &req.from_agent, &req.content, &req.thread_id, "unknown") {
             Ok(msg) => Ok(Response::new(msg)),
             Err(e) => Err(Status::internal(e)),
         }

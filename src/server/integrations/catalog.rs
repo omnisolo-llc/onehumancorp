@@ -39,6 +39,57 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
         }
     };
     catalog.push(twilio_provider);
+
+    let meta_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "meta".to_string(),
+            name: "Meta Graph API".to_string(),
+            category: "messaging".to_string(),
+            base_url: "https://graph.facebook.com".to_string(),
+        }
+    };
+    catalog.push(meta_provider);
+
+    let nylas_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "nylas".to_string(),
+            name: "Nylas Calendar".to_string(),
+            category: "calendar".to_string(),
+            base_url: "https://api.nylas.com".to_string(),
+        }
+    };
+    catalog.push(nylas_provider);
+
+    let resend_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "resend".to_string(),
+            name: "Resend Email".to_string(),
+            category: "marketing".to_string(),
+            base_url: "https://api.resend.com".to_string(),
+        }
+    };
+    catalog.push(resend_provider);
+
+    let easypost_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "easypost".to_string(),
+            name: "EasyPost Logistics".to_string(),
+            category: "logistics".to_string(),
+            base_url: "https://api.easypost.com".to_string(),
+        }
+    };
+    catalog.push(easypost_provider);
+
+    let zoom_provider = crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "zoom".to_string(),
+            name: "Zoom Video".to_string(),
+            category: "video".to_string(),
+            base_url: "https://api.zoom.us".to_string(),
+        }
+    };
+    catalog.push(zoom_provider);
+
     let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
     catalog.push(chromadb_provider.to_integration_provider());
 

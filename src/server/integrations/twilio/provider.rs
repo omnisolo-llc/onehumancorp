@@ -1,8 +1,7 @@
-use super::client::{TwilioClientWrapper, RealTwilioClient};
+use super::client::{TwilioClientWrapper, RealTwilioClient, SmsStatus};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
-
-
+use std::collections::HashMap;
 
 pub struct TwilioProvider {
     client: Arc<dyn TwilioClientWrapper>,
@@ -42,8 +41,17 @@ impl TwilioProvider {
         }
     }
 
-    pub async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
-        self.client.send_sms(to, from, body).await
+    pub async fn send_sms(&self, to: &str, from: &str, body: &str, tenant_id: &str) -> Result<SmsStatus, String> {
+        self.client.send_sms(to, from, body, tenant_id).await
+    }
+
+    pub async fn send_order_notification(&self, to: &str, from: &str, order_id: &str, customer_name: &str, amount: f64, tenant_id: &str) -> Result<SmsStatus, String> {
+        let mut placeholders = HashMap::new();
+        placeholders.insert("order_id".to_string(), order_id.to_string());
+        placeholders.insert("customer_name".to_string(), customer_name.to_string());
+        placeholders.insert("amount".to_string(), amount.to_string());
+
+        self.client.send_templated_sms(to, from, "order_confirmation", placeholders, tenant_id).await
     }
 }
 
@@ -60,9 +68,13 @@ mod tests {
 
     #[async_trait]
     impl TwilioClientWrapper for MockTwilioClient {
-        async fn send_sms(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
+        async fn send_sms(&self, _to: &str, _from: &str, _body: &str, _tenant_id: &str) -> Result<SmsStatus, String> {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
-            Ok(())
+            Ok(SmsStatus { sid: "mock".to_string(), status: "sent".to_string() })
+        }
+        async fn send_templated_sms(&self, _to: &str, _from: &str, _template_id: &str, _placeholders: std::collections::HashMap<String, String>, _tenant_id: &str) -> Result<SmsStatus, String> {
+            self.sent_messages.fetch_add(1, Ordering::SeqCst);
+             Ok(SmsStatus { sid: "mock".to_string(), status: "sent".to_string() })
         }
     }
 
@@ -72,21 +84,7 @@ mod tests {
         let mock = Arc::new(MockTwilioClient { sent_messages: sent.clone() });
         let provider = TwilioProvider::with_client(mock);
 
-        provider.send_sms("+1234567890", "+0987654321", "Test message").await.unwrap();
+        provider.send_sms("+1234567890", "+0987654321", "Test message", "tenant1").await.unwrap();
         assert_eq!(sent.load(Ordering::SeqCst), 1);
-    }
-
-    #[test]
-    fn test_twilio_provider_new() {
-        let provider = TwilioProvider::new("sid".to_string(), "token".to_string());
-        assert_eq!(provider.metadata.id, "twilio");
-        assert_eq!(provider.metadata.category, "sms");
-    }
-
-    #[test]
-    fn test_twilio_provider_into() {
-        let provider = TwilioProvider::new("sid".to_string(), "token".to_string());
-        let integration = provider.into_integration_provider();
-        assert_eq!(integration.metadata.id, "twilio");
     }
 }

@@ -1,6 +1,8 @@
 use std::sync::RwLock;
 use ::server_ohc::orchestration::*;
 use chrono::Utc;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 pub struct IntegrationCredentials {
     pub bot_token: String,
@@ -11,18 +13,26 @@ pub struct IntegrationCredentials {
 }
 
 pub struct IntegrationsRegistry {
-    messages: RwLock<std::collections::HashMap<String, Vec<ChatMessage>>>,
-    instances: RwLock<std::collections::HashMap<String, IntegrationInstance>>,
-    pull_requests: RwLock<std::collections::HashMap<String, Vec<PullRequest>>>,
-    issues: RwLock<std::collections::HashMap<String, Vec<Issue>>>,
-    credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
-    twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
-    nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
+    messages: RwLock<HashMap<String, Vec<ChatMessage>>>,
+    instances: RwLock<HashMap<String, IntegrationInstance>>,
+    pull_requests: RwLock<HashMap<String, Vec<PullRequest>>>,
+    issues: RwLock<HashMap<String, Vec<Issue>>>,
+    credentials: RwLock<HashMap<String, HashMap<String, IntegrationCredentials>>>, // (integration_id, tenant_id)
+    twilio_clients: RwLock<HashMap<String, Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
+    nats_clients: Arc<RwLock<HashMap<String, Arc<crate::integrations::nats::provider::NatsProvider>>>>,
+
+    // New clients - Map (integration_id -> (tenant_id -> Client))
+    meta_clients: RwLock<HashMap<String, HashMap<String, Arc<crate::integrations::meta::client::MetaClient>>>>,
+    nylas_clients: RwLock<HashMap<String, HashMap<String, Arc<crate::integrations::nylas::client::NylasClient>>>>,
+    resend_clients: RwLock<HashMap<String, HashMap<String, Arc<crate::integrations::resend::client::ResendClient>>>>,
+    easypost_clients: RwLock<HashMap<String, HashMap<String, Arc<crate::integrations::easypost::client::EasyPostClient>>>>,
+    zoom_clients: RwLock<HashMap<String, HashMap<String, Arc<crate::integrations::zoom::client::ZoomClient>>>>,
+    mercadopago_clients: RwLock<HashMap<String, HashMap<String, Arc<crate::integrations::mercadopago::client::MercadoPagoClient>>>>,
 }
 
 impl IntegrationsRegistry {
     pub fn new() -> Self {
-        let mut instances = std::collections::HashMap::new();
+        let mut instances = HashMap::new();
         for provider in crate::integrations::catalog::get_catalog() {
             let id = provider.metadata.id.clone();
             instances.insert(id.clone(), IntegrationInstance {
@@ -35,13 +45,19 @@ impl IntegrationsRegistry {
         }
 
         IntegrationsRegistry {
-            messages: RwLock::new(std::collections::HashMap::new()),
+            messages: RwLock::new(HashMap::new()),
             instances: RwLock::new(instances),
-            pull_requests: RwLock::new(std::collections::HashMap::new()),
-            issues: RwLock::new(std::collections::HashMap::new()),
-            credentials: RwLock::new(std::collections::HashMap::new()),
-            twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
+            pull_requests: RwLock::new(HashMap::new()),
+            issues: RwLock::new(HashMap::new()),
+            credentials: RwLock::new(HashMap::new()),
+            twilio_clients: RwLock::new(HashMap::new()),
+            nats_clients: Arc::new(RwLock::new(HashMap::new())),
+            meta_clients: RwLock::new(HashMap::new()),
+            nylas_clients: RwLock::new(HashMap::new()),
+            resend_clients: RwLock::new(HashMap::new()),
+            easypost_clients: RwLock::new(HashMap::new()),
+            zoom_clients: RwLock::new(HashMap::new()),
+            mercadopago_clients: RwLock::new(HashMap::new()),
         }
     }
 
@@ -58,7 +74,7 @@ impl IntegrationsRegistry {
         msgs.get(integration_id).cloned().unwrap_or_default()
     }
 
-    pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, thread_id: &str) -> Result<ChatMessage, String> {
+    pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, thread_id: &str, tenant_id: &str) -> Result<ChatMessage, String> {
         let msg = ChatMessage {
             id: format!("msg-{}", Utc::now().timestamp()),
             channel: channel.to_string(),
@@ -72,57 +88,64 @@ impl IntegrationsRegistry {
         msgs.entry(integration_id.to_string()).or_insert_with(Vec::new).push(msg.clone());
 
         // Attempt real delivery
-        let creds_map = self.credentials.read().unwrap();
-        if let Some(creds) = creds_map.get(integration_id) {
-             let text = format!("[{}] {}", from_agent, content);
-             match integration_id {
-                 "telegram" => {
-                     if !creds.bot_token.is_empty() {
-                         let chat_id = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
-                         tokio::spawn(send_telegram_message(creds.bot_token.clone(), chat_id, text));
-                     }
-                 }
-                 "discord" => {
-                     if !creds.webhook_url.is_empty() {
-                          tokio::spawn(send_discord_webhook(creds.webhook_url.clone(), from_agent.to_string(), content.to_string()));
-                     }
-                 }
-                 "twilio" => {
-                     if !creds.from_phone.is_empty() {
-                         let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
-                         let from = creds.from_phone.clone();
-                         let text = content.to_string();
-
-                         let clients = self.twilio_clients.read().unwrap();
-                         if let Some(client) = clients.get(integration_id) {
-                             let client = client.clone();
-                             tokio::spawn(async move {
-                                 if let Err(e) = client.send_sms(&to, &from, &text).await {
-                                     tracing::error!("Failed to send Twilio SMS: {}", e);
-                                 }
-                             });
+        let creds_outer = self.credentials.read().unwrap();
+        if let Some(tenant_map) = creds_outer.get(integration_id) {
+            if let Some(creds) = tenant_map.get(tenant_id) {
+                 let text = format!("[{}] {}", from_agent, content);
+                 match integration_id {
+                     "telegram" => {
+                         if !creds.bot_token.is_empty() {
+                             let chat_id = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                             tokio::spawn(send_telegram_message(creds.bot_token.clone(), chat_id, text));
                          }
                      }
+                     "discord" => {
+                         if !creds.webhook_url.is_empty() {
+                              tokio::spawn(send_discord_webhook(creds.webhook_url.clone(), from_agent.to_string(), content.to_string()));
+                         }
+                     }
+                     "twilio" => {
+                         if !creds.from_phone.is_empty() {
+                             let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                             let from = creds.from_phone.clone();
+                             let text = content.to_string();
+
+                             let clients = self.twilio_clients.read().unwrap();
+                             if let Some(client) = clients.get(integration_id) {
+                                 let client = client.clone();
+                                 tokio::spawn(async move {
+                                     if let Err(e) = client.send_sms(&to, &from, &text).await {
+                                         tracing::error!("Failed to send Twilio SMS: {}", e);
+                                     }
+                                 });
+                             }
+                         }
+                     }
+                     "meta" => {
+                         let clients_outer = self.meta_clients.read().unwrap();
+                         if let Some(tenant_map) = clients_outer.get(integration_id) {
+                             if let Some(client) = tenant_map.get(tenant_id) {
+                                 let client = client.clone();
+                                 let recipient_id = channel.to_string();
+                                 let text = content.to_string();
+                                 let tenant_id_clone = tenant_id.to_string();
+                                 tokio::spawn(async move {
+                                     if let Err(e) = client.send_message(&recipient_id, &text, "messenger", &tenant_id_clone).await {
+                                         tracing::error!("Failed to send Meta message: {}", e);
+                                     }
+                                 });
+                             }
+                         }
+                     }
+                     _ => {}
                  }
-                 _ => {}
-             }
+            }
         }
 
         Ok(msg)
     }
 
-    // Integration methods
-    pub fn instances(&self) -> Vec<IntegrationInstance> {
-        let insts = self.instances.read().unwrap();
-        insts.values().cloned().collect()
-    }
-
-    pub fn instances_by_category(&self, category: &str) -> Vec<IntegrationInstance> {
-        let insts = self.instances.read().unwrap();
-        insts.values().filter(|i| i.category == category).cloned().collect()
-    }
-
-    pub fn connect(&self, integration_id: &str, base_url: &str, creds: ConnectIntegrationRequest) -> Result<IntegrationInstance, String> {
+    pub fn connect(&self, integration_id: &str, base_url: &str, creds: ConnectIntegrationRequest, tenant_id: &str) -> Result<IntegrationInstance, String> {
         let mut insts = self.instances.write().unwrap();
         let inst = IntegrationInstance {
             id: integration_id.to_string(),
@@ -134,30 +157,75 @@ impl IntegrationsRegistry {
         insts.insert(integration_id.to_string(), inst.clone());
 
         let mut credentials = self.credentials.write().unwrap();
-        credentials.insert(integration_id.to_string(), IntegrationCredentials {
+        let tenant_map = credentials.entry(integration_id.to_string()).or_insert_with(HashMap::new);
+        tenant_map.insert(tenant_id.to_string(), IntegrationCredentials {
             bot_token: creds.bot_token.clone(),
             chat_id: creds.chat_id.clone(),
             webhook_url: creds.webhook_url.clone(),
             api_token: creds.api_token.clone(),
             from_phone: creds.from_phone.clone(),
         });
-        if integration_id == "twilio" {
-            let mut clients = self.twilio_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
-        }
-        if integration_id == "nats" {
-            let base_url_clone = base_url.to_string();
-            let nats_clients = std::sync::Arc::clone(&self.nats_clients);
-            let integration_id_clone = integration_id.to_string();
-            tokio::spawn(async move {
-                if let Ok(provider) = crate::integrations::nats::provider::NatsProvider::new(&base_url_clone).await {
-                    let mut clients = nats_clients.write().unwrap();
-                    clients.insert(integration_id_clone, std::sync::Arc::new(provider));
-                }
-            });
+
+        match integration_id {
+            "twilio" => {
+                let mut clients = self.twilio_clients.write().unwrap();
+                clients.insert(integration_id.to_string(), Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
+            },
+            "nats" => {
+                let base_url_clone = base_url.to_string();
+                let nats_clients = Arc::clone(&self.nats_clients);
+                let integration_id_clone = integration_id.to_string();
+                tokio::spawn(async move {
+                    if let Ok(provider) = crate::integrations::nats::provider::NatsProvider::new(&base_url_clone).await {
+                        let mut clients = nats_clients.write().unwrap();
+                        clients.insert(integration_id_clone, Arc::new(provider));
+                    }
+                });
+            },
+            "meta" => {
+                let mut clients_outer = self.meta_clients.write().unwrap();
+                let tenant_map = clients_outer.entry(integration_id.to_string()).or_insert_with(HashMap::new);
+                tenant_map.insert(tenant_id.to_string(), Arc::new(crate::integrations::meta::client::MetaClient::new(creds.api_token.clone())));
+            },
+            "nylas" => {
+                let mut clients_outer = self.nylas_clients.write().unwrap();
+                let tenant_map = clients_outer.entry(integration_id.to_string()).or_insert_with(HashMap::new);
+                tenant_map.insert(tenant_id.to_string(), Arc::new(crate::integrations::nylas::client::NylasClient::new(creds.api_token.clone())));
+            },
+            "resend" => {
+                let mut clients_outer = self.resend_clients.write().unwrap();
+                let tenant_map = clients_outer.entry(integration_id.to_string()).or_insert_with(HashMap::new);
+                tenant_map.insert(tenant_id.to_string(), Arc::new(crate::integrations::resend::client::ResendClient::new(creds.api_token.clone())));
+            },
+            "easypost" => {
+                let mut clients_outer = self.easypost_clients.write().unwrap();
+                let tenant_map = clients_outer.entry(integration_id.to_string()).or_insert_with(HashMap::new);
+                tenant_map.insert(tenant_id.to_string(), Arc::new(crate::integrations::easypost::client::EasyPostClient::new(creds.api_token.clone())));
+            },
+            "zoom" => {
+                let mut clients_outer = self.zoom_clients.write().unwrap();
+                let tenant_map = clients_outer.entry(integration_id.to_string()).or_insert_with(HashMap::new);
+                tenant_map.insert(tenant_id.to_string(), Arc::new(crate::integrations::zoom::client::ZoomClient::new(creds.api_token.clone())));
+            },
+            "mercadopago" => {
+                let mut clients_outer = self.mercadopago_clients.write().unwrap();
+                let tenant_map = clients_outer.entry(integration_id.to_string()).or_insert_with(HashMap::new);
+                tenant_map.insert(tenant_id.to_string(), Arc::new(crate::integrations::mercadopago::client::MercadoPagoClient::new(creds.api_token.clone())));
+            },
+            _ => {}
         }
 
         Ok(inst)
+    }
+
+    pub fn instances(&self) -> Vec<IntegrationInstance> {
+        let insts = self.instances.read().unwrap();
+        insts.values().cloned().collect()
+    }
+
+    pub fn instances_by_category(&self, category: &str) -> Vec<IntegrationInstance> {
+        let insts = self.instances.read().unwrap();
+        insts.values().filter(|i| i.category == category).cloned().collect()
     }
 
     pub fn disconnect(&self, integration_id: &str) -> Result<IntegrationInstance, String> {
@@ -291,6 +359,7 @@ async fn send_discord_webhook(webhook_url: String, username: String, content: St
         tracing::error!("Failed to send Discord webhook: {}", e);
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -306,10 +375,26 @@ mod tests {
             api_token: "test_token".to_string(),
             from_phone: "+1234567890".to_string(),
         };
-        registry.connect("twilio", "https://api.twilio.com", creds).unwrap();
+        registry.connect("twilio", "https://api.twilio.com", creds, "tenant1").unwrap();
 
-        let msg = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1").unwrap();
+        let msg = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1", "tenant1").unwrap();
         assert_eq!(msg.content, "Hello World");
+    }
 
+    #[tokio::test]
+    async fn test_meta_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "meta".to_string(),
+            base_url: "https://graph.facebook.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "meta_test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("meta", "https://graph.facebook.com", creds, "tenant1").unwrap();
+        let msg = registry.send_chat_message("meta", "user_123", "ambassador", "How can I help you?", "thread_1", "tenant1").unwrap();
+        assert_eq!(msg.content, "How can I help you?");
     }
 }

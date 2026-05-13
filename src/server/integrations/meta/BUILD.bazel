@@ -1,0 +1,9 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "mod.rs",
+        "client.rs",
+        "webhook.rs",
+    ],
+    visibility = ["//src/server/integrations:__pkg__"],
+)

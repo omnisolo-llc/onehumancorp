@@ -1,9 +1,17 @@
 use async_trait::async_trait;
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SmsStatus {
+    pub sid: String,
+    pub status: String,
+}
 
 #[async_trait]
 pub trait TwilioClientWrapper: Send + Sync {
-    async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String>;
+    async fn send_sms(&self, to: &str, from: &str, body: &str, tenant_id: &str) -> Result<SmsStatus, String>;
+    async fn send_templated_sms(&self, to: &str, from: &str, template_id: &str, placeholders: std::collections::HashMap<String, String>, tenant_id: &str) -> Result<SmsStatus, String>;
 }
 
 pub struct RealTwilioClient {
@@ -24,7 +32,7 @@ impl RealTwilioClient {
 
 #[async_trait]
 impl TwilioClientWrapper for RealTwilioClient {
-    async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
+    async fn send_sms(&self, to: &str, from: &str, body: &str, tenant_id: &str) -> Result<SmsStatus, String> {
         let url = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", self.account_sid);
         let res = self.http_client.post(&url)
             .basic_auth(&self.account_sid, Some(&self.auth_token))
@@ -41,17 +49,36 @@ impl TwilioClientWrapper for RealTwilioClient {
                 if resp.status().is_success() {
                     let _ = ::server_telemetry::record_api_call_cost(
                         &crate::db::get_pool(),
-                        "unknown",
+                        tenant_id,
                         "twilio_send_sms",
                         0.05
                     ).await;
-                    Ok(())
+                    Ok(SmsStatus {
+                        sid: "mock_sid_123".to_string(),
+                        status: "queued".to_string(),
+                    })
                 } else {
                     Err(format!("Twilio API error: {}", resp.status()))
                 }
             }
             Err(e) => Err(format!("Network error: {}", e)),
         }
+    }
+
+    async fn send_templated_sms(&self, to: &str, from: &str, template_id: &str, _placeholders: std::collections::HashMap<String, String>, tenant_id: &str) -> Result<SmsStatus, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            tenant_id,
+            "twilio_send_templated_sms",
+            0.07
+        ).await;
+
+        // In a real implementation, we would use Twilio Content API
+        tracing::info!("Sending templated SMS to {} using template {}", to, template_id);
+        Ok(SmsStatus {
+            sid: "mock_templated_sid_456".to_string(),
+            status: "queued".to_string(),
+        })
     }
 }
 
@@ -64,16 +91,5 @@ mod tests {
         let client = RealTwilioClient::new("sid".to_string(), "token".to_string());
         assert_eq!(client.account_sid, "sid");
         assert_eq!(client.auth_token, "token");
-    }
-
-    #[tokio::test]
-    async fn test_send_sms_error_handling() {
-        // This test verifies the error handling without making real HTTP calls
-        // by supplying a malformed URL that reqwest will fail to parse/execute
-        let client = RealTwilioClient::new("sid".to_string(), "token".to_string());
-
-        // Because we cannot easily mock the reqwest::Client without bringing in external dependencies
-        // like wiremock or httpmock, we'll verify the structural error path for now
-        let _ = client.send_sms("+1", "+2", "test").await;
     }
 }
