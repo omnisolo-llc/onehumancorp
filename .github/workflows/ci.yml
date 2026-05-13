@@ -37,10 +37,7 @@ jobs:
             ca-certificates curl git
 
       - name: Set up Go
-        run: |
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
-          sudo apt-get clean || true
-      - uses: actions/setup-go@v5
+        uses: actions/setup-go@v5
         with:
           go-version: "1.24"
 
@@ -108,10 +105,7 @@ jobs:
             ca-certificates curl git
 
       - name: Set up Go
-        run: |
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
-          sudo apt-get clean || true
-      - uses: actions/setup-go@v5
+        uses: actions/setup-go@v5
         with:
           go-version: "1.24"
 
@@ -165,10 +159,7 @@ jobs:
   #           ca-certificates curl git
 
   #     - name: Set up Go
-  #       run: |
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
-          sudo apt-get clean
-      - uses: actions/setup-go@v5
+  #       uses: actions/setup-go@v5
   #       with:
   #         go-version: "1.24"
 
