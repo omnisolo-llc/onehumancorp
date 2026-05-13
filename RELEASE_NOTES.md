@@ -1,3 +1,11 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Add missing database tables to Postgres schema to ensure full parity with Standalone SQLite schema for multi-tenant deployments.
+
+### Privacy/Offline Improvements
+- Implement a comprehensive end-to-end testing suite validating hybrid reliability across both SQLite and Postgres targets.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
