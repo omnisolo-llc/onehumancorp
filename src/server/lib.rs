@@ -1529,6 +1529,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Start MissionWorker Background Task
+    let db_for_mission_worker = db.clone();
+    let env_for_mission_worker = if is_cloud { "cloud".to_string() } else { "standalone".to_string() };
+    tokio::spawn(async move {
+        let worker = Arc::new(crate::workers::mission_worker::MissionWorker::new(db_for_mission_worker.pool.clone(), env_for_mission_worker));
+        worker.start().await;
+    });
+
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
     tokio::spawn(async move {

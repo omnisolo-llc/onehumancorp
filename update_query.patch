@@ -1,0 +1,11 @@
+--- src/server/workers/mission_worker.rs
++++ src/server/workers/mission_worker.rs
+@@ -47,7 +47,8 @@
+                  SELECT id FROM agent_missions
+                  WHERE status = 'PENDING'
+                  ORDER BY created_at ASC
+                  LIMIT $1
++                 FOR UPDATE SKIP LOCKED
+              )
+              RETURNING id, payload, tenant_id"
+         )
