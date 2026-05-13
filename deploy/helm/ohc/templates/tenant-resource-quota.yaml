@@ -1,0 +1,17 @@
+{{- if .Values.multiTenant.enabled }}
+{{- if .Values.multiTenant.tenantQuota.enabled }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ .Release.Name }}-tenant-quota
+spec:
+  hard:
+    requests.cpu: {{ .Values.multiTenant.tenantQuota.requests.cpu | default "2" | quote }}
+    requests.memory: {{ .Values.multiTenant.tenantQuota.requests.memory | default "4Gi" | quote }}
+    requests.ephemeral-storage: {{ .Values.multiTenant.tenantQuota.requests.ephemeralStorage | default "10Gi" | quote }}
+    limits.cpu: {{ .Values.multiTenant.tenantQuota.limits.cpu | default "4" | quote }}
+    limits.memory: {{ .Values.multiTenant.tenantQuota.limits.memory | default "8Gi" | quote }}
+    limits.ephemeral-storage: {{ .Values.multiTenant.tenantQuota.limits.ephemeralStorage | default "20Gi" | quote }}
+    pods: {{ .Values.multiTenant.tenantQuota.limits.pods | default "20" | quote }}
+{{- end }}
+{{- end }}

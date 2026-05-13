@@ -8,14 +8,17 @@ version: "3.9"
 #
 # Cloud-native (k8s) deployment: see deploy/helm/ for multi-tenant Helm charts.
 
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # ─── Rust Core (settings · agent scheduler · meeting rooms · chat) ────────
   ohc-core:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -41,11 +44,7 @@ services:
       - "18789:18789"
 
   server:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -92,11 +91,7 @@ services:
   # A marker file written to the `server-init-data` volume prevents it from
   # repeating even if the container is restarted.
   server-init:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     image: alpine:3.19
     command: sh /scripts/bootstrap-admin.sh
     volumes:
@@ -117,11 +112,7 @@ services:
           memory: 32M
 
   redis:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     image: redis:7-alpine
     ports:
       - "6379:6379"
@@ -137,11 +128,7 @@ services:
           memory: 128M
 
   postgres:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     image: postgres:16-alpine
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
@@ -166,11 +153,7 @@ services:
           memory: 128M
 
   powersync:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     image: journeyapps/powersync-service:latest
     ports:
       - "8081:8080"
@@ -190,11 +173,7 @@ services:
           memory: 128M
 
   chatwoot-migrate:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     image: chatwoot/chatwoot:latest
     command: bundle exec rails db:chatwoot_prepare
     environment:
@@ -213,11 +192,7 @@ services:
         condition: service_healthy
 
   chatwoot:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     image: chatwoot/chatwoot:latest
     command: bundle exec rails s -p 3000 -b 0.0.0.0
     environment:
@@ -240,11 +215,7 @@ services:
           memory: 128M
 
   chatwoot-worker:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     image: chatwoot/chatwoot:latest
     command: bundle exec sidekiq -C config/sidekiq.yml
     environment:
@@ -265,11 +236,7 @@ services:
           memory: 128M
 
   prometheus:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     image: prom/prometheus:latest
     volumes:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
@@ -282,11 +249,7 @@ services:
           memory: 128M
 
   grafana:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     image: grafana/grafana:latest
     ports:
       - "3000:3000"
@@ -304,15 +267,8 @@ services:
           cpus: "0.1"
           memory: 128M
 
-
-
-
   pushgateway:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     image: prom/pushgateway:latest
     ports:
       - "9091:9091"
@@ -323,11 +279,7 @@ services:
           memory: 128M
 
   telemetry-mcp-bridge:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     image: mcp/telemetry-bridge:latest
     environment:
       LOG_LEVEL: "info"

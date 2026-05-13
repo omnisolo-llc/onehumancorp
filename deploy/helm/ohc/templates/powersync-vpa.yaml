@@ -11,7 +11,7 @@ spec:
     kind:       Deployment
     name:       {{ .Release.Name }}-powersync
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Initial"
   resourcePolicy:
     containerPolicies:
       - containerName: powersync

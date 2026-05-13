@@ -1,3 +1,4 @@
+# Dynamically provision Grafana dashboards for Dashboard-as-Code automation
 {{- if dig "kube-prometheus-stack" "grafana" "enabled" false .Values }}
 apiVersion: v1
 kind: ConfigMap
@@ -6,8 +7,8 @@ metadata:
   labels:
     grafana_dashboard: "1"
 data:
-{{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
-  {{ base $path }}: |-
-{{ $bytes | toString | indent 4 }}
+{{- range $file, $content := .Files.Glob "dashboards/*.json" }}
+  {{ base $file }}: |-
+{{ $content | toString | indent 4 }}
 {{- end }}
 {{- end }}
