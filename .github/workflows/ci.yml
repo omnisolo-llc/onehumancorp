@@ -66,7 +66,7 @@ jobs:
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
+          cache-save: false
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
@@ -144,7 +144,7 @@ jobs:
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
+          cache-save: false
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
@@ -208,7 +208,7 @@ jobs:
   #         disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
   #         repository-cache: true
   #         external-cache: true
-  #         cache-save: ${{ github.event_name != 'pull_request' }}
+  #         cache-save: false
   #         bazelrc: |
   #           common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
   #           build --config=buildbuddy
