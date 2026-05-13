@@ -265,6 +265,8 @@ mod tests {
         let possible_src_roots = vec![
             PathBuf::from("src"),
             PathBuf::from("src/server"),
+            PathBuf::from("ohc/src"),
+            PathBuf::from("ohc/src/server"),
         ];
         if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
             let runfiles = PathBuf::from(&runfiles_dir);
