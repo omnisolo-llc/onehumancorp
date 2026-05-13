@@ -10,6 +10,10 @@ pub async fn run_health_monitor(
 ) {
     let mut interval = tokio::time::interval(tick_duration);
     let mut pending_fires: std::collections::HashMap<String, u8> = std::collections::HashMap::new();
+    let mut last_ping_failed = false;
+    let mut last_hybrid_degraded = false;
+    let mut last_sync_errors_state = 0i64;
+    let mut last_no_agents = false;
     loop {
         interval.tick().await;
 
@@ -20,14 +24,24 @@ pub async fn run_health_monitor(
         };
 
         if !ping_ok {
-            tracing::trace!("HEALTH MONITOR: Active probe (ping) failed or timed out.");
+            if !last_ping_failed {
+                tracing::trace!("HEALTH MONITOR: Active probe (ping) failed or timed out.");
+                last_ping_failed = true;
+            }
+        } else {
+            last_ping_failed = false;
         }
 
         // Hybrid mode health check
         if let Ok(health) = monitor_hub.check_health().await {
             if let Some(ready) = health.get("hybrid_mode_ready").and_then(|v| v.as_bool()) {
                 if !ready {
-                    tracing::trace!("HEALTH MONITOR: Hybrid mode is degraded.");
+                    if !last_hybrid_degraded {
+                        tracing::trace!("HEALTH MONITOR: Hybrid mode is degraded.");
+                        last_hybrid_degraded = true;
+                    }
+                } else {
+                    last_hybrid_degraded = false;
                 }
             }
         }
@@ -38,7 +52,12 @@ pub async fn run_health_monitor(
                 if sync_errors > 10 {
                     tracing::warn!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
                 } else if sync_errors > 0 {
-                    tracing::trace!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
+                    if last_sync_errors_state != sync_errors {
+                        tracing::trace!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
+                        last_sync_errors_state = sync_errors;
+                    }
+                } else {
+                    last_sync_errors_state = 0;
                 }
             }
         }
@@ -49,7 +68,12 @@ pub async fn run_health_monitor(
                 let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
 
                 if agents.is_empty() {
-                    tracing::trace!("HEALTH MONITOR: No active agents found."); // Reduced noise
+                    if !last_no_agents {
+                        tracing::trace!("HEALTH MONITOR: No active agents found."); // Reduced noise
+                        last_no_agents = true;
+                    }
+                } else {
+                    last_no_agents = false;
                 }
 
                 let mut active_agent_ids = std::collections::HashSet::new();
