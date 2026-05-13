@@ -232,6 +232,81 @@ Provide your response, which will be passed to the next agent in the sequence.",
 use crate::tools::task::TaskStore;
 use crate::tools::magentic::magentic_tool;
 
+/// The Orchestrator that manages a Handoff flow.
+pub struct HandoffChatManager {
+    pub agents: std::collections::HashMap<String, ChatAgent>,
+    pub max_rounds: usize,
+}
+
+impl HandoffChatManager {
+    pub fn new(agents: Vec<ChatAgent>, max_rounds: usize) -> Self {
+        let mut map = std::collections::HashMap::new();
+        for agent in agents {
+            map.insert(agent.name.clone(), agent);
+        }
+        Self {
+            agents: map,
+            max_rounds,
+        }
+    }
+
+    pub async fn run_handoff(&self, initial_task: &str, start_agent: &str) -> Result<Vec<Message>, String> {
+        let mut transcript = Vec::new();
+        transcript.push(Message::user(format!("Admin: {}", initial_task)));
+
+        let mut current_input = initial_task.to_string();
+        let mut current_agent_name = start_agent.to_string();
+
+        for _round in 0..self.max_rounds {
+            let agent_cfg = match self.agents.get(&current_agent_name) {
+                Some(cfg) => cfg,
+                None => return Err(format!("Agent '{}' not found for handoff.", current_agent_name)),
+            };
+
+            tracing::info!("Handoff Step: {} is running...", agent_cfg.name);
+
+            let prompt_context = format!(
+                "You are participating in a handoff workflow as {}.\n\
+                \n\
+                Your input task/context is:\n\
+                {}\n\
+                \n\
+                Provide your response. If you need to hand off to another agent, you MUST end your response with exactly: HANDOFF: <AgentName>",
+                agent_cfg.name, current_input
+            );
+
+            let mut run_cfg = agent_cfg.run_config.clone();
+            run_cfg.server_system_message =
+                format!("You are {}. {}", agent_cfg.name, agent_cfg.description);
+
+            let mut on_event = |_| {};
+            let response_text = agent_cfg
+                .agent
+                .run(&run_cfg, &prompt_context, &mut on_event)
+                .await
+                .map_err(|e| format!("Agent {} failed: {}", agent_cfg.name, e))?;
+
+            let formatted_response = format!("{}: {}", agent_cfg.name, response_text);
+            transcript.push(Message::assistant(formatted_response.clone()));
+
+            if let Some(handoff_target) = response_text.lines().last().and_then(|line| {
+                if line.starts_with("HANDOFF: ") {
+                    Some(line.trim_start_matches("HANDOFF: ").trim().to_string())
+                } else {
+                    None
+                }
+            }) {
+                current_agent_name = handoff_target;
+                current_input = format!("Context passed from {}:\n{}", agent_cfg.name, response_text);
+            } else {
+                break;
+            }
+        }
+
+        Ok(transcript)
+    }
+}
+
 /// The Orchestrator that manages a "Magentic" flow of agents (a manager dynamically updating a task ledger).
 pub struct MagenticManager {
     pub manager_agent: ChatAgent,
@@ -669,5 +744,48 @@ mod tests {
 
         let found = transcript.iter().any(|m| m.content.contains("I have completed task-1."));
         assert!(found, "Transcript should contain the worker's completion message");
+    }
+
+    #[tokio::test]
+    async fn test_autogen_handoff_chat() {
+        let llm_agent1 = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                "I did part 1.\nHANDOFF: Agent2".to_string(),
+            ]),
+        });
+
+        let llm_agent2 = Arc::new(AutoGenMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                "I did part 2. Finished.".to_string(),
+            ]),
+        });
+
+        let cfg = AgentRunConfig::default();
+
+        let chat_agent1 = ChatAgent {
+            name: "Agent1".to_string(),
+            description: "First step.".to_string(),
+            agent: Arc::new(Agent::new(llm_agent1, vec![])),
+            run_config: cfg.clone(),
+        };
+
+        let chat_agent2 = ChatAgent {
+            name: "Agent2".to_string(),
+            description: "Second step.".to_string(),
+            agent: Arc::new(Agent::new(llm_agent2, vec![])),
+            run_config: cfg.clone(),
+        };
+
+        let manager = HandoffChatManager::new(vec![chat_agent1, chat_agent2], 5);
+
+        let result = manager.run_handoff("Start the pipeline", "Agent1").await;
+        assert!(result.is_ok());
+
+        let transcript = result.unwrap();
+
+        assert_eq!(transcript.len(), 3);
+        assert!(transcript[0].content.contains("Start the pipeline"));
+        assert!(transcript[1].content.contains("Agent1: I did part 1.\nHANDOFF: Agent2"));
+        assert!(transcript[2].content.contains("Agent2: I did part 2. Finished."));
     }
 }
