@@ -1,3 +1,6 @@
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 name: Release
 
 on:
@@ -36,12 +39,12 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            # test --config=buildbuddy
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+#            build --config=buildbuddy-official
+#            test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
@@ -99,12 +102,12 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            # test --config=buildbuddy
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+#            build --config=buildbuddy-official
+#            test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
@@ -151,12 +154,12 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            # test --config=buildbuddy
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+#            build --config=buildbuddy-official
+#            test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
@@ -189,12 +192,12 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            # test --config=buildbuddy
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+#            build --config=buildbuddy-official
+#            test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
@@ -238,12 +241,12 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            # test --config=buildbuddy
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+#            build --config=buildbuddy-official
+#            test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
@@ -283,12 +286,12 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            # test --config=buildbuddy
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+#            build --config=buildbuddy-official
+#            test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
@@ -335,12 +338,12 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            # test --config=buildbuddy
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+#            build --config=buildbuddy-official
+#            test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
@@ -386,12 +389,12 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            # test --config=buildbuddy
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+#            build --config=buildbuddy-official
+#            test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
@@ -439,7 +442,6 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
-        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ── Push Docker images to GHCR ─────────────────────────────────────────────
@@ -472,12 +474,12 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            # test --config=buildbuddy
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+#            build --config=buildbuddy-official
+#            test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
