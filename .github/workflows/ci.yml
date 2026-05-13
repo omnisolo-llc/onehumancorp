@@ -36,21 +36,8 @@ jobs:
             librsvg2-dev libsoup-3.0-dev \
             ca-certificates curl git
 
-
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
       - name: Set up Go
         uses: actions/setup-go@v5
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         with:
           go-version: "1.24"
 
@@ -117,21 +104,8 @@ jobs:
             librsvg2-dev libsoup-3.0-dev \
             ca-certificates curl git
 
-
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
       - name: Set up Go
         uses: actions/setup-go@v5
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         with:
           go-version: "1.24"
 
@@ -186,8 +160,6 @@ jobs:
 
   #     - name: Set up Go
   #       uses: actions/setup-go@v5
-  #       env:
-  #         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   #       with:
   #         go-version: "1.24"
 
