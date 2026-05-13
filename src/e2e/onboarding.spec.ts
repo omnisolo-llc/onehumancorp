@@ -2,15 +2,15 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Wizard', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
 
     // Login
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
+    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
   });
 
   test('Test 1: Sign-Up & Account Creation to Wizard auto-redirect', async ({ page }) => {
@@ -38,13 +38,13 @@ test.describe('Onboarding Wizard', () => {
     await page.click('button:has-text("Next")');
 
     // Test cross device resume -> Reload page
-    await page.reload();
+    await page.goto('/login');
     // Re login and check if it still works
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
+    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
     await page.click('button:has-text("Start Setup")');
     await expect(page.locator('text="Setup Wizard"')).toBeVisible();
   });
