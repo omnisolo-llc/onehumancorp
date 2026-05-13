@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 
-	"onehumancorp/srcs/server/agents/local"
 	dbWrapper "onehumancorp/srcs/server/db"
 	"onehumancorp/srcs/server/orchestration/autodream"
 )
@@ -36,7 +35,7 @@ type AutoDreamWorker struct {
 
 func NewAutoDreamWorker(db *sql.DB, llmClient LLMClient) *AutoDreamWorker {
 	if llmClient == nil {
-		llmClient = local.NewLocalLLMClient()
+		llmClient = nil
 	}
 	return &AutoDreamWorker{
 		db:        db,
@@ -61,7 +60,7 @@ func (w *AutoDreamWorker) handleDeadLetter(memoryDir, filePath string) {
 func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir string) error {
 	start := time.Now()
 	mode := "Cloud"
-	if dbWrapper.GlobalProvider.IsSQLite() {
+	if dbWrapper.IsSQLite() {
 		mode = "Standalone"
 	}
 
@@ -131,7 +130,7 @@ func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir 
 		}
 
 		var query string
-		if dbWrapper.GlobalProvider.IsSQLite() {
+		if dbWrapper.IsSQLite() {
 			query = `
 				INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding, source_type, agent_id)
 				VALUES (?, ?, ?, ?, ?, ?, ?)
