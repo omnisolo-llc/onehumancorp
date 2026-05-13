@@ -9,7 +9,7 @@
 
 To accelerate OHC adoption and establish the **Hybrid Agentic OS** as the gold standard for private LLM usage, we conducted a rigorous audit of our acquisition funnel. The data clearly indicates that the **Standalone Desktop Mode (Local-First)** acts as our primary growth lever due to its unparalleled "Zero Data Leakage" guarantee.
 
-This report outlines the funnel audit, the privacy value proposition, and the engineered viral referral loops designed to bridge Standalone sovereignty with Cloud-Native team expansion.
+This report outlines the funnel audit, the privacy value proposition, and the engineered referral loops designed to bridge Standalone sovereignty with Cloud-Native team expansion.
 
 ## 1. Privacy Value Proposition: The "Local-First" Advantage
 
@@ -32,7 +32,7 @@ Our analysis of the conversion funnel ("Curious Guest" → "Standalone User" →
 
 ## 3. Referral Engineering: The Sovereign-to-Cloud Loop
 
-To increase the 18% conversion from Standalone to Cloud Team, we are implementing a **Viral Invite Loop**.
+To increase the 18% conversion from Standalone to Cloud Team, we are implementing a **Referral Invite Loop**.
 - **The Hook**: A Standalone user can invite a collaborator to view a specific agentic output (e.g., a PRD or Market Audit).
 - **The Bridge**: The invitation dynamically provisions a temporary multi-tenant context in Cloud Mode, allowing the collaborator to view the asset while the original user maintains ultimate local sovereignty over the source data.
 
@@ -42,7 +42,7 @@ To increase the 18% conversion from Standalone to Cloud Team, we are implementin
 graph TD
     A[Curious Guest] -->|Downloads Desktop| B(Standalone User)
     B -->|Zero Data Leakage| C{Sovereign Value Realized}
-    C -->|Invites Team Member| D[Viral Referral Link Generated]
+    C -->|Invites Team Member| D[referral Link Generated]
     D -->|Collaborator Clicks| E(Cloud-Native Tenant Provisioned)
     E -->|Seamless Multi-tenant| F[Cloud Team User]
     F -->|Network Effects| G[Enterprise Expansion]

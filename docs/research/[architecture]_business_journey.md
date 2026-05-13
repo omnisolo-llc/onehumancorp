@@ -19,7 +19,7 @@ The business journey is evaluated against the following core personas:
 -   **Activation**: The "Aha!" moment. A live storefront, the first booking, or the first payment. Must be achieved within Day 1.
 -   **Retention**: Kept engaged through actionable notifications (e.g., new order alerts) and AI-generated weekly health reports.
 -   **Revenue**: Transitioning from a free tier to a paid plan. Triggered by hitting specific milestones (e.g., reaching product/action limits, needing custom domains).
--   **Referral**: Incentivized sharing. Creating a viral loop through referral discounts and shareable success metrics.
+-   **Referral**: Incentivized sharing. Creating a referral loop through referral discounts and shareable success metrics.
 
 ### Identified Friction Points
 1.  **Cognitive Overload during Onboarding**: Requesting too much setup information upfront (e.g., complex shipping rules) causes drop-offs.
@@ -92,7 +92,7 @@ sequenceDiagram
     Cust->>OHC: Books Time & Pays Deposit
     OHC->>Carlos: Notification "Job Booked" (Retention)
     Carlos->>OHC: Taps "Earn $50: Refer a Pro" (Referral)
-    Carlos->>Cust: Taps "Send 10% Discount to Friend" (Viral Loop)
+    Carlos->>Cust: Taps "Send 10% Discount to Friend" (referral loop)
 ```
 
 #### 3. Priya (The Boutique Owner) Journey

@@ -26,7 +26,7 @@ The One Human Corp Marketplace is an ecosystem where the CEO can discover, acqui
 - **Marketplace Registry**: A centralized hub for community-driven agents and tools.
 
 ## 5. Advanced Usage & Power User Tips
-- **Creating Custom Blueprints**: As a power user, you can create and export your own successful agents (e.g., a "TikTok Virality Expert") as a Skill Blueprint and share them.
+- **Creating Custom Blueprints**: As a power user, you can create and export your own successful agents (e.g., a "TikTok Growth Expert") as a Skill Blueprint and share them.
 - **Mix and Match**: Combine templates from different industries to create a unique, hybrid organization tailored to your business needs.
 
 ## 6. Troubleshooting & FAQ

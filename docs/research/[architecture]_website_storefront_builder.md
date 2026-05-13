@@ -27,7 +27,7 @@ graph TD
         P[Product Grid / Menu]
         C[Calendar / Booking]
         T[Testimonials]
-        F[Footer / Viral Link]
+        F[Footer / Referral Link]
     end
 
     Blocks --> LivePreview[Mobile-First Preview]
@@ -40,7 +40,7 @@ Every storefront is a vertical stack of mobile-optimized blocks:
 2.  **Product/Menu Block**: Intelligent grid that handles variants (size/color) or "Sold Out" toggles with 1-tap.
 3.  **Booking/Calendar Block**: Real-time availability sync for services (Carlos/Leo).
 4.  **Contact/Lead Block**: Integrated "The Ambassador" draft-and-approve inbox.
-5.  **Viral Footer**: "Built with OneHumanCorp — Launch Your Shop" referral loop.
+5.  **Referral Footer**: "Built with OneHumanCorp — Launch Your Shop" referral loop.
 
 ### visual Excellence & Vibe Coding
 - **Design Tokens**: Every site uses OHC Premium tokens (Outfit/Inter fonts, Glassmorphism).

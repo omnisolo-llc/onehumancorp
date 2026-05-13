@@ -217,7 +217,7 @@
 - Implemented OS-level SandboxManager using bwrap and sandbox-exec
 
 ### Privacy/Offline Improvements
-- Added viral storefront link growth feature
+- Added referral storefront link growth feature
 - Added referral loop to User Management
 - Implemented AI agent department draft-for-review approval workflow
 - Hardened application for multi-tenant and local standalone
@@ -278,7 +278,7 @@
 ### Cloud Scaling Improvements
 - Implement Business Setup and Website Builder wizard UI scaffolding (#86b87bbd).
 - Implement onboarding wizard cross-device state management (#c58aec3b).
-- Add Business Share & Embed widget for viral storefront growth (#8c6d046a).
+- Add Business Share & Embed widget for referral storefront growth (#8c6d046a).
 
 ### Privacy/Offline Improvements
 - Conduct Hybrid Privacy Audit and implement PII guardrails for telemetry (#16cac).
