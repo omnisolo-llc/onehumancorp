@@ -485,15 +485,14 @@ impl HubService for MyHubService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
-             VALUES ($1, $2, $3, $4, $5) \
-             ON CONFLICT (tenant_id, organization_id) DO UPDATE \
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
+             VALUES ($1, $2, $3, $4) \
+             ON CONFLICT (tenant_id, user_id) DO UPDATE \
              SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
                  current_step = EXCLUDED.current_step, \
                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
         .bind(&user_id)
         .bind(current_step)
         .bind(&state_json)
@@ -520,15 +519,16 @@ impl HubService for MyHubService {
              return Err(tonic::Status::permission_denied("Only tenants can read wizard state"));
         }
         let tenant_id = org_id.clone();
+        let user_id = auth_info.spiffe_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let row = sqlx::query(
-            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
+        .bind(&user_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -572,7 +572,7 @@ impl HubService for MyHubService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(&tenant_id)
         .bind(&org_id)
@@ -1998,6 +1998,46 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         // Initial routing
                         const path = window.location.pathname;
                         const urlParams = new URLSearchParams(window.location.search);
+
+                        async function saveStateToBackend(step) {
+                            try {
+                                const token = localStorage.getItem('token') || '';
+                                await fetch('/api/onboarding/state', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                                    body: JSON.stringify({ step: step, updated: new Date().toISOString() })
+                                });
+                            } catch (e) { console.error('Failed to save state', e); }
+                        }
+
+                        async function restoreStateFromBackend() {
+                            try {
+                                const token = localStorage.getItem('token') || '';
+                                if (!token) return;
+                                const res = await fetch('/api/onboarding/state', { headers: { 'Authorization': 'Bearer ' + token } });
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    if (data.state && data.state !== '{}') {
+                                        const parsed = JSON.parse(data.state);
+                                        if (parsed.step) { nextStep(parsed.step, true); }
+                                    }
+                                }
+                            } catch (e) { console.error('Failed to restore state', e); }
+                        }
+
+                        const originalNextStep = window.nextStep || function(step) {
+                            document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
+                            const target = document.getElementById('step-' + step);
+                            if (target) target.style.display = 'block';
+                        };
+
+                        window.nextStep = function(step, skipSave) {
+                            originalNextStep(step);
+                            if (!skipSave) { saveStateToBackend(step); }
+                        };
+
+                        if (path === '/business-setup') { restoreStateFromBackend(); }
+
                         
                         if (localStorage.getItem('isLoggedIn') === 'true') {
                             if (path === '/pricing') {

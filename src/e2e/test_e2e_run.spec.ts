@@ -561,3 +561,29 @@ test('verify checklist completion progress', async ({ page }) => {
         await expect(page.locator('text=/50%/i')).toBeVisible({ timeout: 5000 });
     }
 });
+
+test('verify cross-device wizard state resume functionality', async ({ browser }) => {
+    const context1 = await browser.newContext();
+    const page1 = await context1.newPage();
+    await page1.goto('/login');
+    await page1.evaluate(() => localStorage.setItem('token', 'spiffe://ohc.app/tenant/test-tenant/user/test-user'));
+    await page1.goto('/business-setup');
+    await page1.waitForLoadState('networkidle');
+    await page1.click('button:has-text("Start My Business")');
+    await page1.click('text="Online Store"');
+    await page1.click('button:has-text("Next")');
+    await page1.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Cross Device Store');
+    await page1.click('button:has-text("Next")');
+    await page1.waitForTimeout(1000);
+    await context1.close();
+
+    const context2 = await browser.newContext();
+    const page2 = await context2.newPage();
+    await page2.goto('/login');
+    await page2.evaluate(() => localStorage.setItem('token', 'spiffe://ohc.app/tenant/test-tenant/user/test-user'));
+    await page2.evaluate(() => localStorage.setItem('isLoggedIn', 'true'));
+    await page2.goto('/business-setup');
+    await page2.evaluate(async () => { if (window.restoreStateFromBackend) { await window.restoreStateFromBackend(); } });
+    await expect(page2.locator('text="What do you sell?"')).toBeVisible({ timeout: 5000 });
+    await context2.close();
+});
