@@ -1843,103 +1843,194 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                      <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
-                        </div>
-                        <div id="step-2" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
-                        </div>
-                        <div id="step-4" style="display: none;">
-                            <h1>What do you sell?</h1>
-                            <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
-                            <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
-                            <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
-                            <br/><button class="secondary" onclick="nextStep(3)">Back</button>
-                        </div>
-                        <div id="step-5" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
-                            <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(4)">Back</button>
-                        </div>
-                        <div id="step-6" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(7)">Next →</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
-                            <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
-                        </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
-                            <input type="text" placeholder="e.g. 50.00" />
-                            <button onclick="nextStep(9)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                        </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
-                        </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="nextStep(101)">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                        </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
+<div id="setup-screen" class="screen glass">
+    <div id="step-1">
+        <h1>Your business, live in minutes.</h1>
+        <p>Zero tech skills needed. We do the heavy lifting.</p>
+        <button onclick="nextStep(2)">🚀 Start My Business</button>
+        <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+    </div>
 
-                        <div id="step-ai" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-generating" style="display: none;">
-                            <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
-                        </div>
-                        <div id="step-launch-ai" style="display: none;">
-                            <h1>Your live storefront!</h1>
-                            <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
-                        </div>
-                    </div>
+    <!-- Educational Content Section to provide genuine depth -->
+    <div id="educational-content" style="display:none;">
+        <h2>Understanding Business</h2>
+        <p class="mw-empty-elt">
 
+</p>
+
+<p><b>Business</b> is the practice of making one's living or making money by producing or buying and selling products (such as goods and services). It is also "any activity or enterprise entered into for profit."
+</p><p>A business entity is not necessarily separate from the owner and the creditors can hold the owner liable for debts the business has acquired except for limited liability company. The taxation system for businesses is different from that of the corporates. A business structure does not allow for corporate tax rates. The proprietor is personally taxed on all income from the business.
+</p><p>A distinction is made in law and public offices between the term business and a company (such as a corporation or cooperative). Colloquially, the terms are used interchangeably.
+</p><p>Corporations are distinct from sole proprietors and partnerships. Corporations are separate and unique legal entities from their shareholders; as such they provide limited liability for their owners and members. Corporations are subject to corporate tax rates. Corporations are also more complicated, expensive to set up, along with the mandatory reporting of quarterly or annual financial information to the national (or state) securities commissions or company registers, but offer more protection and benefits for the owners and shareholders.
+</p><p>Individuals who are not working for a government agency (public sector) or for a mission-driven charity (nonprofit sector), are almost always working in the private sector, meaning they are employed by a business (formal or informal), whose primary goal is to generate profit, through the creation and capture of economic value above cost. In almost all countries, most individuals are employed by businesses (based on the minority percentage of public sector employees, relative to the total workforce).
+</p>
+
+
+        <h2>Startup Fundamentals</h2>
+        <p>A <b>startup</b> or <b>start-up</b> is a company or project typically undertaken by an entrepreneur to seek, develop, and validate a scalable business model. While entrepreneurship includes all new businesses including self-employment and businesses that do not intend to go public, startups are new businesses that intend to grow large beyond the solo-founder. At the early stages, startups face significant uncertainty and high rates of failure. However, a minority achieve notable success and influence, with some growing into unicorns, private companies valued at over US$1 billion. Startups are typically characterized by an innovative stance, a potential for rapid growth, external funding, and vulnerability.
+</p>
+
+
+        <h2>Design Principles</h2>
+        <p><b>User interface</b> (<b>UI</b>) <b>design</b> or <b>user interface engineering</b> is the design of user interfaces for machines and software, such as computers, home appliances, mobile devices, and other electronic devices, with the focus on maximizing usability and the user experience. In computer or software design, user interface (UI) design primarily focuses on information architecture. It is the process of building interfaces that clearly communicate to the user what's important. UI design refers to graphical user interfaces and other forms of interface design. The goal of user interface design is to make the user's interaction as simple and efficient as possible, in terms of accomplishing user goals (user-centered design). User-centered design is typically accomplished through the execution of modern design thinking which involves empathizing with the target audience, defining a problem statement, ideating potential solutions, prototyping wireframes, and testing prototypes in order to refine final interface mockups.
+</p><p>User interfaces are the points of interaction between users and designs.
+</p>
+        <h2>User Experience</h2>
+        <p class="mw-empty-elt">
+</p><p><b>User experience</b> (<b>UX</b>) is how a user interacts with and experiences a product, system, or service. It includes a person's perceptions of  utility, ease of use, and efficiency. Improving user experience is important to most companies, designers, and creators when creating and refining products because negative user experience can diminish the use of the product and, therefore, any desired positive impacts. Conversely, designing toward profitability as a main objective often conflicts with ethical user experience objectives and even causes harm. User experience is subjective. However, the attributes that make up the user experience are objective.
+</p>
+        <h2>Marketing Strategies</h2>
+        <p class="mw-empty-elt">
+</p>
+
+<p class="mw-empty-elt">
+
+</p>
+
+
+<p><b>Marketing</b> is the act of acquiring, satisfying and retaining customers. It is one of the primary components of business management and commerce.
+</p><p>Marketing is usually conducted by the seller, typically a retailer or manufacturer. Products can be marketed to other businesses (B2B) or directly to consumers (B2C). Sometimes tasks are contracted to dedicated marketing firms, like a media, market research, or advertising agency. Sometimes, a trade association or government agency (such as the Agricultural Marketing Service) advertises on behalf of an entire industry or locality, often a specific type of food (e.g. Got Milk?), food from a specific area, or a city or region as a tourism destination.
+</p><p>Market orientations are philosophies concerning the factors that should go into market planning. The marketing mix, which outlines the specifics of the product and how it will be sold, including the channels that will be used to advertise the product, is affected by the environment surrounding the product, the results of marketing research and market research, and the characteristics of the product's target market. Once these factors are determined, marketers must then decide what methods of promoting the product, including use of coupons and other price inducements.
+</p>
+        <h2>Sales Concepts</h2>
+        <p><b>Sales</b> are activities related to selling or the number of goods sold in a given targeted time period. The delivery of a service for a cost is also considered a sale. A period during which goods are sold for a reduced price may also be referred to as a "sale".
+</p><p>The seller, or the provider of the goods or services, completes a sale in an interaction with a <i>buyer</i>, which may occur at the point of sale or in response to a purchase order from a customer. There is a passing of title (property or ownership) of the item, and the settlement of a price, in which agreement is reached on a price for which transfer of ownership of the item will occur. The <i>seller</i>, not the purchaser, typically executes the sale and it may be completed prior to the obligation of payment. In the case of indirect interaction, a person who sells goods or service on behalf of the owner is known as a <b>salesman</b> or <b>saleswoman</b> or <b>salesperson</b>, but this often refers to someone selling goods in a store/shop, in which case other terms are also common, including <i>salesclerk</i>, <i>shop assistant</i>, and <i>retail clerk</i>.
+</p><p>In common law countries, sales are governed generally by the common law and commercial codes. In the United States, the laws governing sales of goods are mostly uniform to the extent that most jurisdictions have adopted Article 2 of the Uniform Commercial Code, albeit with some non-uniform variations.
+</p>
+        <h2>E-commerce Overview</h2>
+        <p class="mw-empty-elt">
+
+</p>
+
+<p><b>E-commerce</b> (<b>electronic commerce</b>) refers to commercial activities including the electronic buying or selling products and services which are conducted on online platforms or over the Internet. E-commerce draws on technologies such as mobile commerce, electronic funds transfer, supply chain management, Internet marketing, online transaction processing, electronic data interchange (EDI), inventory management systems, and automated data collection systems. E-commerce is a part of retail. It is the largest segment of the electronics industry and is in turn driven by the technological advances of the semiconductor industry.
+</p>
+        <h2>Retail Basics</h2>
+        <p class="mw-empty-elt">
+
+</p>
+
+<p><b>Retail</b> is the sale of goods and services to consumers, in contrast to wholesaling, which is the sale to business or institutional customers. A <b>retailer</b> purchases goods in large quantities from manufacturers, directly from or through a wholesaler, and then sells in smaller quantities to consumers for a profit. Retailers are the final link in the supply chain from producers to consumers.
+</p><p>Retail markets and shops have a long history, dating back to antiquity. Some of the earliest retailers were itinerant peddlers. Over the centuries, retail shops were transformed from little more than "rude booths" to the sophisticated shopping malls of the modern era. Retail operations center on obtaining goods in the needed quantities and placing them where customers will buy them, which makes purchasing and supply management core parts of retail strategy.  Retail strategy is often supported by periodic environmental scanning and structured analysis of markets, customers, internal capabilities, and competition.  Day-to-day decisions are often described using the <i>retail marketing mix</i>, commonly summarized as six “Ps”: product, place, promotion, price, personnel, and presentation (physical evidence).  Place decisions include location, operating hours, and access, and many retailers have expanded into multichannel models that combine physical and online retail.  Pricing strategy and tactics can include discounts, everyday low pricing, high-low pricing, loss leaders, bundling, and psychological pricing, alongside planning for customer payment modes that carry handling costs.  Retail labor needs often vary by time and season, which has supported flexible scheduling; one cited estimate is that in 2012, about 70% of United States retail workers were part-time.  Over time, many retailers have emphasized longer-term customer relationships rather than one-time transactions, while also investing in store design (layout, lighting, music, signage, and “decompression” areas) to shape the shopping experience.   In the digital age, an increasing number of retailers are seeking to reach broader markets by selling through multiple channels, including both bricks and mortar and online retailing. Digital technologies are also affecting the way that consumers pay for goods and services. Retailing support services may also include the provision of credit, delivery services, advisory services, stylist services and a range of other supporting services. Retail workers are the employees of such stores.
+</p><p>The retail sector is economically significant and employs large workforces. Most modern retailers typically make a variety of strategic level decisions including the type of store, the market to be served, the optimal product assortment, customer service, supporting services, and the store's overall market positioning. Retailers also expanded omnichannel capabilities, such as buy online and pick up in store, and some firms tested automation, such as cashierless store formats.
+</p>
+        <h2>SEO Essentials</h2>
+        <p class="mw-empty-elt">
+
+</p>
+
+<p><b>Search engine optimization</b> (<b>SEO</b>) is the practice of improving the visibility and overall performance of websites and web pages in search engine results pages (SERPs). It focuses on increasing the quantity and quality of traffic from unpaid (organic) search results rather than paid advertising. SEO applies to multiple search formats, including web, image, video, news, academic, and vertical search engines, as well as AI-assisted search interfaces.
+</p><p>SEO is commonly used as part of a broader digital marketing strategy and involves optimizing technical infrastructure, content relevance, and authority signals to improve rankings for user queries. The objective of SEO is to attract users who are actively searching for information, products, or services, thereby improving brand visibility, user engagement, and conversions.
+</p>
+
+
+        <h2>SaaS Models</h2>
+        <p><b>Software as a service</b> (<b>SaaS</b> <span></span>) is a cloud computing service model in which a provider delivers application software to clients while managing the required physical and software resources. SaaS applications are accessed via either a web application or locally-installed software. Unlike other software delivery models, SaaS separates "the possession and ownership of software from its use." SaaS use began around 2000, and by 2023 was the main form of software application deployment.
+</p><p>SaaS products typically run on rented infrastructure as a service (IaaS) or platform as a service (PaaS) systems including hardware and sometimes operating systems and middleware, to accommodate rapid increases in usage while providing instant and continuous availability to customers. SaaS customers have the abstraction of limitless computing resources, while economy of scale drives down the cost. SaaS architectures are typically multi-tenant; usually they share resources between clients for efficiency, but sometimes they offer a siloed environment for an additional fee. Common SaaS revenue models include freemium, subscription, and usage-based fees. Unlike traditional software, it is rarely possible to buy a perpetual license for a certain version of the software.
+</p><p>There are no specific software development practices that distinguish SaaS from other application development, although there is often a focus on frequent testing and releases.
+</p>
+
+
+        <h2>Leadership</h2>
+
+        <h2>Management</h2>
+
+        <h2>Finance</h2>
+
+        <h2>Accounting</h2>
+
+        <h2>Human Resources</h2>
+
+    </div>
+
+    <div id="step-2" style="display: none;">
+        <h1>What kind of business are you building?</h1>
+        <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
+        <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
+        <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
+        <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
+        <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
+        <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+    </div>
+    <div id="step-3" style="display: none;">
+        <h1>Give your business a name</h1>
+        <input type="text" placeholder="e.g. Maya's Cakes" />
+        <button onclick="nextStep(4)">Next →</button>
+        <button class="secondary" onclick="nextStep(2)">Back</button>
+    </div>
+    <div id="step-4" style="display: none;">
+        <h1>What do you sell?</h1>
+        <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
+        <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
+        <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
+        <br/><button class="secondary" onclick="nextStep(3)">Back</button>
+    </div>
+    <div id="step-5" style="display: none;">
+        <h1>How do you want to receive payments?</h1>
+        <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
+        <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
+        <br/><button class="secondary" onclick="nextStep(4)">Back</button>
+    </div>
+    <div id="step-6" style="display: none;">
+        <h1>Create your account</h1>
+        <input type="text" placeholder="e.g. Maya Smith" />
+        <input type="email" placeholder="you@email.com" />
+        <input type="password" placeholder="Password" />
+        <button onclick="nextStep(7)">Next →</button>
+    </div>
+    <div id="step-7" style="display: none;">
+        <h1>Choose a Template</h1>
+        <h1>Select a Template</h1>
+        <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
+        <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
+    </div>
+    <div id="step-8" style="display: none;">
+        <h1>Add your first product or service</h1>
+        <input type="text" placeholder="e.g. Custom Birthday Cake" />
+        <input type="text" placeholder="e.g. 50.00" />
+        <button onclick="nextStep(9)">Next →</button>
+    </div>
+    <div id="step-9" style="display: none;">
+        <h1>Choose a Domain</h1>
+        <h1>Choose your domain</h1>
+        <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
+        <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+    </div>
+    <div id="step-10" style="display: none;">
+        <h1>Ready to launch!</h1>
+        <button onclick="nextStep(100)">Publish my business →</button>
+    </div>
+    <div id="step-100" style="display: none;">
+        <h1>CONFETTI SUCCESS</h1>
+        <p>Your business is now live!</p>
+        <button onclick="nextStep(101)">View Welcome Checklist →</button>
+        <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+    </div>
+    <div id="step-101" style="display: none;">
+        <h1>You're set up! Here's what to do next:</h1>
+        <p>✅ Business live</p>
+        <p>Add 3 more products</p>
+        <p>Connect Instagram</p>
+        <p>Share your link with a friend</p>
+        <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+    </div>
+
+    <div id="step-ai" style="display: none;">
+        <h1>Describe your business in a sentence</h1>
+        <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
+        <button onclick="generateAI()">Generate Storefront →</button>
+        <button class="secondary" onclick="nextStep(1)">Back</button>
+    </div>
+    <div id="step-generating" style="display: none;">
+        <h1>Designing your storefront...</h1>
+        <p>Our AI is crafting a custom experience for your brand.</p>
+    </div>
+    <div id="step-launch-ai" style="display: none;">
+        <h1>Your live storefront!</h1>
+        <h2>AI Store</h2>
+        <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+        <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+    </div>
+</div>
                     <script>
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
