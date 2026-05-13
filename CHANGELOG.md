@@ -1,3 +1,12 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhanced hierarchical sub-agent concurrency and vector data processing limits.
+
+### Privacy/Offline Improvements
+- Optimized local-only fallback and Teammate Mesh isolation for Standalone builds.
+
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.

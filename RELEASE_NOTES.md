@@ -1,3 +1,9 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+- Scaling (Cloud): Enhanced hierarchical sub-agent concurrency and vector data processing limits.
+- Privacy/Offline (Standalone): Optimized local-only fallback and Teammate Mesh isolation for Standalone builds.
+
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
