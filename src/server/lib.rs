@@ -241,6 +241,17 @@ impl HubService for MyHubService {
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
+        let mut agent_costs = Vec::new();
+        for (name, cost, _tokens, roi, efficiency, _storage) in auditor.get_agent_costs_snapshot() {
+            agent_costs.push(::server_ohc::orchestration::AgentCostSummary {
+                name,
+                cost_usd: cost,
+                roi,
+                efficiency,
+                pct: if llm_cost_f64 > 0.0 { (cost / llm_cost_f64) as f32 } else { 0.0 },
+            });
+        }
+
         Ok(tonic::Response::new(::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
             total_costs: (total_costs_f64 * 100.0) as i64,
@@ -249,6 +260,7 @@ impl HubService for MyHubService {
             payment_fees: (payment_fees_f64 * 100.0) as i64,
             period_start: "2024-05-01".to_string(), // In a real app this would be computed
             period_end: "2024-05-31".to_string(),
+            agent_costs,
         }))
     }
 
