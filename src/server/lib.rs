@@ -1607,8 +1607,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <title>OneHuman Corp</title>
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
                     <style>
-                        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
-                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
+                        body { font-family: 'Outfit', 'Inter', sans-serif; background: #0f172a; color: white; margin: 0; -webkit-font-smoothing: antialiased; }
+                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
                         nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.8); position: sticky; top: 0; z-index: 100; }
                         nav a { color: #4ecca3; text-decoration: none; font-weight: 600; cursor: pointer; }
                         main { padding: 40px; }
@@ -1616,9 +1616,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         .card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
                         h1, h2 { color: #4ecca3; }
                         input { width: 100%; padding: 12px; margin-bottom: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; box-sizing: border-box; }
-                        button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
+                        button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; min-width: 44px; min-height: 44px; }
                         button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
                         .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
+                        .milestone-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; animation: fadeIn 0.5s; }
+                        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                        .milestone-card { padding: 40px; text-align: center; max-width: 400px; }
+                        .milestone-card h1 { font-size: 48px; margin-bottom: 20px; }
                     </style>
                 </head>
                 <body>
@@ -1655,7 +1659,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Dashboard -->
                     <div id="dashboard-screen" class="screen">
+                        <div id="milestone-container"></div>
                         <h1>Dashboard</h1>
+                        <div id="briefing-card" class="card glass" style="border: 1px solid #4ecca3; background: rgba(78, 204, 163, 0.05);">
+                            <h2 style="margin-top: 0;">Morning Briefing</h2>
+                            <p id="briefing-text">Your advisor is preparing your daily update...</p>
+                        </div>
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
@@ -1798,8 +1807,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-generating" style="display: none;">
-                            <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
+                            <div class="glass" style="padding: 40px; text-align: center;">
+                                <div style="width: 50px; height: 50px; border: 4px solid #4ecca3; border-top-color: transparent; border-radius: 50%; margin: 0 auto 20px; animation: spin 1s linear infinite;"></div>
+                                <h1>Designing your storefront...</h1>
+                                <p>The Promoter is crafting a custom experience for your brand using our premium design tokens.</p>
+                                <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+                            </div>
                         </div>
                         <div id="step-launch-ai" style="display: none;">
                             <h1>Your live storefront!</h1>
@@ -1810,16 +1823,60 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
-                        function showScreen(id) {
+                        async function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
                             
                             if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
+                                if (id === 'dashboard-screen') {
+                                    refreshDashboard();
+                                }
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
+                        }
+
+                        function refreshDashboard() {
+                            // In this simple UI, we'll simulate the gRPC call to get_dashboard
+                            // In a real implementation, this would fetch from the backend.
+                            const hasOrders = localStorage.getItem('ohc_orders_count') > 0;
+                            const hasProducts = localStorage.getItem('ohc_products_count') > 0;
+                            const bizName = localStorage.getItem('ohc_biz_name') || 'your business';
+
+                            let briefing = "";
+                            let milestone = "";
+
+                            if (!hasProducts) {
+                                briefing = "Good morning! Welcome to OneHumanCorp. Let's get " + bizName + " started! Your first step is to add your first product or service so customers can find you.";
+                            } else if (!hasOrders) {
+                                briefing = "Good morning! You've got products ready to go. Now is a great time to share your link on Instagram to get your first sale!";
+                                milestone = "🚀 First Product Added! 🚀";
+                            } else {
+                                briefing = "Good morning! " + bizName + " is looking great. You had orders recently. Trending: Customers are loving your new listings! Consider adding more varieties to keep the momentum going.";
+                                milestone = "🎉 Your First Sale! 🎉";
+                            }
+
+                            document.getElementById('briefing-text').innerText = briefing;
+
+                            if (milestone && !localStorage.getItem('milestone_shown_' + milestone)) {
+                                showMilestone(milestone);
+                                localStorage.setItem('milestone_shown_' + milestone, 'true');
+                            }
+                        }
+
+                        function showMilestone(text) {
+                            const container = document.getElementById('milestone-container');
+                            container.innerHTML = `
+                                <div class="milestone-overlay">
+                                    <div class="milestone-card glass">
+                                        <h1>${text}</h1>
+                                        <p>A huge step for your business!</p>
+                                        <button onclick="this.parentElement.parentElement.remove()">Amazing!</button>
+                                    </div>
+                                </div>
+                            `;
                         }
 
                         function handleLogin(btn) {
@@ -1844,6 +1901,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
                             const target = document.getElementById('step-' + step);
                             if (target) target.style.display = 'block';
+
+                            // Save some state for the briefing simulation
+                            if (step === 4) {
+                                const bizName = document.querySelector('#step-3 input').value;
+                                localStorage.setItem('ohc_biz_name', bizName);
+                            }
+                            if (step === 9) {
+                                localStorage.setItem('ohc_products_count', '1');
+                            }
                         }
 
                         function generateAI() {

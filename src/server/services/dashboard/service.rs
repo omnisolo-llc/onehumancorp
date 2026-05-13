@@ -1,5 +1,9 @@
 use ::server_ohc::app::dashboard_service_server::DashboardService;
 use ::server_ohc::app::*;
+use crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent;
+use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+use crate::orchestration::mesh::CentrifugeNode;
+use ohc_builtin_agent::mesh::transport::MemoryTransport;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use ::server_utils::cache::HybridCache;
@@ -12,11 +16,17 @@ static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organi
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
     db: Arc<crate::db::DB>,
+    advisor: Arc<BusinessAdvisoryAgent>,
 }
 
 impl MyDashboardService {
     pub fn new(db: Arc<crate::db::DB>, hub: Arc<crate::hub::Hub>) -> Self {
-        Self { db, hub }
+        let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
+        let transport = Arc::new(MemoryTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+        let advisor = Arc::new(BusinessAdvisoryAgent::new(orchestrator));
+        Self { db, hub, advisor }
     }
 }
 
@@ -444,6 +454,22 @@ impl DashboardService for MyDashboardService {
             org
         };
 
+        let metrics = serde_json::json!({
+            "business_name": org.as_ref().map(|o| o.name.clone()).unwrap_or_default(),
+            "orders_count": orders.len(),
+            "products_count": products.len(),
+        });
+
+        let morning_briefing = self.advisor.generate_morning_briefing(&req.organization_id, metrics).await.unwrap_or_default();
+
+        let active_milestone = if orders.len() >= 1 {
+            "🎉 Your First Sale! 🎉".to_string()
+        } else if products.len() >= 1 {
+            "🚀 First Product Added! 🚀".to_string()
+        } else {
+            "".to_string()
+        };
+
         Ok(Response::new(DashboardSnapshot {
             organization: org,
             agents: final_agents,
@@ -453,6 +479,8 @@ impl DashboardService for MyDashboardService {
             updated_at: chrono::Utc::now().to_rfc3339(),
             products,
             orders,
+            morning_briefing,
+            active_milestone,
         }))
     }
 
@@ -722,6 +750,35 @@ mod tests {
         // The mock might return 0 total_tokens, so we just verify it doesn't crash and returns the struct.
         // If cost auditor returned > 0 tokens, we would see compression.
         assert_eq!(cost_summary.organization_id, "system");
+    }
+
+    #[tokio::test]
+    async fn test_morning_briefing_generation() {
+        let service = setup_test_dashboard_service().await;
+        let metrics = serde_json::json!({
+            "business_name": "Maya's Cakes",
+            "orders_count": 0,
+            "products_count": 0,
+        });
+        let briefing = service.advisor.generate_morning_briefing("system", metrics).await.unwrap();
+        assert!(briefing.contains("Welcome to OneHumanCorp"));
+        assert!(briefing.contains("add your first product"));
+
+        let metrics_with_prod = serde_json::json!({
+            "business_name": "Maya's Cakes",
+            "orders_count": 0,
+            "products_count": 1,
+        });
+        let briefing_prod = service.advisor.generate_morning_briefing("system", metrics_with_prod).await.unwrap();
+        assert!(briefing_prod.contains("products ready to go"));
+
+        let metrics_with_orders = serde_json::json!({
+            "business_name": "Maya's Cakes",
+            "orders_count": 5,
+            "products_count": 2,
+        });
+        let briefing_orders = service.advisor.generate_morning_briefing("system", metrics_with_orders).await.unwrap();
+        assert!(briefing_orders.contains("had 5 orders"));
     }
 
     #[tokio::test]

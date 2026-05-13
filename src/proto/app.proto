@@ -39,6 +39,8 @@ message DashboardSnapshot {
   string updated_at = 6;
   repeated ohc.organization.Product products = 7;
   repeated Order orders = 8;
+  string morning_briefing = 9;
+  string active_milestone = 10;
 }
 
 message GetDashboardRequest {
