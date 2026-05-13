@@ -1663,6 +1663,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Your agents are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
                             <button onclick="showScreen('inbox-screen')">Check Messages</button>
+                            <button onclick="showScreen('agents-screen')">My Team</button>
                         </div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
@@ -1670,7 +1671,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Update Setup</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
+                            <button onclick="simulateOrder()">Simulate Order</button>
                             <button onclick="toggleMenu()">Menu</button>
+                        </div>
+                        <div id="agent-activity-panel" class="card glass" style="display: none;">
+                            <h3>Agent Activity</h3>
+                            <div id="agent-activity-feed"></div>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
@@ -1698,12 +1704,116 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Agents Page -->
                     <div id="agents-screen" class="screen">
-                        <h1>Agents</h1>
-                        <div class="card glass">
-                            <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                        <h1>My Team</h1>
+                        <p>View the status and activity of your 7 AI Departments.</p>
+
+                        <!-- Operations -->
+                        <div class="card glass department-card" style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3>Operations ("The Manager")</h3>
+                                <div>
+                                    <label style="font-size: 0.8em; margin-right: 5px;">Auto-execute</label>
+                                    <input type="checkbox" checked onchange="toggleThreshold(this, 'Operations')">
+                                </div>
+                            </div>
+                            <p style="font-size: 0.9em; color: #aaa;">Status: Active</p>
+                            <div class="activity-feed" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-top: 10px; max-height: 100px; overflow-y: auto;">
+                                <p style="margin: 0; font-size: 0.85em;">- Processed OrderReceived</p>
+                                <p style="margin: 0; font-size: 0.85em;">- Tracked inventory update</p>
+                            </div>
                         </div>
+
+                        <!-- Marketing & Advertising -->
+                        <div class="card glass department-card" style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3>Marketing & Advertising ("The Promoter")</h3>
+                                <div>
+                                    <label style="font-size: 0.8em; margin-right: 5px;">Draft-for-review</label>
+                                    <input type="checkbox" onchange="toggleThreshold(this, 'Marketing')">
+                                </div>
+                            </div>
+                            <p style="font-size: 0.9em; color: #aaa;">Status: Active</p>
+                            <div class="activity-feed" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-top: 10px; max-height: 100px; overflow-y: auto;">
+                                <p style="margin: 0; font-size: 0.85em;">- Optimized SEO for new product</p>
+                            </div>
+                        </div>
+
+                        <!-- Sales & Acquisition -->
+                        <div class="card glass department-card" style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3>Sales & Acquisition ("The Salesperson")</h3>
+                                <div>
+                                    <label style="font-size: 0.8em; margin-right: 5px;">Auto-execute</label>
+                                    <input type="checkbox" checked onchange="toggleThreshold(this, 'Sales')">
+                                </div>
+                            </div>
+                            <p style="font-size: 0.9em; color: #aaa;">Status: Active</p>
+                            <div class="activity-feed" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-top: 10px; max-height: 100px; overflow-y: auto;">
+                                <p style="margin: 0; font-size: 0.85em;">- Generated quote for lead #402</p>
+                            </div>
+                        </div>
+
+                        <!-- Customer Success -->
+                        <div class="card glass department-card" style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3>Customer Success ("The Ambassador")</h3>
+                                <div>
+                                    <label style="font-size: 0.8em; margin-right: 5px;">Auto-execute</label>
+                                    <input type="checkbox" checked onchange="toggleThreshold(this, 'Customer Success')">
+                                </div>
+                            </div>
+                            <p style="font-size: 0.9em; color: #aaa;">Status: Active</p>
+                            <div class="activity-feed" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-top: 10px; max-height: 100px; overflow-y: auto;">
+                                <p style="margin: 0; font-size: 0.85em;">- Drafted confirmation for order #99</p>
+                            </div>
+                        </div>
+
+                        <!-- Finance & Payments -->
+                        <div class="card glass department-card" style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3>Finance & Payments ("The Accountant")</h3>
+                                <div>
+                                    <label style="font-size: 0.8em; margin-right: 5px;">Draft-for-review</label>
+                                    <input type="checkbox" onchange="toggleThreshold(this, 'Finance')">
+                                </div>
+                            </div>
+                            <p style="font-size: 0.9em; color: #aaa;">Status: Active</p>
+                            <div class="activity-feed" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-top: 10px; max-height: 100px; overflow-y: auto;">
+                                <p style="margin: 0; font-size: 0.85em;">- Processed payment for order #99</p>
+                            </div>
+                        </div>
+
+                        <!-- Legal & Compliance -->
+                        <div class="card glass department-card" style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3>Legal & Compliance ("The Protector")</h3>
+                                <div>
+                                    <label style="font-size: 0.8em; margin-right: 5px;">Draft-for-review</label>
+                                    <input type="checkbox" onchange="toggleThreshold(this, 'Legal')">
+                                </div>
+                            </div>
+                            <p style="font-size: 0.9em; color: #aaa;">Status: Active</p>
+                            <div class="activity-feed" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-top: 10px; max-height: 100px; overflow-y: auto;">
+                                <p style="margin: 0; font-size: 0.85em;">- Verified terms of service acceptance</p>
+                            </div>
+                        </div>
+
+                        <!-- Business Advisory -->
+                        <div class="card glass department-card" style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3>Business Advisory ("The Advisor")</h3>
+                                <div>
+                                    <label style="font-size: 0.8em; margin-right: 5px;">Draft-for-review</label>
+                                    <input type="checkbox" onchange="toggleThreshold(this, 'Advisory')">
+                                </div>
+                            </div>
+                            <p style="font-size: 0.9em; color: #aaa;">Status: Active</p>
+                            <div class="activity-feed" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-top: 10px; max-height: 100px; overflow-y: auto;">
+                                <p style="margin: 0; font-size: 0.85em;">- Analyzed weekly trends for order #99</p>
+                            </div>
+                        </div>
+
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
                     <!-- API Screen -->
