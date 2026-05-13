@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use std::sync::OnceLock;
 use regex::Regex;
-use crate::ohc::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities, MeshEvent, TeammateMeshEvent};
+use ::server_ohc::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities, MeshEvent, TeammateMeshEvent};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use crate::billing::Tracker;
@@ -12,7 +12,7 @@ use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use crate::services::billing::auditor::CostAuditor;
-use crate::pricing::calculator::CostConfig;
+use ::server_pricing::calculator::CostConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HubEvent {
@@ -83,13 +83,13 @@ impl Hub {
                     "cost_usd": cost,
                 });
 
-                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
+                let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
 
                 // Blueprint: track cost in cents
                 let cost_cents = (cost * 100.0) as f32;
                 let mut labels_cents = labels.clone();
                 labels_cents["cost_cents"] = serde_json::json!(cost_cents);
-                let _ = crate::telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
+                let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
             }
         });
 
@@ -558,7 +558,7 @@ impl Hub {
 
     pub fn sanitize_hub_event(&self, raw: serde_json::Value) -> HubEvent {
         let event_type = raw["type"].as_str().unwrap_or("unknown").to_string();
-        let redacted_raw = crate::telemetry::redact_interface_pii(raw);
+        let redacted_raw = ::server_telemetry::redact_interface_pii(raw);
         HubEvent {
             r#type: event_type,
             payload: redacted_raw.to_string(),
@@ -613,7 +613,7 @@ impl Hub {
             }
             
             for (org_id, forecast) in forecasts_to_record {
-                let _ = crate::telemetry::record_token_usage_forecast(&self.pool, &org_id, forecast).await;
+                let _ = ::server_telemetry::record_token_usage_forecast(&self.pool, &org_id, forecast).await;
             }
         }
     }

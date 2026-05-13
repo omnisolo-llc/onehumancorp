@@ -1,0 +1,17 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "server_telemetry",
+    srcs = ["mod.rs"],
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/config:server_config",
+        "@crates//:chrono",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tracing",
+        "@crates//:opentelemetry",
+    ],
+)

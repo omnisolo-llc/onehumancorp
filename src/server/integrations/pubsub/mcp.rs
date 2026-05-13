@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use ohc_builtin_agent::mesh::transport::MeshTransport;
-use crate::ohc::orchestration::TeammateMeshEvent;
+use ::server_ohc::orchestration::TeammateMeshEvent;
 
 pub struct PubSubManager {
     transport: Arc<dyn MeshTransport>,
@@ -32,7 +32,7 @@ impl PubSubManager {
         let formatted_topic = self.format_topic(tenant_id, topic);
 
         use prost::Message as ProstMessage;
-        let event = crate::ohc::orchestration::TeammateMeshEvent {
+        let event = ::server_ohc::orchestration::TeammateMeshEvent {
             agent_id: "mcp".to_string(),
             action: "publish".to_string(),
             status: "ok".to_string(),
@@ -42,7 +42,7 @@ impl PubSubManager {
         let mut buf = Vec::new();
         let _ = event.encode(&mut buf);
 
-        let message = crate::ohc::orchestration::TeammateMeshEvent {
+        let message = ::server_ohc::orchestration::TeammateMeshEvent {
             agent_id: "mcp".to_string(),
             action: formatted_topic.clone(),
             status: "ok".to_string(),
@@ -62,7 +62,7 @@ impl PubSubManager {
 
         let wrapped_handler = Box::new(move |msg: TeammateMeshEvent| {
             use prost::Message as ProstMessage;
-            if let Ok(event) = crate::ohc::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
+            if let Ok(event) = ::server_ohc::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
                 let mut new_msg = msg.clone();
                 new_msg.payload = event.payload;
                 handler(new_msg);

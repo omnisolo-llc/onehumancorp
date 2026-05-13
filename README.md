@@ -19,9 +19,11 @@ From the root of the repository, you must explicitly run the onboarding CLI:
 This premium onboarding flow eliminates friction and ensures maximum developer velocity for Day One setup.
 
 ## Identity
+
 One Human Corp is a hybrid cloud-native and local-first agentic platform. The same product can run as a horizontally scalable multi-tenant cloud service, a headless API for remote mobile or desktop clients, or a standalone desktop deployment that runs its own local backend.
 
 ## Product Vision & Market Strategy
+
 One Human Corp (OHC) is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OHC Market Strategy](docs/vision/market_strategy.md)**.
 
 ## Architecture
@@ -30,15 +32,15 @@ The platform supports four operating modes:
 
 | Mode | Local footprint | Remote footprint | Notes |
 |------|-----------------|------------------|-------|
-| **Cloud-native shared service** | Slint desktop or web client | Rust API server, Postgres, agents, optional Redis and Chatwoot | Set `OHC_MULTITENANT=true`. Scale stateless API pods horizontally while Postgres remains the consistency boundary. |
-| **Headless cloud API** | Slint desktop client | API-only Rust server | Set `OHC_HEADLESS=true` when the backend should expose APIs, health probes, metrics, and auth without serving the web UI. |
-| **Desktop standalone** | Slint desktop shell plus local Rust backend and SQLite-backed SIPDB | Optional public SaaS integrations only | Optimized for local resource usage; Redis and Chatwoot are not required for the standalone wrapper flow. |
+| **Cloud-native shared service** | Tauri v2 desktop or web client | Rust API server, Postgres, agents, optional Redis and Chatwoot | Set `OHC_MULTITENANT=true`. Scale stateless API pods horizontally while Postgres remains the consistency boundary. |
+| **Headless cloud API** | Tauri desktop client | API-only Rust server | Set `OHC_HEADLESS=true` when the backend should expose APIs, health probes, metrics, and auth without serving the web UI. |
+| **Desktop standalone** | Tauri v2 desktop shell plus local Rust backend and SQLite-backed SIPDB | Optional public SaaS integrations only | Optimized for local resource usage; Redis and Chatwoot are not required for the standalone wrapper flow. |
 | **Single-machine integration stack** | Full local Docker Compose stack | None | Useful for development, demos, and end-to-end verification on one machine. |
 
 ```mermaid
 graph TD;
-    DesktopClient[Slint Desktop App\nStandalone or Remote] --> API[Rust Server / API];
-    WebClient[Slint Web Client] --> API;
+    DesktopClient[Tauri v2 Desktop App\nStandalone or Remote] --> API[Rust Server / API];
+    WebClient[Next.js Web Client] --> API;
     API --> Orchestration[Orchestration Hub];
     API --> Auth[JWT / OIDC Auth];
     Orchestration --> Agents[AI Agents];
@@ -51,15 +53,19 @@ graph TD;
 
 | Directory | Language | Purpose |
 |-----------|----------|---------|
-| `src/app/` | **Rust/Slint** | Desktop UI app with 54 Slint components for web, desktop |
+| `src/ui/next/` | **React/TypeScript** | Next.js 14 web client with 67 components |
+| `src/ui/tauri/` | **Rust/JSON** | Tauri v2 desktop wrapper |
+| `src/app/` | **Rust** | Backend agent client (formerly Slint UI, deprecated) |
 | `src/server/` | **Rust** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
 | `src/agents/` | **Rust** | Built-in agent implementations |
 | `src/proto/` | **Protobuf** | gRPC service definitions |
 | `src/tests/` | **Python / Shell** | Repository-local validation helpers and test utilities |
+| `src/e2e/` | **TypeScript** | Playwright E2E tests |
 | `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
 | `docs/` | **Markdown** | Architecture, roadmap, feature specs, and developer documentation |
 
 ### KAIROS Orchestration Documentation
+
 The Swarm is powered by the KAIROS engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
 - **[Distributed State Machine](docs/features/kairos/distributed_state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
 - **[Sub-Agent Queue](docs/features/kairos/sub_agent_queue.md):** Learn how vast amounts of agent tasks are routed securely in the background.
@@ -67,7 +73,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 
 ### Remote clients and standalone mode
 
-The Slint desktop app supports a configurable Backend URL and a standalone-mode toggle. In standalone mode the desktop app manages a local backend lifecycle. In remote-client mode the same app acts as a pure UI and talks to a cloud-hosted OHC server over the API.
+The Tauri v2 desktop app supports a configurable Backend URL and a standalone-mode toggle. In standalone mode the desktop app manages a local backend lifecycle. In remote-client mode the same app acts as a pure UI and talks to a cloud-hosted OHC server over the API.
 
 Headless server deployments keep the API, auth, health probes, and metrics online while skipping static UI serving. That is the intended mode for mobile clients and desktop clients that should connect to cloud-hosted services instead of running a local backend.
 
@@ -119,29 +125,43 @@ For API-only remote-client deployments, set `OHC_HEADLESS=true` on the server.
 ```bash
 # Build & Test the full system
 bazelisk build //...
-xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" bazelisk test //...
+bazelisk test //...
 
-# Run E2E tests (requires Docker)
-node scripts/run-playwright.mjs
+# Run E2E tests (requires Docker for postgres/redis)
+bazelisk test //src/e2e:playwright
 
 # Quick Local Dev (run these in separate terminals)
 bazelisk run //src/server:server
-bazelisk run //src/app:app
+bazelisk run //src/ui/tauri:app
 ```
 
-### Slint UI Tests
+### E2E Tests with Playwright
 
-The `//src/app:app_test` target runs 27 headless component tests covering all Slint UI components (dashboard, login, wizard flows, agents, chat, channels, integrations, security, meetings, logs, pricing, scaling, swarm memory, website builder, setup wizard, task list, help center, release notes, tutorials, API docs).
+The `//src/e2e:playwright` target runs 56 Playwright E2E tests covering:
+- Login, authentication, social auth
+- Dashboard, navigation, UX flows
+- Agents, chat, inbox, tasks
+- Integrations, billing, settings
+- Onboarding, meetings, referrals
+- And 30+ more feature areas
 
-Tests require `xvfb` for headless display. In CI, xvfb is automatically installed.
+Tests capture screenshots on every page to `test-results/screenshots/` and explicit `page.screenshot()` calls save to `test-results/*.png`.
 
-### Slint desktop app
+### Tauri v2 Desktop App
 
 ```bash
-bazelisk run //src/app:app
+bazelisk run //src/ui/tauri:app
 ```
 
 The app connects to the server at `http://127.0.0.1:18789` by default.
+
+### Web UI (Next.js)
+
+```bash
+cd src/ui/next && npm run dev
+```
+
+This starts the Next.js development server on `http://localhost:3000`.
 
 ### Server binary
 
@@ -162,7 +182,7 @@ bazelisk run //src/server:server
 | `OHC_SERVE_UI` | Optional override to force UI serving on or off |
 | `OHC_CORE_URL` | URL of the Rust `ohc-core` sidecar |
 | `MCP_BUNDLE_DIR` | Directory for MCP bundles |
-| `FRONTEND_STATIC_DIR` | Path to compiled frontend assets (e.g. `src/app/build/web`) |
+| `FRONTEND_STATIC_DIR` | Path to compiled frontend assets (e.g. `src/ui/next/out`) |
 | `OHC_BOOTSTRAP_ORG_ID` | Optional bootstrap tenant ID used to serve unauthenticated routes in multi-tenant mode |
 | `OHC_BOOTSTRAP_ORG_NAME` | Optional bootstrap tenant display name |
 | `OHC_BOOTSTRAP_CEO_NAME` | Optional bootstrap tenant CEO name |
@@ -175,15 +195,26 @@ Kubernetes secrets are used to inject credentials at runtime without committing 
 ## Developer Workflow
 
 ### Setup and Mode Switching (Manual)
+
 We provide helper scripts in `deploy/scripts/` to smooth the friction of developing against multiple hybrid targets. For day one setup, we recommend using the unified Master CLI (`./deploy/scripts/ohc_hybrid_cli.sh`) from the repository root instead.
 
 - **Initial Setup:** `./deploy/scripts/ohc-setup.sh` (Generates `.env`, verifies builds, and provisions the workspace)
 - **Mode Switching:** `source deploy/scripts/ohc-mode.sh [cloud|standalone|headless]` (Configures environment variables for the current terminal session)
 
 ### Build and Test
+
 - **Build all modules:** `bazelisk build //...`
-- **Run all tests (requires xvfb):** `xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" bazelisk test //...`
-- **Run E2E tests:** `node scripts/run-playwright.mjs`
+- **Run all tests:** `bazelisk test //...`
+- **Run E2E tests:** `bazelisk test //src/e2e:playwright`
 - **Run the server:** `bazelisk run //src/server:server`
-- **Launch the app:** `bazelisk run //src/app:app`
+- **Launch the Tauri app:** `bazelisk run //src/ui/tauri:app`
+- **Build the Next.js UI:** `cd src/ui/next && npm run build`
 - **Build the docs site:** `bazelisk run //:docs_build`
+
+## Deprecated
+
+### Slint UI (Deprecated)
+
+The `src/app/slint_deprecated/` directory contains 72 legacy `.slint` files that were part of the old Slint-based UI. These files are no longer used - the UI has been migrated to Next.js + Tauri v2.
+
+Historical Slint components included: dashboard, login, wizard flows, agents, chat, channels, integrations, security, meetings, logs, pricing, scaling, swarm memory, website builder, setup wizard, task list, help center, release notes, tutorials, and API docs.
