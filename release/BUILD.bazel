@@ -64,7 +64,8 @@ pkg_deb(
 pkg_rpm(
     name = "app_rpm",
     package_name = "ohc-app",
-    version = "0.4.41+1",
+    version = "0.4.41",
+    release = "1",
     license = "Apache-2.0",
     summary = "One Human Corp Desktop Application",
     description = "One Human Corp Desktop Application",
