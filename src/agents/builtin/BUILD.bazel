@@ -43,7 +43,7 @@ rust_library(
         "auth.rs",
         "codex_runner.rs",
         "agent.rs",
-        "checkpointer.rs",
+        "checkpointer.rs", "dummy_commit.rs", "langgraph_error_mechanic.rs",
         "departments.rs",
         "guardrails.rs",
         "harness.rs",
