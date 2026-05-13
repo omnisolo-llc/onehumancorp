@@ -4,6 +4,15 @@
 - Privacy/Offline (Standalone): Ensured local agents leverage Teammate Mesh gracefully with local-only fallback and zero-trust isolated environments.
 
 # OHC Hybrid Agentic OS - Changelog
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhanced multi-environment promotion orchestration across K8s cloud staging.
+
+### Privacy/Offline Improvements
+- Improved local SQLite fallback for isolated desktop wrapper builds.
+
+
 
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
