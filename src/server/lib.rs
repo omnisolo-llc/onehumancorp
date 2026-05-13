@@ -1619,6 +1619,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
                         button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
                         .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
+
+                        @keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
+                        .skeleton { background: linear-gradient(to right, #2a3b5c 4%, #3b4d70 25%, #2a3b5c 36%); background-size: 1000px 100%; animation: shimmer 2s infinite linear; color: transparent !important; pointer-events: none; border: none; }
                     </style>
                 </head>
                 <body>
@@ -1644,9 +1647,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
                         <div class="card glass">
-                            <h2>Welcome back, Human.</h2>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h2>Welcome back, Human.</h2>
+                                <button class="secondary" style="border-radius: 50%; padding: 5px 10px; min-width: 44px; min-height: 44px;" onclick="document.getElementById('welcome-hint').style.display = 'block'">?</button>
+                            </div>
+                            <p id="welcome-hint" style="display: none; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px;">This dashboard shows you how your business is doing today. Tap Check Messages to see customer requests.</p>
                             <p>Your agents are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
+                            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <h3 style="margin: 0; color: #a0aec0; font-size: 14px;">Today's Sales</h3>
+                                <p style="margin: 5px 0 0 0; font-size: 28px; font-weight: bold; color: #4ecca3;">$1,240.50</p>
+                            </div>
                             <button onclick="showScreen('inbox-screen')">Check Messages</button>
                         </div>
                         <div class="card glass">
@@ -1671,12 +1682,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <div class="bottom-nav glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Item</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Messages</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Share Store</button>
+                        <div class="bottom-nav glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap;">
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px; padding: 10px; display: flex; align-items: center; justify-content: center;" onclick="console.log('action_add_product')">Add Product</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px; padding: 10px; display: flex; align-items: center; justify-content: center;">View Orders</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px; padding: 10px; display: flex; align-items: center; justify-content: center;" onclick="showScreen('inbox-screen')">Check Messages</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px; padding: 10px; display: flex; align-items: center; justify-content: center;">See Analytics</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px; padding: 10px; display: flex; align-items: center; justify-content: center;">Share Store</button>
                         </div>
                     </div>
 
@@ -1995,7 +2006,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Login</h1>
                         <h1>One Human Corp</h1>
                         <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
+                        <div id="login-error" class="error">We couldn't sign you in. Please check that your email and password are correct, and try again.</div>
                         <input type="email" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
                         <button onclick="handleLogin(this)">Fix App Issues</button>
@@ -2029,10 +2040,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function handleLogin(btn) {
                             const email = document.querySelector('#login-screen input[type="email"]').value;
+                            btn.classList.add('skeleton');
                             btn.innerText = 'Signing in...';
                             if (!email) {
                                 setTimeout(() => {
                                     document.getElementById('login-error').style.display = 'block';
+                                    btn.classList.remove('skeleton');
                                     btn.innerText = 'Sign In';
                                 }, 500);
                             } else {
