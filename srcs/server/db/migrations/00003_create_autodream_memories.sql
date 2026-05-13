@@ -8,8 +8,6 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
     embedding vector(1536),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
-ALTER TABLE autodream_memories ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_autodream_memories ON autodream_memories USING (organization_id = current_setting('app.current_tenant', true));
 CREATE INDEX IF NOT EXISTS idx_autodream_memories_embedding ON autodream_memories USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
 -- +goose Down

@@ -12,5 +12,3 @@ CREATE TABLE IF NOT EXISTS mcp_audit_sync_log (
     metadata TEXT NOT NULL,
     timestamp TIMESTAMP WITH TIME ZONE NOT NULL
 );
-ALTER TABLE mcp_audit_sync_log ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_mcp_audit_sync_log ON mcp_audit_sync_log USING (tenant_id = current_setting('app.current_tenant', true));
