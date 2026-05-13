@@ -5,9 +5,9 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
     await page.goto('/login');
 
     // Login
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
@@ -79,9 +79,9 @@ test('verify wizard AI agent configuration', async ({ page }) => {
     await page.goto('/login');
 
     // Login
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Navigate to agent settings
     await page.click('text="Manage Agents"');
@@ -106,9 +106,9 @@ test('verify wizard prompt tuning', async ({ page }) => {
     await page.goto('/login');
 
     // Login
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Navigate to agent settings
     await page.click('text="Manage Agents"');
@@ -135,9 +135,9 @@ test('verify wizard prompt tuning', async ({ page }) => {
 
 test('verify grow business suggestions', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     await page.click('button:has-text("Grow Business")');
     await expect(page.locator('text="Actionable Insights"')).toBeVisible();
@@ -149,9 +149,9 @@ test('verify grow business suggestions', async ({ page }) => {
 
 test('verify website builder flow', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     await page.click('button:has-text("Website Builder")');
 
@@ -184,8 +184,8 @@ test('verify login form error message UX wrap behavior', async ({ page }) => {
     await page.goto('/login');
 
     // Trigger an error to see if error message is displayed
-    await page.fill('input[type="email"]', 'invalid@example.com');
-    await page.fill('input[type="password"]', 'wrong');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'invalid@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'wrong');
     await page.click('button:has-text("Sign In")');
 
     // Assume an error message like 'Invalid email or password' appears
@@ -234,7 +234,7 @@ test('verify password toggle', async ({ page }) => {
     await page.goto('/login');
 
     // Fill password
-    await page.fill('input[type="password"]', 'secretpassword');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'secretpassword');
 
     // Click Show
     await page.click('button:has-text("Show")');
@@ -266,9 +266,9 @@ test('verify checklist flow and integration', async ({ page }) => {
     await page.goto('/login');
 
     // Login
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
@@ -335,9 +335,9 @@ test('verify checklist connects instagram routing', async ({ page }) => {
     await page.goto('/login');
 
     // Login
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
@@ -390,9 +390,9 @@ test('verify checklist share link routing', async ({ page }) => {
     await page.goto('/login');
 
     // Login
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
@@ -445,9 +445,9 @@ test('verify checklist fully completed state', async ({ page }) => {
     await page.goto('/login');
 
     // Login
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
@@ -504,9 +504,9 @@ test('verify checklist completion progress', async ({ page }) => {
     await page.goto('/login');
 
     // Login
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();

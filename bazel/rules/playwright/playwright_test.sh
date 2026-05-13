@@ -87,14 +87,16 @@ docker run -d --name "$VALKEY_NAME" -p "$VK_PORT:6379" valkey/valkey:8-alpine
 echo "[playwright] Waiting for postgres on port $PG_PORT..."
 for i in $(seq 1 60); do
   if nc -z 127.0.0.1 "$PG_PORT" 2>/dev/null; then
+    # Give postgres a moment to finish starting up even after the port is open
+    sleep 2
     break
   fi
   sleep 1
 done
 
 echo "[playwright] Initializing database roles..."
-docker exec "$POSTGRES_NAME" psql -h localhost -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
-docker exec "$POSTGRES_NAME" psql -h localhost -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
+docker exec "$POSTGRES_NAME" psql -h 127.0.0.1 -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
+docker exec "$POSTGRES_NAME" psql -h 127.0.0.1 -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
 
 echo "[playwright] Workspace root: $workspace_root"
 echo "[playwright] Searching for server binary..."
@@ -156,6 +158,13 @@ fi
 # Run Playwright on the host (no Docker for tests)
 export CI=true
 export BASE_URL="http://localhost:18789"
+export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
+if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
+  echo "[playwright] Using hermetic browsers from: $PLAYWRIGHT_BROWSERS_PATH"
+  # Ensure the path is absolute for Playwright
+  export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$PLAYWRIGHT_BROWSERS_PATH")"
+fi
 
 # Use npx to run playwright - it will find the local installation via package.json
 if [[ -n "$spec_file" ]]; then
