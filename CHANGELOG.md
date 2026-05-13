@@ -1,3 +1,7 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+- Scaling (Cloud): Implement auto-scaling capabilities for Hybrid Distributed Sub-Agent Orchestration queue.
+- Privacy/Offline (Standalone): Hardened local vector embedding sync and off-the-grid privacy modes.
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
