@@ -80,6 +80,8 @@ jobs:
           PKG_CONFIG_PATH: "/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
           PKG_CONFIG_ALLOW_SYSTEM_LIBS: "1"
           PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
+          DBUS_1_NO_PKG_CONFIG: "1"
+          DBUS_1_DYNAMIC: "1"
         run: bazelisk build //release:all_release_artifacts --config=linux
 
       - name: Test
@@ -87,6 +89,8 @@ jobs:
           PKG_CONFIG_PATH: "/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
           PKG_CONFIG_ALLOW_SYSTEM_LIBS: "1"
           PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
+          DBUS_1_NO_PKG_CONFIG: "1"
+          DBUS_1_DYNAMIC: "1"
         run: |
           bazelisk test \
             --config=linux \
@@ -148,6 +152,8 @@ jobs:
           PKG_CONFIG_PATH: "/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
           PKG_CONFIG_ALLOW_SYSTEM_LIBS: "1"
           PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
+          DBUS_1_NO_PKG_CONFIG: "1"
+          DBUS_1_DYNAMIC: "1"
         run: |
           bazelisk build //... --config=linux
           bazelisk build //... --config=windows || echo "Warning: Windows build failed"
