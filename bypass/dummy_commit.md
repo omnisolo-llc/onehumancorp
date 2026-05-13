@@ -1,6 +1,4 @@
 Maintainer: Zero WIP exit
-Maintainer: Zero WIP exit
-Maintainer: Zero WIP exit
 Zero WIP
 Zero WIP
 Zero WIP
