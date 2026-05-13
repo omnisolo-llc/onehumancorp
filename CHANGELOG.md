@@ -5,6 +5,14 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhanced vector data pipeline auto-scaling limits for improved concurrency.
+
+### Privacy/Offline Improvements
+- Upgraded local SQLite vector cache for the Standalone build to ensure robust offline functionality.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
