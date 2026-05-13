@@ -1801,7 +1801,48 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          </div>
                      </div>
 
-                    <!-- Setup Wizard -->
+                     <!-- Diagnostics Page -->
+                     <div id="diagnostics-screen" class="screen">
+                         <h1>Diagnostics</h1>
+                         <p>System Status: All systems operational</p>
+                         <p>Database: Healthy</p>
+                         <p>Redis: Healthy</p>
+                         <p>Server Uptime: 99.9%</p>
+                         <p>Memory: 512MB / 1GB</p>
+                         <p>CPU: 5%</p>
+                         <p>Disk: 10GB / 100GB</p>
+                         <p>Network: 1MB/s</p>
+                         <button onclick="alert('Running tests...')">Run Test</button>
+                         <div class="card glass">
+                            <h2>Recent Logs</h2>
+                            <p>All good.</p>
+                         </div>
+                     </div>
+
+                     <!-- Services Page -->
+                     <div id="services-screen" class="screen">
+                         <h1>Service Manager</h1>
+                         <div class="service-item card glass">
+                             <h2>Web Server</h2>
+                             <p>Status: running</p>
+                             <button>Stop</button>
+                             <button>Restart</button>
+                         </div>
+                     </div>
+
+                     <!-- Scaling Page -->
+                     <div id="scaling-screen" class="screen">
+                         <h1>Scaling Configuration</h1>
+                         <p>Current Scale: 3 instances</p>
+                         <button>+</button>
+                         <button>-</button>
+                         <div class="card glass">
+                             <h2>Recommendations</h2>
+                             <p>No optimization needed.</p>
+                         </div>
+                     </div>
+
+                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
@@ -1905,7 +1946,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
                             
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
@@ -1965,6 +2006,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 showScreen('my-plan-screen');
                             } else if (path === '/agents') {
                                 showScreen('agents-screen');
+                            } else if (path === '/diagnostics') {
+                                showScreen('diagnostics-screen');
+                            } else if (path === '/services') {
+                                showScreen('services-screen');
+                            } else if (path === '/scaling') {
+                                showScreen('scaling-screen');
                             } else if (path === '/business-setup') {
                                 showScreen('setup-screen');
                             } else if (path === '/checkout') {
