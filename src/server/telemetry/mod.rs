@@ -165,6 +165,13 @@ pub async fn buffer_metric(
     if !is_telemetry_enabled {
         return Ok(());
     }
+    // Standalone check
+    if !::server_config::get().multitenant {
+        let opt_in = std::env::var("OHC_TELEMETRY_OPT_IN").unwrap_or_else(|_| "false".to_string());
+        if opt_in != "true" {
+            return Ok(());
+        }
+    }
 
     let redacted_labels = redact_interface_pii(labels);
     let labels_json = serde_json::to_string(&redacted_labels)?;
@@ -243,7 +250,11 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("billing") ||
     k.contains("ip_address") ||
     k.contains("mac_address") ||
-    k.contains("geolocation")
+    k.contains("geolocation") ||
+    k.contains("uuid") ||
+    k.contains("identifier") ||
+    k.contains("user_id") ||
+    k.contains("client_id")
 }
 
 pub fn is_email(s: &str) -> bool {

@@ -558,6 +558,10 @@ impl AuthService for AuthServiceServerImpl {
     async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
 
+        if ::server_config::get().multitenant && req.organization_id == "system" {
+            return Err(Status::invalid_argument("the 'system' organization ID is reserved and cannot be used"));
+        }
+
         if ::server_config::get().multitenant && req.organization_id.is_empty() {
             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
         }
@@ -581,6 +585,9 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn register(&self, request: Request<CreateUserRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
+        if ::server_config::get().multitenant && req.organization_id == "system" {
+            return Err(Status::invalid_argument("the 'system' organization ID is reserved and cannot be used"));
+        }
         if ::server_config::get().multitenant && req.organization_id.is_empty() {
              return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
         }

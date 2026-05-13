@@ -119,10 +119,14 @@ impl HybridFSMcpServer {
                 async {
                     let id = uuid::Uuid::new_v4().to_string();
                     let spiffe_id_str = &req.spiffe_id;
-                    let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+                    let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
                     let mut tenant_id = parsed.0;
-                    if tenant_id.is_empty() {
-                        tenant_id = "system".to_string();
+                    if tenant_id.is_empty() || (::server_config::get().multitenant && tenant_id == "system") {
+                        if ::server_config::get().multitenant {
+                            return Err(tonic::Status::invalid_argument("organization_id is required in cloud mode and 'system' is restricted"));
+                        } else {
+                            tenant_id = "system".to_string();
+                        }
                     }
 
                     // Add to hybrid_fs_sync_queue

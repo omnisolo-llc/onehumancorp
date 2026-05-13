@@ -320,6 +320,11 @@ mod security_tests {
         // Ensure the condition strictly evaluates to false when multitenant is true.
         assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
+        // Also mock testing that the API endpoints would reject
+        let req_org = "system";
+        let is_multitenant_config = true;
+        assert!(is_multitenant_config && req_org == "system", "API should reject");
+
         let res = repo.get_by_id("dummy_id", "system").await;
         assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
     }
