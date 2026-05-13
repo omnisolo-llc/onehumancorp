@@ -36,7 +36,7 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: true
+          repository-cache: false
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
