@@ -1,5 +1,6 @@
 pub mod mesh_handler;
 pub mod autodream;
+pub mod cataloger;
 
 pub mod billing_webhook;
 #[cfg(test)]
