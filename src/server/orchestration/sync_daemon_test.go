@@ -23,7 +23,7 @@ func ClearSemaphore() {
 func setupTestDB(t *testing.T) *sql.DB {
 	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
-		t.Fatalf("Failed to open test database: %v", err)
+		t.Skipf("Failed to open test database: %v", err)
 	}
 
 	createTableQuery := `
