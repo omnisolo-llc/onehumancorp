@@ -9,7 +9,7 @@ test.describe('Dashboard Navigation UX', () => {
 
   test('should trigger Add Product action via bottom nav button', async ({ page }) => {
     // Wait for the Dashboard to load and the new nav to be visible
-    const addProductBtn = page.locator('text="Add Product"').first();
+    const addProductBtn = page.locator('text="Add Product"').filter({ visible: true }).first();
     await addProductBtn.waitFor({ state: 'visible', timeout: 30000 });
 
     // Listen for dialogs or console messages to assert action was taken, since slint mocks actions
@@ -25,28 +25,28 @@ test.describe('Dashboard Navigation UX', () => {
   });
 
   test('should trigger Orders action via bottom nav button', async ({ page }) => {
-    const ordersBtn = page.locator('text="Orders"').first();
+    const ordersBtn = page.locator('text="Orders"').filter({ visible: true }).first();
     await ordersBtn.waitFor({ state: 'visible', timeout: 30000 });
     await ordersBtn.click();
     await expect(page).not.toHaveURL('about:blank');
   });
 
   test('should trigger Messages action via bottom nav button', async ({ page }) => {
-    const messagesBtn = page.locator('text="Messages"').first();
+    const messagesBtn = page.locator('text="Messages"').filter({ visible: true }).first();
     await messagesBtn.waitFor({ state: 'visible', timeout: 30000 });
     await messagesBtn.click();
     await expect(page).not.toHaveURL('about:blank');
   });
 
   test('should trigger Analytics action via bottom nav button', async ({ page }) => {
-    const analyticsBtn = page.locator('text="Analytics"').first();
+    const analyticsBtn = page.locator('text="Analytics"').filter({ visible: true }).first();
     await analyticsBtn.waitFor({ state: 'visible', timeout: 30000 });
     await analyticsBtn.click();
     await expect(page).not.toHaveURL('about:blank');
   });
 
   test('should trigger Share Store action via bottom nav button', async ({ page }) => {
-    const shareBtn = page.locator('text="Share Store"').first();
+    const shareBtn = page.locator('text="Share Store"').filter({ visible: true }).first();
     await shareBtn.waitFor({ state: 'visible', timeout: 30000 });
     await shareBtn.click();
     await expect(page).not.toHaveURL('about:blank');

@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Dashboard Core', () => {
   test('should load dashboard page', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Dashboard' }).filter({ visible: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
   test('should display navigation', async ({ page }) => {
@@ -13,7 +13,7 @@ test.describe('Dashboard Core', () => {
 
   test('should show dashboard header', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1').first()).toBeVisible();
+    await expect(page.locator('h1').filter({ visible: true }).first()).toBeVisible();
   });
 
   test('should show welcome message', async ({ page }) => {
@@ -30,16 +30,16 @@ test.describe('Dashboard Core', () => {
 test.describe('Login Page', () => {
   test('should display login page', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Login' }).filter({ visible: true })).toBeVisible();
-    await expect(page.getByPlaceholder('Email or Username').first()).toBeVisible();
-    await expect(page.locator('input[type="password"]').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
+    await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
   });
 });
 
 test.describe('Agents Page', () => {
   test('should display agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 });
 

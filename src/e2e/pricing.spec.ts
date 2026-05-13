@@ -265,7 +265,7 @@ test.describe('My Plan Page', () => {
     await page.click('button:has-text("Billing")');
 
     // Wait for My Plan page
-    await expect(page.locator('text=/my.*plan|current.*plan/i').filter({ visible: true }).first().filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('text=/my.*plan|current.*plan/i').filter({ visible: true }).first()).toBeVisible();
 
     // Verify Cost Details button and click it
     const detailsBtn = page.locator('button:has-text("View Cost Details")').filter({ visible: true }).first();
