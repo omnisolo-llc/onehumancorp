@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Pricing Page', () => {
 
   test('should display "What does this cost?" wizard flow correctly', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
 
     // Login flow
     await page.fill('input[type="email"], input[placeholder*="email" i]', 'test@example.com');
@@ -29,7 +29,7 @@ test.describe('Pricing Page', () => {
     await expect(page.locator('text="Start Free"').first()).toBeVisible();
 
     // Go back to billing
-    await page.goto('/login');
+    await page.goto('/');
     await expect(page.locator('text=Dashboard').first()).toBeVisible();
     await page.click('button:has-text("Billing")');
 
@@ -161,7 +161,7 @@ test.describe('Pricing Page', () => {
 test.describe('My Plan Page', () => {
 
   test('should display over storage quota warning on My Plan dashboard', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
 
     await page.fill('input[type="email"], input[placeholder*="email" i]', 'test@example.com');
     await page.fill('input[type="password"], input[placeholder*="password" i]', 'password123');
@@ -251,7 +251,7 @@ test.describe('My Plan Page', () => {
   });
 
   test('should open cost transparency dashboard', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
 
     // Login flow
     await page.fill('input[type="email"], input[placeholder*="email" i]', 'test@example.com');

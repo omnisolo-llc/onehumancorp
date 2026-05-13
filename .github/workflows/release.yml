@@ -4,11 +4,10 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -296,9 +295,8 @@ jobs:
 
       - name: Install Linux desktop dependencies
         run: |
-          echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends --fix-missing \
+          sudo apt-get install -y --no-install-recommends \
             clang cmake ninja-build pkg-config \
             libgtk-3-dev liblzma-dev libstdc++-12-dev
 

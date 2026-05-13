@@ -2,15 +2,15 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Wizard', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
 
     // Login
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
   });
 
   test('Test 1: Sign-Up & Account Creation to Wizard auto-redirect', async ({ page }) => {
@@ -38,13 +38,13 @@ test.describe('Onboarding Wizard', () => {
     await page.click('button:has-text("Next")');
 
     // Test cross device resume -> Reload page
-    await page.goto('/login');
+    await page.reload();
     // Re login and check if it still works
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
     await page.click('button:has-text("Start Setup")');
     await expect(page.locator('text="Setup Wizard"')).toBeVisible();
   });

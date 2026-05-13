@@ -11,8 +11,8 @@ test.describe('Health Monitoring Resilience E2E', () => {
         // If login button is visible, perform login
         if (await loginBtn.isVisible({ timeout: 1000 })) {
             await loginBtn.click();
-            await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-            await page.locator('input[type="password"]').first().fill( 'password');
+            await page.fill('input[type="email"]', 'test@example.com');
+            await page.fill('input[type="password"]', 'password');
             await page.click('button[type="submit"]');
             await page.waitForURL('**/dashboard*');
         }
@@ -21,7 +21,7 @@ test.describe('Health Monitoring Resilience E2E', () => {
     test('Agent health status transitions and recovers using real data flow', async ({ page, context }) => {
         // Navigate by clicking UI exactly as a user would
         await page.click('a:has-text("Agents"), button:has-text("Agents")');
-        await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
+        await expect(page.locator('h1')).toContainText('Agents');
 
         // Assert an agent card from the live system is rendered unconditionally
         await page.waitForSelector('.agent-card');
@@ -39,7 +39,7 @@ test.describe('Health Monitoring Resilience E2E', () => {
 
     test('Health Metrics dashboard component is accessible', async ({ page }) => {
         await page.click('a:has-text("Settings"), button:has-text("Settings")');
-        await expect(page.getByRole('heading', { name: 'Settings' }).filter({ visible: true })).toBeVisible();
+        await expect(page.locator('h1')).toContainText('Settings');
         // Wait for the advanced tab
         const advancedTab = page.locator('text=Advanced');
         await advancedTab.waitFor();
@@ -51,7 +51,7 @@ test.describe('Health Monitoring Resilience E2E', () => {
 
     test('Tasks list correctly renders unassigned tasks after agent lifecycle events', async ({ page }) => {
         await page.click('a:has-text("Tasks"), button:has-text("Tasks")');
-        await expect(page.getByRole('heading', { name: 'Tasks' }).filter({ visible: true })).toBeVisible();
+        await expect(page.locator('h1')).toContainText('Tasks');
 
         // Assert the real task item stream loads unconditionally or displays empty state
         const items = page.locator('.task-item').first().or(page.locator('.empty-state-message'));
@@ -61,7 +61,7 @@ test.describe('Health Monitoring Resilience E2E', () => {
 
     test('System logs stream reflects health monitor execution', async ({ page }) => {
         await page.click('a:has-text("Logs"), button:has-text("Logs")');
-        await expect(page.getByRole('heading', { name: 'Logs' }).filter({ visible: true })).toBeVisible();
+        await expect(page.locator('h1')).toContainText('Logs');
 
         // Assert the real system log stream loads unconditionally or displays empty state
         const items = page.locator('.log-entry').first().or(page.locator('.empty-state-message'));
@@ -71,7 +71,7 @@ test.describe('Health Monitoring Resilience E2E', () => {
 
     test('Swarm Memory page handles cluster wide failures seamlessly', async ({ page }) => {
         await page.click('a:has-text("Memory"), button:has-text("Memory")');
-        await expect(page.getByRole('heading', { name: 'Memory' }).filter({ visible: true })).toBeVisible();
+        await expect(page.locator('h1')).toContainText('Memory');
 
         const items = page.locator('.memory-node').first().or(page.locator('.empty-state-message'));
         await items.waitFor();

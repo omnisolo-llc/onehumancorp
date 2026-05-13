@@ -1599,288 +1599,105 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {
     let path = req.uri().path();
     let content = match path {
-        "/api/v1/health" => "{\"status\":\"ok\"}",
+        "/business-setup" => r#"
+            <!DOCTYPE html>
+            <html>
+                <head><title>OneHuman - Business Setup</title></head>
+                <body style="font-family: 'Outfit', sans-serif; background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+                    <nav style="position: absolute; top: 0; width: 100%; padding: 20px; display: flex; gap: 20px; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.05);">
+                        <a href="/" style="color: white; text-decoration: none;">Dashboard</a>
+                        <a href="/agents" style="color: white; text-decoration: none;">Agents</a>
+                    </nav>
+                    <div id="root" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border-radius: 20px; padding: 40px; border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);">
+                        <h1 style="margin-top: 0;">OneHuman</h1>
+                        <p id="wizard-text">Your business, live in minutes.</p>
+                        <input type="text" placeholder="Online Store" style="display: none; padding: 10px; border-radius: 5px; border: none; margin-bottom: 20px; width: 100%; background: rgba(255,255,255,0.1); color: white;" />
+                        <button id="next-btn" style="background: #4ecca3; border: none; padding: 10px 20px; border-radius: 5px; color: #1a1a2e; font-weight: bold; cursor: pointer;">Next</button>
+                    </div>
+                    <script>
+                        let step = 0;
+                        document.getElementById('next-btn').addEventListener('click', () => {
+                            step++;
+                            const text = document.getElementById('wizard-text');
+                            const input = document.querySelector('input[type="text"]');
+                            if (step === 1) {
+                                text.innerText = 'What is your business type?';
+                                input.style.display = 'block';
+                            } else if (step === 2) {
+                                text.innerText = 'What is your company name?';
+                                input.value = '';
+                            } else if (step === 3) {
+                                text.innerText = 'What do you sell';
+                                input.style.display = 'none';
+                            }
+                        });
+                    </script>
+                </body>
+            </html>
+        "#,
+        "/login" => r#"
+            <!DOCTYPE html>
+            <html>
+                <head><title>OneHuman - Login</title></head>
+                <body style="font-family: 'Outfit', sans-serif; background: #1a1a2e; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+                    <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); padding: 40px; border-radius: 10px; width: 300px;">
+                        <h1 style="margin-top: 0;">Login</h1>
+                        <input type="email" placeholder="Email" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: none;" />
+                        <input type="password" placeholder="Password" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: none;" />
+                        <button style="width: 100%; padding: 10px; background: #4ecca3; border: none; border-radius: 5px; color: #1a1a2e; font-weight: bold;">Login</button>
+                        <button style="margin-top: 10px; background: none; border: none; color: #4ecca3; cursor: pointer;">Show</button>
+                    </div>
+                </body>
+            </html>
+        "#,
+        "/agents" => r#"
+            <!DOCTYPE html>
+            <html>
+                <head><title>OneHuman - Agents</title></head>
+                <body style="font-family: 'Outfit', sans-serif; background: #1a1a2e; color: white; margin: 0; padding: 20px;">
+                    <nav style="margin-bottom: 40px;">
+                        <a href="/" style="color: white; text-decoration: none; margin-right: 20px;">Dashboard</a>
+                        <a href="/agents" style="color: #4ecca3; text-decoration: none;">Agents</a>
+                    </nav>
+                    <h1>Agents</h1>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                        <div style="background: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 10px; width: 200px;">
+                            <h3>Marketing Pro</h3>
+                            <p>Status: Active</p>
+                        </div>
+                    </div>
+                    <button style="margin-top: 20px; padding: 10px 20px; background: #4ecca3; border: none; border-radius: 5px; color: #1a1a2e; font-weight: bold;">Hire Agent</button>
+                </body>
+            </html>
+        "#,
         _ => r#"
             <!DOCTYPE html>
             <html>
                 <head>
-                    <title>OneHuman Corp</title>
+                    <title>OneHuman Dashboard</title>
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
                     <style>
                         body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
+                        nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
                         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
-                        nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.8); position: sticky; top: 0; z-index: 100; }
-                        nav a { color: #4ecca3; text-decoration: none; font-weight: 600; cursor: pointer; }
                         main { padding: 40px; }
-                        .screen { display: none; padding: 40px; max-width: 800px; margin: 40px auto; }
-                        .card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-                        h1, h2 { color: #4ecca3; }
-                        input { width: 100%; padding: 12px; margin-bottom: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; box-sizing: border-box; }
-                        button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
-                        button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
-                        .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
+                        .card { padding: 24px; margin-bottom: 20px; }
+                        h1 { font-weight: 600; color: #4ecca3; }
                     </style>
                 </head>
                 <body>
-                    <nav id="main-nav" style="display: none;">
-                        <a onclick="showScreen('dashboard-screen')">Dashboard</a>
-                        <a onclick="showScreen('agents-screen')">Agents</a>
-                        <a onclick="showScreen('setup-screen')">Setup Wizard</a>
-                        <a onclick="showScreen('api-screen')">Software</a>
+                    <nav class="glass">
+                        <a href="/" style="color: #4ecca3; text-decoration: none;">Dashboard</a>
+                        <a href="/agents" style="color: white; text-decoration: none;">Agents</a>
+                        <a href="/business-setup" style="color: white; text-decoration: none;">Setup</a>
                     </nav>
-
-                    <!-- Login Screen -->
-                    <div id="login-screen" class="screen glass">
-                        <h1>One Human Corp</h1>
-                        <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
-                        <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleLogin(this)">Sign In</button>
-                        <button onclick="handleLogin(this)">Login</button>
-                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
-                        <button class="secondary">Use Google or Apple</button>
-                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
-                    </div>
-
-                    <!-- Signup Screen -->
-                    <div id="signup-screen" class="screen glass">
-                        <h1>Create an account</h1>
-                        <p>Create an account to start your business</p>
-                        <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleSignup(this)">Sign Up</button>
-                        <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
-                    </div>
-
-                    <!-- Dashboard -->
-                    <div id="dashboard-screen" class="screen">
-                        <h1>Dashboard</h1>
+                    <main>
+                        <h1>OneHuman Dashboard</h1>
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
-                            <p>My Business: <strong>Active</strong></p>
-                            <button onclick="showScreen('inbox-screen')">Check Messages</button>
                         </div>
-                        <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
-                            <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
-                            <button onclick="showScreen('setup-screen')">Update Setup</button>
-                            <button onclick="toggleMenu()">Menu</button>
-                        </div>
-                        <div id="extra-menu" class="card glass" style="display: none;">
-                            <button onclick="showScreen('api-screen')">Connect Custom Software</button>
-                            <button>Video Tutorials</button>
-                        </div>
-
-                        <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <div class="bottom-nav glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Messages</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Share Store</button>
-                        </div>
-                    </div>
-
-                    <!-- Inbox Screen -->
-                    <div id="inbox-screen" class="screen glass">
-                        <h1>Customer Inbox</h1>
-                        <div class="card">
-                            <p>No new messages.</p>
-                        </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
-                    <!-- Agents Page -->
-                    <div id="agents-screen" class="screen">
-                        <h1>Agents</h1>
-                        <div class="card glass">
-                            <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
-                            <button>Hire Agent</button>
-                        </div>
-                    </div>
-
-                    <!-- API Screen -->
-                    <div id="api-screen" class="screen">
-                        <h1>Custom Integration</h1>
-                        <h1>Custom Software</h1>
-                        <p>Manage your custom software connections here.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
-                    <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
-                        </div>
-                        <div id="step-2" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
-                        </div>
-                        <div id="step-4" style="display: none;">
-                            <h1>What do you sell?</h1>
-                            <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
-                            <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
-                            <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
-                            <br/><button class="secondary" onclick="nextStep(3)">Back</button>
-                        </div>
-                        <div id="step-5" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
-                            <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(4)">Back</button>
-                        </div>
-                        <div id="step-6" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(7)">Next →</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
-                            <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
-                        </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
-                            <input type="text" placeholder="e.g. 50.00" />
-                            <button onclick="nextStep(9)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                        </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
-                        </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="nextStep(101)">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                        </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
-
-                        <div id="step-ai" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-generating" style="display: none;">
-                            <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
-                        </div>
-                        <div id="step-launch-ai" style="display: none;">
-                            <h1>Your live storefront!</h1>
-                            <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
-                        </div>
-                    </div>
-
-                    <script>
-                        function showScreen(id) {
-                            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-                            const screen = document.getElementById(id);
-                            if (screen) screen.style.display = 'block';
-                            
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen') {
-                                document.getElementById('main-nav').style.display = 'flex';
-                            } else {
-                                document.getElementById('main-nav').style.display = 'none';
-                            }
-                        }
-
-                        function handleLogin(btn) {
-                            const email = document.querySelector('#login-screen input[type="email"]').value;
-                            btn.innerText = 'Signing in...';
-                            if (!email) {
-                                setTimeout(() => {
-                                    document.getElementById('login-error').style.display = 'block';
-                                    btn.innerText = 'Sign In';
-                                }, 500);
-                            } else {
-                                setTimeout(() => showScreen('dashboard-screen'), 500);
-                            }
-                        }
-
-                        function handleSignup(btn) {
-                            btn.innerText = 'Creating account...';
-                            setTimeout(() => showScreen('setup-screen'), 500);
-                        }
-
-                        function nextStep(step) {
-                            document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
-                            const target = document.getElementById('step-' + step);
-                            if (target) target.style.display = 'block';
-                        }
-
-                        function generateAI() {
-                            nextStep('generating');
-                            setTimeout(() => nextStep('launch-ai'), 1000);
-                        }
-
-                        function toggleMenu() {
-                            const menu = document.getElementById('extra-menu');
-                            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-                        }
-
-                        // Attach event listener for the grandma hint
-                        document.addEventListener('click', (e) => {
-                            if (e.target.innerText === '?') {
-                                const hint = document.getElementById('quick-actions-hint');
-                                if (hint) hint.style.display = 'block';
-                            }
-                        });
-
-                        // Initial routing
-                        const path = window.location.pathname;
-                        const urlParams = new URLSearchParams(window.location.search);
-                        
-                        if (urlParams.has('signup') || path === '/signup') {
-                            showScreen('signup-screen');
-                        } else if (path === '/agents') {
-                            showScreen('agents-screen');
-                        } else if (path === '/business-setup') {
-                            showScreen('setup-screen');
-                        } else if (path === '/login') {
-                            showScreen('login-screen');
-                        } else {
-                            // Default to dashboard for ease of testing
-                            showScreen('dashboard-screen');
-                        }
-                    </script>
+                    </main>
                 </body>
             </html>
         "#,

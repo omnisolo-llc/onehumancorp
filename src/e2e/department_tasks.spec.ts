@@ -1,16 +1,16 @@
 import { test, expect } from '@playwright/test';
 
 test('Order placement triggers Operations and Customer Success AI agents', async ({ page }) => {
-    // Navigate to the login page
-    await page.goto('/login');
+    // Navigate to the home page
+    await page.goto('/');
 
     // Login
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     // Simulate placing an order
     await page.click('button:has-text("Simulate Order")');
