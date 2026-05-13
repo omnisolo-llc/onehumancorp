@@ -246,6 +246,10 @@ impl Store {
     }
 
     pub fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
+        if ::server_config::get().multitenant && org_id == "system" {
+            return Err("organization_id 'system' is reserved".to_string());
+        }
+
         if username.is_empty() {
             return Err("username is required".to_string());
         }
@@ -293,6 +297,10 @@ impl Store {
     }
 
     pub fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
+        if ::server_config::get().multitenant && org_id == "system" {
+            return Err("organization_id 'system' is reserved".to_string());
+        }
+
         let by_name = self.by_name.read().unwrap();
         let users = self.users.read().unwrap();
 
@@ -562,6 +570,10 @@ impl AuthService for AuthServiceServerImpl {
             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
         }
 
+        if ::server_config::get().multitenant && req.organization_id == "system" {
+            return Err(Status::permission_denied("organization_id 'system' is reserved"));
+        }
+
         match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
             Ok(user) => {
                 match self.store.issue_token(&user) {
@@ -583,6 +595,10 @@ impl AuthService for AuthServiceServerImpl {
         let req = request.into_inner();
         if ::server_config::get().multitenant && req.organization_id.is_empty() {
              return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+        }
+
+        if ::server_config::get().multitenant && req.organization_id == "system" {
+            return Err(Status::permission_denied("organization_id 'system' is reserved"));
         }
 
         let user = self.store.create_user(

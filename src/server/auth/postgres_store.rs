@@ -20,6 +20,10 @@ impl PgUserRepository {
 #[async_trait]
 impl UserRepository for PgUserRepository {
     async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
+        if ::server_config::get().multitenant && org_id == "system" {
+            return Err("organization_id 'system' is reserved".to_string());
+        }
+
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
@@ -51,6 +55,10 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
+        if ::server_config::get().multitenant && org_id == "system" {
+            return Err("organization_id 'system' is reserved".to_string());
+        }
+
         let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -105,6 +113,10 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
+        if ::server_config::get().multitenant && org_id == "system" {
+            return Err("organization_id 'system' is reserved".to_string());
+        }
+
         // Similar to get_by_id but query by email
         let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1";
 
@@ -132,6 +144,10 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
+        if ::server_config::get().multitenant && org_id == "system" {
+            return Err("organization_id 'system' is reserved".to_string());
+        }
+
         // Similar to get_by_id but query by oidc_subject
         let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1";
 
@@ -159,6 +175,10 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
+        if ::server_config::get().multitenant && org_id == "system" {
+            return Err("organization_id 'system' is reserved".to_string());
+        }
+
         let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -189,6 +209,10 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
+        if ::server_config::get().multitenant && org_id == "system" {
+            return Err("organization_id 'system' is reserved".to_string());
+        }
+
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
 
         let query = r#"
@@ -225,6 +249,10 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
+        if ::server_config::get().multitenant && org_id == "system" {
+            return Err("organization_id 'system' is reserved".to_string());
+        }
+
         let query = "DELETE FROM users WHERE id = $1 RETURNING id";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;

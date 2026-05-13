@@ -103,16 +103,23 @@ where
     let _ = tx.try_send(Box::new(f));
 }
 
-fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
-    let spiffe_id = req.metadata().get("x-spiffe-id")
-        .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
+fn spiffe_interceptor(mut req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+    let spiffe_id_str = {
+        let spiffe_id = req.metadata().get("x-spiffe-id")
+            .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
+        spiffe_id.to_str()
+            .map_err(|_| tonic::Status::invalid_argument("invalid x-spiffe-id header"))?
+            .to_string()
+    };
 
-    let spiffe_id_str = spiffe_id.to_str()
-        .map_err(|_| tonic::Status::invalid_argument("invalid x-spiffe-id header"))?;
-
-    match ::server_auth::parse_spiffe_id(spiffe_id_str) {
-        Ok((_org_id, _agent_id)) => {
+    match ::server_auth::parse_spiffe_id(&spiffe_id_str) {
+        Ok((org_id, agent_id)) => {
             tracing::info!("Authenticated SPIFFE ID successfully.");
+            req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+                org_id,
+                agent_id,
+                spiffe_id: spiffe_id_str,
+            });
         }
         Err(e) => return Err(e),
     }

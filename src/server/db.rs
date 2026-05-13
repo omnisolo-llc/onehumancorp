@@ -13,7 +13,14 @@ static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get().cloned().unwrap_or_else(|| {
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let mut database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        if !database_url.starts_with("sqlite") && !database_url.contains("statement_cache_capacity=0") {
+            if database_url.contains('?') {
+                database_url.push_str("&statement_cache_capacity=0");
+            } else {
+                database_url.push_str("?statement_cache_capacity=0");
+            }
+        }
         sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(500))
