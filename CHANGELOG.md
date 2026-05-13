@@ -1,3 +1,13 @@
+## [0.4.42] / [0.4.42+1]
+
+### Cloud Scaling Improvements
+- Optimized K8s pod resource utilization and connection pooling.
+- Bumped Helm chart dependencies for CloudNative-PG and Redis.
+
+### Privacy/Offline Improvements
+- Enhanced local SQLite encryption handling.
+- Improved idempotent state handoff between modes.
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
