@@ -212,7 +212,7 @@ impl OperationsWorker {
                             let mut drafted_msg = String::new();
                             if let (Some(s_name), Some(s_contact)) = (&supplier_name, &supplier_contact) {
                                 let prompt = format!("Draft a concise restock message to our supplier '{}' at '{}' for the product '{}'. Currently we have {} left and are selling at a rate of {:.1} per day. Ask to order more to cover the next month.", s_name, s_contact, product_name, inventory_count, daily_sales);
-                                if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                                     let reason_req = ::server_ohc::orchestration::ReasonRequest {
                                         prompt,
                                         from_agent_id: "operations".into(),
@@ -750,7 +750,7 @@ impl PromoterWorker {
 
                             let mut drafted_post = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
 
-                            if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                            if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                                 let reason_req = ::server_ohc::orchestration::ReasonRequest {
                                     prompt,
                                     from_agent_id: "The Promoter".into(),
@@ -817,7 +817,7 @@ impl PromoterWorker {
                                     from_agent_id: "setup_wizard".to_string(),
                                 };
 
-                                if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
 
                                     if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
                                         if let Ok(v) = serde_json::from_str::<serde_json::Value>(&res.into_inner().content) {
