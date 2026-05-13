@@ -41,6 +41,10 @@ pkg_files(
 pkg_tar(
     name = "app_tar",
     srcs = [":app_files"],
+
+
+
+
     extension = "tar.gz",
     visibility = ["//visibility:public"],
 )
@@ -69,6 +73,12 @@ pkg_rpm(
     summary = "One Human Corp Desktop Application",
     description = "One Human Corp Desktop Application",
     srcs = [":app_files"],
+    release = "1",
+
+
+
+
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -80,6 +90,10 @@ pkg_rpm(
 pkg_zip(
     name = "app_windows_zip",
     srcs = [":app_files"],
+
+
+
+
     package_file_name = "ohc-app-windows-0.4.41+1.zip",
     visibility = ["//visibility:public"],
 )
