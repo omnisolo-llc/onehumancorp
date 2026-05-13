@@ -1,10 +1,14 @@
+use opentelemetry::global;
 use std::fs;
 use std::path::Path;
-use opentelemetry::global;
 
 pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
-    let base_dir = if is_cloud { ".ohc-cloud-data" } else { ".ohc-local-data" };
-    
+    let base_dir = if is_cloud {
+        ".ohc-cloud-data"
+    } else {
+        ".ohc-local-data"
+    };
+
     let dirs = vec![
         format!("{}/db", base_dir),
         format!("{}/blob", base_dir),
@@ -19,13 +23,17 @@ pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
         .u64_counter("ohc.provisioner.environments_created")
         .build()
         .add(1, &[]);
-    
+
     Ok(())
 }
 
 pub fn check_environment(is_cloud: bool) -> Result<(), String> {
-    let base_dir = if is_cloud { ".ohc-cloud-data" } else { ".ohc-local-data" };
-    
+    let base_dir = if is_cloud {
+        ".ohc-cloud-data"
+    } else {
+        ".ohc-local-data"
+    };
+
     let dirs = vec![
         format!("{}/db", base_dir),
         format!("{}/blob", base_dir),
@@ -42,17 +50,21 @@ pub fn check_environment(is_cloud: bool) -> Result<(), String> {
 }
 
 pub fn cleanup_environment(is_cloud: bool) -> Result<(), String> {
-    let base_dir = if is_cloud { ".ohc-cloud-data" } else { ".ohc-local-data" };
-    
+    let base_dir = if is_cloud {
+        ".ohc-cloud-data"
+    } else {
+        ".ohc-local-data"
+    };
+
     if Path::new(base_dir).exists() {
         fs::remove_dir_all(base_dir).map_err(|e| e.to_string())?;
     }
-    
+
     global::meter("ohc.onboarding")
         .u64_counter("ohc.provisioner.environments_cleaned")
         .build()
         .add(1, &[]);
-    
+
     Ok(())
 }
 

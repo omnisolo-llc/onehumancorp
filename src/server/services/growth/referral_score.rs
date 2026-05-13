@@ -1,21 +1,25 @@
-use std::sync::RwLock;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
+use std::sync::RwLock;
 
-pub struct ViralLoopTracker {
+pub struct ReferralScoreTracker {
     invites_sent: RwLock<i32>,
     invites_accepted: RwLock<i32>,
     invites_sent_metric: Counter<u64>,
     invites_accepted_metric: Counter<u64>,
 }
 
-impl ViralLoopTracker {
+impl ReferralScoreTracker {
     pub fn new() -> Self {
         let meter = global::meter("ohc.growth");
-        let invites_sent_metric = meter.u64_counter("ohc.growth.viral_loop.invites_sent").build();
-        let invites_accepted_metric = meter.u64_counter("ohc.growth.viral_loop.invites_accepted").build();
+        let invites_sent_metric = meter
+            .u64_counter("ohc.growth.referral_score.invites_sent")
+            .build();
+        let invites_accepted_metric = meter
+            .u64_counter("ohc.growth.referral_score.invites_accepted")
+            .build();
 
-        ViralLoopTracker {
+        ReferralScoreTracker {
             invites_sent: RwLock::new(0),
             invites_accepted: RwLock::new(0),
             invites_sent_metric,
@@ -35,7 +39,7 @@ impl ViralLoopTracker {
         self.invites_accepted_metric.add(1, &[]);
     }
 
-    pub fn calculate_k_factor(&self) -> f64 {
+    pub fn calculate_score(&self) -> f64 {
         let sent = self.invites_sent.read().unwrap();
         let accepted = self.invites_accepted.read().unwrap();
 
@@ -52,14 +56,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_viral_loop_tracker() {
-        let tracker = ViralLoopTracker::new();
-        
+    fn test_referral_score_tracker() {
+        let tracker = ReferralScoreTracker::new();
+
         tracker.record_invite_sent("user1");
         tracker.record_invite_sent("user2");
         tracker.record_invite_accepted("invitee1");
-        
-        let k_factor = tracker.calculate_k_factor();
-        assert_eq!(k_factor, 0.5);
+
+        let score = tracker.calculate_score();
+        assert_eq!(score, 0.5);
     }
 }

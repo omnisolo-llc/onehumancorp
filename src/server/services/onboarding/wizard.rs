@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use crate::services::onboarding::preflight;
 use crate::services::onboarding::provisioner;
+use std::collections::HashMap;
 
 pub struct InteractiveWizard;
 
@@ -30,7 +30,11 @@ impl InteractiveWizard {
     }
 
     pub fn generate_wizard_ui(&self, is_cloud: bool) -> String {
-        let mode = if is_cloud { "Cloud-native" } else { "Standalone" };
+        let mode = if is_cloud {
+            "Cloud-native"
+        } else {
+            "Standalone"
+        };
 
         format!(
             "<div style=\"backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 24px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);\">\n\
@@ -41,8 +45,13 @@ impl InteractiveWizard {
         )
     }
 
-
-    pub fn save_onboarding_state(&self, _org_id: &str, _user_id: &str, _step: i32, _state_json: &str) -> Result<(), String> {
+    pub fn save_onboarding_state(
+        &self,
+        _org_id: &str,
+        _user_id: &str,
+        _step: i32,
+        _state_json: &str,
+    ) -> Result<(), String> {
         // Here we would use sqlx to persist to the onboarding_state table
         Ok(())
     }
@@ -81,7 +90,7 @@ mod tests {
     #[test]
     fn test_reset_environment() {
         let w = InteractiveWizard::new();
-        
+
         // Ensure clean slate
         let _ = fs::remove_dir_all(".ohc-local-data");
 

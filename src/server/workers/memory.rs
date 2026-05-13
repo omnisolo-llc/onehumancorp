@@ -1,6 +1,6 @@
-use std::sync::Arc;
-use ohc_builtin_agent::memory_store::VectorRepository;
 use chrono::Utc;
+use ohc_builtin_agent::memory_store::VectorRepository;
+use std::sync::Arc;
 
 /// MemoryConsolidationWorker is responsible for periodically pruning stale context
 /// and automatically resolving memory conflicts within the vector repository.
@@ -15,7 +15,7 @@ impl MemoryConsolidationWorker {
         Self {
             repository,
             poll_interval: std::time::Duration::from_secs(3600), // 1 hour
-            prune_threshold_days: 180, // Default to 180 days
+            prune_threshold_days: 180,                           // Default to 180 days
         }
     }
 
@@ -32,7 +32,10 @@ impl MemoryConsolidationWorker {
                     tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
                 }
                 if let Err(e) = repository.auto_resolve_conflicts().await {
-                    tracing::error!("Consolidation Worker: Failed to resolve memory conflicts: {}", e);
+                    tracing::error!(
+                        "Consolidation Worker: Failed to resolve memory conflicts: {}",
+                        e
+                    );
                 }
             }
         });
@@ -49,7 +52,10 @@ mod tests {
         use std::str::FromStr;
 
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+        let pool = SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
         let worker = MemoryConsolidationWorker::new(repo);
@@ -67,19 +73,23 @@ mod tests {
         use std::str::FromStr;
 
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+        let pool = SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
         let worker = MemoryConsolidationWorker::new(repo);
         assert_eq!(worker.poll_interval.as_secs(), 3600);
-}
+    }
     #[tokio::test]
     async fn test_worker_pipeline_execution() {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use std::str::FromStr;
 
         // Safe database initialization without Err(_) => return
-        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse SQLite connection string");
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
+            .expect("Failed to parse SQLite connection string");
         let pool = SqlitePoolOptions::new()
             .connect_with(conn_opts)
             .await
@@ -100,7 +110,7 @@ mod tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
+            );",
         )
         .execute(&pool)
         .await
@@ -123,7 +133,9 @@ mod tests {
             owner_override: false,
             metadata: None,
         };
-        repo.upsert(&stale_record).await.expect("Failed to upsert stale record");
+        repo.upsert(&stale_record)
+            .await
+            .expect("Failed to upsert stale record");
 
         let mut worker = MemoryConsolidationWorker::new(repo.clone());
         worker.poll_interval = std::time::Duration::from_millis(10); // Fast interval for testing
@@ -143,9 +155,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_worker_full_pipeline_with_conflict_and_pruning() {
+        use sqlx::Row;
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use std::str::FromStr;
-        use sqlx::Row;
 
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = SqlitePoolOptions::new()
@@ -167,7 +179,7 @@ mod tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
+            );",
         )
         .execute(&pool)
         .await
@@ -244,6 +256,9 @@ mod tests {
 
         assert_eq!(id, "conflict_winner", "The winner must be preserved");
         // Loser has 1, winner has 2, logic increments winner by loser + 1 -> 2 + 1 + 1 = 4.
-        assert_eq!(ref_count, 4, "The winner should inherit the loser's reference count");
+        assert_eq!(
+            ref_count, 4,
+            "The winner should inherit the loser's reference count"
+        );
     }
 }
