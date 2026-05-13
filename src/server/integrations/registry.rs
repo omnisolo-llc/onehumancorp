@@ -17,6 +17,12 @@ pub struct IntegrationsRegistry {
     issues: RwLock<std::collections::HashMap<String, Vec<Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
+    mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
+    calcom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calcom::provider::CalComProvider>>>,
+    resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
+    shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
+    dailyco_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::dailyco::provider::DailyCoProvider>>>,
+    meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
 }
 
@@ -41,6 +47,12 @@ impl IntegrationsRegistry {
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            calcom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            dailyco_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
         }
     }
@@ -144,6 +156,30 @@ impl IntegrationsRegistry {
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
+        }
+        if integration_id == "mercadopago" {
+            let mut clients = self.mercadopago_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::mercadopago::provider::MercadoPagoProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "calcom" {
+            let mut clients = self.calcom_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::calcom::provider::CalComProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "resend" {
+            let mut clients = self.resend_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::resend::provider::ResendProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "shippo" {
+            let mut clients = self.shippo_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::shippo::provider::ShippoProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "dailyco" {
+            let mut clients = self.dailyco_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::dailyco::provider::DailyCoProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "meta" {
+            let mut clients = self.meta_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(creds.bot_token.clone())));
         }
         if integration_id == "nats" {
             let base_url_clone = base_url.to_string();
