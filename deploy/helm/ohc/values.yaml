@@ -130,7 +130,7 @@ multiTenant:
 # PowerSync - synchronization engine
 powersync:
   enabled: true
-  image: journeyapps/powersync-service:latest
+  image: journeyapps/powersync-service:1.20.5
   replicas: 1
   service:
     type: ClusterIP

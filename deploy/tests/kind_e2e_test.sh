@@ -97,12 +97,12 @@ if [[ -n "${TEST_SRCDIR:-}" ]]; then
   popd >/dev/null
   
   # Standardize tags for the test
-  docker tag onehumancorp/server:latest onehumancorp/server:e2e
+  docker tag onehumancorp/server:v0.4.41 onehumancorp/server:e2e
 else
   require_tool bazelisk
   log "Manual run detected. Building server image via Bazel..."
   bazelisk run //deploy:server_load
-  docker tag onehumancorp/server:latest onehumancorp/server:e2e
+  docker tag onehumancorp/server:v0.4.41 onehumancorp/server:e2e
 fi
 
 # ── Add Helm repos ─────────────────────────────────────────────────────────────
