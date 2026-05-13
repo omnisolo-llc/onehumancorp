@@ -19,7 +19,6 @@ permissions:
   pages: write
   id-token: write
 
-
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -39,7 +38,7 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: false
+          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
