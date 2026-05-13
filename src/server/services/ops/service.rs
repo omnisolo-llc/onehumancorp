@@ -9,6 +9,11 @@ use std::pin::Pin;
 use tokio_stream::StreamExt;
 
 pub struct MyOpsService {
+    incidents_cache: ::server_utils::cache::HybridCache<IncidentsResponse>,
+    compute_profiles_cache: ::server_utils::cache::HybridCache<ComputeProfilesResponse>,
+    cluster_status_cache: ::server_utils::cache::HybridCache<ClusterStatus>,
+    budget_alerts_cache: ::server_utils::cache::HybridCache<BudgetAlertsResponse>,
+    pipelines_cache: ::server_utils::cache::HybridCache<PipelinesResponse>,
     hub: Arc<Hub>,
     incidents: RwLock<Vec<Incident>>,
     compute_profiles: RwLock<Vec<ComputeProfile>>,
@@ -18,12 +23,18 @@ pub struct MyOpsService {
 
 impl MyOpsService {
     pub fn new(hub: Arc<Hub>) -> Self {
+        let redis_client = hub.redis_client.clone();
         MyOpsService {
             hub,
             incidents: RwLock::new(Vec::new()),
             compute_profiles: RwLock::new(Vec::new()),
             budget_alerts: RwLock::new(Vec::new()),
             pipelines: RwLock::new(Vec::new()),
+            incidents_cache: ::server_utils::cache::HybridCache::new(redis_client.clone()),
+            compute_profiles_cache: ::server_utils::cache::HybridCache::new(redis_client.clone()),
+            cluster_status_cache: ::server_utils::cache::HybridCache::new(redis_client.clone()),
+            budget_alerts_cache: ::server_utils::cache::HybridCache::new(redis_client.clone()),
+            pipelines_cache: ::server_utils::cache::HybridCache::new(redis_client),
         }
     }
 }
@@ -34,10 +45,18 @@ impl OpsService for MyOpsService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<IncidentsResponse>, Status> {
-        let incidents = self.incidents.read().unwrap();
-        Ok(Response::new(IncidentsResponse {
-            incidents: incidents.clone(),
-        }))
+        let cache_key = "ops_incidents";
+        if let Some(cached) = self.incidents_cache.get(cache_key).await {
+            return Ok(Response::new(cached));
+        }
+        let response = {
+            let incidents = self.incidents.read().unwrap();
+            IncidentsResponse {
+                incidents: incidents.clone(),
+            }
+        };
+        self.incidents_cache.set(cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+        Ok(Response::new(response))
     }
 
     async fn create_incident(
@@ -61,8 +80,11 @@ impl OpsService for MyOpsService {
             resolution_plan_id: String::new(),
         };
         
-        let mut incidents = self.incidents.write().unwrap();
-        incidents.push(incident.clone());
+        {
+            let mut incidents = self.incidents.write().unwrap();
+            incidents.push(incident.clone());
+        }
+        let _ = self.incidents_cache.invalidate("ops_incidents").await;
         
         Ok(Response::new(incident))
     }
@@ -76,29 +98,33 @@ impl OpsService for MyOpsService {
             return Err(Status::invalid_argument("incidentId and status are required"));
         }
         
-        let mut incidents = self.incidents.write().unwrap();
-        let mut found = false;
-        let mut updated = None;
-        
-        for inc in incidents.iter_mut() {
-            if inc.id == req.incident_id {
-                inc.status = req.status.clone();
-                inc.updated_at_unix = Utc::now().timestamp();
-                if !req.resolution_plan_id.is_empty() {
-                    inc.resolution_plan_id = req.resolution_plan_id.clone();
+        let (found, updated) = {
+            let mut incidents = self.incidents.write().unwrap();
+            let mut found = false;
+            let mut updated = None;
+
+            for inc in incidents.iter_mut() {
+                if inc.id == req.incident_id {
+                    inc.status = req.status.clone();
+                    inc.updated_at_unix = Utc::now().timestamp();
+                    if !req.resolution_plan_id.is_empty() {
+                        inc.resolution_plan_id = req.resolution_plan_id.clone();
+                    }
+                    if !req.rca.is_empty() {
+                        inc.rca = req.rca.clone();
+                    }
+                    updated = Some(inc.clone());
+                    found = true;
+                    break;
                 }
-                if !req.rca.is_empty() {
-                    inc.rca = req.rca.clone();
-                }
-                updated = Some(inc.clone());
-                found = true;
-                break;
             }
-        }
+            (found, updated)
+        };
         
         if !found {
             return Err(Status::not_found("incident not found"));
         }
+        let _ = self.incidents_cache.invalidate("ops_incidents").await;
         
         Ok(Response::new(updated.unwrap()))
     }
@@ -107,10 +133,18 @@ impl OpsService for MyOpsService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<ComputeProfilesResponse>, Status> {
-        let profiles = self.compute_profiles.read().unwrap();
-        Ok(Response::new(ComputeProfilesResponse {
-            profiles: profiles.clone(),
-        }))
+        let cache_key = "ops_compute_profiles";
+        if let Some(cached) = self.compute_profiles_cache.get(cache_key).await {
+            return Ok(Response::new(cached));
+        }
+        let response = {
+            let profiles = self.compute_profiles.read().unwrap();
+            ComputeProfilesResponse {
+                profiles: profiles.clone(),
+            }
+        };
+        self.compute_profiles_cache.set(cache_key, response.clone(), std::time::Duration::from_secs(3600)).await;
+        Ok(Response::new(response))
     }
 
     async fn create_compute_profile(
@@ -130,8 +164,11 @@ impl OpsService for MyOpsService {
             created_at_unix: Utc::now().timestamp(),
         };
         
-        let mut profiles = self.compute_profiles.write().unwrap();
-        profiles.push(profile.clone());
+        {
+            let mut profiles = self.compute_profiles.write().unwrap();
+            profiles.push(profile.clone());
+        }
+        let _ = self.compute_profiles_cache.invalidate("ops_compute_profiles").await;
         
         Ok(Response::new(profile))
     }
@@ -145,23 +182,39 @@ impl OpsService for MyOpsService {
             return Err(Status::invalid_argument("region is required"));
         }
         
-        Ok(Response::new(ClusterStatus {
-            region: req.region,
+        let cache_key = format!("ops_cluster_status_{}", req.region);
+        if let Some(cached) = self.cluster_status_cache.get(&cache_key).await {
+            return Ok(Response::new(cached));
+        }
+
+        let response = ClusterStatus {
+            region: req.region.clone(),
             status: "healthy".to_string(),
             latency_ms: 3,
             available_nodes: 5,
             checked_at_unix: Utc::now().timestamp(),
-        }))
+        };
+        self.cluster_status_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(5)).await;
+
+        Ok(Response::new(response))
     }
 
     async fn get_budget_alerts(
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<BudgetAlertsResponse>, Status> {
-        let alerts = self.budget_alerts.read().unwrap();
-        Ok(Response::new(BudgetAlertsResponse {
-            alerts: alerts.clone(),
-        }))
+        let cache_key = "ops_budget_alerts";
+        if let Some(cached) = self.budget_alerts_cache.get(cache_key).await {
+            return Ok(Response::new(cached));
+        }
+        let response = {
+            let alerts = self.budget_alerts.read().unwrap();
+            BudgetAlertsResponse {
+                alerts: alerts.clone(),
+            }
+        };
+        self.budget_alerts_cache.set(cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+        Ok(Response::new(response))
     }
 
     async fn create_budget_alert(
@@ -184,8 +237,11 @@ impl OpsService for MyOpsService {
             created_at_unix: Utc::now().timestamp(),
         };
         
-        let mut alerts = self.budget_alerts.write().unwrap();
-        alerts.push(alert.clone());
+        {
+            let mut alerts = self.budget_alerts.write().unwrap();
+            alerts.push(alert.clone());
+        }
+        let _ = self.budget_alerts_cache.invalidate("ops_budget_alerts").await;
         
         Ok(Response::new(alert))
     }
@@ -194,10 +250,18 @@ impl OpsService for MyOpsService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<PipelinesResponse>, Status> {
-        let pipelines = self.pipelines.read().unwrap();
-        Ok(Response::new(PipelinesResponse {
-            pipelines: pipelines.clone(),
-        }))
+        let cache_key = "ops_pipelines";
+        if let Some(cached) = self.pipelines_cache.get(cache_key).await {
+            return Ok(Response::new(cached));
+        }
+        let response = {
+            let pipelines = self.pipelines.read().unwrap();
+            PipelinesResponse {
+                pipelines: pipelines.clone(),
+            }
+        };
+        self.pipelines_cache.set(cache_key, response.clone(), std::time::Duration::from_secs(10)).await;
+        Ok(Response::new(response))
     }
 
     async fn create_pipeline(
@@ -221,8 +285,11 @@ impl OpsService for MyOpsService {
             updated_at_unix: now.timestamp(),
         };
         
-        let mut pipelines = self.pipelines.write().unwrap();
-        pipelines.push(pipeline.clone());
+        {
+            let mut pipelines = self.pipelines.write().unwrap();
+            pipelines.push(pipeline.clone());
+        }
+        let _ = self.pipelines_cache.invalidate("ops_pipelines").await;
         
         Ok(Response::new(pipeline))
     }
@@ -232,26 +299,36 @@ impl OpsService for MyOpsService {
         request: Request<PipelinePromoteRequest>,
     ) -> Result<Response<Pipeline>, Status> {
         let req = request.into_inner();
-        let mut pipelines = self.pipelines.write().unwrap();
-        let mut found = false;
-        let mut updated = None;
-        
-        for p in pipelines.iter_mut() {
-            if p.id == req.pipeline_id {
-                if p.status != "STAGING" {
-                    return Err(Status::failed_precondition("pipeline must be in STAGING status to promote"));
+        let (found, updated, ret_err) = {
+            let mut pipelines = self.pipelines.write().unwrap();
+            let mut found = false;
+            let mut updated = None;
+            let mut ret_err = None;
+
+            for p in pipelines.iter_mut() {
+                if p.id == req.pipeline_id {
+                    if p.status != "STAGING" {
+                        ret_err = Some(Status::failed_precondition("pipeline must be in STAGING status to promote"));
+                        break;
+                    }
+                    p.status = "PROMOTED".to_string();
+                    p.updated_at_unix = Utc::now().timestamp();
+                    updated = Some(p.clone());
+                    found = true;
+                    break;
                 }
-                p.status = "PROMOTED".to_string();
-                p.updated_at_unix = Utc::now().timestamp();
-                updated = Some(p.clone());
-                found = true;
-                break;
             }
+            (found, updated, ret_err)
+        };
+
+        if let Some(err) = ret_err {
+            return Err(err);
         }
         
         if !found {
             return Err(Status::not_found("pipeline not found"));
         }
+        let _ = self.pipelines_cache.invalidate("ops_pipelines").await;
         
         Ok(Response::new(updated.unwrap()))
     }
@@ -261,26 +338,30 @@ impl OpsService for MyOpsService {
         request: Request<UpdatePipelineStatusRequest>,
     ) -> Result<Response<Pipeline>, Status> {
         let req = request.into_inner();
-        let mut pipelines = self.pipelines.write().unwrap();
-        let mut found = false;
-        let mut updated = None;
-        
-        for p in pipelines.iter_mut() {
-            if p.id == req.pipeline_id {
-                p.status = req.status.clone();
-                p.updated_at_unix = Utc::now().timestamp();
-                if !req.staging_url.is_empty() {
-                    p.staging_url = req.staging_url.clone();
+        let (found, updated) = {
+            let mut pipelines = self.pipelines.write().unwrap();
+            let mut found = false;
+            let mut updated = None;
+
+            for p in pipelines.iter_mut() {
+                if p.id == req.pipeline_id {
+                    p.status = req.status.clone();
+                    p.updated_at_unix = Utc::now().timestamp();
+                    if !req.staging_url.is_empty() {
+                        p.staging_url = req.staging_url.clone();
+                    }
+                    updated = Some(p.clone());
+                    found = true;
+                    break;
                 }
-                updated = Some(p.clone());
-                found = true;
-                break;
             }
-        }
+            (found, updated)
+        };
         
         if !found {
             return Err(Status::not_found("pipeline not found"));
         }
+        let _ = self.pipelines_cache.invalidate("ops_pipelines").await;
         
         Ok(Response::new(updated.unwrap()))
     }
@@ -384,5 +465,159 @@ impl OpsService for MyOpsService {
             })),
             Err(e) => Err(Status::internal(format!("failed to prune missions: {}", e))),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::Request;
+
+    async fn setup_test_service() -> MyOpsService {
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        // Since we are mocking database connections in these tests, avoiding real remote calls is crucial
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://dummy_user:dummy_pass@localhost:5432/dummy_db").unwrap();
+        let db_arc = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) });
+        let hub = Arc::new(crate::hub::Hub::new(tx, db_arc.pool.clone()));
+        MyOpsService::new(hub)
+    }
+
+    #[tokio::test]
+    async fn test_get_incidents_caching() {
+        let service = setup_test_service().await;
+
+        // Setup initial dummy incident to ensure there's something to fetch
+        let create_req = CreateIncidentRequest {
+            severity: "high".to_string(),
+            summary: "Test incident".to_string(),
+            rca: "".to_string(),
+        };
+        let _ = service.create_incident(Request::new(create_req)).await.unwrap();
+
+        let res1 = service.get_incidents(Request::new(EmptyRequest {})).await.unwrap().into_inner();
+        let res2 = service.get_incidents(Request::new(EmptyRequest {})).await.unwrap().into_inner();
+
+        assert_eq!(res1.incidents.len(), 1);
+        assert_eq!(res2.incidents.len(), 1);
+        assert_eq!(res1.incidents[0].summary, "Test incident");
+    }
+
+    #[tokio::test]
+    async fn test_create_and_update_incident_cache_invalidation() {
+        let service = setup_test_service().await;
+
+        let create_req = CreateIncidentRequest {
+            severity: "high".to_string(),
+            summary: "Test incident".to_string(),
+            rca: "".to_string(),
+        };
+        let inc = service.create_incident(Request::new(create_req)).await.unwrap().into_inner();
+
+        // This will cache it
+        let _ = service.get_incidents(Request::new(EmptyRequest {})).await.unwrap();
+
+        // Update incident should invalidate cache
+        let update_req = IncidentStatusRequest {
+            incident_id: inc.id.clone(),
+            status: "RESOLVED".to_string(),
+            resolution_plan_id: "".to_string(),
+            rca: "".to_string(),
+        };
+        let _ = service.update_incident_status(Request::new(update_req)).await.unwrap();
+
+        // Get incidents should reflect new status
+        let res = service.get_incidents(Request::new(EmptyRequest {})).await.unwrap().into_inner();
+        assert_eq!(res.incidents[0].status, "RESOLVED");
+    }
+
+    #[tokio::test]
+    async fn test_get_compute_profiles_caching() {
+        let service = setup_test_service().await;
+
+        let create_req = CreateComputeProfileRequest {
+            role_id: "worker".to_string(),
+            min_vram_gb: 4,
+            preferred_gpu_type: "nvidia".to_string(),
+            scheduling_priority: 1,
+        };
+        let _ = service.create_compute_profile(Request::new(create_req)).await.unwrap();
+
+        let res1 = service.get_compute_profiles(Request::new(EmptyRequest {})).await.unwrap().into_inner();
+        let res2 = service.get_compute_profiles(Request::new(EmptyRequest {})).await.unwrap().into_inner();
+
+        assert_eq!(res1.profiles.len(), 1);
+        assert_eq!(res2.profiles.len(), 1);
+        assert_eq!(res1.profiles[0].role_id, "worker");
+    }
+
+    #[tokio::test]
+    async fn test_get_cluster_status_caching() {
+        let service = setup_test_service().await;
+
+        let res1 = service.get_cluster_status(Request::new(GetClusterStatusRequest { region: "us-east-1".to_string() })).await.unwrap().into_inner();
+        let res2 = service.get_cluster_status(Request::new(GetClusterStatusRequest { region: "us-east-1".to_string() })).await.unwrap().into_inner();
+
+        assert_eq!(res1.region, "us-east-1");
+        assert_eq!(res2.region, "us-east-1");
+        assert_eq!(res1.status, "healthy");
+    }
+
+    #[tokio::test]
+    async fn test_get_budget_alerts_caching() {
+        let service = setup_test_service().await;
+
+        let create_req = CreateBudgetAlertRequest {
+            organization_id: "org1".to_string(),
+            threshold_usd: 100.0,
+            notify_at_pct: 80.0,
+            predictive: false,
+            forecast_hours: 0,
+        };
+        let _ = service.create_budget_alert(Request::new(create_req)).await.unwrap();
+
+        let res1 = service.get_budget_alerts(Request::new(EmptyRequest {})).await.unwrap().into_inner();
+        let res2 = service.get_budget_alerts(Request::new(EmptyRequest {})).await.unwrap().into_inner();
+
+        assert_eq!(res1.alerts.len(), 1);
+        assert_eq!(res2.alerts.len(), 1);
+        assert_eq!(res1.alerts[0].threshold_usd, 100.0);
+    }
+
+    #[tokio::test]
+    async fn test_get_pipelines_caching() {
+        let service = setup_test_service().await;
+
+        let create_req = CreatePipelineRequest {
+            name: "test-pipeline".to_string(),
+            branch: "main".to_string(),
+            initiated_by: "user1".to_string(),
+        };
+        let pipe = service.create_pipeline(Request::new(create_req)).await.unwrap().into_inner();
+
+        // This gets cached
+        let res1 = service.get_pipelines(Request::new(EmptyRequest {})).await.unwrap().into_inner();
+        assert_eq!(res1.pipelines.len(), 1);
+        assert_eq!(res1.pipelines[0].name, "test-pipeline");
+
+        // Now test update status invalidation
+        let update_req = UpdatePipelineStatusRequest {
+            pipeline_id: pipe.id.clone(),
+            status: "STAGING".to_string(),
+            staging_url: "".to_string(),
+        };
+        let _ = service.update_pipeline_status(Request::new(update_req)).await.unwrap();
+
+        let res2 = service.get_pipelines(Request::new(EmptyRequest {})).await.unwrap().into_inner();
+        assert_eq!(res2.pipelines[0].status, "STAGING");
+
+        // Now test promote invalidation
+        let promote_req = PipelinePromoteRequest {
+            pipeline_id: pipe.id.clone(),
+        };
+        let _ = service.promote_pipeline(Request::new(promote_req)).await.unwrap();
+
+        let res3 = service.get_pipelines(Request::new(EmptyRequest {})).await.unwrap().into_inner();
+        assert_eq!(res3.pipelines[0].status, "PROMOTED");
     }
 }
