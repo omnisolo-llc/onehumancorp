@@ -1,6 +1,6 @@
 use tonic::{Request, Status};
-use super::parse_spiffe_id;
-use ::server_ohc::orchestration::*;
+use crate::auth::parse_spiffe_id;
+use crate::ohc::orchestration::*;
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -18,7 +18,8 @@ pub fn interceptor(req: Request<()>) -> Result<Request<()>, Status> {
         .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))?
         .to_string();
 
-    let (org_id, agent_id) = parse_spiffe_id(&spiffe_id_str)?;
+    let (org_id, agent_id) = parse_spiffe_id(&spiffe_id_str)
+        .map_err(|e| Status::permission_denied(e))?;
 
     let mut req = req;
     req.extensions_mut().insert(AuthInfo {

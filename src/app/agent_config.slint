@@ -1,0 +1,250 @@
+import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit, Slider, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+import { AdvancedToggle } from "advanced_toggle.slint";
+
+export component AgentConfig inherits Window {
+    width: 600px;
+    height: 500px;
+    title: "Configure Helper";
+
+    callback activate_agent(string, bool, bool, bool, bool, string, string, string, string);
+    callback next_step();
+    callback save_state();
+
+    in-out property <int> step: 0;
+    in-out property <string> selected_agent: "";
+    in-out property <string> selected_agent_display: "";
+    in-out property <bool> can_reply: false;
+    in-out property <bool> can_social: false;
+    in-out property <bool> can_write_descriptions: false;
+    in-out property <bool> can_send_updates: false;
+    in-out property <float> frequency_value: 2.0;
+    in-out property <string> frequency: round(frequency_value) == 0 ? "Real-time" : (round(frequency_value) == 1 ? "Hourly" : (round(frequency_value) == 2 ? "Daily" : "Weekly"));
+    in-out property <bool> is_advanced: false;
+    in-out property <bool> show_toast: false;
+    in-out property <string> api_scope_override: "";
+    in-out property <string> cron_override: "";
+    in-out property <string> raw_activation_payload: "";
+
+    next_step => { step = step + 1; }
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Configure Helper"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
+            Rectangle {}
+            AdvancedToggle {
+                is_advanced <=> root.is_advanced;
+                toggled => { save_state(); }
+            }
+        }
+
+        // Step 0: Choose Agent
+        if (step == 0) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Raw Config Override"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "{ \"agent_id\": \"override-123\" }"; }
+            }
+            spacing: 20px;
+            Text { text: "Choose a helper to add to your team"; font-family: "Inter"; color: white; }
+
+            ScrollView {
+                height: 300px;
+                VerticalBox {
+                    spacing: 12px;
+                    GlassCard {
+                        height: 90px;
+                        background: selected_agent == "Customer Support" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        HorizontalBox {
+                            padding: 16px; spacing: 16px; alignment: center;
+                            Text { text: "🎧"; font-size: 32px; }
+                            VerticalBox {
+                                alignment: center;
+                                Text { text: "Customer Support"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "Customer Support — keeps customers happy"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                            }
+                        }
+                        TouchArea { clicked => { selected_agent = "Customer Support"; selected_agent_display = "Customer Support"; } }
+                    }
+                    GlassCard {
+                        height: 90px;
+                        background: selected_agent == "Social Media Manager" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        HorizontalBox {
+                            padding: 16px; spacing: 16px; alignment: center;
+                            Text { text: "📱"; font-size: 32px; }
+                            VerticalBox {
+                                alignment: center;
+                                Text { text: "Social Media Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "Social Media Manager — gets the word out"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                            }
+                        }
+                        TouchArea { clicked => { selected_agent = "Social Media Manager"; selected_agent_display = "Social Media Manager"; } }
+                    }
+                    GlassCard {
+                        height: 90px;
+                        background: selected_agent == "SEO Booster" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        HorizontalBox {
+                            padding: 16px; spacing: 16px; alignment: center;
+                            Text { text: "🚀"; font-size: 32px; }
+                            VerticalBox {
+                                alignment: center;
+                                Text { text: "SEO Booster"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "SEO Booster — drives traffic"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                            }
+                        }
+                        TouchArea { clicked => { selected_agent = "SEO Booster"; selected_agent_display = "SEO Booster"; } }
+                    }
+                    GlassCard {
+                        height: 90px;
+                        background: selected_agent == "Order Manager" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        HorizontalBox {
+                            padding: 16px; spacing: 16px; alignment: center;
+                            Text { text: "📦"; font-size: 32px; }
+                            VerticalBox {
+                                alignment: center;
+                                Text { text: "Order Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "Order Manager — handles daily operations"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                            }
+                        }
+                        TouchArea { clicked => { selected_agent = "Order Manager"; selected_agent_display = "Order Manager"; } }
+                    }
+                    GlassCard {
+                        height: 90px;
+                        background: selected_agent == "Email Marketer" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        HorizontalBox {
+                            padding: 16px; spacing: 16px; alignment: center;
+                            Text { text: "✉️"; font-size: 32px; }
+                            VerticalBox {
+                                alignment: center;
+                                Text { text: "Email Marketer"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "Email Marketer — runs email campaigns"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
+                            }
+                        }
+                        TouchArea { clicked => { selected_agent = "Email Marketer"; selected_agent_display = "Email Marketer"; } }
+                    }
+                }
+            }
+            Text { text: "Selected: " + selected_agent_display; color: #a855f7; font-family: "Inter"; font-weight: 700; }
+        }
+
+        // Step 1: Capabilities
+        if (step == 1) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Capability API Scope (JSON)"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "[\"read:messages\", \"write:messages\"]"; text <=> api_scope_override; }
+            }
+            spacing: 16px;
+            Text { text: "What should this helper do?"; color: white; font-family: "Inter"; }
+
+            HorizontalBox {
+                Text { text: "Reply to customer messages"; color: white; font-family: "Inter"; }
+                CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
+            }
+            HorizontalBox {
+                Text { text: "Post to Instagram & Facebook"; color: white; font-family: "Inter"; }
+                CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
+            }
+            HorizontalBox {
+                Text { text: "Write product descriptions"; color: white; font-family: "Inter"; }
+                CheckBox { checked: can_write_descriptions; toggled => { can_write_descriptions = !can_write_descriptions; } }
+            }
+            HorizontalBox {
+                Text { text: "Send order updates"; color: white; font-family: "Inter"; }
+                CheckBox { checked: can_send_updates; toggled => { can_send_updates = !can_send_updates; } }
+            }
+        }
+
+        // Step 2: Frequency
+        if (step == 2) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Cron Expression Override"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "0 * * * *"; text <=> cron_override; }
+            }
+            spacing: 20px;
+            Text { text: "How often should this agent work?"; color: white; font-family: "Inter"; }
+
+            HorizontalBox {
+                spacing: 10px;
+                Slider {
+                    minimum: 0.0;
+                    maximum: 3.0;
+                    value <=> frequency_value;
+                    width: 100%;
+                }
+            }
+            Text { text: "Schedule: " + frequency; color: #a855f7; horizontal-alignment: center; font-family: "Inter"; font-weight: 700; }
+        }
+
+        // Step 3: Review
+        if (step == 3) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Raw Activation Payload (JSON)"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "{\"agent_id\":\"" + selected_agent + "\",\"config\":{}}"; text <=> raw_activation_payload; }
+            }
+            spacing: 16px;
+            Text { text: "Review & Activate"; color: white; font-family: "Inter"; }
+            GlassCard {
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "Helper: " + selected_agent_display; color: white; font-family: "Inter"; font-weight: 700; }
+                    Text { text: "Reply: " + (can_reply ? "Yes" : "No"); color: #94a3b8; font-family: "Inter"; }
+                    Text { text: "Social: " + (can_social ? "Yes" : "No"); color: #94a3b8; font-family: "Inter"; }
+                    Text { text: "Write Descriptions: " + (can_write_descriptions ? "Yes" : "No"); color: #94a3b8; font-family: "Inter"; }
+                    Text { text: "Send Updates: " + (can_send_updates ? "Yes" : "No"); color: #94a3b8; font-family: "Inter"; }
+                    Text { text: "Schedule: " + frequency; color: #94a3b8; font-family: "Inter"; }
+                }
+            }
+        }
+
+        Rectangle {} // Spacer
+
+        // Navigation
+        HorizontalBox {
+            if (step > 0) : Button {
+                text: "Back";
+                clicked => { step = step - 1; }
+            }
+            Rectangle {} // Spacer
+            Button {
+                text: step == 3 ? "Activate" : "Next";
+                clicked => {
+                    if (step < 3) {
+                        next_step();
+                    } else {
+                        show_toast = true;
+                        activate_agent(selected_agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency, api_scope_override, cron_override, raw_activation_payload);
+                    }
+                }
+            }
+        }
+    }
+
+    if (show_toast) : GlassCard {
+        width: 300px;
+        height: 60px;
+        x: (parent.width - self.width) / 2;
+        y: parent.height - 100px;
+        background: rgba(16, 185, 129, 0.9); // Green background
+        VerticalBox {
+            alignment: center;
+            Text {
+                text: "Helper Activated ✓";
+                font-family: "Outfit";
+                font-size: 16px;
+                font-weight: 700;
+                color: white;
+                horizontal-alignment: center;
+            }
+        }
+        TouchArea { clicked => { show_toast = false; } }
+    }
+}

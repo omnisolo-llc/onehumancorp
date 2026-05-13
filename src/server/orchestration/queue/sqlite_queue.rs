@@ -18,28 +18,21 @@ impl TaskQueue for SQLiteTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-
-        let mut query_str = String::from("INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id) VALUES ");
-        let mut values = Vec::new();
-
-        for _ in 0..jobs.len() {
-            values.push("(?, ?, ?, ?, 'QUEUED', ?, ?)");
-        }
-        query_str.push_str(&values.join(", "));
-
-        let mut query = sqlx::query(&query_str);
-
         for job in jobs {
-            query = query
-                .bind(job.id)
-                .bind(job.parent_task_id)
-                .bind(job.agent_role)
-                .bind(job.payload)
-                .bind(job.run_after)
-                .bind(job.tenant_id);
+            sqlx::query(
+                "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id)
+                 VALUES (?, ?, ?, ?, 'QUEUED', ?, ?)"
+            )
+            .bind(&job.id)
+            .bind(&job.parent_task_id)
+            .bind(&job.agent_role)
+            .bind(&job.payload)
+            .bind(job.run_after)
+            .bind(&job.tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
         }
-
-        query.execute(&mut *tx).await.map_err(|e| e.to_string())?;
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }

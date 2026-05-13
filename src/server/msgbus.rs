@@ -44,10 +44,8 @@ impl MemoryBus {
 impl Bus for MemoryBus {
     async fn publish(&self, msg: Message) -> Result<(), String> {
         let subs = self.subs.lock().await;
-        for (topic, tx) in subs.iter() {
-            if msg.topic == *topic || (topic.ends_with(':') && msg.topic.starts_with(topic)) {
-                let _ = tx.send(msg.clone());
-            }
+        if let Some(tx) = subs.get(&msg.topic) {
+            let _ = tx.send(msg);
         }
         Ok(())
     }
@@ -164,19 +162,14 @@ impl Bus for RedisBus {
         use futures_util::StreamExt;
 
         let mut pubsub = self.client.get_async_pubsub().await.map_err(|e| e.to_string())?;
-        if topic.ends_with(':') {
-            pubsub.psubscribe(format!("{}*", topic)).await.map_err(|e| e.to_string())?;
-        } else {
-            pubsub.subscribe(&topic).await.map_err(|e| e.to_string())?;
-        }
+        pubsub.subscribe(&topic).await.map_err(|e| e.to_string())?;
         let mut stream = pubsub.into_on_message();
 
         let worker = tokio::spawn(async move {
             while let Some(msg) = stream.next().await {
                 if let Ok(buf) = msg.get_payload::<Vec<u8>>() {
                     use prost::Message as ProstMessage;
-                    let topic_name = msg.get_channel_name().to_string();
-                    let m = Message::decode(&buf[..]).unwrap_or_else(|_| Message { topic: topic_name, payload: vec![] });
+                    let m = Message::decode(&buf[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![] });
                     handler(m);
                 }
             }
@@ -283,12 +276,10 @@ impl IpcBus {
                     let s = subs.lock().await;
                     for (id, topic, payload_buf) in &results {
                         last_id = *id;
-                        for (sub_topic, tx) in s.iter() {
-                            if topic == sub_topic || (sub_topic.ends_with(':') && topic.starts_with(sub_topic)) {
-                                use prost::Message as ProstMessage;
-                                let m = Message::decode(&payload_buf[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![] });
-                                let _ = tx.send(m);
-                            }
+                        if let Some(tx) = s.get(topic) {
+                            use prost::Message as ProstMessage;
+                            let m = Message::decode(&payload_buf[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![] });
+                            let _ = tx.send(m);
                         }
                     }
                     if !results.is_empty() {
@@ -389,11 +380,9 @@ impl Bus for NatsBus {
         let mut buf = Vec::new();
         msg.encode(&mut buf).unwrap();
 
-        let nats_topic = msg.topic.replace(":", ".");
-
         let mut retries = 0;
         loop {
-            match self.client.publish(nats_topic.clone(), buf.clone().into()).await {
+            match self.client.publish(msg.topic.clone(), buf.clone().into()).await {
                 Ok(_) => return Ok(()),
                 Err(e) => {
                     if retries >= 3 {
@@ -409,17 +398,12 @@ impl Bus for NatsBus {
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         use futures_util::StreamExt;
 
-        let subscribe_topic = if topic.ends_with(':') {
-            format!("{}>", topic.replace(":", "."))
-        } else {
-            topic.replace(":", ".")
-        };
-        let mut subscriber = self.client.subscribe(subscribe_topic).await.map_err(|e| e.to_string())?;
+        let mut subscriber = self.client.subscribe(topic.clone()).await.map_err(|e| e.to_string())?;
 
         let worker = tokio::spawn(async move {
             while let Some(msg) = subscriber.next().await {
                 use prost::Message as ProstMessage;
-                let m = Message::decode(&msg.payload[..]).unwrap_or_else(|_| Message { topic: msg.subject.to_string().replace(".", ":"), payload: vec![] });
+                let m = Message::decode(&msg.payload[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![] });
                 handler(m);
             }
         });
@@ -547,37 +531,18 @@ impl DistributedLock for IpcBus {
 #[allow(dead_code)]
 pub struct StateHandoffManager {
     bus: std::sync::Arc<dyn Bus>,
-    lock: std::sync::Arc<dyn DistributedLock>,
-    node_id: String,
 }
 
 #[allow(dead_code)]
 impl StateHandoffManager {
-    pub fn new(bus: std::sync::Arc<dyn Bus>, lock: std::sync::Arc<dyn DistributedLock>, node_id: String) -> Self {
-        Self { bus, lock, node_id }
+    pub fn new(bus: std::sync::Arc<dyn Bus>) -> Self {
+        Self { bus }
     }
 
-    pub async fn trigger_handoff(&self, mission_id: &str, tenant_id: &str, payload: Vec<u8>) -> Result<(), String> {
-        use prost::Message as ProstMessage;
-        let handoff = crate::interop::protocol::proto::StateHandoff {
-            mission_id: mission_id.to_string(),
-            tenant_id: tenant_id.to_string(),
-            source_mode: 0,
-            target_mode: 0,
-            timestamp_ms: chrono::Utc::now().timestamp_millis(),
-            state_snapshot: payload,
-        };
-        let mut buf = Vec::new();
-        handoff.encode(&mut buf).map_err(|e| e.to_string())?;
-
-        let idempotency_lock = format!("handoff:{}", mission_id);
-        if !self.lock.acquire_lock(&idempotency_lock, &self.node_id, 3600).await.unwrap_or(false) {
-            return Ok(());
-        }
-
+    pub async fn trigger_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
         let msg = Message {
             topic: "system:state_handoff".to_string(),
-            payload: buf,
+            payload,
         };
         self.bus.publish(msg).await
     }
@@ -586,13 +551,12 @@ impl StateHandoffManager {
 #[allow(dead_code)]
 pub struct HealthMonitor {
     bus: std::sync::Arc<dyn Bus>,
-    transport: std::sync::Arc<dyn crate::orchestration::mesh::TeammateMesh>,
 }
 
 #[allow(dead_code)]
 impl HealthMonitor {
-    pub fn new(bus: std::sync::Arc<dyn Bus>, transport: std::sync::Arc<dyn crate::orchestration::mesh::TeammateMesh>) -> Self {
-        Self { bus, transport }
+    pub fn new(bus: std::sync::Arc<dyn Bus>) -> Self {
+        Self { bus }
     }
 
     pub async fn ping(&self) -> Result<(), String> {
@@ -610,13 +574,10 @@ impl HealthMonitor {
         let ping = crate::interop::protocol::proto::HealthPing {
             current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
-            source_node_id: node_id.clone(),
+            source_node_id: node_id,
         };
         let mut buf = Vec::new();
         prost::Message::encode(&ping, &mut buf).map_err(|e| e.to_string())?;
-
-        // Cross-Mode Health Monitoring: explicitly register presence via transport
-        self.transport.register_presence(&node_id, "online", 60).await.map_err(|e| e.to_string())?;
 
         let msg = Message {
             topic: "system:health_ping".to_string(),
@@ -746,8 +707,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_monitor_ping() {
         let bus = std::sync::Arc::new(MemoryBus::new());
-        let transport = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
-        let monitor = HealthMonitor::new(bus.clone(), transport);
+        let monitor = HealthMonitor::new(bus.clone());
 
         let received = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         let received_clone = received.clone();
@@ -785,29 +745,23 @@ mod tests {
     #[tokio::test]
     async fn test_state_handoff_trigger() {
         let bus = std::sync::Arc::new(MemoryBus::new());
-        let lock = bus.clone();
-        let manager = StateHandoffManager::new(bus.clone(), lock, "node1".to_string());
+        let manager = StateHandoffManager::new(bus.clone());
 
         let received = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         let received_clone = received.clone();
 
+        let payload_data = vec![1, 2, 3, 4];
+        let payload_clone = payload_data.clone();
+
         let handler = Box::new(move |msg: Message| {
-            if msg.topic == "system:state_handoff" {
-                use prost::Message as ProstMessage;
-                if let Ok(handoff) = crate::interop::protocol::proto::StateHandoff::decode(&msg.payload[..]) {
-                    if handoff.mission_id == "m1" && handoff.tenant_id == "t1" && handoff.state_snapshot == vec![1, 2, 3, 4] {
-                        received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
-                    }
-                }
+            if msg.topic == "system:state_handoff" && msg.payload == payload_clone {
+                received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
             }
         });
 
         let cancel = bus.subscribe("system:state_handoff".to_string(), handler).await.unwrap();
 
-        manager.trigger_handoff("m1", "t1", vec![1, 2, 3, 4]).await.unwrap();
-
-        // test idempotency
-        manager.trigger_handoff("m1", "t1", vec![1, 2, 3, 4]).await.unwrap();
+        manager.trigger_handoff(payload_data).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -818,8 +772,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_monitor_ping_success() {
         let bus = std::sync::Arc::new(MemoryBus::new());
-        let transport = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
-        let monitor = HealthMonitor::new(bus.clone(), transport);
+        let monitor = HealthMonitor::new(bus.clone());
 
         // We need to listen for the ping and respond with an ack.
         let bus_clone = bus.clone();
@@ -851,8 +804,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_monitor_ping_timeout() {
         let bus = std::sync::Arc::new(MemoryBus::new());
-        let transport = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
-        let monitor = HealthMonitor::new(bus.clone(), transport);
+        let monitor = HealthMonitor::new(bus.clone());
 
         // Without any handler to respond with an ack, ping should timeout.
         let result = monitor.ping().await;

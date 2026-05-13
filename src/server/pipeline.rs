@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use crate::hub::Hub;
-use ::server_ohc::orchestration::Message;
+use crate::ohc::orchestration::Message;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[allow(dead_code)]

@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use sqlx::Row;
-use ::server_common::auth_utils::set_org_context;
+use crate::utils::auth_utils::set_org_context;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Job {
@@ -842,10 +842,12 @@ impl TaskQueue for SqliteTaskQueue {
         if roles.is_empty() { return Ok(None); }
 
         // SQLite doesn't support SELECT ... FOR UPDATE SKIP LOCKED.
-        // To avoid SQLITE_BUSY lock-upgrade errors when claiming tasks in SQLite, execute an atomic UPDATE ... RETURNING query
+        // We will do a simple select and update approach in a transaction.
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
         let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query_str = format!(
-            "UPDATE local_queue_jobs SET status = 'RUNNING' WHERE id = (SELECT id FROM local_queue_jobs WHERE status = 'PENDING' AND role IN ({}) LIMIT 1) RETURNING id, tenant_id, task_id, role, payload, status",
+            "SELECT id, tenant_id, task_id, role, payload, status FROM local_queue_jobs WHERE status = 'PENDING' AND role IN ({}) LIMIT 1",
             role_placeholders
         );
 
@@ -854,17 +856,26 @@ impl TaskQueue for SqliteTaskQueue {
             query = query.bind(role);
         }
 
-        let row = query.fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
+        let row = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
 
         if let Some(row) = row {
             use sqlx::Row;
-use ::server_common::auth_utils::set_org_context;
+use crate::utils::auth_utils::set_org_context;
             let id: String = row.get("id");
             let tenant_id: String = row.get("tenant_id");
             let task_id: String = row.get("task_id");
             let role: String = row.get("role");
             let payload: Vec<u8> = row.get("payload");
             
+            sqlx::query("UPDATE local_queue_jobs SET status = 'RUNNING' WHERE id = ? AND tenant_id = ?")
+                .bind(&id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            tx.commit().await.map_err(|e| e.to_string())?;
+
             Ok(Some(Job {
                 id,
                 tenant_id,
@@ -924,7 +935,6 @@ use ::server_common::auth_utils::set_org_context;
 pub struct RedisTaskQueue {
     client: redis::Client,
     queue_name: String,
-    connection: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
 }
 
 impl RedisTaskQueue {
@@ -933,15 +943,7 @@ impl RedisTaskQueue {
         Ok(RedisTaskQueue {
             client,
             queue_name: queue_name.to_string(),
-            connection: tokio::sync::OnceCell::new(),
         })
-    }
-
-    async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
-        let conn = self.connection.get_or_try_init(|| async {
-            self.client.get_multiplexed_tokio_connection().await
-        }).await.map_err(|e| e.to_string())?;
-        Ok(conn.clone())
     }
 }
 
@@ -949,7 +951,7 @@ impl RedisTaskQueue {
 impl TaskQueue for RedisTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
-        let mut conn = self.get_connection().await?;
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let mut pipe = redis::pipe();
         for job in jobs {
             let queue_job = crate::interop::protocol::proto::QueueJob {
@@ -974,7 +976,7 @@ impl TaskQueue for RedisTaskQueue {
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
-        let mut conn = self.get_connection().await?;
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let queue_job = crate::interop::protocol::proto::QueueJob {
             id: job.id,
             tenant_id: job.tenant_id,
@@ -1002,7 +1004,7 @@ impl TaskQueue for RedisTaskQueue {
     }
 
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
-        let mut conn = self.get_connection().await?;
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         
         // Use BLPOP with 1 second timeout to avoid busy loop
         let result: Option<(String, Vec<u8>)> = redis::cmd("BLPOP")
@@ -1041,7 +1043,7 @@ impl TaskQueue for RedisTaskQueue {
     }
 
     async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
-        let mut conn = self.get_connection().await?;
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let processing_key = format!("{}_processing", self.queue_name);
         let result: Option<Vec<u8>> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
         if let Some(payload_bytes) = result {
@@ -1057,7 +1059,7 @@ impl TaskQueue for RedisTaskQueue {
     }
 
     async fn fail(&self, job_id: &str, tenant_id: &str, _reason: &str) -> Result<(), String> {
-        let mut conn = self.get_connection().await?;
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let processing_key = format!("{}_processing", self.queue_name);
         let result: Option<Vec<u8>> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
         if let Some(payload_bytes) = result {
@@ -1088,7 +1090,7 @@ impl TaskQueue for RedisTaskQueue {
             updated_at_ms: job.updated_at.timestamp_millis(),
         };
         let payload_bytes = prost::Message::encode_to_vec(&queue_job);
-        let mut conn = self.get_connection().await?;
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let _: () = redis::cmd("RPUSH")
             .arg(&self.queue_name)
             .arg(&payload_bytes)

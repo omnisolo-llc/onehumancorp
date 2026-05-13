@@ -1,0 +1,639 @@
+import { TooltipElement } from "tooltip_element.slint";
+import { TooltipRegistry } from "tooltip_registry.slint";
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+import { StatCard } from "stat_card.slint";
+
+import { UpgradePrompt } from "./upgrade_prompt.slint";
+import { DailyBriefing } from "daily_briefing.slint";
+import { SwarmObservabilityPanel, SwarmActivity, SwarmAgentStatus } from "swarm_observability_panel.slint";
+
+export struct UiPendingApproval {
+    task_id: string,
+    title: string,
+    proposed_content: string,
+    helper_name: string,
+}
+
+export struct UiRoleCount {
+    role: string,
+    count: int,
+}
+
+export component Dashboard inherits Window { // milestones
+    width: 375px;
+    height: 800px;
+    title: "Dashboard";
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    in property <string> todays_sales: "$0.00";
+    in property <int> new_orders_count: 0;
+    in property <int> active_helpers_count: 0;
+    in property <int> tasks_in_progress_count: 0;
+    in property <string> generative_score: "85";
+    in property <bool> is_loading: false;
+    in-out property <bool> is_advanced: false;
+
+    // AI Assistant Memory Telemetry
+    in property <string> telemetry_cache_hits: "84%";
+    in property <string> telemetry_rag_latency: "120ms";
+    in property <string> telemetry_chart_placeholder: "[ Dynamic Hybrid Correlation Chart ]";
+    in-out property <bool> show_telemetry_visualization: true;
+
+    in property <[UiPendingApproval]> pending_approvals;
+    in property <[UiRoleCount]> role_counts;
+
+
+    in-out property <bool> show_milestone: false;
+    in property <string> milestone_title: "";
+    in property <string> milestone_message: "";
+    callback dismiss_milestone();
+
+    callback open_help_center();
+    callback open_ai_chat();
+    callback open_interactive_walkthrough();
+    callback open_kairos_orchestration_walkthrough();
+    callback open_video_tutorials();
+    callback open_release_notes();
+    callback open_api_docs();
+    callback approve_task(string);
+    callback open_billing();
+    callback open_my_plan();
+    callback action_failed(string);
+
+    callback action_add_product();
+    callback action_view_orders();
+    callback action_check_messages();
+    callback action_see_analytics();
+    callback action_share_store();
+    callback action_open_referrals();
+    callback action_open_email_marketing();
+    callback action_open_social_posting();
+    callback action_grow_business();
+    callback action_open_swarm_observability();
+    callback action_mark_order_ready();
+    callback action_open_kairos_orchestration();
+    callback action_simulate_order();
+    callback action_manage_my_ai_team();
+
+    in-out property <bool> show_upgrade_prompt: false;
+    in-out property <string> upgrade_prompt_message: "";
+
+    in-out property <bool> show_daily_briefing: false;
+    in property <[string]> daily_briefing_content: [];
+    callback dismiss_daily_briefing();
+
+    in-out property <bool> show_quick_actions_hint: false;
+    in-out property <bool> show_advisory_hint: false;
+    in-out property <bool> show_team_hint: false;
+    in-out property <bool> show_health_hint: false;
+    in-out property <bool> show_menu: false;
+    in-out property <bool> show_swarm_observability: false;
+    in property <[SwarmActivity]> swarm_activities;
+    in property <[SwarmAgentStatus]> swarm_agent_statuses;
+
+    if (show_upgrade_prompt) : UpgradePrompt {
+        message: root.upgrade_prompt_message;
+        action_dismiss => { root.show_upgrade_prompt = false; }
+    }
+
+    Flickable {
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        // Header
+        HorizontalBox {
+            spacing: 16px;
+            VerticalBox {
+                alignment: center;
+                Text { text: "My Store"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                if (is_loading) : GlassCard {
+                    height: 12px;
+                    width: 100px;
+                    border-radius: 6px;
+                    background: rgba(255, 255, 255, 0.1);
+                    opacity: 0.5;
+                    animate opacity { duration: 1500ms; iteration-count: -1; easing: ease-in-out; }
+                }
+            }
+            Rectangle {} // Spacer
+            TooltipElement { tooltip_id: "ask_ai"; Button { text: "Ask anything"; height: 44px; clicked => { open_ai_chat(); } } }
+            TooltipElement { tooltip_id: "menu"; Button { text: "Menu"; height: 44px; clicked => { show_menu = !show_menu; } } }
+        }
+
+        if (show_menu) : Rectangle {
+            border-color: rgba(255, 255, 255, 0.1);
+            border-width: 1px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            VerticalBox {
+                padding: 16px;
+                spacing: 8px;
+
+                Button { text: "Help Center"; height: 44px; clicked => { open_help_center(); show_menu = false; } }
+                Button { text: "Billing"; height: 44px; clicked => { open_billing(); show_menu = false; } }
+                Button { text: "My Plan"; height: 44px; clicked => { open_my_plan(); show_menu = false; } }
+                TooltipElement { tooltip_id: "api_docs"; Button { text: "Connect Apps"; height: 44px; clicked => { open_api_docs(); show_menu = false; } } }
+                Button { text: "Video Tutorials"; height: 44px; clicked => { open_video_tutorials(); show_menu = false; } }
+                Button { text: "How to use this app"; height: 44px; clicked => { open_interactive_walkthrough(); show_menu = false; } }
+                Button { text: "How to automate work"; height: 44px; clicked => { open_kairos_orchestration_walkthrough(); show_menu = false; } }
+                Button { text: "What's New"; height: 44px; clicked => { open_release_notes(); show_menu = false; } }
+            }
+        }
+
+        // Stat Cards
+        VerticalBox {
+            spacing: 16px;
+
+            // Large Screen (Grid)
+            if (root.width > 768px) : VerticalBox {
+                spacing: 16px;
+                HorizontalBox {
+                    spacing: 16px;
+                    StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
+                    StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
+                }
+                HorizontalBox {
+                    spacing: 16px;
+                    StatCard { label: "Team Members"; value: active_helpers_count; value_color: #10b981; }
+                    StatCard { label: "Ongoing Tasks"; value: tasks_in_progress_count; value_color: #f59e0b; }
+                }
+                HorizontalBox {
+                    spacing: 16px;
+                    alignment: start;
+                    StatCard { label: "Business Health"; value: generative_score; value_color: #34d399; }
+                    Button { text: "?"; width: 44px; height: 44px; clicked => { show_health_hint = !show_health_hint; } }
+                }
+                if (show_health_hint) : Text { text: "Your Business Health is an AI-calculated score of your business's overall health and performance."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+            }
+
+            // Small Screen (List)
+            if (root.width <= 768px) : VerticalBox {
+                spacing: 16px;
+                StatCard { label: "Today's Sales"; value: todays_sales; value_color: #a855f7; }
+                HorizontalBox {
+                    spacing: 16px;
+                    StatCard { label: "Orders to Ship"; value: new_orders_count; value_color: #06b6d4; }
+                    StatCard { label: "Team Members"; value: active_helpers_count; value_color: #10b981; }
+                }
+                HorizontalBox {
+                    spacing: 16px;
+                    StatCard { label: "Ongoing Tasks"; value: tasks_in_progress_count; value_color: #f59e0b; }
+                    StatCard { label: "Business Health"; value: generative_score; value_color: #34d399; }
+                }
+                HorizontalBox {
+                    alignment: start;
+                    Button { text: "? Learn about Business Health"; height: 44px; clicked => { show_health_hint = !show_health_hint; } }
+                }
+                if (show_health_hint) : Text { text: "Your Business Health is an AI-calculated score of your business's overall health and performance."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+            }
+        }
+
+        if (show_milestone) : GlassCard {
+            border-color: #f59e0b;
+            border-width: 1px;
+            background: rgba(245, 158, 11, 0.1);
+
+            HorizontalBox {
+                padding: 16px;
+                spacing: 12px;
+                alignment: start;
+
+                Text { text: "🎉"; font-size: 32px; vertical-alignment: center; }
+
+                VerticalBox {
+                    spacing: 4px;
+                    Text { text: milestone_title; font-weight: 700; font-size: 19px; color: white; }
+                    Text { text: milestone_message; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+                }
+
+                Rectangle {}
+
+                Button {
+                    text: "Dismiss";
+                    height: 44px;
+                    clicked => { dismiss_milestone(); }
+                }
+            }
+        }
+
+        // AI Assistant Health (Telemetry Visualization)
+        if (show_telemetry_visualization && is_advanced) : GlassCard {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.1);
+            border-width: 1px;
+            border-radius: 12px;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: rgba(0, 0, 0, 0.5);
+
+            VerticalBox {
+                padding: 24px;
+                spacing: 24px;
+
+                Text {
+                    text: "AI Assistant Memory";
+                    font-size: 20px;
+                    font-family: "Outfit";
+                    font-weight: 700;
+                    color: white;
+                }
+
+                HorizontalBox {
+                    spacing: 16px;
+
+                    Rectangle {
+                        background: rgba(0, 0, 0, 0.2);
+                        border-radius: 8px;
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 8px;
+                            Text { text: "AI Memory Usage"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
+                            Text { text: root.telemetry_cache_hits; font-size: 32px; font-weight: 700; font-family: "Inter"; color: white; }
+                        }
+                    }
+
+                    Rectangle {
+                        background: rgba(0, 0, 0, 0.2);
+                        border-radius: 8px;
+                        VerticalBox {
+                            padding: 16px;
+                            spacing: 8px;
+                            Text { text: "Intelligence Speed"; font-size: 14px; font-family: "Inter"; color: white; opacity: 0.7; }
+                            Text { text: root.telemetry_rag_latency; font-size: 32px; font-weight: 700; font-family: "Inter"; color: white; }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    background: rgba(0, 0, 0, 0.1);
+                    border-radius: 8px;
+                    height: 200px;
+                    HorizontalBox {
+                        alignment: center;
+                        Text {
+                            text: root.telemetry_chart_placeholder;
+                            color: white;
+                            font-size: 14px;
+                            vertical-alignment: center;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Actionable Insights from "The Advisor"
+        VerticalBox {
+            spacing: 12px;
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "Store Tips"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                TooltipElement { tooltip_id: "advisory_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_advisory_hint = !show_advisory_hint; } } }
+            }
+            if (show_advisory_hint) : Text { text: "The Advisor analyzes your store to suggest the best actions to take."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+            GlassCard {
+                border-color: rgba(168, 85, 247, 0.5);
+                border-width: 1px;
+                background: rgba(168, 85, 247, 0.1);
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "Tuesday was your busiest day. Want to run a promo?"; font-size: 16px; color: white; wrap: word-wrap; }
+                    HorizontalBox {
+                        alignment: end;
+                        Button { text: "Run Promo"; height: 44px; clicked => { action_grow_business(); } }
+                        Button { text: "Agent Activity"; height: 44px; clicked => { action_open_swarm_observability(); } }
+                    }
+                }
+            }
+        }
+
+        // Pending Orders/Bookings (Middle)
+        VerticalBox {
+            spacing: 12px;
+            Text { text: "Orders to Fulfill"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+            if (new_orders_count > 0) : GlassCard {
+                border-color: #06b6d4;
+                border-width: 1px;
+                background: rgba(6, 182, 212, 0.1);
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "You have " + new_orders_count + " orders to fulfill."; font-size: 16px; color: white; wrap: word-wrap; }
+                    HorizontalBox {
+                        alignment: end;
+                        Button { text: "View Orders"; height: 44px; clicked => { action_view_orders(); } }
+                    }
+                }
+            }
+            if (new_orders_count == 0) : Text { text: "No pending orders."; color: #cbd5e1; font-size: 14px; }
+        }
+
+        // Quick Actions Navigation
+        VerticalBox {
+            spacing: 12px;
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "Quick Actions"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+                TooltipElement { tooltip_id: "quick_actions_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_quick_actions_hint = !show_quick_actions_hint; } } }
+            }
+            if (show_quick_actions_hint) : Text { text: "These buttons are shortcuts to your most common daily tasks."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+            VerticalBox {
+                spacing: 8px;
+                HorizontalBox {
+                    spacing: 8px;
+                    TooltipElement { tooltip_id: "grow_business"; Button { text: "Grow"; height: 44px; clicked => { action_grow_business(); } } }
+                    TooltipElement { tooltip_id: "referrals"; Button { text: "Referrals"; height: 44px; clicked => { action_open_referrals(); } } }
+                    TooltipElement { tooltip_id: "email_marketing"; Button { text: "Emails"; height: 44px; clicked => { action_open_email_marketing(); } } }
+                }
+                HorizontalBox {
+                    spacing: 8px;
+                    TooltipElement { tooltip_id: "social_posting"; Button { text: "Social"; height: 44px; clicked => { action_open_social_posting(); } } }
+                    TooltipElement { tooltip_id: "kairos_orchestration"; Button { text: "Automations"; height: 44px; clicked => { action_open_kairos_orchestration(); } } }
+                    Button { text: "Test Order"; height: 44px; clicked => { action_simulate_order(); } }
+                    if (new_orders_count > 0) : Button {
+                        text: "Ship Order";
+                        height: 44px;
+                        clicked => { action_mark_order_ready(); }
+                    }
+                }
+            }
+        }
+        if (pending_approvals.length > 0) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Tasks for You to Approve"; font-size: 20px; font-weight: 700; color: white; }
+
+            for approval in pending_approvals : GlassCard {
+                border-color: rgba(255, 255, 255, 0.1);
+                border-width: 1px;
+                border-radius: 12px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+
+                    HorizontalBox {
+                        spacing: 8px;
+                        alignment: start;
+                        Rectangle {
+                            width: 24px;
+                            height: 24px;
+                            background: #8b5cf6;
+                            border-radius: 12px;
+                            Text { text: "✨"; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                        }
+                        Text { text: approval.helper_name; color: #a855f7; font-weight: 700; font-size: 12px; vertical-alignment: center; }
+                    }
+
+                    VerticalBox {
+                        spacing: 4px;
+                        Text { text: approval.title; font-weight: 700; color: white; font-size: 16px; }
+                        Text { text: approval.proposed_content; color: #cbd5e1; wrap: word-wrap; font-size: 14px; }
+                    }
+
+                    HorizontalBox {
+                        alignment: end;
+                        spacing: 10px;
+                        Button { text: "Edit"; height: 44px; }
+                        Button {
+                            text: "Approve & Send";
+                            height: 44px;
+                            clicked => { approve_task(approval.task_id); }
+                        }
+                    }
+                }
+            }
+        }
+
+
+        // My Team
+        VerticalBox {
+            spacing: 12px;
+            HorizontalBox {
+                alignment: start;
+                spacing: 8px;
+                Text { text: "My Team"; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+                TooltipElement { tooltip_id: "team_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_team_hint = !show_team_hint; } } }
+            }
+            if (show_team_hint) : Text { text: "Manage your AI team members here."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
+        }
+
+        VerticalBox {
+            spacing: 10px;
+
+            for role_count in role_counts : GlassCard {
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: role_count.role; font-weight: 700; color: white; horizontal-alignment: center; }
+                    Rectangle {}
+                    Button { text: "-"; width: 44px; height: 44px; }
+                    Text { text: role_count.count; font-weight: 700; color: white; horizontal-alignment: center; }
+                    Button { text: "+"; width: 44px; height: 44px; }
+                }
+            }
+        }
+
+        Button {
+            text: "Manage my AI team";
+            height: 44px;
+            clicked => { action_manage_my_ai_team(); }
+        }
+    }
+}
+
+    // Floating Action Button (Bottom)
+    Rectangle {
+        y: parent.height - 80px;
+        x: parent.width - 80px;
+        width: 60px;
+        height: 60px;
+        background: #8b5cf6;
+        border-radius: 30px;
+        drop-shadow-blur: 10px;
+        drop-shadow-color: rgba(0, 0, 0, 0.5);
+
+        Text {
+            text: "+";
+            color: white;
+            font-size: 32px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        TouchArea {
+            clicked => {
+                // We'll map this floating action button to add product for now
+                action_add_product();
+            }
+        }
+    }
+
+    // Floating Create Post & Share Store (Bottom Left quick actions)
+    HorizontalBox {
+        y: parent.height - 80px;
+        x: 20px;
+        spacing: 16px;
+
+        Rectangle {
+            width: 60px;
+            height: 60px;
+            background: #3b82f6;
+            border-radius: 30px;
+            drop-shadow-blur: 10px;
+            drop-shadow-color: rgba(0, 0, 0, 0.5);
+
+            Text {
+                text: "✍️";
+                color: white;
+                font-size: 24px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            TouchArea {
+                clicked => {
+                    action_open_social_posting();
+                }
+            }
+        }
+
+        Rectangle {
+            width: 60px;
+            height: 60px;
+            background: #10b981; // Emerald
+            border-radius: 30px;
+            drop-shadow-blur: 10px;
+            drop-shadow-color: rgba(0, 0, 0, 0.5);
+
+            Text {
+                text: "🔗";
+                color: white;
+                font-size: 24px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            TouchArea {
+                clicked => {
+                    action_share_store();
+                }
+            }
+        }
+    }
+
+    if (show_swarm_observability) : Rectangle {
+        width: parent.width;
+        height: parent.height;
+        z: 99;
+        SwarmObservabilityPanel {
+            activities: swarm_activities;
+            agent_statuses: swarm_agent_statuses;
+            close => { show_swarm_observability = false; }
+        }
+    }
+
+    if (show_daily_briefing) : Rectangle {
+        width: parent.width;
+        height: parent.height;
+        z: 100;
+        DailyBriefing {
+            bullets: daily_briefing_content;
+            dismiss => { dismiss_daily_briefing(); }
+        }
+    }
+
+    // Floating Help & Chat Buttons
+    Rectangle {
+        x: parent.width - 130px;
+        y: parent.height - 160px;
+        width: 120px;
+        height: 60px;
+
+        HorizontalBox {
+            spacing: 12px;
+
+            // In-App Help Center '?' Button
+            TooltipElement {
+                tooltip_id: "help_center";
+                Rectangle {
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 25px;
+                    background: #3b82f6; // Blue
+                    drop-shadow-blur: 4px;
+                    drop-shadow-color: #3b82f6;
+
+                    TouchArea {
+                        clicked => { open_help_center(); }
+                    }
+
+                    Text {
+                        text: "?";
+                        color: white;
+                        font-size: 24px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            // AI-Powered Help Chat Button
+            TooltipElement {
+                tooltip_id: "ask_ai";
+                Rectangle {
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 25px;
+                    background: #8b5cf6; // Purple
+
+                    TouchArea {
+                        clicked => { open_ai_chat(); }
+                    }
+
+                    Text {
+                        text: "Ask anything";
+                        color: white;
+                        font-size: 14px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+
+    // Tooltip overlay
+    if (TooltipRegistry.is_visible) : Rectangle {
+        x: TooltipRegistry.active_x;
+        y: TooltipRegistry.active_y;
+        z: 1000;
+
+        background: #1e293b;
+        border-radius: 4px;
+        border-width: 1px;
+        border-color: rgba(255, 255, 255, 0.2);
+
+        HorizontalLayout {
+            padding: 8px;
+            Text {
+                text: TooltipRegistry.active_text;
+                color: white;
+                wrap: word-wrap;
+            }
+        }
+    }
+}
+// Business Journey Architecture verification
+// Growth loops fully engaged
+// OHC Growth Initiative

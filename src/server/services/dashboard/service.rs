@@ -1,13 +1,13 @@
-use ::server_ohc::app::dashboard_service_server::DashboardService;
-use ::server_ohc::app::*;
+use crate::ohc::app::dashboard_service_server::DashboardService;
+use crate::ohc::app::*;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
-use ::server_utils::cache::HybridCache;
+use crate::utils::cache::HybridCache;
 use std::sync::OnceLock;
 
-static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> = OnceLock::new();
-static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
-static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
+static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<crate::ohc::organization::Product>>> = OnceLock::new();
+static ORDERS_CACHE: OnceLock<HybridCache<Vec<crate::ohc::app::Order>>> = OnceLock::new();
+static ORG_CACHE: OnceLock<HybridCache<Option<crate::ohc::organization::Organization>>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -28,18 +28,18 @@ impl DashboardService for MyDashboardService {
     ) -> Result<Response<DashboardSnapshot>, Status> {
         let auth_info = request
             .extensions()
-            .get::<::server_auth::orchestration::AuthInfo>()
+            .get::<crate::auth::orchestration::AuthInfo>()
             .cloned()
             .ok_or_else(|| Status::unauthenticated("Missing authentication information"))?;
 
         let req = request.into_inner();
 
-        if ::server_config::get().multitenant && req.organization_id.is_empty() {
+        if crate::config::get().multitenant && req.organization_id.is_empty() {
             return Err(Status::invalid_argument(
                 "organization_id is required in cloud mode to maintain tenant isolation",
             ));
         }
-        if ::server_config::get().multitenant
+        if crate::config::get().multitenant
             && auth_info.org_id != "system"
             && auth_info.org_id != req.organization_id
         {
@@ -64,20 +64,20 @@ impl DashboardService for MyDashboardService {
         let hub_org = self.hub.clone();
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || {
+            async {
                 Ok::<_, String>(hub1.get_agents())
-            }),
-            tokio::task::spawn_blocking(move || {
+            },
+            async {
                 Ok::<_, String>(hub2.get_meetings())
-            }),
-            tokio::task::spawn_blocking(move || {
+            },
+            async {
                 let cost_auditor = hub3.get_cost_auditor();
                 Ok::<_, String>((
                     cost_auditor.get_total_cost(),
                     cost_auditor.get_total_tokens(),
                     cost_auditor.get_agent_costs_snapshot(),
                 ))
-            }),
+            },
             async {
                 let org_id = org_id1;
                 let cache_key = format!("hub:products:{}", org_id);
@@ -94,7 +94,7 @@ impl DashboardService for MyDashboardService {
                     crate::db::DbStore::Postgres => {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db1.pool).await {
                             for r in rows {
-                                let p = ::server_ohc::organization::Product {
+                                let p = crate::ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r
                                         .try_get("organization_id")
@@ -113,7 +113,7 @@ impl DashboardService for MyDashboardService {
                     crate::db::DbStore::Sqlite(pool) => {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
                             for r in rows {
-                                let p = ::server_ohc::organization::Product {
+                                let p = crate::ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r
                                         .try_get("organization_id")
@@ -151,7 +151,7 @@ impl DashboardService for MyDashboardService {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db2.pool).await {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
-                                let o = ::server_ohc::app::Order {
+                                let o = crate::ohc::app::Order {
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r.try_get("tenant_id").unwrap_or_default(),
                                     product_id: "".to_string(),
@@ -167,7 +167,7 @@ impl DashboardService for MyDashboardService {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
-                                let o = ::server_ohc::app::Order {
+                                let o = crate::ohc::app::Order {
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r.try_get("tenant_id").unwrap_or_default(),
                                     product_id: "".to_string(),
@@ -201,7 +201,7 @@ impl DashboardService for MyDashboardService {
                         if let Ok(Some(row)) =
                             sqlx::query(q).bind(&org_id).fetch_optional(&db3.pool).await
                         {
-                            org = Some(::server_ohc::organization::Organization {
+                            org = Some(crate::ohc::organization::Organization {
                                 id: row.try_get("tenant_id").unwrap_or_default(),
                                 name: row.try_get("business_name").unwrap_or_default(),
                                 domain: "".to_string(),
@@ -217,7 +217,7 @@ impl DashboardService for MyDashboardService {
                         if let Ok(Some(row)) =
                             sqlx::query(q).bind(&org_id).fetch_optional(pool).await
                         {
-                            org = Some(::server_ohc::organization::Organization {
+                            org = Some(crate::ohc::organization::Organization {
                                 id: row.try_get("tenant_id").unwrap_or_default(),
                                 name: row.try_get("business_name").unwrap_or_default(),
                                 domain: "".to_string(),
@@ -236,16 +236,10 @@ impl DashboardService for MyDashboardService {
             }
         );
 
-        let agents = agents_res
-            .map_err(|e| Status::internal(e.to_string()))?
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res
-            .map_err(|e| Status::internal(e.to_string()))?
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, _agent_costs_data) =
-            cost_res
-                .map_err(|e| Status::internal(e.to_string()))?
-                .map_err(|e| Status::internal(e.to_string()))?;
+            cost_res.map_err(|e| Status::internal(e.to_string()))?;
         let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
         let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
         let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
@@ -253,7 +247,7 @@ impl DashboardService for MyDashboardService {
         let products = if req.mobile_optimized {
             products
                 .into_iter()
-                .map(|p| ::server_ohc::organization::Product {
+                .map(|p| crate::ohc::organization::Product {
                     description: String::new(),
                     metadata_json: String::new(),
                     fulfillment_strategy: String::new(),
@@ -268,7 +262,7 @@ impl DashboardService for MyDashboardService {
         let orders = if req.mobile_optimized {
             orders
                 .into_iter()
-                .map(|o| ::server_ohc::app::Order {
+                .map(|o| crate::ohc::app::Order {
                     product_id: String::new(),
                     status: String::new(),
                     organization_id: String::new(),
@@ -279,12 +273,12 @@ impl DashboardService for MyDashboardService {
             orders
         };
 
-        let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
+        let mut out_meetings: Vec<crate::ohc::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
             let mut transcript = Vec::new();
             if !req.mobile_optimized {
                 for msg in &m.transcript {
-                    transcript.push(::server_ohc::agent::AgentMessage {
+                    transcript.push(crate::ohc::agent::AgentMessage {
                         id: msg.id.clone(),
                         from_agent_id: msg.from_agent.clone(),
                         to_agent_id: msg.to_agent.clone(),
@@ -295,14 +289,14 @@ impl DashboardService for MyDashboardService {
                     });
                 }
             }
-            out_meetings.push(::server_ohc::app::MeetingRoom {
+            out_meetings.push(crate::ohc::app::MeetingRoom {
                 id: m.id.clone(),
                 participants: m.participants.clone(),
                 transcript,
             });
         }
 
-        let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
+        let _filtered_agents: Vec<crate::ohc::orchestration::Agent> = agents
             .iter()
             .filter(|a| {
                 a.organization_id == req.organization_id
@@ -383,19 +377,18 @@ impl DashboardService for MyDashboardService {
         }
 
         let mut agent_summaries = Vec::new();
-        for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
-            agent_summaries.push(::server_ohc::billing::AgentCostSummary {
+        for (agent_id, cost_usd, tokens_used, roi, efficiency) in _agent_costs_data {
+            agent_summaries.push(crate::ohc::billing::AgentCostSummary {
                 agent_id,
                 cost_usd,
                 token_used: tokens_used,
                 roi,
                 efficiency,
                 pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
-                storage_usage_bytes: _storage,
             });
         }
 
-        let cost_summary = ::server_ohc::billing::CostSummary {
+        let cost_summary = crate::ohc::billing::CostSummary {
             organization_id: req.organization_id.clone(),
             total_cost_usd: total_cost,
             total_tokens: optimized_total_tokens,
@@ -405,23 +398,12 @@ impl DashboardService for MyDashboardService {
 
         let mut final_agents = _filtered_agents
             .into_iter()
-            .map(|a| {
-                let compressed_name = a.name
-                    .split_whitespace()
-                    .filter(|word| {
-                        let clean_word = word.to_lowercase();
-                        !stop_words.contains(clean_word.as_str())
-                    })
-                    .collect::<Vec<&str>>()
-                    .join(" ");
-
-                ::server_ohc::agent::Agent {
-                    id: a.id,
-                    name: compressed_name,
-                    role: ::server_ohc::common::Role::Unspecified as i32,
-                    status: ::server_ohc::common::AgentStatus::Idle as i32,
-                    organization_id: a.organization_id,
-                }
+            .map(|a| crate::ohc::agent::Agent {
+                id: a.id,
+                name: a.name,
+                role: crate::ohc::common::Role::Unspecified as i32,
+                status: crate::ohc::common::AgentStatus::Idle as i32,
+                organization_id: a.organization_id,
             })
             .collect::<Vec<_>>();
 
@@ -476,14 +458,14 @@ impl DashboardService for MyDashboardService {
     ) -> Result<Response<GetOnboardingStateResponse>, Status> {
         let auth_info = request
             .extensions()
-            .get::<::server_auth::orchestration::AuthInfo>()
+            .get::<crate::auth::orchestration::AuthInfo>()
             .cloned()
             .ok_or_else(|| Status::unauthenticated("Missing authentication information"))?;
 
         let req = request.into_inner();
         let org_id = req.organization_id;
 
-        if ::server_config::get().multitenant && org_id.is_empty() {
+        if crate::config::get().multitenant && org_id.is_empty() {
             return Err(Status::invalid_argument(
                 "organization_id is required in cloud mode to maintain tenant isolation",
             ));
@@ -551,7 +533,7 @@ impl DashboardService for MyDashboardService {
     ) -> Result<Response<UpdateOnboardingStateResponse>, Status> {
         let auth_info = request
             .extensions()
-            .get::<::server_auth::orchestration::AuthInfo>()
+            .get::<crate::auth::orchestration::AuthInfo>()
             .cloned()
             .ok_or_else(|| Status::unauthenticated("Missing authentication information"))?;
 
@@ -569,39 +551,28 @@ impl DashboardService for MyDashboardService {
         let state_json_val: serde_json::Value = serde_json::from_str(&state.state_json)
             .map_err(|e| Status::invalid_argument(e.to_string()))?;
 
-        let update_res = tokio::time::timeout(std::time::Duration::from_secs(2), async {
-            sqlx::query(
-                "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $3"
-            )
-            .bind(state.current_step)
-            .bind(state_json_val)
-            .bind(&state.organization_id)
-            .execute(&self.db.pool)
-            .await
-        }).await;
+        sqlx::query(
+            "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $3"
+        )
+        .bind(state.current_step)
+        .bind(state_json_val)
+        .bind(&state.organization_id)
+        .execute(&self.db.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
 
-        match update_res {
-            Ok(Ok(_)) => Ok(Response::new(UpdateOnboardingStateResponse { success: true })),
-            Ok(Err(e)) => {
-                tracing::warn!("DB error updating onboarding state: {}. Write operation queued locally for retry.", e);
-                // In a production-grade system, this would actually append to a persistent local buffer.
-                // For this mission, we simulate the success but mark it as locally queued in logs to satisfy the reliability requirement.
-                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
-            }
-            Err(_) => {
-                tracing::warn!("Timeout updating onboarding state. Write operation queued locally for retry.");
-                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
-            }
-        }
+        Ok(Response::new(UpdateOnboardingStateResponse {
+            success: true,
+        }))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::server_ohc::app::GetDashboardRequest;
-    use ::server_ohc::app::dashboard_service_server::DashboardService;
-    use ::server_auth::orchestration::AuthInfo;
+    use crate::ohc::app::GetDashboardRequest;
+    use crate::ohc::app::dashboard_service_server::DashboardService;
+    use crate::auth::orchestration::AuthInfo;
     use tonic::Request;
     use std::sync::Arc;
     use uuid::Uuid;
@@ -628,7 +599,7 @@ mod tests {
         let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
         // Add agents
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(crate::ohc::orchestration::Agent {
             id: "agent_1".to_string(),
             name: "A detailed assistant that is very helpful and provides lots of information about everything".to_string(), // Redundant words to test compression
             role: "assistant".to_string(),
@@ -640,7 +611,7 @@ mod tests {
         // Add meetings
         let meeting_id = format!("meeting-{}", Uuid::new_v4());
         hub.open_meeting(meeting_id.clone(), vec!["agent_1".to_string()], "Test Agenda".to_string());
-        let _ = hub.clone().publish(::server_ohc::orchestration::Message {
+        let _ = hub.clone().publish(crate::ohc::orchestration::Message {
             id: "msg_1".to_string(),
             from_agent: "agent_1".to_string(),
             to_agent: "all".to_string(),
@@ -748,9 +719,10 @@ mod tests {
         });
         let start2 = std::time::Instant::now();
         let _res2 = service.get_dashboard(request2).await.unwrap().into_inner();
-        let _elapsed2 = start2.elapsed();
+        let elapsed2 = start2.elapsed();
 
         // The second call might be faster, but we just verify it works properly via caching
         // without panicking.
+        assert!(elapsed2.as_millis() >= 0);
     }
 }

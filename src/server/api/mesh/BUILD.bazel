@@ -11,8 +11,4 @@ go_test(
     name = "mesh_test",
     srcs = ["middleware_test.go"],
     embed = [":mesh"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )

@@ -2,7 +2,7 @@ use std::sync::Arc;
 use crate::db::DB;
 use sqlx::Row;
 use serde_json::json;
-use ::server_ohc::orchestration::{sync_service_client::SyncServiceClient, PowerSyncPushRequest, PowerSyncPullRequest};
+use crate::ohc::orchestration::{sync_service_client::SyncServiceClient, PowerSyncPushRequest, PowerSyncPullRequest};
 use tonic::transport::Channel;
 use tonic::Request;
 use tonic::metadata::MetadataValue;

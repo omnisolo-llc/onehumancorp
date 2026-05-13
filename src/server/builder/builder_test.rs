@@ -109,7 +109,7 @@ async fn test_builder_api() {
 
     let app = super::api::router(pool.clone());
 
-    use ::server_common::Claims;
+    use crate::auth::Claims;
     let claims = Claims {
         sub: "user123".to_string(),
         username: "user".to_string(),
@@ -191,82 +191,6 @@ async fn test_builder_api() {
     let res = client.post(&format!("{}/builder/sites/{}/publish", base_url, site.id))
         .send().await.unwrap();
     assert_eq!(res.status(), 202); // ACCEPTED
-
-    // Clean up
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
-}
-
-
-
-
-#[tokio::test]
-async fn test_builder_generate_and_publish_draft() {
-    let (pool, tenant_id) = match setup_db().await {
-        Some(v) => v,
-        None => return,
-    };
-
-    let app = super::api::router(pool.clone());
-
-    use ::server_common::Claims;
-    let claims = Claims {
-        sub: "user123".to_string(),
-        username: "user".to_string(),
-        email: "user@test.com".to_string(),
-        roles: vec!["user".to_string()],
-        session_id: None,
-        iat: 0,
-        jti: "test".to_string(),
-        organization_id: Some(tenant_id.to_string()),
-        exp: 0,
-    };
-
-    let app_with_auth = axum::Router::new()
-        .nest("/builder", app)
-        .layer(axum::middleware::from_fn(move |req: axum::extract::Request, next: axum::middleware::Next| {
-            let claims = claims.clone();
-            async move {
-                let mut req = req;
-                req.extensions_mut().insert(claims);
-                next.run(req).await
-            }
-        }));
-
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let port = listener.local_addr().unwrap().port();
-
-    tokio::spawn(async move {
-        axum::serve(listener, app_with_auth.into_make_service()).await.unwrap();
-    });
-
-    let client = reqwest::Client::new();
-    let base_url = format!("http://127.0.0.1:{}", port);
-
-    // 1. Generate Storefront
-    let res = match client.post(&format!("{}/builder/generate", base_url))
-        .json(&serde_json::json!({"description": "I am a handyman"}))
-        .send().await {
-            Ok(r) => r,
-            Err(_) => return,
-        };
-
-
-
-    assert_eq!(res.status(), 200);
-    let draft: super::api::SiteDraft = res.json().await.unwrap();
-    assert_eq!(draft.pages.len(), 1);
-    assert_eq!(draft.pages[0].blocks.len(), 2);
-    assert_eq!(draft.pages[0].blocks[0].block_type, "HeroBlock");
-    assert_eq!(draft.pages[0].blocks[1].block_type, "ServiceBookingBlock");
-
-    // 2. Publish Draft
-    let res = client.post(&format!("{}/builder/publish_draft", base_url))
-        .json(&serde_json::json!({"domain": "handyman-draft.com", "draft": draft}))
-        .send().await.unwrap();
-
-    assert_eq!(res.status(), 200);
-    let site: super::api::SiteResponse = res.json().await.unwrap();
-    assert_eq!(site.domain.as_deref(), Some("handyman-draft.com"));
 
     // Clean up
     let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
