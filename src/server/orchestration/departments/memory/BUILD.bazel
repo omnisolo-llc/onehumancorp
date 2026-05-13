@@ -1,9 +1,12 @@
 filegroup(
     name = "srcs",
     srcs = [
+        "conflict_resolution_e2e_test.rs",
+        "cross_department_e2e_test.rs",
         "e2e_journey_test.rs",
         "layer.rs",
         "mod.rs",
+        "pruning_e2e_test.rs",
     ],
     visibility = ["//src/server/orchestration/departments:__pkg__"],
 )
