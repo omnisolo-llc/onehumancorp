@@ -30,7 +30,7 @@ pub struct StripeEventData {
 }
 
 pub async fn stripe_webhook_handler(
-    State(state): State<WebhookState>,
+    State(_state): State<WebhookState>,
     Json(payload): Json<StripeEvent>,
 ) -> impl IntoResponse {
 
@@ -64,7 +64,7 @@ pub async fn stripe_webhook_handler(
 
 
                 // Update Redis Rate Limiter
-                if let Err(_e) = state.rate_limiter.set_tenant_tier(tenant_id, tier.clone()).await {
+                if let Err(_e) = _state.rate_limiter.set_tenant_tier(tenant_id, tier.clone()).await {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
@@ -76,12 +76,13 @@ pub async fn stripe_webhook_handler(
                     PlanTier::Business => "Business",
                 };
 
-                let res = match &state.db.store {
-                    DbStore::Sqlite(pool) => {
+                let res = match &_state.db.store {
+                    DbStore::Sqlite(sqlite_pool) => {
+                        let p: &sqlx::Pool<sqlx::Sqlite> = sqlite_pool;
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind(tier_string)
                             .bind(tenant_id)
-                            .execute(&*pool)
+                            .execute(p)
                             .await
                             .map(|_| ())
                     }
@@ -89,7 +90,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = $1 WHERE tenant_id = $2")
                             .bind(tier_string)
                             .bind(tenant_id)
-                            .execute(&state.db.pool)
+                            .execute(&_state.db.pool)
                             .await
                             .map(|_| ())
                     }
@@ -114,17 +115,18 @@ pub async fn stripe_webhook_handler(
             if let Some(tenant_id) = tenant_id_opt {
 
                 // Update Redis
-                if let Err(_e) = state.rate_limiter.set_tenant_tier(tenant_id, PlanTier::Free).await {
+                if let Err(_e) = _state.rate_limiter.set_tenant_tier(tenant_id, PlanTier::Free).await {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
                 // Update DB
-                let res = match &state.db.store {
-                    DbStore::Sqlite(pool) => {
+                let res = match &_state.db.store {
+                    DbStore::Sqlite(sqlite_pool) => {
+                        let p: &sqlx::Pool<sqlx::Sqlite> = sqlite_pool;
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind("Free")
                             .bind(tenant_id)
-                            .execute(&*pool)
+                            .execute(p)
                             .await
                             .map(|_| ())
                     }
@@ -132,7 +134,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = $1 WHERE tenant_id = $2")
                             .bind("Free")
                             .bind(tenant_id)
-                            .execute(&state.db.pool)
+                            .execute(&_state.db.pool)
                             .await
                             .map(|_| ())
                     }
@@ -174,7 +176,7 @@ pub struct MercadoPagoEventData {
 }
 
 pub async fn mercadopago_webhook_handler(
-    State(state): State<WebhookState>,
+    State(_state): State<WebhookState>,
     Json(payload): Json<MercadoPagoEvent>,
 ) -> impl IntoResponse {
     match payload.action.as_str() {

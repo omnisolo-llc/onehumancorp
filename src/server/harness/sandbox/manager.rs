@@ -28,6 +28,7 @@ pub trait SandboxAdapter: Send + Sync {
     fn annotate_error(&self, err: String, stdout: String) -> String;
 }
 
+#[allow(dead_code)]
 pub struct SandboxManager {
     evaluator: PermissionEvaluator,
     wrapper: BashWrapper,
