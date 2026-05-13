@@ -40,13 +40,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-          cache: false
+          cache-dependency-path: "**/go.sum"
+          cache: true
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: false
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -62,7 +63,7 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: false
+          bazelisk-cache: "npm"
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -121,13 +122,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-          cache: false
+          cache-dependency-path: "**/go.sum"
+          cache: true
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: false
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -140,7 +142,7 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: false
+          bazelisk-cache: "npm"
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -185,13 +187,14 @@ jobs:
   #       uses: actions/setup-go@v5
   #       with:
   #         go-version: "1.24"
-  #         cache: false
+  #         cache-dependency-path: "**/go.sum"
+  #         cache: true
 
   #     - name: Set up Node
   #       uses: actions/setup-node@v4
   #       with:
   #         node-version: "24"
-  #         cache: false
+  #         cache: "npm"
 
   #     - name: Install dependencies
   #       run: npm ci
@@ -204,7 +207,7 @@ jobs:
   #     - name: Set up Bazel
   #       uses: bazel-contrib/setup-bazel@0.19.0
   #       with:
-  #         bazelisk-cache: false
+  #         bazelisk-cache: "npm"
   #         disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
   #         repository-cache: true
   #         external-cache: true
