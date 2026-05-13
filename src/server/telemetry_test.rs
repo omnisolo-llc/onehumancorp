@@ -262,10 +262,15 @@ mod tests {
 
         let mut search_dirs = vec![PathBuf::from(".")];
         // Try multiple possible source locations
-        let possible_src_roots = vec![
+        let mut possible_src_roots = vec![
             PathBuf::from("src"),
             PathBuf::from("src/server"),
         ];
+        if let Ok(workspace_dir) = env::var("BUILD_WORKSPACE_DIRECTORY") {
+            let workspace = PathBuf::from(workspace_dir);
+            possible_src_roots.push(workspace.join("src"));
+            possible_src_roots.push(workspace.join("src/server"));
+        }
         if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
             let runfiles = PathBuf::from(&runfiles_dir);
             // In bazel runfiles, the manifest is at RUNFILES_DIR/MANIFEST.txt
