@@ -162,27 +162,31 @@ impl TaskQueue for PostgresTaskQueue {
 
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
-        let mut builder = sqlx::QueryBuilder::new("INSERT INTO sub_agent_queue (id, organization_id, parent_task_id, payload, status, scheduled_at) ");
-        builder.push_values(jobs.into_iter(), |mut b, job| {
-            let run_after = job.run_after;
-            let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
-            payload_map["agent_role"] = serde_json::Value::String(job.agent_role.clone());
-            payload_map["attempts"] = serde_json::json!(job.attempts);
-            payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
-            let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
-            let org_id = if job.tenant_id.is_empty() {
-                payload_map["organization_id"].as_str().unwrap_or("").to_string()
-            } else {
-                job.tenant_id.clone()
-            };
-            b.push_bind(job.id)
-             .push_bind(org_id)
-             .push_bind(job.parent_task_id)
-             .push_bind(new_payload)
-             .push_bind("PENDING")
-             .push_bind(run_after);
-        });
-        builder.build().execute(&self.pool).await.map_err(|e| e.to_string())?;
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        for chunk in jobs.chunks(500) {
+            let mut builder = sqlx::QueryBuilder::new("INSERT INTO sub_agent_queue (id, organization_id, parent_task_id, payload, status, scheduled_at) ");
+            builder.push_values(chunk.into_iter(), |mut b, job| {
+                let run_after = job.run_after;
+                let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
+                payload_map["agent_role"] = serde_json::Value::String(job.agent_role.clone());
+                payload_map["attempts"] = serde_json::json!(job.attempts);
+                payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
+                let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
+                let org_id = if job.tenant_id.is_empty() {
+                    payload_map["organization_id"].as_str().unwrap_or("").to_string()
+                } else {
+                    job.tenant_id.clone()
+                };
+                b.push_bind(&job.id)
+                 .push_bind(org_id)
+                 .push_bind(&job.parent_task_id)
+                 .push_bind(new_payload)
+                 .push_bind("PENDING")
+                 .push_bind(run_after);
+            });
+            builder.build().execute(&mut *tx).await.map_err(|e| e.to_string())?;
+        }
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
