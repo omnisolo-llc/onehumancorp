@@ -1218,6 +1218,38 @@ impl HubService for MyHubService {
     }
 }
 
+pub struct DbRevocationChecker {
+    pub pool: crate::db::DB,
+}
+impl ::server_auth::RevocationChecker for DbRevocationChecker {
+    fn check_revoked(&self, jti: &str, org_id: &str) -> bool {
+        if !::server_config::get().multitenant {
+            return false;
+        }
+        let pool = self.pool.pool.clone();
+        let jti = jti.to_string();
+        let org_id = org_id.to_string();
+        tokio::task::block_in_place(move || {
+            tokio::runtime::Handle::current().block_on(async move {
+                let mut tx = match pool.begin().await {
+                    Ok(tx) => tx,
+                    Err(_) => return false,
+                };
+                let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &org_id).await;
+                let row: Result<(i64,), sqlx::Error> = sqlx::query_as("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP")
+                    .bind(&jti)
+                    .fetch_one(&mut *tx)
+                    .await;
+                let _ = tx.rollback().await;
+                match row {
+                    Ok(r) => r.0 > 0,
+                    Err(_) => false,
+                }
+            })
+        })
+    }
+}
+
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     let use_json = std::env::var("LOG_FORMAT").unwrap_or_default() == "json";
@@ -1497,7 +1529,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
-    let store = std::sync::Arc::new(::server_auth::Store::new());
+    let store = std::sync::Arc::new(::server_auth::Store::with_checker(Box::new(DbRevocationChecker { pool: (*db).clone() })));
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if ::server_config::get().telemetry_enabled {

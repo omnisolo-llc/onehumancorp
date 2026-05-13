@@ -110,6 +110,10 @@ pub struct OIDCConfig {
     pub enabled: bool,
 }
 
+pub trait RevocationChecker: Send + Sync {
+    fn check_revoked(&self, jti: &str, org_id: &str) -> bool;
+}
+
 pub struct Store {
     users: RwLock<HashMap<String, User>>,
     roles: RwLock<HashMap<String, Role>>,
@@ -121,9 +125,16 @@ pub struct Store {
     secret: Vec<u8>,
     #[allow(dead_code)]
     oidc_cfg: RwLock<OIDCConfig>,
+    revocation_checker: Option<Box<dyn RevocationChecker>>,
 }
 
 impl Store {
+    pub fn with_checker(checker: Box<dyn RevocationChecker>) -> Self {
+        let mut store = Self::new();
+        store.revocation_checker = Some(checker);
+        store
+    }
+
     pub fn new() -> Self {
         let secret = std::env::var("JWT_SECRET")
             .map(|s| s.into_bytes())
@@ -198,7 +209,7 @@ impl Store {
         let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
         let enabled = !issuer_url.is_empty();
 
-        let store = Store {
+        let mut store = Store {
             users: RwLock::new(HashMap::new()),
             roles: RwLock::new(roles),
             by_name: RwLock::new(HashMap::new()),
@@ -211,6 +222,7 @@ impl Store {
                 client_id,
                 enabled,
             }),
+            revocation_checker: None,
         };
 
         store.seed_default_admin(now);
@@ -421,12 +433,17 @@ impl Store {
         revoked.retain(|_, v| *v > now);
     }
 
-    pub fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
+    pub fn is_revoked(&self, jti: &str, org_id: &str) -> bool {
         let revoked = self.revoked.read().unwrap();
         if let Some(exp) = revoked.get(jti) {
              if exp > &Utc::now() {
                  return true;
              }
+        }
+        if let Some(checker) = &self.revocation_checker {
+            if checker.check_revoked(jti, org_id) {
+                return true;
+            }
         }
         false
     }
@@ -483,8 +500,10 @@ impl Store {
                         return Err("Invalid token: organization_id is required in cloud mode".to_string());
                     }
                     if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
-                        return Err("token revoked".to_string());
+                        return Err("token revoked locally".to_string());
                     }
+                    // For global token revocation checks we rely on the caller or the interceptor in the API layer where the connection pool is available.
+                    // This is because we cannot synchronously open connection pools dynamically inside an auth store safely.
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
                         return Err("Invalid token claims".to_string());
                     }

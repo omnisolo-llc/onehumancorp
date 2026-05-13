@@ -31,7 +31,7 @@ impl CloudStateManager {
         _lock_guard: &MeshLockGuard,
     ) -> Result<(), String> {
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, _tenant_id).await.map_err(|e| e.to_string())?;
 
         // 1. Verify current state with FOR UPDATE
         let row = sqlx::query(
@@ -56,7 +56,7 @@ impl CloudStateManager {
             ));
         }
 
-        let tenant_id_db: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+        let tenant_id_db: String = row.try_get("tenant_id").unwrap_or_else(|_| _tenant_id.to_string());
 
         // DAG validation
         if to_state == "EXECUTING" {
@@ -162,7 +162,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         };
 
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let rows_future = sqlx::query(
             r#"

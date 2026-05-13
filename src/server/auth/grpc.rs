@@ -54,6 +54,8 @@ impl AuthConfig {
         let token = &auth_str["Bearer ".len()..];
         if token.is_empty() { return Err(Status::unauthenticated("empty token")); }
         
+        // JWT tokens are NOT validated here. They are checked in the Web API layer which has access to the DB.
+        // This function is for AuthMode::Token which is a static shared secret mechanism (like API Keys).
         let app_key = std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
         let mut mac = Hmac::<Sha256>::new_from_slice(app_key.as_bytes()).expect("HMAC can take key of any size");
         mac.update(token.as_bytes());
