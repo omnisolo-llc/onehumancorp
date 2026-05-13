@@ -140,7 +140,7 @@ mod tests {
 
         let args = json!({
             "path": "test.rs",
-            "content": "fn main() { println!(\"Hello\"); }"
+            "content": "fn main() { let x = \"Hello\"; }"
         });
 
         // Should succeed and pass verification

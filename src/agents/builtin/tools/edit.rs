@@ -176,7 +176,7 @@ mod tests {
     async fn test_edit_tool_rust_verification_success() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.rs");
-        fs::write(&file_path, "fn main() { println!(\"old\"); }").await.unwrap();
+        fs::write(&file_path, "fn main() { let x = \"old\"; }").await.unwrap();
 
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
@@ -196,7 +196,7 @@ mod tests {
     async fn test_edit_tool_rust_verification_failure() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.rs");
-        fs::write(&file_path, "fn main() { println!(\"old\"); }").await.unwrap();
+        fs::write(&file_path, "fn main() { let x = \"old\"; }").await.unwrap();
 
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         // Simulate rustc failure
@@ -206,7 +206,7 @@ mod tests {
 
         let args = json!({
             "path": "test.rs",
-            "old_str": "println!(\"old\");",
+            "old_str": "let x = \"old\";",
             "new_str": "let x = ;" // Introduce syntax error
         });
 
