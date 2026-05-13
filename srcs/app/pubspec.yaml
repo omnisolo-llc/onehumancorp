@@ -1,0 +1,8 @@
+name: app
+description: Smart Block system
+publish_to: 'none'
+environment:
+  sdk: '^3.7.2'
+dependencies:
+  flutter:
+    sdk: flutter
