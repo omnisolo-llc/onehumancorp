@@ -4,19 +4,19 @@ pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sql
 where
     E: Executor<'a, Database = Postgres>,
 {
-    if org_id == "system" && !::server_config::get().multitenant {
-        // Elevate privileges for system-level queries.
-        // We cannot issue multiple queries because sqlx extended protocol doesn't allow it,
-        // and we cannot call execute multiple times because E is consumed.
-        // Wait, we can use `query` instead of `executor.execute`, because `query` takes `executor` which we can borrow if we used `&mut executor`, but wait, we had errors with `&mut executor` too because E doesn't implement `Executor` for `&mut E`.
-        // The right way is to use a single SQL function, or use an anonymous DO block if we want multiple statements!
-        // But DO blocks can't be used with extended query protocol either? Actually they can!
-        // Another option: "SET LOCAL ROLE ohc_bypassrls" is all we need! We don't strictly *need* to set current_tenant to empty.
-        query("SET LOCAL ROLE ohc_bypassrls")
+    // Security Mandate: Ensure absolute isolation and explicit privilege elevation
+    if org_id == "system" {
+        // Elevate to bypass role for system-level operations across all tenants
+        // SET LOCAL ROLE ensures this privilege is strictly scoped to the current transaction.
+        // We also explicitly set the tenant to an empty/system state to prevent accidental leakage
+        // if some queries don't check RLS but use the current_tenant config directly.
+        query("DO $$ BEGIN EXECUTE 'SET LOCAL ROLE ohc_bypassrls'; PERFORM set_config('app.current_tenant', 'system', true); END $$")
             .execute(executor)
             .await?;
     } else {
-        // No need to RESET ROLE since SET LOCAL is transaction scoped.
+        // Standard tenant isolation: enforce RLS via app.current_tenant
+        // We use SELECT set_config to ensure the value is bound and sanitized correctly.
+        // Transaction scoping (is_local = true) prevents cross-request pollution in pooled connections.
         query("SELECT set_config('app.current_tenant', $1, true)")
             .bind(org_id)
             .execute(executor)

@@ -23,6 +23,10 @@ pub mod analytics;
 pub use ::server_telemetry as telemetry;
 #[cfg(test)]
 pub mod telemetry_test;
+#[cfg(test)]
+pub mod telemetry_pii_test;
+#[cfg(test)]
+pub mod rls_test;
 pub mod chaos;
 pub mod integrations;
 pub use ::server_utils as utils;

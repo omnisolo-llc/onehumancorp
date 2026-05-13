@@ -204,6 +204,12 @@ pub fn redact_interface_pii(val: Value) -> Value {
         Value::String(s) => {
             if is_email(&s) {
                 Value::String("[EMAIL_REDACTED]".to_string())
+            } else if is_ssn(&s) {
+                Value::String("[SSN_REDACTED]".to_string())
+            } else if is_credit_card(&s) {
+                Value::String("[CARD_REDACTED]".to_string())
+            } else if is_ipv4(&s) {
+                Value::String("[IP_REDACTED]".to_string())
             } else {
                 Value::String(s)
             }
@@ -247,7 +253,27 @@ pub fn is_sensitive_key(key: &str) -> bool {
 }
 
 pub fn is_email(s: &str) -> bool {
-    s.contains('@') && s.contains('.')
+    // Simple but effective email heuristic for telemetry redaction
+    s.contains('@') && s.contains('.') && s.len() > 5
+}
+
+pub fn is_ssn(s: &str) -> bool {
+    static SSN_REGEX: OnceLock<regex::Regex> = OnceLock::new();
+    // Non-anchored to catch SSN embedded in text
+    SSN_REGEX.get_or_init(|| regex::Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").unwrap()).is_match(s)
+}
+
+pub fn is_credit_card(s: &str) -> bool {
+    static CARD_REGEX: OnceLock<regex::Regex> = OnceLock::new();
+    // Basic pattern for Visa, Mastercard, Amex, Discover
+    // Non-anchored to catch CC embedded in text
+    CARD_REGEX.get_or_init(|| regex::Regex::new(r"\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})\b").unwrap()).is_match(s)
+}
+
+pub fn is_ipv4(s: &str) -> bool {
+    static IP_REGEX: OnceLock<regex::Regex> = OnceLock::new();
+    // Non-anchored to catch IP embedded in text
+    IP_REGEX.get_or_init(|| regex::Regex::new(r"\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b").unwrap()).is_match(s)
 }
 
 #[cfg(test)]
