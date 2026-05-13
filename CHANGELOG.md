@@ -5,6 +5,15 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimized cloud artifact deployment footprint by removing redundant documentation and license files from the unified build.
+
+### Privacy/Offline Improvements
+- Enhanced desktop client build reliability and reduced binary footprint by pruning unused mobile help center assets.
+
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
