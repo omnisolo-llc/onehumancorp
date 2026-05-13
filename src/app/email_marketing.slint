@@ -2,8 +2,8 @@ import { Button, VerticalBox, HorizontalBox, TextEdit, CheckBox, ScrollView } fr
 import { GlassCard } from "glass_card.slint";
 
 export component EmailMarketing inherits Window { // marketing
-    width: 620px;
-    height: 800px;
+    width: 375px;
+    height: 700px;
     title: "Email Marketing";
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
@@ -56,7 +56,7 @@ export component EmailMarketing inherits Window { // marketing
                         Text { text: "2. Pick an AI Template"; font-weight: 700; color: white; font-size: 18px; font-family: "Outfit"; }
                         Text { text: "Our AI will draft a high-converting message for you."; color: #94a3b8; font-size: 14px; font-family: "Inter"; }
 
-                        HorizontalBox {
+                        VerticalBox {
                             spacing: 12px;
                             Button {
                                 text: "📦 New arrivals";
@@ -89,7 +89,8 @@ export component EmailMarketing inherits Window { // marketing
                             font-family: "Inter";
                         }
 
-                        HorizontalBox {
+                        VerticalBox {
+                            spacing: 12px;
                             Button {
                                 text: "🚀 Send Campaign";
                                 primary: true;
@@ -112,7 +113,7 @@ export component EmailMarketing inherits Window { // marketing
                         padding: 16px;
                         spacing: 12px;
                         Text { text: "Analytics"; font-weight: 700; color: white; font-size: 18px; font-family: "Outfit"; }
-                        HorizontalBox {
+                        VerticalBox {
                             spacing: 20px;
                             VerticalBox {
                                 Text { text: "Emails Sent"; color: #94a3b8; font-size: 12px; font-family: "Inter"; }

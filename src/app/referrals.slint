@@ -10,8 +10,8 @@ export struct UiReferral {
 }
 
 export component Referrals inherits Window { // growth
-    width: 600px;
-    height: 800px;
+    width: 375px;
+    height: 700px;
     title: "Referral Dashboard";
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
@@ -81,7 +81,7 @@ export component Referrals inherits Window { // growth
                             }
                         }
 
-                        HorizontalBox {
+                        VerticalBox {
                             spacing: 12px;
                             Button {
                                 text: "📷 Share to Instagram";
@@ -111,20 +111,18 @@ export component Referrals inherits Window { // growth
                         spacing: 16px;
                         Text { text: "Your Stats"; font-weight: 700; color: white; font-size: 18px; font-family: "Outfit"; }
 
-                        HorizontalBox {
+                        VerticalBox {
                             spacing: 12px;
                             VerticalBox {
                                 alignment: center;
                                 Text { text: total_referrals; font-size: 24px; font-weight: 700; color: #a855f7; horizontal-alignment: center; font-family: "Outfit"; }
                                 Text { text: "Invites"; color: #94a3b8; font-size: 12px; horizontal-alignment: center; font-family: "Inter"; }
                             }
-                            Rectangle { width: 1px; background: rgba(255, 255, 255, 0.1); height: 40px; }
                             VerticalBox {
                                 alignment: center;
                                 Text { text: click_count; font-size: 24px; font-weight: 700; color: #06b6d4; horizontal-alignment: center; font-family: "Outfit"; }
                                 Text { text: "Clicks"; color: #94a3b8; font-size: 12px; horizontal-alignment: center; font-family: "Inter"; }
                             }
-                            Rectangle { width: 1px; background: rgba(255, 255, 255, 0.1); height: 40px; }
                             VerticalBox {
                                 alignment: center;
                                 Text { text: reward_balance; font-size: 24px; font-weight: 700; color: #10b981; horizontal-alignment: center; font-family: "Outfit"; }
@@ -132,8 +130,8 @@ export component Referrals inherits Window { // growth
                             }
                         }
 
-                        HorizontalBox {
-                            alignment: space-between;
+                        VerticalBox {
+                            spacing: 12px;
                             Button { text: "📜 View History"; clicked => { view_history(); } }
                             Button { text: "📤 Export Data"; clicked => { export_data(); } }
                         }
