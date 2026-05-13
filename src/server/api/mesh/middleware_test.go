@@ -19,28 +19,28 @@ func TestValidationMiddleware(t *testing.T) {
 			name:           "Valid Payload",
 			method:         "POST",
 			path:           "/api/mesh/broadcast",
-			body:           `{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK", "data": {"foo": "bar"}}`,
+			body:           `{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK", "data": {"foo": "bar"}, "action": "test_action", "status": "ok"}`,
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Missing agent_id",
 			method:         "POST",
 			path:           "/api/mesh/broadcast",
-			body:           `{"channel": "mesh:tasks", "event_type": "TASK", "data": {"foo": "bar"}}`,
+			body:           `{"channel": "mesh:tasks", "event_type": "TASK", "data": {"foo": "bar"}, "action": "test_action", "status": "ok"}`,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Deprecated action key",
+			name:           "Missing action",
 			method:         "POST",
 			path:           "/api/mesh/broadcast",
-			body:           `{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK", "data": {"foo": "bar"}, "action": "do_something"}`,
+			body:           `{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK", "data": {"foo": "bar"}, "status": "ok"}`,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "Empty agent_id string",
 			method:         "POST",
 			path:           "/api/mesh/broadcast",
-			body:           `{"agent_id": "", "channel": "mesh:tasks", "event_type": "TASK", "data": {"foo": "bar"}}`,
+			body:           `{"agent_id": "", "channel": "mesh:tasks", "event_type": "TASK", "data": {"foo": "bar"}, "action": "test_action", "status": "ok"}`,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
@@ -71,10 +71,6 @@ func TestValidationMiddleware(t *testing.T) {
 
 			if w.Code != tt.expectedStatus {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, w.Code)
-			}
-
-			if tt.expectedStatus == http.StatusBadRequest && w.Body.Len() > 0 && tt.name != "Missing agent_id" && tt.name != "Empty agent_id string" && tt.name != "Valid Payload" {
-				// Basic check that it doesn't fail on old tests
 			}
 		})
 	}

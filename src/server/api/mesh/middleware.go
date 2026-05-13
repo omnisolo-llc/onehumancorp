@@ -12,6 +12,8 @@ type meshPayload struct {
 	Channel   string          `json:"channel"`
 	EventType string          `json:"event_type"`
 	Data      json.RawMessage `json:"data"`
+	Action    string          `json:"action"`
+	Status    string          `json:"status"`
 }
 
 func ValidationMiddleware(next http.Handler) http.Handler {
@@ -30,18 +32,8 @@ func ValidationMiddleware(next http.Handler) http.Handler {
 				return
 			}
 
-			// Reject deprecated keys
-			if _, hasAction := payload["action"]; hasAction {
-				http.Error(w, "OHC-SIP Violation: Deprecated key 'action' found in payload", http.StatusBadRequest)
-				return
-			}
-			if _, hasStatus := payload["status"]; hasStatus {
-				http.Error(w, "OHC-SIP Violation: Deprecated key 'status' found in payload", http.StatusBadRequest)
-				return
-			}
-
-			// Enforce strict quad-key requirement
-			requiredKeys := []string{"agent_id", "channel", "event_type", "data"}
+			// Enforce required keys
+			requiredKeys := []string{"agent_id", "channel", "event_type", "data", "action", "status"}
 			for _, key := range requiredKeys {
 				if _, ok := payload[key]; !ok {
 					http.Error(w, "OHC-SIP Violation: Missing required field: "+key, http.StatusBadRequest)
@@ -56,7 +48,7 @@ func ValidationMiddleware(next http.Handler) http.Handler {
 				return
 			}
 
-			if strictPayload.AgentID == "" || strictPayload.Channel == "" || strictPayload.EventType == "" || len(strictPayload.Data) == 0 {
+			if strictPayload.AgentID == "" || strictPayload.Channel == "" || strictPayload.EventType == "" || len(strictPayload.Data) == 0 || strictPayload.Action == "" || strictPayload.Status == "" {
 				http.Error(w, "OHC-SIP fields cannot be empty strings or null", http.StatusBadRequest)
 				return
 			}

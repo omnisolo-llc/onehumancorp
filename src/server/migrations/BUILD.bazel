@@ -1,5 +1,9 @@
 filegroup(
     name = "migrations",
-    srcs = glob(["*.sql"]),
-    visibility = ["//src/server:__pkg__"],
+    srcs = [
+        "001_initial_schema.sql",
+        "002_kairos.up.sql",
+        "002_kairos.down.sql",
+    ],
+    visibility = ["//visibility:public"],
 )
