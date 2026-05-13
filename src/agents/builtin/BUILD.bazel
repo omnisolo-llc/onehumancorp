@@ -63,7 +63,6 @@ rust_library(
     crate_name = "ohc_builtin_agent",
     edition = "2024",
     proc_macro_deps = [
-        "@crates//:async-recursion",
         "@crates//:async-trait",
     ],
     visibility = ["//visibility:public"],
@@ -117,7 +116,6 @@ rust_binary(
     srcs = ["main.rs"],
     edition = "2024",
     proc_macro_deps = [
-        "@crates//:async-recursion",
         "@crates//:async-trait",
     ],
     visibility = ["//visibility:public"],

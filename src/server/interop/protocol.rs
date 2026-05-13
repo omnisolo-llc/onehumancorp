@@ -110,7 +110,7 @@ impl InteropProtocol {
 
     /// Listens for HealthPings and sends HealthAcks
     pub async fn listen_for_pings(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let node_id = self.node_id.clone();
+
         let bus = self.bus.clone();
 
         let handler = Box::new(move |msg: Message| {

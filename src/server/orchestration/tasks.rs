@@ -5,92 +5,128 @@ use crate::tasks::SharedTask;
 use chrono::Utc;
 
 use opentelemetry::global;
-use opentelemetry::trace::{Tracer, TraceContextExt};
+use opentelemetry::trace::Tracer;
+
+#[async_trait::async_trait]
+pub trait TaskDecompositionRepository: Send + Sync {
+    async fn create_task(&self, task: &SharedTask) -> Result<(), String>;
+}
+
+struct PostgresTaskRepository {
+    pool: sqlx::PgPool,
+}
+
+#[async_trait::async_trait]
+impl TaskDecompositionRepository for PostgresTaskRepository {
+    async fn create_task(&self, task: &SharedTask) -> Result<(), String> {
+        let deps = serde_json::to_value(&task.dependencies).map_err(|e| e.to_string())?;
+        let payload = serde_json::from_str::<serde_json::Value>(&task.payload).unwrap_or(serde_json::json!({}));
+        let deliberation = serde_json::from_str::<serde_json::Value>(task.deliberation_log.as_deref().unwrap_or("[]")).unwrap_or(serde_json::json!([]));
+
+        sqlx::query(
+            r#"
+            INSERT INTO shared_tasks_decomposition (
+                id, organization_id, mission_id, parent_plan_id, dependencies,
+                title, description, status, priority, payload, deliberation_log,
+                depth, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            "#
+        )
+        .bind(&task.id)
+        .bind(&task.organization_id)
+        .bind(&task.mission_id)
+        .bind(&task.parent_plan_id)
+        .bind(&deps)
+        .bind(&task.title)
+        .bind(&task.description)
+        .bind(&task.status)
+        .bind(&task.priority)
+        .bind(&payload)
+        .bind(&deliberation)
+        .bind(task.depth)
+        .bind(&task.created_at)
+        .bind(&task.updated_at)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+}
+
+struct SqliteTaskRepository {
+    pool: sqlx::SqlitePool,
+}
+
+#[async_trait::async_trait]
+impl TaskDecompositionRepository for SqliteTaskRepository {
+    async fn create_task(&self, task: &SharedTask) -> Result<(), String> {
+        let deps_str = serde_json::to_string(&task.dependencies).map_err(|e| e.to_string())?;
+        let payload_str = if task.payload.is_empty() { "{}" } else { &task.payload };
+        let deliberation_str = task.deliberation_log.as_deref().unwrap_or("[]");
+
+        sqlx::query(
+            r#"
+            INSERT INTO shared_tasks_decomposition (
+                id, organization_id, mission_id, parent_plan_id, dependencies,
+                title, description, status, priority, payload, deliberation_log,
+                depth, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            "#
+        )
+        .bind(&task.id)
+        .bind(&task.organization_id)
+        .bind(&task.mission_id)
+        .bind(&task.parent_plan_id)
+        .bind(&deps_str)
+        .bind(&task.title)
+        .bind(&task.description)
+        .bind(&task.status)
+        .bind(&task.priority)
+        .bind(payload_str)
+        .bind(deliberation_str)
+        .bind(task.depth)
+        .bind(&task.created_at)
+        .bind(&task.updated_at)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+}
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,
     sqlite_mu: tokio::sync::Mutex<()>,
     mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>,
+    repo: Box<dyn TaskDecompositionRepository>,
 }
 
 impl TaskDecompositionService {
     pub fn new(db: Arc<DB>, mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>) -> Self {
+        let repo: Box<dyn TaskDecompositionRepository> = match &db.store {
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                Box::new(SqliteTaskRepository { pool: sqlite_pool.clone() })
+            }
+            crate::db::DbStore::Postgres => {
+                Box::new(PostgresTaskRepository { pool: db.pool.clone() })
+            }
+        };
+
         Self {
             db,
             sqlite_mu: tokio::sync::Mutex::new(()),
             mesh,
+            repo,
         }
     }
 
     pub async fn create_task(&self, task: SharedTask) -> Result<SharedTask, String> {
         let tracer = global::tracer("ohc.orchestration");
         let _span = tracer.start("create_task");
-        match &self.db.store {
-            DbStore::Postgres => {
-                let deps = serde_json::to_value(&task.dependencies).map_err(|e| e.to_string())?;
-                let payload = serde_json::from_str::<serde_json::Value>(&task.payload).unwrap_or(serde_json::json!({}));
-                let deliberation = serde_json::from_str::<serde_json::Value>(task.deliberation_log.as_deref().unwrap_or("[]")).unwrap_or(serde_json::json!([]));
 
-                sqlx::query(
-                    r#"
-                    INSERT INTO shared_tasks_decomposition (
-                        id, organization_id, mission_id, parent_plan_id, dependencies,
-                        title, description, status, priority, payload, deliberation_log,
-                        depth, created_at, updated_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-                    "#
-                )
-                .bind(&task.id)
-                .bind(&task.organization_id)
-                .bind(&task.mission_id)
-                .bind(&task.parent_plan_id)
-                .bind(&deps)
-                .bind(&task.title)
-                .bind(&task.description)
-                .bind(&task.status)
-                .bind(&task.priority)
-                .bind(&payload)
-                .bind(&deliberation)
-                .bind(task.depth)
-                .bind(&task.created_at)
-                .bind(&task.updated_at)
-                .execute(&self.db.pool)
-                .await
-                .map_err(|e| e.to_string())?;
-            }
-            DbStore::Sqlite(sqlite_pool) => {
-                let deps_str = serde_json::to_string(&task.dependencies).map_err(|e| e.to_string())?;
-                let payload_str = if task.payload.is_empty() { "{}" } else { &task.payload };
-                let deliberation_str = task.deliberation_log.as_deref().unwrap_or("[]");
-
-                sqlx::query(
-                    r#"
-                    INSERT INTO shared_tasks_decomposition (
-                        id, organization_id, mission_id, parent_plan_id, dependencies,
-                        title, description, status, priority, payload, deliberation_log,
-                        depth, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    "#
-                )
-                .bind(&task.id)
-                .bind(&task.organization_id)
-                .bind(&task.mission_id)
-                .bind(&task.parent_plan_id)
-                .bind(&deps_str)
-                .bind(&task.title)
-                .bind(&task.description)
-                .bind(&task.status)
-                .bind(&task.priority)
-                .bind(payload_str)
-                .bind(deliberation_str)
-                .bind(task.depth)
-                .bind(&task.created_at)
-                .bind(&task.updated_at)
-                .execute(sqlite_pool)
-                .await
-                .map_err(|e| e.to_string())?;
-            }
-        }
+        self.repo.create_task(&task).await?;
 
         Ok(task)
     }
@@ -886,7 +922,7 @@ mod chaos_tests {
         let mut success = 0;
         let mut failed = 0;
         for handle in handles {
-            let (res, elapsed) = handle.await.unwrap();
+            let (res, _elapsed) = handle.await.unwrap();
             match res {
                 Ok(Some(_task)) => success += 1,
                 Ok(None) => success += 1,
@@ -948,7 +984,7 @@ mod chaos_tests {
         let mut success = 0;
         let mut failed = 0;
         for handle in handles {
-            let (res, elapsed) = handle.await.unwrap();
+            let (res, _elapsed) = handle.await.unwrap();
             match res {
                 Ok(Some(_task)) => success += 1,
                 Ok(None) => success += 1,
