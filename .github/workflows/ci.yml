@@ -40,6 +40,7 @@ jobs:
         uses: actions/setup-go@v5
         env:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+          PKG_CONFIG_PATH: "/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
         with:
           go-version: "1.24"
 
@@ -59,8 +60,8 @@ jobs:
           bazelrc: |
             build --remote_cache=
             test --remote_cache=
-            build --config=local
-            test --config=local
+            build --config=buildbuddy
+            test --config=buildbuddy
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
@@ -108,6 +109,7 @@ jobs:
         uses: actions/setup-go@v5
         env:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+          PKG_CONFIG_PATH: "/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
         with:
           go-version: "1.24"
 
@@ -127,8 +129,8 @@ jobs:
           bazelrc: |
             build --remote_cache=
             test --remote_cache=
-            build --config=local
-            test --config=local
+            build --config=buildbuddy
+            test --config=buildbuddy
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
