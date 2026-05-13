@@ -8,7 +8,7 @@ test.describe('UX Friction Audit', () => {
     await page.waitForTimeout(10000);
 
     // Assertion on Title
-    await expect(page).toHaveTitle(/OneHuman\s*Corp/);
+    await expect(page).toHaveTitle(/OneHumanCorp/);
 
     // Mobile Screenshot
     await page.setViewportSize({ width: 375, height: 800 });
