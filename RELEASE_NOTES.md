@@ -1,3 +1,7 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+- Scaling (Cloud): Bump version to v0.4.42 for Cloud releases.
+- Privacy/Offline (Standalone): Bump version to v0.4.42+1 for Standalone releases.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
