@@ -37,7 +37,6 @@ type SQLiteProvider interface {
 
 type PostgresProvider interface {
 	TaskStore
-	Ping(ctx context.Context) error
 }
 
 // Add these methods to SqliteTaskStore so it implements SQLiteProvider
@@ -68,10 +67,6 @@ func NewHybridMCPRAGDaemon(db *sql.DB, remoteURL string) *HybridMCPRAGDaemon {
 	}
 }
 
-func (d *HybridMCPRAGDaemon) ProbeHealth(ctx context.Context) error {
-	return d.db.PingContext(ctx)
-}
-
 // SyncPendingMissions queries the database for agent_missions with status 'CLOUD_ESCALATION'
 // and synced_to_cloud = false, then attempts to sync them to the remote API.
 func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
@@ -90,6 +85,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 	for rows.Next() {
 		var m mission
 		if err := rows.Scan(&m.id, &m.status, &m.payload); err != nil {
+			log.Printf("sync_daemon: [DEBUG] failed to scan row: %v", err)
 			continue
 		}
 		missions = append(missions, m)
@@ -117,6 +113,7 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		if err != nil {
 			// Release semaphore on error
 			<-throttleSemaphore
+			log.Printf("sync_daemon: [DEBUG] failed to sync mission %s: %v", m.id, err)
 			continue
 		}
 
@@ -126,12 +123,14 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		// Release semaphore after db transaction
 		<-throttleSemaphore
 		if err != nil {
+			log.Printf("sync_daemon: [DEBUG] failed to update synced_to_cloud flag for mission %s: %v", m.id, err)
 			continue
 		}
 
 		syncedCount++
 	}
 
+	// log.Printf("sync_daemon: successfully synced %d agent_missions", syncedCount)
 	return nil
 }
 
@@ -188,7 +187,7 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 		}
 
 		if len(payloadBytes) > 0 {
-			sanitized, err := SanitizePayloadFunc(string(payloadBytes))
+			sanitized, err := SanitizePayload(string(payloadBytes))
 			if err != nil {
 				log.Printf("Error sanitizing task %s", task.ID)
 				continue
@@ -221,7 +220,8 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 
 	for _, task := range tasksToUpdate {
 		// Update local status to avoid re-syncing
-		localDB.UpdateTaskStatus(ctx, task.ID, "CLOUD_PROCESSING")
+		updateQuery := `UPDATE shared_tasks SET status = 'CLOUD_PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+		localDB.GetDB().ExecContext(ctx, updateQuery, task.ID)
 	}
 
 	return nil
@@ -259,10 +259,8 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 		// Check cloud DB
 		cloudTask, err := cloudDB.GetTask(ctx, id)
 		if err != nil {
-			if err != sql.ErrNoRows && err.Error() != "task not found" {
+			if err != sql.ErrNoRows {
 				log.Printf("Error getting task from cloud DB: %v", err)
-			} else {
-				localDB.UpdateTaskStatus(ctx, id, "CLOUD_ESCALATION")
 			}
 			continue
 		}
