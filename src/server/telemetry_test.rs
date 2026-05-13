@@ -446,6 +446,3067 @@ mod tests {
             },
         );
     }
+
+#[test]
+fn test_redact_pii_org_id_edge_case_0() {
+    let input = serde_json::json!({
+        "normal_field": "safe",
+        "org_id": "sensitive_value_123",
+        "nested": {
+            "deep_org_id": "deep_sensitive"
+        },
+        "array_field": [
+            { "id": 1, "org_id": "array_sensitive_1" },
+            { "id": 2, "safe": "value" }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "normal_field": "safe",
+        "org_id": "[REDACTED]",
+        "nested": {
+            "deep_org_id": "[REDACTED]"
+        },
+        "array_field": [
+            { "id": 1, "org_id": "[REDACTED]" },
+            { "id": 2, "safe": "value" }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_session_data_edge_case_1() {
+    let input = serde_json::json!({
+        "normal_field": "safe",
+        "session_data": "sensitive_value_123",
+        "nested": {
+            "deep_session_data": "deep_sensitive"
+        },
+        "array_field": [
+            { "id": 1, "session_data": "array_sensitive_1" },
+            { "id": 2, "safe": "value" }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "normal_field": "safe",
+        "session_data": "[REDACTED]",
+        "nested": {
+            "deep_session_data": "[REDACTED]"
+        },
+        "array_field": [
+            { "id": 1, "session_data": "[REDACTED]" },
+            { "id": 2, "safe": "value" }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_api_key_edge_case_2() {
+    let input = serde_json::json!({
+        "normal_field": "safe",
+        "api_key": "sensitive_value_123",
+        "nested": {
+            "deep_api_key": "deep_sensitive"
+        },
+        "array_field": [
+            { "id": 1, "api_key": "array_sensitive_1" },
+            { "id": 2, "safe": "value" }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "normal_field": "safe",
+        "api_key": "[REDACTED]",
+        "nested": {
+            "deep_api_key": "[REDACTED]"
+        },
+        "array_field": [
+            { "id": 1, "api_key": "[REDACTED]" },
+            { "id": 2, "safe": "value" }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_secret_key_edge_case_3() {
+    let input = serde_json::json!({
+        "normal_field": "safe",
+        "secret_key": "sensitive_value_123",
+        "nested": {
+            "deep_secret_key": "deep_sensitive"
+        },
+        "array_field": [
+            { "id": 1, "secret_key": "array_sensitive_1" },
+            { "id": 2, "safe": "value" }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "normal_field": "safe",
+        "secret_key": "[REDACTED]",
+        "nested": {
+            "deep_secret_key": "[REDACTED]"
+        },
+        "array_field": [
+            { "id": 1, "secret_key": "[REDACTED]" },
+            { "id": 2, "safe": "value" }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_pin_edge_case_4() {
+    let input = serde_json::json!({
+        "normal_field": "safe",
+        "pin": "sensitive_value_123",
+        "nested": {
+            "deep_pin": "deep_sensitive"
+        },
+        "array_field": [
+            { "id": 1, "pin": "array_sensitive_1" },
+            { "id": 2, "safe": "value" }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "normal_field": "safe",
+        "pin": "[REDACTED]",
+        "nested": {
+            "deep_pin": "[REDACTED]"
+        },
+        "array_field": [
+            { "id": 1, "pin": "[REDACTED]" },
+            { "id": 2, "safe": "value" }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_routing_number_edge_case_5() {
+    let input = serde_json::json!({
+        "normal_field": "safe",
+        "routing_number": "sensitive_value_123",
+        "nested": {
+            "deep_routing_number": "deep_sensitive"
+        },
+        "array_field": [
+            { "id": 1, "routing_number": "array_sensitive_1" },
+            { "id": 2, "safe": "value" }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "normal_field": "safe",
+        "routing_number": "[REDACTED]",
+        "nested": {
+            "deep_routing_number": "[REDACTED]"
+        },
+        "array_field": [
+            { "id": 1, "routing_number": "[REDACTED]" },
+            { "id": 2, "safe": "value" }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_0() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_1() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_2() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_3() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_4() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "pin": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "routing_number": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "pin_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "routing_number_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "pin": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "routing_number": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "pin_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "routing_number_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_5() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "routing_number": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "org_id": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "routing_number_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "org_id_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "routing_number": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "org_id": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "routing_number_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "org_id_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_6() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_7() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_8() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_9() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_10() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "pin": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "routing_number": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "pin_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "routing_number_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "pin": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "routing_number": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "pin_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "routing_number_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_11() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "routing_number": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "org_id": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "routing_number_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "org_id_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "routing_number": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "org_id": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "routing_number_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "org_id_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_12() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_13() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_14() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_15() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_16() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "pin": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "routing_number": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "pin_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "routing_number_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "pin": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "routing_number": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "pin_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "routing_number_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_17() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "routing_number": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "org_id": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "routing_number_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "org_id_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "routing_number": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "org_id": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "routing_number_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "org_id_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_18() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_19() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_20() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_21() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_22() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "pin": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "routing_number": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "pin_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "routing_number_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "pin": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "routing_number": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "pin_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "routing_number_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_23() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "routing_number": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "org_id": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "routing_number_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "org_id_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "routing_number": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "org_id": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "routing_number_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "org_id_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_24() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_25() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_26() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_27() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_28() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "pin": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "routing_number": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "pin_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "routing_number_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "pin": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "routing_number": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "pin_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "routing_number_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_29() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "routing_number": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "org_id": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "routing_number_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "org_id_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "routing_number": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "org_id": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "routing_number_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "org_id_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_30() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_31() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_32() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_33() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_34() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "pin": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "routing_number": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "pin_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "routing_number_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "pin": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "routing_number": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "pin_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "routing_number_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_35() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "routing_number": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "org_id": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "routing_number_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "org_id_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "routing_number": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "org_id": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "routing_number_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "org_id_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_36() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "org_id": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "session_data": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "org_id_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "session_data_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_37() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "session_data": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "api_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "session_data_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "api_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_38() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "api_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "secret_key": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "api_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "secret_key_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_redact_pii_complex_nested_39() {
+    let input = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "secret_data_a",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "secret_data_b"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "sensitive_1",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "sensitive_2"
+                }
+            }
+        ]
+    });
+
+    let expected = serde_json::json!({
+        "metadata": {
+            "version": "1.0",
+            "flags": [true, false]
+        },
+        "user_context": {
+            "profile": {
+                "secret_key": "[REDACTED]",
+                "public_info": "hello"
+            },
+            "settings": {
+                "theme": "dark",
+                "pin": "[REDACTED]"
+            }
+        },
+        "events": [
+            {
+                "type": "login",
+                "details": {
+                    "secret_key_val": "[REDACTED]",
+                    "status": "success"
+                }
+            },
+            {
+                "type": "purchase",
+                "details": {
+                    "amount": 100,
+                    "pin_info": "[REDACTED]"
+                }
+            }
+        ]
+    });
+
+    let result = ::server_telemetry::redact_interface_pii(input);
+    assert_eq!(result, expected);
+}
+
 }
 
 #[tokio::test]
