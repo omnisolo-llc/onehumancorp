@@ -9,6 +9,7 @@ filegroup(
         "mesh_handler.rs",
         "mod.rs",
         "telemetry.rs",
+        "tool_integrations_logic.rs",
         "//src/server/api/agents:srcs",
         "//src/server/api/onboarding:srcs",
     ],
