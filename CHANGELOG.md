@@ -1,9 +1,16 @@
-## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
-
-- Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
-- Privacy/Offline (Standalone): Ensured local agents leverage Teammate Mesh gracefully with local-only fallback and zero-trust isolated environments.
-
 # OHC Hybrid Agentic OS - Changelog
+
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
+- Enhanced backend scaling capabilities and OCI container improvements.
+- Coordinated multi-environment promotions across Cloud staging.
+
+### Privacy/Offline Improvements
+- Implement offline-first local vector embeddings cache for the OHC Swarm.
+- Desktop application refinements for better local execution.
+- Improved privacy guarantees for standalone mode and Local desktop beta builds.
 
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
