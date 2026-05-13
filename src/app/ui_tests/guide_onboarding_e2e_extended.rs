@@ -43,7 +43,7 @@ fn test_maya_baker_full_flow() {
     let launched = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launched_clone = launched.clone();
     wizard_ui.on_launch(move |bt, cn, _cd, pp, _ae, _wt, pn, _price, _dc, _an, _ap, _pt| {
-        assert_eq!(bt, "Food");
+        assert_eq!(bt, "Restaurant / Food");
         assert_eq!(cn, "Maya's Bakery");
         assert_eq!(pp, "in_person");
         assert_eq!(pn, "Sourdough Loaf");
@@ -101,7 +101,7 @@ fn test_carlos_handyman_full_flow() {
     let launched = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launched_clone = launched.clone();
     wizard_ui.on_launch(move |bt, cn, _cd, _pp, _ae, _wt, pn, _price, _dc, _an, _ap, _pt| {
-        assert_eq!(bt, "Service");
+        assert_eq!(bt, "Service Business");
         assert_eq!(cn, "Carlos Fixes It");
         assert_eq!(pn, "1 Hour Repair");
         *launched_clone.borrow_mut() = true;
@@ -158,7 +158,7 @@ fn test_jessica_freelance_writer_full_flow() {
     let launched = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launched_clone = launched.clone();
     wizard_ui.on_launch(move |bt, cn, _cd, _pp, _ae, _wt, pn, _price, _dc, _an, _ap, _pt| {
-        assert_eq!(bt, "Digital");
+        assert_eq!(bt, "Creative / Portfolio");
         assert_eq!(cn, "Jessica Writes");
         assert_eq!(pn, "Blog Post");
         *launched_clone.borrow_mut() = true;
@@ -215,7 +215,7 @@ fn test_david_fitness_coach_full_flow() {
     let launched = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launched_clone = launched.clone();
     wizard_ui.on_launch(move |bt, cn, _cd, _pp, _ae, _wt, pn, _price, _dc, _an, _ap, _pt| {
-        assert_eq!(bt, "Health");
+        assert_eq!(bt, "Local Business");
         assert_eq!(cn, "David Fitness");
         assert_eq!(pn, "Monthly Coaching");
         *launched_clone.borrow_mut() = true;
@@ -272,7 +272,7 @@ fn test_emma_clothing_boutique_full_flow() {
     let launched = std::rc::Rc::new(std::cell::RefCell::new(false));
     let launched_clone = launched.clone();
     wizard_ui.on_launch(move |bt, cn, _cd, _pp, _ae, _wt, pn, _price, _dc, _an, _ap, _pt| {
-        assert_eq!(bt, "Retail");
+        assert_eq!(bt, "Online Store");
         assert_eq!(cn, "Emma's Boutique");
         assert_eq!(pn, "Summer Dress");
         *launched_clone.borrow_mut() = true;
