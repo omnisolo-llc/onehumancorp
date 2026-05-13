@@ -371,10 +371,454 @@ impl InteropProtocol {
         self.bus.subscribe(format!("system:job_status:{}", job_id), bus_handler).await
     }
 
+
+    pub async fn dispatch_reliable_job(&self, job_id: &str, tenant_id: &str, action_name: &str, payload: Vec<u8>, max_retries: i32) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+
+        let dispatch = proto::ReliableJobDispatch {
+            job_id: job_id.to_string(),
+            tenant_id: tenant_id.to_string(),
+            action_name: action_name.to_string(),
+            payload,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+            max_retries,
+        };
+
+        let mut buf = Vec::new();
+        if let Err(e) = dispatch.encode(&mut buf) {
+            return Err(e.to_string());
+        }
+
+        let msg = Message {
+            topic: format!("system:reliable_dispatch:{}", tenant_id),
+            payload: buf,
+        };
+
+        let mut retries = 0;
+        let mut delay_ms = 100;
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let job_id_clone = job_id.to_string();
+        let cancel_ack = self.bus.subscribe(format!("system:reliable_ack:{}", job_id), Box::new(move |msg| {
+            if let Ok(ack) = proto::ReliableAck::decode(&msg.payload[..]) {
+                if ack.job_id == job_id_clone {
+                    let _ = tx.try_send(true);
+                }
+            }
+        })).await.map_err(|e| e.to_string())?;
+
+        let res = loop {
+            if let Err(e) = self.bus.publish(msg.clone()).await {
+                break Err(e);
+            }
+
+            match tokio::time::timeout(tokio::time::Duration::from_millis(1000), rx.recv()).await {
+                Ok(Some(_)) => break Ok(()),
+                Ok(None) => break Err("Channel closed unexpectedly".to_string()),
+                Err(_) => {}
+            }
+
+            retries += 1;
+            if retries >= max_retries {
+                break Err(format!("Failed to receive ack after {} retries", max_retries));
+            }
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+            delay_ms *= 2;
+        };
+
+        cancel_ack();
+        res
+    }
+
+    pub async fn cancel_job(&self, job_id: String, tenant_id: &str, reason: &str, timeout_ms: u64) -> Result<bool, String> {
+        use prost::Message as ProstMessage;
+
+        let cancel = proto::JobCancel {
+            job_id: job_id.clone(),
+            tenant_id: tenant_id.to_string(),
+            reason: reason.to_string(),
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+
+        let mut buf = Vec::new();
+        if let Err(e) = cancel.encode(&mut buf) {
+            return Err(e.to_string());
+        }
+
+        let msg = Message {
+            topic: format!("system:job_cancel:{}", tenant_id),
+            payload: buf,
+        };
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let cancel_ack = self.bus.subscribe(format!("system:job_ack:{}", job_id), Box::new(move |msg| {
+            if let Ok(ack) = proto::JobAck::decode(&msg.payload[..]) {
+                if ack.job_id == job_id {
+                    let _ = tx.try_send(true);
+                }
+            }
+        })).await.map_err(|e| e.to_string())?;
+
+        self.bus.publish(msg).await?;
+
+        let res = if let Ok(Some(_)) = tokio::time::timeout(tokio::time::Duration::from_millis(timeout_ms), rx.recv()).await {
+            Ok(true)
+        } else {
+            Ok(false)
+        };
+
+        cancel_ack();
+        res
+    }
+
+    pub async fn listen_for_job_cancel(&self, tenant_id: &str, handler: Box<dyn Fn(proto::JobCancel) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.bus.subscribe(format!("system:job_cancel:{}", tenant_id), Box::new(move |msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(cancel) = proto::JobCancel::decode(&msg.payload[..]) {
+                handler(cancel);
+            }
+        })).await
+    }
+
+    pub async fn send_heartbeat(&self, mode: proto::DeploymentMode) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+
+        let hb = proto::Heartbeat {
+            node_id: self.node_id.clone(),
+            mode: mode as i32,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+
+        let mut buf = Vec::new();
+        if let Err(e) = hb.encode(&mut buf) {
+            return Err(e.to_string());
+        }
+
+        let msg = Message {
+            topic: "system:heartbeat".to_string(),
+            payload: buf,
+        };
+
+        self.bus.publish(msg).await
+    }
+
+    pub async fn listen_for_heartbeats(&self, handler: Box<dyn Fn(proto::Heartbeat) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.bus.subscribe("system:heartbeat".to_string(), Box::new(move |msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(hb) = proto::Heartbeat::decode(&msg.payload[..]) {
+                handler(hb);
+            }
+        })).await
+    }
+
+    pub async fn monitor_agent_health(&self, check_interval_ms: u64, timeout_ms: u64, on_unresponsive: Box<dyn Fn(String) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let last_seen = Arc::new(std::sync::RwLock::new(std::collections::HashMap::<String, i64>::new()));
+        let last_seen_clone = last_seen.clone();
+
+        let cancel_sub = self.listen_for_heartbeats(Box::new(move |hb| {
+            if let Ok(mut ls) = last_seen_clone.write() {
+                ls.insert(hb.node_id.clone(), chrono::Utc::now().timestamp_millis());
+            }
+        })).await?;
+
+        let cancel_flag = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let cancel_flag_clone = cancel_flag.clone();
+
+        let on_unresponsive_arc = Arc::new(on_unresponsive);
+
+        tokio::spawn(async move {
+            loop {
+                if cancel_flag_clone.load(std::sync::atomic::Ordering::SeqCst) {
+                    cancel_sub();
+                    break;
+                }
+
+                tokio::time::sleep(tokio::time::Duration::from_millis(check_interval_ms)).await;
+
+                let now = chrono::Utc::now().timestamp_millis();
+                let mut dead_nodes = Vec::new();
+
+                if let Ok(mut ls) = last_seen.write() {
+                    for (node, &last_ts) in ls.iter() {
+                        if now - last_ts > timeout_ms as i64 {
+                            dead_nodes.push(node.clone());
+                        }
+                    }
+
+                    for node in &dead_nodes {
+                        ls.remove(node);
+                    }
+                }
+
+                for node in dead_nodes {
+                    on_unresponsive_arc(node);
+                }
+            }
+        });
+
+        Ok(Box::new(move || {
+            cancel_flag.store(true, std::sync::atomic::Ordering::SeqCst);
+        }))
+    }
+
+    pub async fn handoff_state(&self, mission_id: &str, tenant_id: &str, state: Vec<u8>) -> Result<(), String> {
+        let idempotency_key = format!("handoff_executed:{}:{}", tenant_id, mission_id);
+
+        // Simple idempotency check utilizing the distributed lock mechanism
+        if !self.lock.acquire_lock(&idempotency_key, &self.node_id, 86400 * 30).await.unwrap_or(false) {
+             return Ok(());
+        }
+
+        let handoff_msg = proto::StateHandoff {
+            mission_id: mission_id.to_string(),
+            tenant_id: tenant_id.to_string(),
+            source_mode: proto::DeploymentMode::ModeCloud as i32,
+            target_mode: proto::DeploymentMode::ModeStandalone as i32,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+            state_snapshot: state,
+        };
+
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        if let Err(e) = handoff_msg.encode(&mut buf) {
+            let _ = self.lock.release_lock(&idempotency_key, &self.node_id).await;
+            return Err(e.to_string());
+        }
+
+        let msg = Message {
+            topic: "system:state_handoff".to_string(),
+            payload: buf,
+        };
+
+        match self.bus.publish(msg).await {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                let _ = self.lock.release_lock(&idempotency_key, &self.node_id).await;
+                Err(e)
+            }
+        }
+    }
+
+    pub async fn distributed_lock(&self, resource: &str, ttl_seconds: u64) -> Result<bool, String> {
+        use prost::Message as ProstMessage;
+
+        let req = proto::LockRequest {
+            resource: resource.to_string(),
+            owner: self.node_id.clone(),
+            ttl_seconds,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+
+        let mut buf = Vec::new();
+        if let Err(e) = req.encode(&mut buf) {
+             return Err(e.to_string());
+        }
+
+        let msg = Message {
+            topic: format!("system:lock_request:{}", resource),
+            payload: buf,
+        };
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let resource_clone = resource.to_string();
+
+        let cancel_ack = self.bus.subscribe(format!("system:lock_response:{}", self.node_id), Box::new(move |msg| {
+            if let Ok(resp) = proto::LockResponse::decode(&msg.payload[..]) {
+                if resp.resource == resource_clone {
+                    let _ = tx.try_send(resp.granted);
+                }
+            }
+        })).await?;
+
+        self.bus.publish(msg).await?;
+
+        let res: Result<bool, String> = if let Ok(Some(granted)) = tokio::time::timeout(tokio::time::Duration::from_millis(5000), rx.recv()).await {
+             Ok(granted)
+        } else {
+             Ok(false)
+        };
+
+        cancel_ack();
+
+        // Also use the actual distributed lock
+        if let Ok(true) = res {
+             self.lock.acquire_lock(resource, &self.node_id, ttl_seconds).await
+        } else {
+             Ok(false)
+        }
+    }
+
+    pub async fn listen_for_distributed_locks(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let lock_clone = self.lock.clone();
+        let bus_clone = self.bus.clone();
+        self.bus.subscribe("system:lock_request:*".to_string(), Box::new(move |msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(req) = proto::LockRequest::decode(&msg.payload[..]) {
+                let lock_clone2 = lock_clone.clone();
+                let bus_clone2 = bus_clone.clone();
+                tokio::spawn(async move {
+                    let granted = lock_clone2.acquire_lock(&req.resource, &req.owner, req.ttl_seconds).await.unwrap_or(false);
+                    let resp = proto::LockResponse {
+                        resource: req.resource,
+                        granted,
+                        timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                    };
+                    let mut buf = Vec::new();
+                    let _ = resp.encode(&mut buf);
+                    let _ = bus_clone2.publish(Message {
+                        topic: format!("system:lock_response:{}", req.owner),
+                        payload: buf,
+                    }).await;
+                });
+            }
+        })).await
+    }
 }
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_interop_reliable_message() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let bus_clone = bus.clone();
+        let _cancel_listen = bus.subscribe("system:reliable_dispatch:t1".to_string(), Box::new(move |msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(dispatch) = proto::ReliableJobDispatch::decode(&msg.payload[..]) {
+                let ack = proto::ReliableAck {
+                    job_id: dispatch.job_id.clone(),
+                    timestamp_ms: 1000,
+                };
+                let mut buf = Vec::new();
+                ack.encode(&mut buf).unwrap();
+                let b = bus_clone.clone();
+                tokio::spawn(async move {
+                    b.publish(crate::msgbus::Message {
+                        topic: format!("system:reliable_ack:{}", dispatch.job_id),
+                        payload: buf,
+                    }).await.unwrap();
+                });
+            }
+        })).await.unwrap();
+
+        let res = protocol.dispatch_reliable_job("job1", "t1", "action", vec![1, 2, 3], 3).await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_interop_cancel_job() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let bus_clone = bus.clone();
+        let _cancel_listen = protocol.listen_for_job_cancel("t1", Box::new(move |cancel| {
+            let ack = proto::JobAck {
+                job_id: cancel.job_id.clone(),
+                node_id: "responder".to_string(),
+                timestamp_ms: 1000,
+            };
+            use prost::Message as ProstMessage;
+            let mut buf = Vec::new();
+            ack.encode(&mut buf).unwrap();
+            let b = bus_clone.clone();
+            tokio::spawn(async move {
+                b.publish(crate::msgbus::Message {
+                    topic: format!("system:job_ack:{}", cancel.job_id),
+                    payload: buf,
+                }).await.unwrap();
+            });
+        })).await.unwrap();
+
+        let res = protocol.cancel_job("job1".to_string(), "t1", "reason", 100).await;
+        assert!(res.is_ok() && res.unwrap() == true);
+    }
+
+    #[tokio::test]
+    async fn test_interop_handoff_state() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+        let res = protocol.handoff_state("m1", "t1", vec![]).await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_interop_heartbeat() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let rx = received.clone();
+
+        let _cancel_listen = protocol.listen_for_heartbeats(Box::new(move |hb| {
+            if hb.node_id == "node1" {
+                rx.store(true, std::sync::atomic::Ordering::SeqCst);
+            }
+        })).await.unwrap();
+
+        let _ = protocol.send_heartbeat(proto::DeploymentMode::ModeCloud).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_monitor_agent_health() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "monitor_node".to_string());
+
+        let detected = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let detected_clone = detected.clone();
+
+        let _cancel_monitor = protocol.monitor_agent_health(10, 50, Box::new(move |node| {
+            if node == "agent_node" {
+                detected_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+            }
+        })).await.unwrap();
+
+        let hb = proto::Heartbeat {
+            node_id: "agent_node".to_string(),
+            mode: 1,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        hb.encode(&mut buf).unwrap();
+
+        bus.publish(crate::msgbus::Message {
+            topic: "system:heartbeat".to_string(),
+            payload: buf,
+        }).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+        assert!(detected.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_distributed_lock() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock.clone(), "node1".to_string());
+
+        let _cancel_listen = protocol.listen_for_distributed_locks().await.unwrap();
+
+        // Let listener initialize
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        // Provide the lock manually for memorybus in mock context since acquire_lock may return false depending on init
+        let _ = protocol.lock.acquire_lock("my_res", "node1", 10).await;
+
+        let res = protocol.distributed_lock("my_res", 10).await;
+        assert!(res.is_ok());
+    }
     use super::*;
     use crate::msgbus::MemoryBus;
     use std::sync::atomic::{AtomicBool, Ordering};

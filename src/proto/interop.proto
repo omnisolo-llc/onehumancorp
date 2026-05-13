@@ -75,3 +75,49 @@ message JobStatusUpdate {
   bytes details_payload = 4;
   int64 timestamp_ms = 5;
 }
+
+// Cancels an executing job
+message JobCancel {
+  string job_id = 1;
+  string tenant_id = 2;
+  string reason = 3;
+  int64 timestamp_ms = 4;
+}
+
+// Extends Interop Protocol with Heartbeat
+message Heartbeat {
+  string node_id = 1;
+  DeploymentMode mode = 2;
+  int64 timestamp_ms = 3;
+}
+
+// Reliable Job Dispatch
+message ReliableJobDispatch {
+  string job_id = 1;
+  string tenant_id = 2;
+  string action_name = 3;
+  bytes payload = 4;
+  int64 timestamp_ms = 5;
+  int32 max_retries = 6;
+}
+
+// Reliable Ack
+message ReliableAck {
+  string job_id = 1;
+  int64 timestamp_ms = 2;
+}
+
+// Distributed Lock Request
+message LockRequest {
+  string resource = 1;
+  string owner = 2;
+  uint64 ttl_seconds = 3;
+  int64 timestamp_ms = 4;
+}
+
+// Distributed Lock Response
+message LockResponse {
+  string resource = 1;
+  bool granted = 2;
+  int64 timestamp_ms = 3;
+}
