@@ -77,6 +77,9 @@ impl McpService for MyMcpService {
         &self,
         request: Request<McpInvokeRequest>,
     ) -> Result<Response<McpInvokeResponse>, Status> {
+        let tenant_id = request.extensions().get::<crate::auth::Claims>()
+            .and_then(|c| c.organization_id.clone())
+            .ok_or_else(|| Status::permission_denied("Missing organization_id in claims"))?;
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
 
@@ -101,7 +104,7 @@ impl McpService for MyMcpService {
                 let content = params["content"].as_str().ok_or_else(|| Status::invalid_argument("content is required"))?;
                 let thread_id = params["thread_id"].as_str().unwrap_or_default();
 
-                let msg = self.registry.send_chat_message(&req.tool_id, channel, from_agent, content, thread_id)
+                let msg = self.registry.send_chat_message(&tenant_id, &req.tool_id, channel, from_agent, content, thread_id)
                     .map_err(|e| Status::internal(e))?;
 
                 let resp_payload = serde_json::to_string(&msg).unwrap();
@@ -118,7 +121,7 @@ impl McpService for MyMcpService {
                 let target = params["target_branch"].as_str().unwrap_or("main");
                 let created_by = params["created_by"].as_str().unwrap_or_default();
 
-                let pr = self.registry.create_pull_request(&req.tool_id, repo, title, body, source, target, created_by)
+                let pr = self.registry.create_pull_request(&tenant_id, &req.tool_id, repo, title, body, source, target, created_by)
                     .map_err(|e| Status::internal(e))?;
 
                 let resp_payload = serde_json::to_string(&pr).unwrap();
@@ -143,7 +146,7 @@ impl McpService for MyMcpService {
                     }
                 }
 
-                let issue = self.registry.create_issue(&req.tool_id, project, title, description, created_by, priority, labels)
+                let issue = self.registry.create_issue(&tenant_id, &req.tool_id, project, title, description, created_by, priority, labels)
                     .map_err(|e| Status::internal(e))?;
 
                 let resp_payload = serde_json::to_string(&issue).unwrap();
@@ -375,6 +378,46 @@ mod tests {
         let resp = service.sync_missions(req).await;
         if let Err(status) = resp {
             assert_ne!(status.code(), tonic::Code::Unauthenticated);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_invoke_tool_claims() {
+        let registry = Arc::new(IntegrationsRegistry::new());
+        let pool_opts = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(500))
+            .max_connections(1);
+        let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let service = MyMcpService::new(registry, hub);
+
+        let mut req = Request::new(crate::ohc::orchestration::McpInvokeRequest {
+            spiffe_id: "".to_string(),
+            tool_id: "test-tool".to_string(),
+            params: "{}".to_string(),
+            action: "".to_string(),
+            agent_id: "".to_string(),
+        });
+
+        req.extensions_mut().insert(crate::auth::Claims {
+            sub: "test".to_string(),
+            username: "test".to_string(),
+            email: "test".to_string(),
+            roles: vec![],
+            organization_id: Some("tenant1".to_string()),
+            session_id: None,
+            iat: 0,
+            exp: 0,
+            jti: "test".to_string(),
+        });
+
+        let resp = service.invoke_tool(req).await;
+        if let Err(status) = resp {
+             assert_ne!(status.code(), tonic::Code::PermissionDenied);
         }
     }
 
