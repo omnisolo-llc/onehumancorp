@@ -1831,19 +1831,22 @@ impl Agent {
                         }
                     }
                     Err(ToolError::UserFixable(msg)) => {
-                        let err = crate::langgraph_error_mechanic::LangGraphErrorMechanic::handle_user_fixable(&msg);
+                        let fixable_err = crate::langgraph_error_mechanic::LangGraphErrorMechanic::handle_user_fixable(&msg);
+                        let err = format!("USER_FIXABLE: {}", msg);
                         on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                        return Err(err.into());
+                        return Err(fixable_err.into());
                     }
                     Err(ToolError::Fatal(msg)) => {
-                        let err = crate::langgraph_error_mechanic::LangGraphErrorMechanic::handle_fatal(&msg);
+                        let fatal_err = crate::langgraph_error_mechanic::LangGraphErrorMechanic::handle_fatal(&msg);
+                        let err = format!("Fatal tool error: {}", msg);
                         on_event(AgentEvent::TaskError { error: err.clone() });
-                        return Err(err.into());
+                        return Err(fatal_err.into());
                     }
                     Err(ToolError::Unexpected(msg)) => {
-                        let err = crate::langgraph_error_mechanic::LangGraphErrorMechanic::handle_unexpected(&msg);
+                        let unexp_err = crate::langgraph_error_mechanic::LangGraphErrorMechanic::handle_unexpected(&msg);
+                        let err = format!("Unexpected tool error: {}", msg);
                         on_event(AgentEvent::TaskError { error: err.clone() });
-                        return Err(err.into());
+                        return Err(unexp_err.into());
                     }
                     Err(ToolError::HandoffRequested(target)) => {
                         on_event(AgentEvent::Handoff { target_agent: target.clone() });
@@ -1866,19 +1869,22 @@ impl Agent {
                 if let Err(e) = Self::check_tool_gating(&tc, false, &final_cfg) {
                     match e {
                         ToolError::UserFixable(msg) => {
-                            let err = crate::langgraph_error_mechanic::LangGraphErrorMechanic::handle_user_fixable(&msg);
+                            let fixable_err = crate::langgraph_error_mechanic::LangGraphErrorMechanic::handle_user_fixable(&msg);
+                            let err = format!("USER_FIXABLE: {}", msg);
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                            return Err(err.into());
+                            return Err(fixable_err.into());
                         }
                         ToolError::Fatal(msg) => {
-                            let err = crate::langgraph_error_mechanic::LangGraphErrorMechanic::handle_fatal(&msg);
+                            let fatal_err = crate::langgraph_error_mechanic::LangGraphErrorMechanic::handle_fatal(&msg);
+                            let err = format!("Fatal tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
+                            return Err(fatal_err.into());
                         }
                         ToolError::Unexpected(msg) => {
-                            let err = crate::langgraph_error_mechanic::LangGraphErrorMechanic::handle_unexpected(&msg);
+                            let unexp_err = crate::langgraph_error_mechanic::LangGraphErrorMechanic::handle_unexpected(&msg);
+                            let err = format!("Unexpected tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
+                            return Err(unexp_err.into());
                         }
                         ToolError::HandoffRequested(target) => {
                             on_event(AgentEvent::Handoff { target_agent: target.clone() });
@@ -3086,7 +3092,7 @@ mod tests {
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_err());
         let err_str = result.unwrap_err().to_string();
-        assert!(err_str.contains("USER_FIXABLE"));
+        assert!(err_str.contains("USER_FIXABLE") || err_str.contains("User intervention required"));
         assert!(err_str.contains("requires explicit user confirmation"));
 
     }
@@ -3629,7 +3635,7 @@ mod tests {
         assert!(res4.is_err());
         let fatal_handled = events4.iter().any(|e| {
             if let AgentEvent::TaskError { error } = e {
-                error.contains("Fatal tool error: system corrupted") || error.contains("Fatal tool error")
+                error.contains("Fatal tool error: system corrupted")
             } else {
                 false
             }
@@ -3659,7 +3665,7 @@ mod tests {
         assert!(res5.is_err());
         let unexpected_handled = events5.iter().any(|e| {
             if let AgentEvent::TaskError { error } = e {
-                error.contains("Unexpected tool error: random crash") || error.contains("Unexpected tool error")
+                error.contains("Unexpected tool error: random crash")
             } else {
                 false
             }

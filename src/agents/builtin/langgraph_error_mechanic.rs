@@ -43,15 +43,15 @@ impl LangGraphErrorMechanic {
         })
     }
 
-    pub fn handle_user_fixable(msg: &str) -> String {
-        format!("USER_FIXABLE: {}", msg)
+    pub fn handle_user_fixable(msg: &str) -> ToolError {
+        ToolError::UserFixable(msg.to_string())
     }
 
-    pub fn handle_fatal(msg: &str) -> String {
-        format!("Fatal tool error: {}", msg)
+    pub fn handle_fatal(msg: &str) -> ToolError {
+        ToolError::Fatal(msg.to_string())
     }
 
-    pub fn handle_unexpected(msg: &str) -> String {
-        format!("Unexpected tool error: {}", msg)
+    pub fn handle_unexpected(msg: &str) -> ToolError {
+        ToolError::Unexpected(msg.to_string())
     }
 }
