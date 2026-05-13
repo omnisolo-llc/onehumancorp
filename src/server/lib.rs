@@ -39,6 +39,7 @@ pub mod builder;
 use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
+    pub mod finance;
     pub mod dashboard;
     pub mod wizard;
     pub mod billing;
@@ -1656,6 +1657,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Dashboard -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
+                        <div class="card glass" id="daily-briefing-card">
+                            <h3>Business Briefing</h3>
+                            <p id="briefing-content">Loading your insights...</p>
+                        </div>
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
