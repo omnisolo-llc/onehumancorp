@@ -3,8 +3,8 @@ filegroup(
     srcs = [
         "chaos_bench.rs",
         "latency_bench.rs",
+        "bolt_verification_tests.rs",
         "mod.rs",
-
     ],
     visibility = ["//src/server:__pkg__"],
 )

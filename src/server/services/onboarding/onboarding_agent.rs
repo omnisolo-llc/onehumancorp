@@ -13,6 +13,7 @@ impl OnboardingAgent {
     }
 
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
+        crate::track_latency!("start_onboarding");
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
 
         let business_type = req.business_type.clone();

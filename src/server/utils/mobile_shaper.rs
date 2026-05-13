@@ -1,72 +1,34 @@
-use serde::{Serialize, Deserialize};
+use serde::Serialize;
+use serde_json::Value;
 
-/// A trait for types that can be optimized for mobile clients by stripping heavy or redundant fields.
 pub trait MobileShaper {
-    fn optimize_for_mobile(&mut self);
+    fn shape_for_mobile(&mut self);
 }
 
-impl MobileShaper for ::server_ohc::app::DashboardSnapshot {
-    fn optimize_for_mobile(&mut self) {
-        // Strip large meeting transcripts
-        for meeting in &mut self.meetings {
-            meeting.transcript.clear();
-        }
+impl MobileShaper for Value {
+    fn shape_for_mobile(&mut self) {
+        if let Some(obj) = self.as_object_mut() {
+            // Remove heavy fields typically not needed for initial mobile dashboard view
+            obj.remove("transcript");
+            obj.remove("raw_metadata");
+            obj.remove("debug_info");
+            obj.remove("history");
+            obj.remove("embeddings");
 
-        // Strip verbose agent details
-        for agent in &mut self.agents {
-            agent.name = String::new(); // Rely on ID or icon on mobile
-        }
-
-        // Strip non-essential product metadata
-        for product in &mut self.products {
-            product.description = String::new();
-            product.metadata_json = String::new();
-            product.fulfillment_strategy = String::new();
-            product.currency = String::new();
-        }
-
-        // Strip verbose order info
-        for order in &mut self.orders {
-            order.product_id = String::new();
-            order.status = String::new();
-            order.organization_id = String::new();
-        }
-
-        // Strip detailed organization members/profiles
-        if let Some(ref mut org) = self.organization {
-            org.domain = String::new();
-            org.members = vec![];
-            org.role_profiles = vec![];
-            org.ceo_id = String::new();
-            org.created_at_unix = 0;
+            // Recursively shape nested objects
+            for (_key, value) in obj.iter_mut() {
+                value.shape_for_mobile();
+            }
+        } else if let Some(arr) = self.as_array_mut() {
+            for item in arr.iter_mut() {
+                item.shape_for_mobile();
+            }
         }
     }
 }
 
-impl MobileShaper for ::server_ohc::app::GetOnboardingStateResponse {
-    fn optimize_for_mobile(&mut self) {
-        if let Some(ref mut state) = self.state {
-             // Example: strip verbose state_json for mobile if it's too large
-             if state.state_json.len() > 1024 {
-                 // For now, keep it
-             }
-        }
-    }
-}
-
-impl MobileShaper for ::server_ohc::orchestration::PollTasksResponse {
-    fn optimize_for_mobile(&mut self) {
-        for task in &mut self.tasks {
-            task.description = String::new();
-            task.payload = String::new();
-            task.proposed_content = String::new();
-        }
-    }
-}
-
-/// Helper to apply shaping if requested
-pub fn shape_if_needed<T: MobileShaper>(payload: &mut T, mobile_optimized: bool) {
-    if mobile_optimized {
-        payload.optimize_for_mobile();
-    }
+pub fn is_mobile_request<T>(request: &tonic::Request<T>) -> bool {
+    request.metadata().get("x-client-platform")
+        .map(|v| v.to_str().unwrap_or("").to_lowercase().contains("mobile"))
+        .unwrap_or(false)
 }

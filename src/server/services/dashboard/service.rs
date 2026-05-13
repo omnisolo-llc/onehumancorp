@@ -26,6 +26,7 @@ impl DashboardService for MyDashboardService {
         &self,
         request: Request<GetDashboardRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
+        crate::track_latency!("get_dashboard");
         let auth_info = request
             .extensions()
             .get::<::server_auth::orchestration::AuthInfo>()
@@ -250,7 +251,7 @@ impl DashboardService for MyDashboardService {
         let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
         let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
 
-        let products = if req.mobile_optimized {
+        let products = if req.mobile_optimized || ::server_utils::mobile_shaper::is_mobile_request(&request) {
             products
                 .into_iter()
                 .map(|p| ::server_ohc::organization::Product {
@@ -265,7 +266,7 @@ impl DashboardService for MyDashboardService {
             products
         };
 
-        let orders = if req.mobile_optimized {
+        let orders = if req.mobile_optimized || ::server_utils::mobile_shaper::is_mobile_request(&request) {
             orders
                 .into_iter()
                 .map(|o| ::server_ohc::app::Order {
@@ -282,7 +283,7 @@ impl DashboardService for MyDashboardService {
         let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
             let mut transcript = Vec::new();
-            if !req.mobile_optimized {
+            if !(req.mobile_optimized || ::server_utils::mobile_shaper::is_mobile_request(&request)) {
                 for msg in &m.transcript {
                     transcript.push(::server_ohc::agent::AgentMessage {
                         id: msg.id.clone(),
@@ -425,13 +426,13 @@ impl DashboardService for MyDashboardService {
             })
             .collect::<Vec<_>>();
 
-        if req.mobile_optimized {
+        if req.mobile_optimized || ::server_utils::mobile_shaper::is_mobile_request(&request) {
             for agent in final_agents.iter_mut() {
                 agent.name = String::new();
             }
         }
 
-        let org = if req.mobile_optimized {
+        let org = if req.mobile_optimized || ::server_utils::mobile_shaper::is_mobile_request(&request) {
             org.map(|mut o| {
                 o.domain = String::new();
                 o.members = vec![];
@@ -474,6 +475,7 @@ impl DashboardService for MyDashboardService {
         &self,
         request: Request<GetOnboardingStateRequest>,
     ) -> Result<Response<GetOnboardingStateResponse>, Status> {
+        crate::track_latency!("get_dashboard");
         let auth_info = request
             .extensions()
             .get::<::server_auth::orchestration::AuthInfo>()
@@ -516,7 +518,12 @@ impl DashboardService for MyDashboardService {
 
             // In a real scenario, we would check a field in the request.
             // For this implementation, we apply default shaping.
-            ::server_utils::mobile_shaper::shape_if_needed(&mut response, true);
+                        if ::server_utils::mobile_shaper::is_mobile_request(&request) {
+                let mut val = serde_json::to_value(&response).unwrap_or(serde_json::json!({}));
+                use ::server_utils::mobile_shaper::MobileShaper;
+                val.shape_for_mobile();
+                response = serde_json::from_value(val).unwrap_or(response);
+            }
 
             Ok(Response::new(response))
         } else {
@@ -555,6 +562,7 @@ impl DashboardService for MyDashboardService {
         &self,
         request: Request<UpdateOnboardingStateRequest>,
     ) -> Result<Response<UpdateOnboardingStateResponse>, Status> {
+        crate::track_latency!("get_dashboard");
         let auth_info = request
             .extensions()
             .get::<::server_auth::orchestration::AuthInfo>()

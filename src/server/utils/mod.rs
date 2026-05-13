@@ -9,3 +9,5 @@ pub mod json_minify;
 pub mod dialect;
 pub mod slug;
 pub mod cache;
+pub mod mobile_shaper;
+pub mod performance_monitor;

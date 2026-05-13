@@ -1,3 +1,4 @@
+use rand;
 use sqlx::PgPool;
 use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
 use sqlx::SqlitePool;
