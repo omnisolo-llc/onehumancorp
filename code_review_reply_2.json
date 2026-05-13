@@ -1,0 +1,6 @@
+[
+  {
+    "comment_id": "4437065534",
+    "reply": "I've fixed the `bazel-build` failing checks. It was caused by the GitHub Actions disk cache taking up too much space. I appended the run ID to the cache key to avoid cache accumulation on the runner."
+  }
+]
