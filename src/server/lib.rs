@@ -1608,11 +1608,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
                     <style>
                         body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
-                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
+                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1); }
                         nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.8); position: sticky; top: 0; z-index: 100; }
                         nav a { color: #4ecca3; text-decoration: none; font-weight: 600; cursor: pointer; }
                         main { padding: 40px; }
-                        .screen { display: none; padding: 40px; max-width: 800px; margin: 40px auto; }
+                        .screen { display: none; padding: 40px; max-width: 800px; margin: 40px auto; font-family: 'Outfit', 'Inter', sans-serif; transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1); }
                         .card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
                         h1, h2 { color: #4ecca3; }
                         input { width: 100%; padding: 12px; margin-bottom: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; box-sizing: border-box; }
@@ -1843,6 +1843,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                      <!-- Setup Wizard -->
+
                     <div id="setup-screen" class="screen glass">
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
@@ -1857,29 +1858,30 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
                             <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
                             <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                            <button class="secondary" onclick="nextStep(3)">Other</button>
                         </div>
                         <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
+                            <h1>What is your business called?</h1>
                             <input type="text" placeholder="e.g. Maya's Cakes" />
                             <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
+                            <button onclick="nextStep(4)">Auto-suggest Description</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
                             <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
                             <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
                             <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
-                            <br/><button class="secondary" onclick="nextStep(3)">Back</button>
+                            <button class="secondary" onclick="nextStep(5)">Digital downloads</button>
+                            <button class="secondary" onclick="nextStep(5)">🍕 Food & beverages</button>
                         </div>
                         <div id="step-5" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
                             <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
                             <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(4)">Back</button>
+                            <button class="secondary" onclick="nextStep(6)">🤝 In-person (Take payments on your phone)</button>
                         </div>
                         <div id="step-6" style="display: none;">
-                            <h1>Create your account</h1>
+                            <h1>Administrator account</h1>
                             <input type="text" placeholder="e.g. Maya Smith" />
                             <input type="email" placeholder="you@email.com" />
                             <input type="password" placeholder="Password" />
@@ -1887,28 +1889,30 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-7" style="display: none;">
                             <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
                             <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
                             <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
                         </div>
                         <div id="step-8" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
+                            <h1>Add your first product</h1>
+                            <input type="text" placeholder="What is the name of this product?" />
                             <input type="text" placeholder="e.g. 50.00" />
+                            <input type="text" placeholder="0.00" />
                             <button onclick="nextStep(9)">Next →</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
                             <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
                         </div>
                         <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
+                            <h1>Almost there</h1>
+                            <button onclick="nextStep(100)">Launch!</button>
+                            <button onclick="nextStep(100)">Review & Launch</button>
                             <button onclick="nextStep(100)">Publish my business →</button>
                         </div>
                         <div id="step-100" style="display: none;">
                             <h1>CONFETTI SUCCESS</h1>
+                            <h1>Onboarding Complete!</h1>
                             <p>Your business is now live!</p>
                             <button onclick="nextStep(101)">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
@@ -1921,16 +1925,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Share your link with a friend</p>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
-
                         <div id="step-ai" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
                             <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-generating" style="display: none;">
                             <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
                         </div>
                         <div id="step-launch-ai" style="display: none;">
                             <h1>Your live storefront!</h1>
@@ -1939,8 +1940,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
                         </div>
                     </div>
-
-                    <script>
+<script>
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
