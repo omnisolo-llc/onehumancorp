@@ -13,7 +13,7 @@ impl OnboardingAgent {
     }
 
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
-        let org_id = format!("org-{}", uuid::Uuid::new_v4());
+        let org_id = req.organization_id.clone().unwrap_or_else(|| format!("org-{}", uuid::Uuid::new_v4()));
 
         let business_type = req.business_type.clone();
         let company_name = req.company_name.clone();
@@ -327,7 +327,7 @@ mod tests {
             first_product_name: "Cake".to_string(),
             first_product_price: "25.00".to_string(),
             domain_choice: "subdomain".to_string(),
-            price_type: "fixed".to_string(),
+            price_type: "fixed".to_string(), organization_id: None,
         };
 
         let req_categories = req.selling_categories.clone();
@@ -391,7 +391,7 @@ mod tests {
             first_product_name: "Consultation".to_string(),
             first_product_price: "100.00".to_string(),
             domain_choice: "subdomain".to_string(),
-            price_type: "fixed".to_string(),
+            price_type: "fixed".to_string(), organization_id: None,
         };
 
         let res_service = agent.start_onboarding(req_service).await.unwrap();
@@ -428,7 +428,7 @@ mod tests {
             first_product_name: "Taco".to_string(),
             first_product_price: "5.00".to_string(),
             domain_choice: "subdomain".to_string(),
-            price_type: "fixed".to_string(),
+            price_type: "fixed".to_string(), organization_id: None,
         };
 
         let res_food = agent.start_onboarding(req_food).await.unwrap();
