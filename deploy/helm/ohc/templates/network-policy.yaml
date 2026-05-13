@@ -27,6 +27,8 @@ spec:
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-backend
+    - from:
+        - namespaceSelector: {}
       ports:
         - protocol: TCP
           port: {{ .Values.backend.service.port }}
