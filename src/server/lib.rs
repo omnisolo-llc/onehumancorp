@@ -1627,6 +1627,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('agents-screen')">Agents</a>
                         <a onclick="showScreen('setup-screen')">Setup Wizard</a>
                         <a onclick="showScreen('api-screen')">Software</a>
+                        <a onclick="showScreen('integrations-screen')">Integrations</a>
                     </nav>
 
 
@@ -1708,6 +1709,105 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Read Product List</p>
                         <p>Manage your custom software connections here.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+
+                    <!-- Integrations Screen -->
+                    <div id="integrations-screen" class="screen">
+                        <h1>Integrations</h1>
+                        <div class="card glass">
+                            <input type="search" placeholder="Search integrations...">
+                            <select><option>All</option><option>Social</option></select>
+                        </div>
+
+                        <div class="integration card glass">
+                            <h2>Meta</h2>
+                            <p>Status: Inactive</p>
+                            <p>API Calls Usage: 0</p>
+                            <button>Connect Meta</button>
+                            <button>Settings</button>
+                            <button>Disconnect</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Slack</h2>
+                            <p>Status: Inactive</p>
+                            <p>API Calls Usage: 0</p>
+                            <button>Connect Slack</button>
+                            <button>Settings</button>
+                            <button>Disconnect</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>GitHub</h2>
+                            <p>Status: Inactive</p>
+                            <p>API Calls Usage: 0</p>
+                            <button>Connect</button>
+                            <button>Settings</button>
+                            <button>Disconnect</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Zapier</h2>
+                            <p>Status: Inactive</p>
+                            <p>API Calls Usage: 0</p>
+                            <button>Connect</button>
+                            <button>Settings</button>
+                            <button>Disconnect</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Google Workspace</h2>
+                            <p>Status: Inactive</p>
+                            <p>API Calls Usage: 0</p>
+                            <button>Connect</button>
+                            <button>Settings</button>
+                            <button>Disconnect</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Microsoft Teams</h2>
+                            <p>Status: Inactive</p>
+                            <p>API Calls Usage: 0</p>
+                            <button>Connect</button>
+                            <button>Settings</button>
+                            <button>Disconnect</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Zoom</h2>
+                            <button>Connect Zoom</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Twilio</h2>
+                            <button>Connect Twilio</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Calendly</h2>
+                            <button>Connect Calendly</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Chatwoot</h2>
+                            <button>Configure</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Cal.com</h2>
+                            <button>Configure</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Resend</h2>
+                            <button>Configure</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Shippo</h2>
+                            <button>Configure</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Mercado Pago</h2>
+                            <button>Configure</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Razorpay</h2>
+                            <button>Configure</button>
+                        </div>
+                        <div class="integration card glass">
+                            <h2>Mailchimp</h2>
+                            <button>Configure</button>
+                        </div>
                     </div>
 
                     <!-- Settings Screen -->
@@ -2012,7 +2112,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
                             
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'integrations-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
@@ -2098,6 +2198,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         } else {
                             if (urlParams.has('signup') || path === '/signup') {
                                 showScreen('signup-screen');
+                            } else if (path === '/integrations') {
+                                showScreen('integrations-screen');
                             } else if (path === '/pricing') {
                                 showScreen('pricing-screen');
                             } else if (path === '/my-plan' || path === '/billing') {
