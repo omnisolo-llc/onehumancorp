@@ -171,7 +171,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             WHERE t.status = 'PENDING'
               AND NOT EXISTS (
                   SELECT 1
-                  FROM jsonb_array_elements_text(t.dependencies) as dep_id
+                  FROM json_array_elements_text(t.dependencies::json) as dep_id
                   JOIN swarm_tasks dep ON dep.id::text = dep_id
                   WHERE dep.status != 'COMPLETED'
               )
