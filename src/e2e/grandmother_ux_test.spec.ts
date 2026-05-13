@@ -9,13 +9,13 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
 
   test('Login screen shows plain language brand name', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.locator('text="One Human Corp"').first()).toBeVisible();
+    await expect(page.locator('text="One Human Corp"').filter({ visible: true }).first()).toBeVisible();
   });
 
   test('Integrations screen uses plain language for external tools', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
     await page.click('button:has-text("Sign In")');
 
     await page.click('button:has-text("Menu")');
@@ -26,8 +26,8 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
 
   test('API Docs screen uses Custom Integration label', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
     await page.click('button:has-text("Sign In")');
 
     await page.click('button:has-text("Menu")');
@@ -38,8 +38,8 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
 
   test('API Docs screen replaces GET /v1/products with Read Product List', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
     await page.click('button:has-text("Sign In")');
 
     await page.click('button:has-text("Menu")');
