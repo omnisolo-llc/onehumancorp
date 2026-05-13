@@ -30,7 +30,7 @@ mod tests {
                 tx.execute("SET LOCAL app.current_tenant = 'system'").await.expect("Failed to set system context");
 
                 // Ensure the tenant exists
-                let _ = sqlx::query("INSERT INTO tenants (tenant_id, owner_id) VALUES ($1, 'test_owner') ON CONFLICT DO NOTHING")
+                let _ = sqlx::query("INSERT INTO tenants (id, owner_email) VALUES ($1, 'test_owner') ON CONFLICT DO NOTHING")
                     .bind(org_id)
                     .execute(&mut *tx).await;
 
