@@ -31,6 +31,15 @@ impl ToolExecutor for WriteExecutor {
                 .map_err(|e| format!("write: create dir {}: {}", parent.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         }
 
+        // Rule 3: Idempotency Check
+        if actual_path.exists() {
+            if let Ok(existing) = fs::read_to_string(&actual_path).await {
+                if existing == content {
+                    return Ok(format!("File already contains the desired content: {}", path));
+                }
+            }
+        }
+
         fs::write(&actual_path, content)
             .await
             .map_err(|e| format!("write: {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;

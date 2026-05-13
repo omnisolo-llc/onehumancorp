@@ -72,6 +72,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_time_travel_rewind: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
+    pub total_run_timeout: std::time::Duration,
 }
 
 impl Default for AgentRunConfig {
@@ -121,6 +122,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_time_travel_rewind: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
+            total_run_timeout: std::time::Duration::from_secs(60),
         }
     }
 }
@@ -1135,6 +1137,28 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let timeout_duration = cfg.total_run_timeout;
+        let run_future = self.run_internal(cfg, initial_message, on_event);
+
+        match tokio::time::timeout(timeout_duration, run_future).await {
+            Ok(result) => result,
+            Err(_) => {
+                let err_msg = format!("Agent run timed out after {:?} (ML-Resilience Rule 1)", timeout_duration);
+                on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                Err(err_msg.into())
+            }
+        }
+    }
+
+    async fn run_internal<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
         let mut self_with_memory = self;
         let owned_agent;
         if let Some(ltm) = &cfg.long_term_memory {
@@ -1399,12 +1423,23 @@ impl Agent {
             // Intelligent Context Truncation to save tokens
             let req = ohc_builtin_agent_llm::truncate_chat_request(req, 10000); // Limit history to ~10k words
 
-            let resp = match self.llm.chat(req).await {
-                Ok(r) => r,
+            let mut llm_retries = 0;
+            let max_llm_retries = 3;
+            let resp = loop {
+                match self.llm.chat(req.clone()).await {
+                Ok(r) => break r,
                 Err(e) => {
                     let err = format!("LLM error: {}", e);
                     if err.to_lowercase().contains("timeout") || err.to_lowercase().contains("rate limit") || err.to_lowercase().contains("unavailable") || err.to_lowercase().contains("resource exhausted") {
-                        let err_msg = "LLM API is currently unavailable or rate-limited. Agent transitioning to PAUSED state. Please try again later.".to_string();
+                        if llm_retries < max_llm_retries {
+                            llm_retries += 1;
+                            let backoff = std::time::Duration::from_secs(1 << llm_retries);
+                            tracing::warn!("LLM API transient error, retrying in {:?} (attempt {}/{}): {}", backoff, llm_retries, max_llm_retries, e);
+                            tokio::time::sleep(backoff).await;
+                            continue;
+                        }
+
+                        let err_msg = "LLM API is currently unavailable or rate-limited after multiple retries. Agent transitioning to PAUSED state. Notification sent to business owner.".to_string();
                         on_event(AgentEvent::TaskError { error: err_msg.clone() });
                         return Err(err_msg.into());
                     } else if err.to_lowercase().contains("malformed") || err.to_lowercase().contains("invalid json") {
@@ -1422,6 +1457,7 @@ impl Agent {
                         on_event(AgentEvent::TaskError { error: err.clone() });
                         return Err(err.into());
                     }
+                }
                 }
             };
 

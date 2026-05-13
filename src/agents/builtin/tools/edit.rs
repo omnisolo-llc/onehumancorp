@@ -45,7 +45,18 @@ impl ToolExecutor for EditExecutor {
             )));
         }
 
+        // Rule 3: Idempotency Check
+        if content.contains(new_str) && !content.contains(old_str) {
+             return Ok(format!("File already appears to have been edited (new_str found, old_str missing): {}", path));
+        }
+
         let new_content = content.replacen(old_str, new_str, 1);
+
+        // If content is already what we want, skip write
+        if new_content == content {
+             return Ok(format!("File content is already identical to the requested edit result: {}", path));
+        }
+
         fs::write(&actual_path, &new_content)
             .await
             .map_err(|e| format!("edit: write {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;

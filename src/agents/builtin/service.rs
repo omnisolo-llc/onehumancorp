@@ -421,6 +421,7 @@ impl AgentServiceImpl {
             max_rewind_attempts: 3,
             // Long-term memory store for cross-department context sharing
             long_term_memory,
+            total_run_timeout: std::time::Duration::from_secs(60),
         }
     }
 
@@ -616,6 +617,8 @@ impl AgentService for AgentServiceImpl {
 
             while attempt < max_attempts {
                 attempt += 1;
+
+                // ML-Resilience Rule 1: 60-second timeout with automatic retry (max 3 attempts)
                 let res = tokio::time::timeout(
                     std::time::Duration::from_secs(60),
                     agent_clone.run(&run_cfg, &task, &mut on_event)
@@ -628,6 +631,21 @@ impl AgentService for AgentServiceImpl {
                     }
                     Ok(Err(e)) => {
                         let err_str = e.to_string().to_lowercase();
+                        // ML-Resilience Rule 4: LLM API Unavailable -> PAUSED state
+                        if err_str.contains("unavailable") || err_str.contains("rate-limited") || err_str.contains("paused") {
+                             // Transition to persistent PAUSED state
+                             let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
+                             if let Some(store) = &memory {
+                                 let _ = store.pool.execute(
+                                     sqlx::query("UPDATE agent_missions SET status = 'PAUSED' WHERE id = $1 AND tenant_id = $2")
+                                     .bind(&task_req.task_id)
+                                     .bind(&org_id)
+                                 ).await;
+                             }
+                             last_result = Err(e);
+                             break;
+                        }
+
                         if err_str.contains("timeout") || err_str.contains("rate limit") || err_str.contains("unavailable") {
                             if attempt < max_attempts {
                                 last_result = Err(e);
@@ -643,6 +661,8 @@ impl AgentService for AgentServiceImpl {
                         on_event(AgentEvent::TaskError { error: err_msg.clone() });
                         last_result = Err(err_msg.into());
                         if attempt < max_attempts {
+                             // Expotential backoff for retries
+                             tokio::time::sleep(std::time::Duration::from_secs(1 << attempt)).await;
                              continue;
                         }
                     }
@@ -740,6 +760,7 @@ impl AgentService for AgentServiceImpl {
                 enable_time_travel_rewind: false,
                 max_rewind_attempts: 3,
                 long_term_memory: None,
+                total_run_timeout: std::time::Duration::from_secs(60),
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));

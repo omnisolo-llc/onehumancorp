@@ -28,13 +28,43 @@ pub enum DbStore {
     Sqlite(SqlitePool),
 }
 
+#[derive(Clone, Default)]
+pub struct FaultInjectionConfig {
+    pub delay: Option<std::time::Duration>,
+    pub error_rate: f64,
+}
+
 #[derive(Clone)]
 pub struct DB {
     pub pool: PgPool,
     pub store: DbStore,
+    pub fault_injection: Arc<RwLock<std::collections::HashMap<String, FaultInjectionConfig>>>,
 }
 
 impl DB {
+    pub async fn set_fault(&self, operation: &str, delay: Option<std::time::Duration>, error_rate: f64) {
+        let mut faults = self.fault_injection.write().await;
+        faults.insert(operation.to_string(), FaultInjectionConfig { delay, error_rate });
+    }
+
+    pub async fn clear_faults(&self) {
+        let mut faults = self.fault_injection.write().await;
+        faults.clear();
+    }
+
+    async fn apply_fault(&self, operation: &str) -> Result<(), String> {
+        let faults = self.fault_injection.read().await;
+        if let Some(config) = faults.get(operation) {
+            if let Some(delay) = config.delay {
+                tokio::time::sleep(delay).await;
+            }
+            if config.error_rate > 0.0 && rand::random::<f64>() < config.error_rate {
+                return Err(format!("Fault injected for operation: {}", operation));
+            }
+        }
+        Ok(())
+    }
+
     pub fn is_sqlite(&self) -> bool {
         match &self.store {
             DbStore::Sqlite(_) => true,
@@ -45,6 +75,7 @@ impl DB {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let database_url = env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let fault_injection = Arc::new(RwLock::new(std::collections::HashMap::new()));
 
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -145,7 +176,7 @@ impl DB {
                 .connect_with(conn_opts)
                 .await?;
 
-            Ok(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) })
+            Ok(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool), fault_injection })
         } else {
             let mut pg_url = database_url.clone();
             if !pg_url.contains("statement_cache_capacity=0") {
@@ -179,7 +210,7 @@ impl DB {
             };
 
             let _ = GLOBAL_POOL.set(pool.clone());
-            Ok(DB { pool: pool.clone(), store: DbStore::Postgres })
+            Ok(DB { pool: pool.clone(), store: DbStore::Postgres, fault_injection })
         }
     }
 
@@ -190,6 +221,10 @@ impl DB {
         Fut: std::future::Future<Output = Result<T, E>>,
         E: std::fmt::Debug + std::fmt::Display + From<String>,
     {
+        if let Err(e) = self.apply_fault(operation).await {
+            return Err(E::from(e));
+        }
+
         let mut attempt = 0;
         let max_attempts = 10;
         let mut backoff = std::time::Duration::from_millis(50);

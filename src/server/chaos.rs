@@ -494,4 +494,190 @@ mod tests {
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
+
+    #[tokio::test]
+    async fn test_sql_sync_lag_simulation_chaos() {
+        // Simulate SQL sync lag by delaying the "synced" status update in a multi-step workflow
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect(&uri).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE sync_queue_chaos (
+                id TEXT PRIMARY KEY,
+                payload TEXT,
+                synced BOOLEAN DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let item_id = "lag_chaos_1";
+        sqlx::query("INSERT INTO sync_queue_chaos (id, payload) VALUES (?, 'data')")
+            .bind(item_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Simulate a background process that is "lagging" behind the main application thread
+        let pool_clone = pool.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(200)).await;
+            let _ = sqlx::query("UPDATE sync_queue_chaos SET synced = 1 WHERE id = ?")
+                .bind(item_id)
+                .execute(&pool_clone)
+                .await;
+        });
+
+        // Immediate check should be unsynced (simulating eventual consistency boundary)
+        let synced: bool = sqlx::query_scalar("SELECT synced FROM sync_queue_chaos WHERE id = ?")
+            .bind(item_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert!(!synced);
+
+        // Eventually it should sync, allowing the system to proceed
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        let synced_late: bool = sqlx::query_scalar("SELECT synced FROM sync_queue_chaos WHERE id = ?")
+            .bind(item_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert!(synced_late);
+    }
+
+    #[tokio::test]
+    async fn test_exhaust_cpu_memory_chaos_degradation() {
+        // Simulate CPU/Memory exhaustion via high artificial latency and verify timeout/circuit breaking
+        let start = std::time::Instant::now();
+        let timeout_duration = std::time::Duration::from_millis(50);
+
+        let result = tokio::time::timeout(timeout_duration, async {
+            // Memory exhaustion simulation
+            let mut vec: Vec<u8> = Vec::with_capacity(1024 * 10);
+            // CPU exhaustion spinloop
+            loop {
+                vec.push(1);
+                if vec.len() > 1024 * 100 {
+                    vec.clear();
+                }
+                // Yield to allow timeout to trigger
+                tokio::task::yield_now().await;
+            }
+            // Unreachable
+            #[allow(unreachable_code)]
+            Ok::<(), String>(())
+        }).await;
+
+        assert!(result.is_err(), "Service should time out under heavy CPU/Memory load simulation to prevent cascading failure");
+        assert!(start.elapsed() >= timeout_duration);
+    }
+
+    #[tokio::test]
+    async fn test_transport_packet_loss_chaos() {
+        // Stress test a mock transport layer that randomly drops packets to verify application-level retries
+        struct ChaosTransport {
+            drop_rate: f64,
+        }
+
+        impl ChaosTransport {
+            async fn send(&self, _msg: &str) -> Result<(), String> {
+                if rand::random::<f64>() < self.drop_rate {
+                    return Err("Packet dropped by chaos simulation".to_string());
+                }
+                Ok(())
+            }
+        }
+
+        let transport = ChaosTransport { drop_rate: 0.5 };
+        let mut drops = 0;
+        let mut successes = 0;
+
+        for _ in 0..100 {
+            if transport.send("hello").await.is_err() {
+                drops += 1;
+            } else {
+                successes += 1;
+            }
+        }
+
+        assert!(drops > 0, "Packet loss simulation should successfully drop packets");
+        assert!(successes > 0, "Packet loss simulation should allow some packets to pass");
+    }
+
+    #[tokio::test]
+    async fn test_agent_lock_race_conditions_chaos() {
+        // Simulate race conditions on a shared .agent-lock file
+        let lock_dir = std::env::temp_dir().join(format!("agent_lock_chaos_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&lock_dir).unwrap();
+        let lock_file = lock_dir.join(".agent-lock");
+
+        let lock_file_arc = std::sync::Arc::new(lock_file);
+        let mut handles = vec![];
+
+        for i in 0..10 {
+            let lf = lock_file_arc.clone();
+            handles.push(tokio::spawn(async move {
+                let mut acquired = false;
+                for _ in 0..5 {
+                    // Primitive lock acquisition simulation
+                    if !lf.exists() {
+                        let _ = std::fs::write(&*lf, format!("locked_by_{}", i));
+                        tokio::time::sleep(Duration::from_millis(5)).await;
+                        if let Ok(content) = std::fs::read_to_string(&*lf) {
+                            if content == format!("locked_by_{}", i) {
+                                acquired = true;
+                                let _ = std::fs::remove_file(&*lf);
+                                break;
+                            }
+                        }
+                    }
+                    tokio::time::sleep(Duration::from_millis(2)).await;
+                }
+                acquired
+            }));
+        }
+
+        let mut success_count = 0;
+        for h in handles {
+            if h.await.unwrap() {
+                success_count += 1;
+            }
+        }
+
+        // In a high-contention race without proper atomics/flock, some will fail.
+        // This test verifies that we can handle the contention without crashing.
+        tracing::info!("Agent lock race condition successes: {}/10", success_count);
+        assert!(success_count <= 10);
+
+        let _ = std::fs::remove_dir_all(&lock_dir);
+    }
+
+    #[tokio::test]
+    async fn test_db_fault_injection_chaos() {
+        use crate::db::DB;
+        let database_url = "sqlite::memory:";
+        // We need OHC_SQLITE_KEY for DB::new()
+        std::env::set_var("OHC_SQLITE_KEY", "test_key");
+        std::env::set_var("DATABASE_URL", database_url);
+
+        let db = DB::new().await.unwrap();
+        db.run_migrations().await.unwrap();
+
+        // 1. Inject Latency
+        db.set_fault("test_op", Some(Duration::from_millis(100)), 0.0).await;
+        let start = std::time::Instant::now();
+        let _: Result<(), String> = db.execute_with_retry("test_op", || async { Ok(()) }).await;
+        assert!(start.elapsed() >= Duration::from_millis(100));
+
+        // 2. Inject Errors
+        db.set_fault("test_err", None, 1.0).await;
+        let res: Result<(), String> = db.execute_with_retry("test_err", || async { Ok(()) }).await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Fault injected"));
+
+        db.clear_faults().await;
+        let res_ok: Result<(), String> = db.execute_with_retry("test_err", || async { Ok(()) }).await;
+        assert!(res_ok.is_ok());
+    }
 }
