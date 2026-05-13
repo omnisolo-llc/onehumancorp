@@ -14,9 +14,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 defaults:
   run:
     shell: bash
@@ -39,15 +36,8 @@ jobs:
             librsvg2-dev libsoup-3.0-dev \
             ca-certificates curl git
 
-      - name: Free up disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
-          sudo apt-get clean
-
       - name: Set up Go
         uses: actions/setup-go@v5
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           go-version: "1.24"
 
@@ -66,8 +56,8 @@ jobs:
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            # build --config=buildbuddy
-            # test --config=buildbuddy
+            build --config=buildbuddy
+            test --config=buildbuddy
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
             # build --config=buildbuddy-official
             # test --config=buildbuddy-official
@@ -114,15 +104,8 @@ jobs:
             librsvg2-dev libsoup-3.0-dev \
             ca-certificates curl git
 
-      - name: Free up disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
-          sudo apt-get clean
-
       - name: Set up Go
         uses: actions/setup-go@v5
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           go-version: "1.24"
 
@@ -141,8 +124,8 @@ jobs:
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            # build --config=buildbuddy
-            # test --config=buildbuddy
+            build --config=buildbuddy
+            test --config=buildbuddy
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
             # build --config=buildbuddy-official
             # test --config=buildbuddy-official
@@ -175,15 +158,8 @@ jobs:
   #           librsvg2-dev libsoup-3.0-dev \
   #           ca-certificates curl git
 
-  #     - name: Free up disk space
-  #       run: |
-  #         sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
-  #         sudo apt-get clean
-
   #     - name: Set up Go
   #       uses: actions/setup-go@v5
-  #       env:
-  #         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   #       with:
   #         go-version: "1.24"
 
