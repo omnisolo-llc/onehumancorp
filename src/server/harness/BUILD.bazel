@@ -1,0 +1,44 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_harness",
+    srcs = [
+        "executor.rs",
+        "mod.rs",
+        "sandbox/ast.rs",
+        "sandbox/manager.rs",
+        "sandbox/mod.rs",
+        "sandbox/permissions.rs",
+        "sandbox/wrapper.rs",
+        "telemetry/mod.rs",
+        "telemetry/store.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/telemetry:server_telemetry",
+
+        "@crates//:opentelemetry",
+        "@crates//:regex",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:tree-sitter",
+        "@crates//:tree-sitter-bash",
+        "@crates//:uuid",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+
+    ],
+)
+
+rust_test(
+    name = "server_harness_test",
+    crate = ":server_harness",
+    deps = [
+        "@crates//:tokio",
+    ],
+)
