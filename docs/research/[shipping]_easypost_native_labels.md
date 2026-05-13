@@ -1,0 +1,65 @@
+# Native Label Printing via EasyPost
+
+**Category:** Shipping & Logistics
+**Priority:** P1
+**Estimated Scope:** Large
+
+## Problem Statement
+Very small businesses don't want to pay for a separate ShipStation subscription. They want to print a USPS/UPS label directly from OHC.
+
+## Research Report
+EasyPost provides a robust API for rating and purchasing labels. OHC can use EasyPost to provide a seamless, native label experience.
+
+**Key Advantages & Risks:**
+Advantages: Unbeatable UX. Keeps the entire workflow inside OHC. Excellent API documentation.
+Risks: Handling international customs forms (CN22/CP72) natively is complex. Dealing with printer formats (ZPL vs PDF) requires user settings.
+
+**Rough Pricing Estimate:**
+EasyPost charges a few cents per label. OHC can either absorb, markup, or pass this directly to the user.
+
+**Cloud vs. Standalone Modes:**
+Cloud: OHC can act as the master carrier account.
+Standalone: User must provide their own EasyPost production API key.
+
+## Design Doc
+Add a 'Fulfill' button. A modal asks for package weight/dimensions. OHC fetches live rates from EasyPost. User selects a rate and clicks 'Purchase Label'.
+
+## Implementation Prompt
+Implement a native label purchasing flow directly within OHC using EasyPost. The business owner should be able to weigh a package, see shipping rates, buy a label, and print it.
+
+## Deep Dive Architecture & Product Strategy
+
+### Strategy Implication
+We should allow users to save standard package dimensions (e.g., 'Small Box 8x6x4') to speed up the rating process.
+
+This directly impacts the engineering roadmap by requiring robust state management and error handling across distributed systems. The UX must abstract this complexity entirely from the small business owner, presenting only clear, actionable alerts if integration synchronicity is lost. Furthermore, considering our core tenet of privacy and data sovereignty, any data passed to these external tools must be explicitly consented to, and data retention policies must be clearly outlined during the OAuth or API key setup flows.
+
+The technical debt associated with maintaining third-party APIs is non-trivial. Webhook schemas evolve, and API versions are deprecated. OHC must implement an active monitoring layer utilizing tools like Sentry to catch schema deviations before they cause widespread integration outages for our users. Rate limiting is another critical factor; implementing a resilient queue system (like Redis or NATS) is necessary to ensure we don't overwhelm external providers during peak business hours.
+
+### Strategy Implication
+Address validation via EasyPost's API should be performed before rating to prevent label purchase failures due to invalid zips.
+
+This directly impacts the engineering roadmap by requiring robust state management and error handling across distributed systems. The UX must abstract this complexity entirely from the small business owner, presenting only clear, actionable alerts if integration synchronicity is lost. Furthermore, considering our core tenet of privacy and data sovereignty, any data passed to these external tools must be explicitly consented to, and data retention policies must be clearly outlined during the OAuth or API key setup flows.
+
+The technical debt associated with maintaining third-party APIs is non-trivial. Webhook schemas evolve, and API versions are deprecated. OHC must implement an active monitoring layer utilizing tools like Sentry to catch schema deviations before they cause widespread integration outages for our users. Rate limiting is another critical factor; implementing a resilient queue system (like Redis or NATS) is necessary to ensure we don't overwhelm external providers during peak business hours.
+
+### Strategy Implication
+Support for generating ZPL thermal printer files is critical for high-volume shippers, not just standard 8.5x11 PDFs.
+
+This directly impacts the engineering roadmap by requiring robust state management and error handling across distributed systems. The UX must abstract this complexity entirely from the small business owner, presenting only clear, actionable alerts if integration synchronicity is lost. Furthermore, considering our core tenet of privacy and data sovereignty, any data passed to these external tools must be explicitly consented to, and data retention policies must be clearly outlined during the OAuth or API key setup flows.
+
+The technical debt associated with maintaining third-party APIs is non-trivial. Webhook schemas evolve, and API versions are deprecated. OHC must implement an active monitoring layer utilizing tools like Sentry to catch schema deviations before they cause widespread integration outages for our users. Rate limiting is another critical factor; implementing a resilient queue system (like Redis or NATS) is necessary to ensure we don't overwhelm external providers during peak business hours.
+
+### Strategy Implication
+The system must handle refunding purchased labels that were generated by mistake before they enter the mailstream.
+
+This directly impacts the engineering roadmap by requiring robust state management and error handling across distributed systems. The UX must abstract this complexity entirely from the small business owner, presenting only clear, actionable alerts if integration synchronicity is lost. Furthermore, considering our core tenet of privacy and data sovereignty, any data passed to these external tools must be explicitly consented to, and data retention policies must be clearly outlined during the OAuth or API key setup flows.
+
+The technical debt associated with maintaining third-party APIs is non-trivial. Webhook schemas evolve, and API versions are deprecated. OHC must implement an active monitoring layer utilizing tools like Sentry to catch schema deviations before they cause widespread integration outages for our users. Rate limiting is another critical factor; implementing a resilient queue system (like Redis or NATS) is necessary to ensure we don't overwhelm external providers during peak business hours.
+
+### Strategy Implication
+Displaying transit time estimates alongside the price rates significantly improves the user's selection process.
+
+This directly impacts the engineering roadmap by requiring robust state management and error handling across distributed systems. The UX must abstract this complexity entirely from the small business owner, presenting only clear, actionable alerts if integration synchronicity is lost. Furthermore, considering our core tenet of privacy and data sovereignty, any data passed to these external tools must be explicitly consented to, and data retention policies must be clearly outlined during the OAuth or API key setup flows.
+
+The technical debt associated with maintaining third-party APIs is non-trivial. Webhook schemas evolve, and API versions are deprecated. OHC must implement an active monitoring layer utilizing tools like Sentry to catch schema deviations before they cause widespread integration outages for our users. Rate limiting is another critical factor; implementing a resilient queue system (like Redis or NATS) is necessary to ensure we don't overwhelm external providers during peak business hours.
