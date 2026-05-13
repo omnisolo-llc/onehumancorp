@@ -126,7 +126,8 @@ async fn launch_business(
 
 
         let pass_clone = pass.clone();
-        let hashed_pass = match tokio::task::spawn_blocking(move || bcrypt::hash(pass_clone, bcrypt::DEFAULT_COST)).await {
+        let cost = if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST };
+        let hashed_pass = match tokio::task::spawn_blocking(move || bcrypt::hash(pass_clone, cost)).await {
             Ok(Ok(h)) => h,
             _ => return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
         };
