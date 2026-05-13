@@ -1,5 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { Shimmer } from "shimmer.slint";
 
 export struct UiProduct {
     id: string,
@@ -17,6 +18,7 @@ export component BusinessManager inherits Window {
     out property <string> test_title: root.title;
     // "list" | "add"
     in-out property <string> current_view: "list";
+    in property <bool> is_loading: false;
 
     in property <[UiProduct]> products;
 
@@ -67,7 +69,31 @@ export component BusinessManager inherits Window {
             ScrollView {
                 VerticalBox {
                     spacing: 12px;
-                    for prod in products : GlassCard {
+
+                    if (is_loading) : VerticalBox {
+                        spacing: 12px;
+                        GlassCard {
+                            height: 100px;
+                            VerticalBox {
+                                padding: 16px;
+                                spacing: 12px;
+                                Shimmer { width: 100%; height: 20px; }
+                                Shimmer { width: 50%; height: 20px; }
+                            }
+                        }
+                        GlassCard {
+                            height: 100px;
+                            VerticalBox {
+                                padding: 16px;
+                                spacing: 12px;
+                                Shimmer { width: 100%; height: 20px; }
+                                Shimmer { width: 50%; height: 20px; }
+                            }
+                        }
+                    }
+                    if (!is_loading) : VerticalBox {
+                        spacing: 12px;
+                        for prod in products : GlassCard {
                         border-color: prod.is_out_of_stock ? rgba(239, 68, 68, 0.5) : rgba(255, 255, 255, 0.1);
                         border-width: 1px;
                         VerticalBox {
@@ -109,6 +135,7 @@ export component BusinessManager inherits Window {
                                 Button { text: "Archive"; height: 44px; clicked => { action_archive(prod.id); } }
                             }
                         }
+                    }
                     }
                 }
             }
