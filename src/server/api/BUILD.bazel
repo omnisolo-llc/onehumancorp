@@ -14,3 +14,8 @@ filegroup(
     ],
     visibility = ["//src/server:__pkg__"],
 )
+filegroup(
+    name = "sites_srcs",
+    srcs = ["//src/server/api/sites:srcs"],
+    visibility = ["//src/server:__pkg__"],
+)

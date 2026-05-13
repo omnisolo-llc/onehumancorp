@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "sites",
+    srcs = ["sites.go"],
+    importpath = "onehumancorp/src/server/api/sites",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "sites_test",
+    srcs = ["sites_test.go"],
+    embed = [":sites"],
+)
+
+filegroup(
+    name = "srcs",
+    srcs = ["sites.go", "sites_test.go"],
+    visibility = ["//src/server/api:__pkg__"],
+)
