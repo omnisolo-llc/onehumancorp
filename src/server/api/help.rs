@@ -1,0 +1,224 @@
+
+use axum::{routing::{get, post}, Router, Json};
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct HelpArticle {
+    pub id: String,
+    pub title: String,
+    pub content: String,
+    pub topic: String,
+    pub keywords: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Tooltip {
+    pub id: String,
+    pub element_selector: String,
+    pub text: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct WalkthroughStep {
+    pub id: String,
+    pub target: String,
+    pub message: String,
+    pub position: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct VideoMetadata {
+    pub id: String,
+    pub title: String,
+    pub url: String,
+    pub duration_seconds: u32,
+    pub thumbnail_url: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ReleaseNote {
+    pub version: String,
+    pub date: String,
+    pub content: String,
+    pub image_url: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ChatMessage {
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ChatResponse {
+    pub reply: String,
+    pub article_link: Option<String>,
+}
+
+pub fn help_routes() -> Router {
+    Router::new()
+        .route("/api/help/articles", get(get_articles))
+        .route("/api/help/tooltips", get(get_tooltips))
+        .route("/api/help/walkthroughs", get(get_walkthroughs))
+        .route("/api/help/videos", get(get_videos))
+        .route("/api/help/changelog", get(get_changelog))
+        .route("/api/help/chat", post(chat))
+}
+
+async fn get_articles() -> Json<Vec<HelpArticle>> {
+    let mut articles = Vec::new();
+    let docs_dir = "docs/business/public/app/help_center_content";
+
+    // Read directly from markdown source
+    if let Ok(entries) = std::fs::read_dir(docs_dir) {
+        let mut paths: Vec<_> = entries.filter_map(|e| e.ok()).map(|e| e.path()).collect();
+        paths.sort();
+        for path in paths {
+            if path.extension().and_then(|s| s.to_str()) == Some("md") {
+                if let Ok(content) = std::fs::read_to_string(&path) {
+                    let title = path.file_stem().and_then(|s| s.to_str()).unwrap_or("Untitled").to_string();
+                    articles.push(HelpArticle {
+                        id: title.clone(),
+                        title: title.replace("_", " ").to_uppercase(),
+                        content,
+                        topic: "Guides".into(),
+                        keywords: vec!["guide".into()],
+                    });
+                }
+            }
+        }
+    }
+
+    if articles.is_empty() {
+        articles.push(HelpArticle {
+            id: "getting-started".into(),
+            title: "Getting Started with OHC".into(),
+            content: "Welcome to OHC! To begin, navigate to the Dashboard and click on 'Setup Wizard'. This will guide you through adding your business details, connecting your bank, and inviting your first team members.".into(),
+            topic: "Onboarding".into(),
+            keywords: vec!["start".into(), "setup".into(), "onboarding".into()],
+        });
+    }
+
+    Json(articles)
+}
+
+async fn get_tooltips() -> Json<Vec<Tooltip>> {
+    Json(vec![
+        Tooltip {
+            id: "t1".into(),
+            element_selector: "#help-btn".into(),
+            text: "Click here to open the Help Center.".into(),
+        },
+        Tooltip {
+            id: "t2".into(),
+            element_selector: ".store-setup-btn".into(),
+            text: "Start configuring your storefront here.".into(),
+        },
+        Tooltip {
+            id: "t3".into(),
+            element_selector: ".payment-btn".into(),
+            text: "View and accept incoming payments from customers.".into(),
+        },
+        Tooltip {
+            id: "t4".into(),
+            element_selector: ".agent-status-indicator".into(),
+            text: "Indicates if your AI agents are currently processing tasks or idle.".into(),
+        },
+        Tooltip {
+            id: "t5".into(),
+            element_selector: ".sync-status".into(),
+            text: "Shows connection status to the cloud. Green means all local changes are saved.".into(),
+        }
+    ])
+}
+
+async fn get_walkthroughs() -> Json<Vec<WalkthroughStep>> {
+    Json(vec![
+        WalkthroughStep {
+            id: "w1".into(),
+            target: "#setup-store".into(),
+            message: "Welcome! Click here to begin setting up your store profile and connecting your bank account.".into(),
+            position: "bottom".into(),
+        },
+        WalkthroughStep {
+            id: "w2".into(),
+            target: ".hire-agent-btn".into(),
+            message: "Next, hire your first AI Agent to help manage customer support and marketing.".into(),
+            position: "right".into(),
+        },
+        WalkthroughStep {
+            id: "w3".into(),
+            target: ".analytics-card".into(),
+            message: "Finally, keep an eye on this section to monitor your daily sales and website traffic.".into(),
+            position: "top".into(),
+        }
+    ])
+}
+
+async fn get_videos() -> Json<Vec<VideoMetadata>> {
+    Json(vec![
+        VideoMetadata {
+            id: "v1".into(),
+            title: "Quickstart: First 5 Minutes".into(),
+            url: "https://example.com/videos/quickstart.mp4".into(),
+            duration_seconds: 300,
+            thumbnail_url: Some("https://example.com/thumbs/quickstart.png".into()),
+        },
+        VideoMetadata {
+            id: "v2".into(),
+            title: "Accepting your first payment".into(),
+            url: "https://example.com/videos/payments.mp4".into(),
+            duration_seconds: 60,
+            thumbnail_url: Some("https://example.com/thumbs/payments.png".into()),
+        },
+        VideoMetadata {
+            id: "v3".into(),
+            title: "How to command your AI Agents".into(),
+            url: "https://example.com/videos/agents.mp4".into(),
+            duration_seconds: 120,
+            thumbnail_url: Some("https://example.com/thumbs/agents.png".into()),
+        }
+    ])
+}
+
+async fn get_changelog() -> Json<Vec<ReleaseNote>> {
+    Json(vec![
+        ReleaseNote {
+            version: "1.2.0".into(),
+            date: "2023-11-15".into(),
+            content: "Added new interactive Walkthroughs and contextual Tooltips to help new users get started faster.".into(),
+            image_url: None,
+        },
+        ReleaseNote {
+            version: "1.1.0".into(),
+            date: "2023-10-20".into(),
+            content: "Introduced the floating AI Help Chat. You can now ask questions directly from any page in the app.".into(),
+            image_url: None,
+        },
+        ReleaseNote {
+            version: "1.0.0".into(),
+            date: "2023-10-01".into(),
+            content: "Initial release of OHC Small Business App. Includes storefront builder, agent orchestration, and payment processing.".into(),
+            image_url: None,
+        },
+    ])
+}
+
+async fn chat(Json(payload): Json<ChatMessage>) -> Json<ChatResponse> {
+    let lower = payload.message.to_lowercase();
+    let (reply, best_link) = if lower.contains("store") {
+        ("To set up your store, navigate to the My Store section and click the 'Setup Wizard'. It will guide you through the process.".to_string(), "/help/articles/article_1".to_string())
+    } else if lower.contains("payment") || lower.contains("money") || lower.contains("invoice") {
+        ("You can accept payments by going to the 'Settings > Integrations' tab and linking your bank account. After that, use the Payments tab to generate invoices.".to_string(), "/help/articles/article_2".to_string())
+    } else if lower.contains("agent") || lower.contains("ai") {
+        ("Go to the 'Agents' tab to manage your AI employees. Give them clear, plain-language instructions to automate your tasks.".to_string(), "/help/articles/article_3".to_string())
+    } else if lower.contains("sync") || lower.contains("offline") {
+        ("If you see the 'Offline' indicator, check your internet. OHC stores data locally and syncs automatically when reconnected.".to_string(), "/help/articles/article_4".to_string())
+    } else {
+        (format!("AI Assistant: I received your query '{}'. Try searching the Help Center for more detailed guides.", payload.message), "/help/articles/article_1".to_string())
+    };
+
+    Json(ChatResponse {
+        reply,
+        article_link: Some(best_link),
+    })
+}
