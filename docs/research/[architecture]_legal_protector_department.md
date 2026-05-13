@@ -28,7 +28,7 @@ graph TD
     Protector -->|Analyzes| Regs[Regional & Category Regulations]
     Regs -->|Generates| Policies[Custom Policies & Contracts]
 
-    subgraph Legal Suite
+    subgraph LegalSuite [Legal Suite]
         ToS[Terms of Service]
         PP[Privacy Policy]
         RP[Refund Policy]
@@ -40,7 +40,7 @@ graph TD
     Policies --> RP
     Policies --> SA
 
-    Legal Suite --> Promoter[The Promoter Agent]
+    ToS & PP & RP & SA --> Promoter[The Promoter Agent]
     Promoter -->|1-Tap Publish| Storefront[Live Website]
 
     Protector -->|Triggers| Consent[Cookie/Consent Banners]

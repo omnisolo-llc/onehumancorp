@@ -45,6 +45,10 @@ nav:
       - api/index.md
       - "Interactive Api Playbook": api/playbook.md
   - Features:
+      - AI Legal Protector: research/[architecture]_legal_protector_department.md
+      - AI Finance Accountant: research/[architecture]_finance_accountant_department.md
+      - AI Sales Salesperson: research/[architecture]_sales_acquisition_department.md
+      - Design System Tokens: research/[ui]_design_system_tokens.md
       - Hybrid WebSockets MCP: research/[integrations]_hybrid_websockets_mcp.md
       - Hybrid Feature Flags MCP: research/[integrations]_hybrid_feature_flags_mcp.md
       - Hybrid SPIFFE Identity MCP: research/[integrations]_hybrid_spiffe_identity_mcp.md

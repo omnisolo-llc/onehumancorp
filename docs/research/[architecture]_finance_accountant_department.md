@@ -25,7 +25,7 @@ graph TD
     Sales[Sales & Transactions] --> Accountant[The Accountant Agent]
     Accountant -->|Calculates| Net[Net Profit & Fees]
 
-    subgraph Financial Engine
+    subgraph FinancialEngine [Financial Engine]
         Fees[Transaction Fees]
         Tax[Estimated Tax Reserves]
         COGS[Cost of Goods Sold]
