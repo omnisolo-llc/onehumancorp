@@ -395,8 +395,8 @@ mod tests {
         let search_dirs_for_error = search_dirs.clone();
         if checked_files == 0 {
             // No files found to check - likely running in an environment where source files
-            // are not accessible (e.g., some bazel sandboxes). Skip the test gracefully.
-            println!("PII test skipped: Could not find any .rs files. Search dirs: {:?}", search_dirs_for_error);
+            // are not accessible (e.g., some bazel sandboxes). Fail the test instead of skipping it to ensure the PII check actually runs.
+            assert!(false, "No source files found to check for PII. Search dirs: {:?}", search_dirs_for_error);
             return;
         }
         assert!(
