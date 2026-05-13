@@ -1,3 +1,12 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Implement sharded Vector Data Pipeline cache arrays to reduce multi-tenant resource contention.
+
+### Privacy/Offline Improvements
+- Increase offline local vector store security via standalone Teammate Mesh isolation parameters.
+
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
