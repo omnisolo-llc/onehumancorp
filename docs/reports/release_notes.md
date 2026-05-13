@@ -7,3 +7,4 @@
 ## Standalone (Privacy/Offline) Improvements
 - Desktop application refinements for better local execution.
 - Improved privacy guarantees for standalone mode.
+- 👂 Echo: [UX Simplification and Zero WIP exit cleanup]

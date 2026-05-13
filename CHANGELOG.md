@@ -8,9 +8,11 @@
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
+- 👂 Echo: [UX Simplification and Zero WIP exit cleanup]
 - Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
 
 ### Privacy/Offline Improvements
+- 👂 Echo: [UX Simplification and Zero WIP exit cleanup]
 - Implement offline-first local vector embeddings cache for the OHC Swarm.
 
 
