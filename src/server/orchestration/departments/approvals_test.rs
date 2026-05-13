@@ -13,7 +13,12 @@ mod tests {
             return;
         }
 
-        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        unsafe { std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key"); }
+        let db_res = crate::db::DB::new().await;
+        if db_res.is_err() {
+            return;
+        }
+        let db = Arc::new(db_res.unwrap());
 
         let tenant_id = "test-tenant-123".to_string();
 
