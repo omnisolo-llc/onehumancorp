@@ -4,9 +4,9 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
   // dummy validation comment
   test('should traverse the complete business setup wizard successfully', async ({ page }) => {
     await page.goto('/login');
-    await page.locator('input[type="email"]').fill('founder@example.com');
-    await page.locator('input[type="password"]').fill('password123');
-    await page.locator('button:has-text("Login")').click();
+    await page.getByPlaceholder('Email or Username').first().fill('founder@example.com');
+    await page.locator('input[type="password"]').first().fill('password123');
+    await page.locator('button:has-text("Login")').first().click();
 
     await page.waitForURL('**/dashboard');
 

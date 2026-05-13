@@ -3,9 +3,9 @@ import { test, expect } from '@playwright/test';
 test.describe('User Management', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');
-    await page.locator('input[type="email"]').fill('test@example.com');
-    await page.locator('input[type="password"]').fill('password123');
-    await page.locator('button:has-text("Login")').click();
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().fill('password123');
+    await page.locator('button:has-text("Login")').first().click();
     await page.waitForURL('**/dashboard');
     await page.goto('/users');
   });
@@ -30,7 +30,7 @@ test.describe('User Management', () => {
   test('should enter user email', async ({ page }) => {
     const inviteBtn = page.locator('button:has-text("Add User"), button:has-text("Invite")').first();
     await inviteBtn.click();
-    const emailInput = page.locator('input[type="email"]').first();
+    const emailInput = page.getByPlaceholder('Email or Username').first().first();
     await emailInput.fill('newuser@example.com');
   });
 
@@ -44,7 +44,7 @@ test.describe('User Management', () => {
   test('should send invitation', async ({ page }) => {
     const inviteBtn = page.locator('button:has-text("Add User"), button:has-text("Invite")').first();
     await inviteBtn.click();
-    await page.fill('input[type="email"]', 'newuser@example.com');
+    await page.getByPlaceholder('Email or Username').first().fill( 'newuser@example.com');
     await page.locator('button:has-text("Send"), button:has-text("Invite")').click();
     await expect(page.locator('text=/invited|sent/i')).toBeVisible({ timeout: 3000 });
   });
@@ -124,9 +124,9 @@ test.describe('User Management', () => {
 test.describe('Role Management', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');
-    await page.locator('input[type="email"]').fill('test@example.com');
-    await page.locator('input[type="password"]').fill('password123');
-    await page.locator('button:has-text("Login")').click();
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().fill('password123');
+    await page.locator('button:has-text("Login")').first().click();
     await page.waitForURL('**/dashboard');
     await page.goto('/users/roles');
   });

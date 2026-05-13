@@ -41,13 +41,13 @@ test.describe('Business Setup Wizard', () => {
 test.describe('Login', () => {
   test('should show login form', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.locator('input[type="password"]')).toBeVisible();
+    await expect(page.getByPlaceholder('Email or Username').first()).toBeVisible();
+    await expect(page.locator('input[type="password"]').first()).toBeVisible();
   });
 
   test('should allow password visibility toggle', async ({ page }) => {
     await page.goto('/login');
-    const passwordInput = page.locator('input[type="password"]');
+    const passwordInput = page.locator('input[type="password"]').first();
     const toggleButton = page.locator('button:has-text("Show")');
     await expect(toggleButton).toBeVisible();
   });

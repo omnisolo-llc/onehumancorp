@@ -14,8 +14,8 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
 
   test('Integrations screen uses plain language for external tools', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
     await page.click('button:has-text("Sign In")');
 
     await page.click('button:has-text("Menu")');
@@ -26,8 +26,8 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
 
   test('API Docs screen uses Custom Integration label', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
     await page.click('button:has-text("Sign In")');
 
     await page.click('button:has-text("Menu")');
@@ -38,8 +38,8 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
 
   test('API Docs screen replaces GET /v1/products with Read Product List', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
     await page.click('button:has-text("Sign In")');
 
     await page.click('button:has-text("Menu")');

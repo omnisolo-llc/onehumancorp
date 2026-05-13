@@ -5,9 +5,9 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/login');
 
     // Login
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.locator('button:has-text("Login")').first().click();
 
     // Wait for the Dashboard
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
@@ -40,9 +40,9 @@ test.describe('Onboarding Wizard', () => {
     // Test cross device resume -> Reload page
     await page.goto('/login');
     // Re login and check if it still works
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Login")');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.locator('button:has-text("Login")').first().click();
 
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
     await page.click('button:has-text("Start Setup")');

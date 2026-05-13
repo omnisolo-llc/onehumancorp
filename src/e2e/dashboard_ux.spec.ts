@@ -8,9 +8,9 @@ test.describe('Dashboard UX', () => {
     await page.goto('/login');
 
     // Fill in credentials and sign in
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
 
     // Wait for Dashboard to load
     await page.waitForURL('**/*');
@@ -30,9 +30,9 @@ test.describe('Dashboard UX', () => {
 
 test('should display Quick Actions on mobile', async ({ page }) => {
   await page.goto('/login');
-  await page.fill('input[type="email"]', 'test@example.com');
-  await page.fill('input[type="password"]', 'password123');
-  await page.click('button:has-text("Sign In")');
+  await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+  await page.locator('input[type="password"]').first().first().fill('password123');
+  await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
   await page.waitForURL('**/*');
 
   // Verify navigation actions
@@ -84,9 +84,9 @@ test('should display Quick Actions on mobile', async ({ page }) => {
 
 test('should display Menu toggle on mobile and have expected links', async ({ page }) => {
   await page.goto('/login');
-  await page.fill('input[type="email"]', 'test@example.com');
-  await page.fill('input[type="password"]', 'password123');
-  await page.click('button:has-text("Sign In")');
+  await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+  await page.locator('input[type="password"]').first().first().fill('password123');
+  await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
   await page.waitForURL('**/*');
 
   // Verify navigation actions
@@ -108,9 +108,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
     await page.goto('/login');
 
     // Fill in credentials and sign in
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
 
     // Wait for Dashboard to load
     await page.waitForURL('**/*');
@@ -125,9 +125,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
 
   test('Grandmother test: Check Orders from login', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
     await page.waitForURL('**/*');
 
     const ordersBtn = page.locator('button:has-text("Orders")').first();
@@ -136,9 +136,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
 
   test('Grandmother test: Check Messages from login', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
     await page.waitForURL('**/*');
 
     const messagesBtn = page.locator('button:has-text("Chat")').first();
@@ -147,9 +147,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
 
   test('Grandmother test: Check Analytics from login', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
     await page.waitForURL('**/*');
 
     const analyticsBtn = page.locator('button:has-text("Stats")').first();
@@ -158,9 +158,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
 
   test('Grandmother test: Share Store from login', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().first().fill('password123');
+    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
     await page.waitForURL('**/*');
 
     const shareBtn = page.locator('button:has-text("Share")').first();
