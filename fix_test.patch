@@ -1,0 +1,48 @@
+--- src/server/telemetry_test.rs
++++ src/server/telemetry_test.rs
+@@ -231,6 +231,14 @@
+         use std::env;
+         use std::path::PathBuf;
+
++        const SENSITIVE_KEYS: &[&str] = &[
++            "tenant_id", "organization_id", "org_id", "session_data", "session_id",
++            "payload", "email", "password", "pii", "api_key", "secret_key"
++        ];
++        const LOGGING_MACROS: &[&str] = &[
++            "tracing::info!", "etracing::info!", "info!", "error!", "warn!", "debug!", "trace!", "tracing::"
++        ];
++
+         let mut violations = Vec::new();
+
+         let mut search_dirs = vec![PathBuf::from(".")];
+@@ -257,21 +265,9 @@
+                     let content = fs::read_to_string(entry.path()).unwrap_or_default();
+                     for (i, line) in content.lines().enumerate() {
+                         let lower_line = line.to_lowercase();
+-                        if lower_line.contains("tracing::info!") ||
+-                           lower_line.contains("etracing::info!") ||
+-                           lower_line.contains("info!") ||
+-                           lower_line.contains("error!") ||
+-                           lower_line.contains("warn!") ||
+-                           lower_line.contains("debug!") ||
+-                           lower_line.contains("tracing::")
+-                        {
+-                            if lower_line.contains("tenant_id") ||
+-                               lower_line.contains("organization_id") ||
+-                               lower_line.contains("org_id") ||
+-                               lower_line.contains("session_data") ||
+-                               lower_line.contains("session_id") ||
+-                               lower_line.contains("payload") ||
+-                               lower_line.contains("email") ||
+-                               lower_line.contains("password") ||
+-                               lower_line.contains("pii") ||
+-                               lower_line.contains("api_key") ||
+-                               lower_line.contains("secret_key") {
++
++                        let has_logging = LOGGING_MACROS.iter().any(|&macro_name| lower_line.contains(macro_name));
++                        if has_logging {
++                            let has_pii = SENSITIVE_KEYS.iter().any(|&key| lower_line.contains(key));
++                            if has_pii {
+                                 violations.push(format!("{}:{}: {}", entry.path().display(), i + 1, line.trim()));
+                             }
+                         }
