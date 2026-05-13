@@ -119,19 +119,14 @@ pub async fn bench_api_response_time() {
 }
 
 pub async fn bench_dashboard_snapshot() {
-    println!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+    let _database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
-    if database_url == "postgres://localhost/dummy" {
-        return;
-    }
-
-    let db = if database_url.starts_with("sqlite") {
+    let db = if _database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(&database_url).await.unwrap();
+            .connect(&_database_url).await.unwrap();
         // Run minimal migrations for benchmark
         sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
@@ -142,7 +137,7 @@ pub async fn bench_dashboard_snapshot() {
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect(&database_url).await.unwrap();
+            .connect(&_database_url).await.unwrap();
         crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
 
@@ -326,16 +321,15 @@ mod tests {
         bench_api_response_time().await;
     }
 
-    #[tokio::test]
-    async fn test_bench_dashboard_snapshot() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        println!("DEBUG: db_url = {}", db_url);
-        if db_url == "dummy" {
-            println!("DEBUG: skipping because db_url is dummy");
-            return;
-        }
-        println!("RUNNING BENCHMARK DASHBOARD SNAPSHOT");
-        bench_dashboard_snapshot().await;
+    #[test]
+    fn test_bench_dashboard_snapshot() {
+        temp_env::with_var("DATABASE_URL", Some("sqlite::memory:"), || {
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(bench_dashboard_snapshot());
+        });
     }
 
     #[tokio::test]
