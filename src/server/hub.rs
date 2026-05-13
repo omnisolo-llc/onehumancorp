@@ -721,17 +721,28 @@ impl Hub {
 
         let pool3 = self.pool.clone();
         let sync_queue_future = tokio::task::spawn(async move {
-            let dialect_query = if std::env::var("DATABASE_URL").unwrap_or_default().starts_with("postgres") {
-                "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < NOW() - INTERVAL '5 minutes')"
+            let is_postgres = std::env::var("DATABASE_URL").unwrap_or_default().starts_with("postgres");
+            if is_postgres {
+                let mut conn = pool3.acquire().await?;
+                crate::common::auth_utils::set_org_context(&mut *conn, "system").await?;
+                let dialect_query = "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < NOW() - INTERVAL '5 minutes')";
+                sqlx::query_scalar::<_, i64>(dialect_query).fetch_one(&mut *conn).await
             } else {
-                "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes'))"
-            };
-            sqlx::query_scalar::<_, i64>(dialect_query).fetch_one(&pool3).await
+                let dialect_query = "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes'))";
+                sqlx::query_scalar::<_, i64>(dialect_query).fetch_one(&pool3).await
+            }
         });
 
         let pool4 = self.pool.clone();
         let sync_errors_future = tokio::task::spawn(async move {
-            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE sync_error IS NOT NULL AND synced_to_cloud = false").fetch_one(&pool4).await
+            let is_postgres = std::env::var("DATABASE_URL").unwrap_or_default().starts_with("postgres");
+            if is_postgres {
+                let mut conn = pool4.acquire().await?;
+                crate::common::auth_utils::set_org_context(&mut *conn, "system").await?;
+                sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE sync_error IS NOT NULL AND synced_to_cloud = false").fetch_one(&mut *conn).await
+            } else {
+                sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE sync_error IS NOT NULL AND synced_to_cloud = false").fetch_one(&pool4).await
+            }
         });
 
         let (db_ping_res, sync_queue_res_res, sync_errors_res_res) = tokio::join!(ping_future, sync_queue_future, sync_errors_future);

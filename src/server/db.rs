@@ -1188,4 +1188,22 @@ mod e2e_tenant_isolation_tests {
         // Discarding `DISCARD ALL` safely scopes context explicitly for each execution.
         assert!(true, "Verified PgPoolOptions handles initialization securely without leaky app.current_tenant override.");
     }
+
+    #[test]
+    #[should_panic(expected = "CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode")]
+    fn test_sqlite_encryption_key_mandatory() {
+        // Force Standalone Mode by setting a sqlite URL without a key and clearing OHC_SQLITE_KEY
+        temp_env::with_vars(vec![
+            ("DATABASE_URL", Some("sqlite://test.db")),
+            ("OHC_SQLITE_KEY", None),
+        ], || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            rt.block_on(async {
+                let _ = super::DB::new().await;
+            });
+        });
+    }
 }

@@ -227,18 +227,24 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("address") ||
     k.contains("name") ||
     k.contains("pii") ||
-    k.contains("tenant_id") ||
-    k.contains("organization_id") ||
     k.contains("session_id") ||
     k.contains("payload") ||
     k.contains("credit") ||
     k.contains("card") ||
     k.contains("cvv") ||
+    k.contains("cvc") ||
     k.contains("dob") ||
     k.contains("birth") ||
     k.contains("passport") ||
     k.contains("bank") ||
     k.contains("account") ||
+    k.contains("routing_number") ||
+    k.contains("iban") ||
+    k.contains("swift") ||
+    k.contains("tax_id") ||
+    k.contains("driver_license") ||
+    k.contains("medicare") ||
+    k.contains("social_security") ||
     k.contains("stripe") ||
     k.contains("billing") ||
     k.contains("ip_address") ||
