@@ -96,3 +96,29 @@ issue_todo_list:
   - [ ] Implement approval/rejection callback endpoints.
 issue_label: ["architecture", "high-impact", "core-feature"]
 ```
+
+### Agent Task Delegation
+- When a task is generated (either by a user event or scheduled trigger), the Orchestrator must correctly route it to the appropriate department.
+- **Routing Rules**: Based on intent classification or explicit event types (e.g., `OrderReceived` -> Operations).
+- **Escalation**: If an agent encounters a situation it cannot handle (e.g., an irate customer), it must escalate the task to the business owner or a designated human-in-the-loop queue.
+
+### Memory and Context Sharing
+- Agents within different departments must share a unified context.
+- If "The Salesperson" generates a quote for Carlos, "The Operations Manager" must have access to that quote's details when the job is booked.
+- The `agent_memories` table serves as this shared knowledge base.
+
+### Tone and Personality
+- The AI must maintain a consistent, professional, and helpful tone, aligning with the OHC brand guidelines.
+- The tone should adapt slightly based on the department (e.g., "The Promoter" might be more enthusiastic, while "The Accountant" is strictly factual).
+- Users should have limited ability to customize the agent's personality to ensure it remains effective and safe.
+
+### Auditing and Explainability
+- Every action taken by an agent must be fully auditable.
+- The business owner must be able to see a clear log of *why* an agent took a specific action (e.g., "Drafted quote based on similar job from last month").
+- This builds trust and allows the owner to fine-tune the agent's behavior if necessary.
+
+### Rate Limiting and Cost Control
+- AI operations (especially LLM calls) are expensive.
+- The system must enforce strict rate limits per tenant based on their SaaS tier.
+- Background tasks (like routine inventory checks) should be scheduled efficiently to minimize API costs.
+- The system must gracefully handle rate limit errors from external AI providers, retrying later or falling back to simpler rules-based logic when possible.

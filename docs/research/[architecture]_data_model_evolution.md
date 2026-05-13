@@ -71,3 +71,34 @@ P0
 
 ## Estimated Scope
 Large
+
+### Cross-Tenant Data Leakage Prevention
+A core requirement for OHC is ensuring zero data leakage between tenants.
+- **RLS Policies**: Postgres Row Level Security must be the primary enforcement mechanism.
+- The `tenant_id` must be extracted from the authenticated session context (e.g., JWT or SPIFFE ID) and set at the beginning of the transaction.
+- Queries should never rely on the application code to explicitly append `WHERE tenant_id = ?` clauses; the database layer itself must enforce this via RLS.
+
+### Support for Hybrid Mode
+- The data model must seamlessly transition between Cloud (Postgres) and Standalone (SQLite) modes.
+- This requires abstracting complex Postgres-specific features (like specific JSONB operators or pgvector) through application-layer interfaces or falling back gracefully when in SQLite mode.
+- Migrations must be written and tested for both database engines.
+
+### Agent Context and Memory Schema
+- Agents require a dedicated schema to store their "thoughts," drafts, and historical interactions with users.
+- `agent_memories`: Stores conversational history, user preferences, and inferred business rules.
+- `agent_actions`: An audit log of every action taken by an agent (e.g., drafting a quote, sending an email), critical for transparency and user trust.
+- These tables must be heavily indexed by `tenant_id` and timestamp to ensure fast retrieval during active conversations.
+
+### Event Sourcing and Audit Trails
+- For critical operations (payments, inventory adjustments, tier upgrades), the system must utilize an event-sourced model.
+- Instead of just updating a row, a corresponding event record must be appended to an append-only log.
+- This provides an irrefutable audit trail and allows for complex analytical queries by the AI agents later.
+
+### Schema Evolution Strategy
+- Given the rapidly evolving nature of the OHC platform, the schema will change frequently.
+- **Additive Changes**: Prefer additive changes (adding columns or tables) over destructive changes (renaming or deleting).
+- **Phased Rollouts**: For complex migrations, utilize a multi-phase approach:
+    1. Add the new column/table.
+    2. Write to both old and new.
+    3. Read from new (and backfill).
+    4. Remove old column/table.

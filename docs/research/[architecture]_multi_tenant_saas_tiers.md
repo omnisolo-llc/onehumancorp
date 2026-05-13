@@ -34,3 +34,30 @@ When a user attempts an action that exceeds their current tier's limits, the UI 
 
 ## Implementation Prompt
 Implement the Multi-Tenant SaaS Tier Architecture as outlined above. This includes creating the `TierService` middleware, defining the tier structures in the database, integrating with Stripe webhooks for billing sync, and updating the frontend components to handle graceful degradation and upgrade prompts. Ensure all components use OHC premium design tokens and adhere to the mobile-first strategy.
+
+### Tier Enforcement Logic
+- **Hard Quotas vs. Soft Limits**: Distinguish between hard limits (e.g., maximum storage capacity) and soft limits (e.g., number of AI actions).
+- Hard quotas should block the action with a clear error message and an immediate upgrade prompt.
+- Soft limits should trigger warnings as the user approaches the limit, allowing them time to upgrade without interrupting their workflow.
+- **Grace Periods**: Implement a grace period (e.g., 3 days) when a payment fails before downgrading an account, ensuring business continuity for the user.
+
+### Feature Flag Integration
+- Tiers should be managed via a robust feature flagging system.
+- This allows for easy adjustments to tier offerings without requiring code deployments.
+- Example: `feature.custom_domain_ssl` is `false` for Free/Starter, `true` for Pro/Business.
+
+### Billing Synchronization
+- Integrate deeply with a billing provider (like Stripe).
+- Webhooks must reliably update the tenant's tier status in the OHC database.
+- Implement robust retry mechanisms for failed webhook processing to prevent state mismatches between OHC and the billing provider.
+
+### Upgrades and Downgrades
+- **Proration**: Handle proration correctly when a user upgrades mid-billing cycle.
+- **Downgrade Constraints**: When a user downgrades, the system must handle the transition gracefully.
+    - If Maya downgrades from Starter to Free, what happens to her 11th through 100th products?
+    - The system should set them to "inactive" or "draft" state rather than deleting them, preserving the data while enforcing the new limit.
+
+### Analytics and Tier Tracking
+- Telemetry must track how users interact with tier limits.
+- If a high percentage of users hit the 100-action limit on the Free tier and then churn instead of upgrading, the limit might be set too low (failing to prove value) or the price might be too high.
+- The AI Advisor can use this data to offer targeted discounts to highly engaged users who are hesitant to upgrade.

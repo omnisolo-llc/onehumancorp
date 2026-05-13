@@ -173,3 +173,50 @@ sequenceDiagram
 Implement the foundational user onboarding flow and dashboard state management that supports the progression from Acquisition to Activation. The system should define the required data models to capture the user's business type and minimal initial configuration. Build the mobile-first (375px) UI wizard that guides a user through the initial setup, ensuring that advanced configurations are deferred. The final step of the wizard should instantly generate a functional "Storefront/Booking Page" view, satisfying the 'Activation' milestone. Ensure that interactions feel premium (Glassmorphism, correct typography) and are resilient to network issues (optimistic updates). Do not prescribe the specific database schema or backend routing; focus on the unified API contract and the user journey transitions. Include E2E test coverage verifying a successful run-through from login to the generated storefront.
 
 issue_id: 9353
+
+### Detailed Persona Mapping
+
+#### Maya (Home Baker)
+-   **Acquisition**: Sees an Instagram ad demonstrating how to convert DMs into sales.
+-   **Onboarding**: Answers 3 questions via a conversational AI interface; the system generates her initial storefront.
+-   **Activation**: Publishes her site and receives her first paid deposit via the integrated booking flow.
+-   **Retention**: Engaged by weekly AI health reports detailing her response times and conversion rates.
+-   **Revenue**: Reaches the 10-product limit and upgrades to the Starter tier for unlimited products and a custom domain.
+-   **Referral**: Shares her customized storefront link with fellow bakers, acting as organic marketing.
+
+#### Carlos (Handyman)
+-   **Acquisition**: Discovers OHC through a targeted search for "simple scheduling for contractors."
+-   **Onboarding**: Uses voice input to list his services; the AI structures his catalog and syncs his Google Calendar.
+-   **Activation**: A client books a service slot directly through his new online portal.
+-   **Retention**: Relies heavily on the AI "Salesperson" to draft quotes and handle initial client inquiries.
+-   **Revenue**: Exceeds the monthly AI action limit on the free tier and upgrades to maintain the automated quoting features.
+-   **Referral**: Refers a subcontractor using an in-app referral code for a discount.
+
+#### Priya (Boutique Owner)
+-   **Acquisition**: Searches for solutions to sync her physical inventory with an online store.
+-   **Onboarding**: Uses the app to take photos of her inventory; the AI extracts variants (sizes, colors) automatically.
+-   **Activation**: Processes a physical sale using her phone as a POS, instantly updating her online stock levels.
+-   **Retention**: Utilizes the unified dashboard daily to track total revenue and automate post-purchase review requests.
+-   **Revenue**: Upgrades to the Pro tier to unlock advanced reporting and custom domain SSL provisioning.
+-   **Referral**: Shares a generated "Year in Review" graphic on LinkedIn, showcasing her growth powered by OHC.
+
+#### Leo (Music Tutor)
+-   **Acquisition**: Clicks on another creator's OHC link-in-bio on TikTok.
+-   **Onboarding**: Sets up subscription tiers and connects his payment gateway, migrating his existing students seamlessly.
+-   **Activation**: A new student signs up for a monthly subscription package.
+-   **Retention**: Benefits from the AI "Advisor" which proactively manages churn by reminding inactive students to book lessons.
+-   **Revenue**: Reaches the digital storage limit when uploading video courses and upgrades to a higher tier.
+-   **Referral**: His link-in-bio serves as a constant, highly visible referral engine to his audience.
+
+#### Fatima (Food Cart Operator)
+-   **Acquisition**: Hears about OHC from another street vendor.
+-   **Onboarding**: Uses WhatsApp to send a photo of her menu; the AI extracts the items and sets up her account out-of-band.
+-   **Activation**: A customer scans the provided QR code and places a pre-order, triggering a loud alert on her phone.
+-   **Retention**: Relies on the extreme simplicity of the interface and daily SMS earnings summaries.
+-   **Revenue**: Upgrades to a flat-rate tier when her transaction volume makes the fixed monthly fee more economical than the per-transaction fee.
+-   **Referral**: The visible QR codes on her cart generate interest from neighboring vendors.
+
+### Strategic Implications
+-   **Onboarding is paramount**: The "Grandmother Test" must be applied rigorously. Any friction during the first 10 minutes will lead to churn.
+-   **Value over Features**: Users don't buy features; they buy solutions to their specific problems. The AI must be framed as a helpful employee ("The Advisor," "The Salesperson"), not just a technical tool.
+-   **Tiering Strategy**: Upgrades must be triggered naturally by the user's growth and success, ensuring a clear alignment between platform value and revenue.

@@ -41,3 +41,34 @@ P0
 
 ## Estimated Scope
 Medium
+
+### Critical SaaS Journeys
+
+#### Offline Reliability
+When Fatima is in a dead zone, the OHC app must queue actions instead of displaying errors.
+- A generic "No Internet" toast is insufficient.
+- The app must clearly distinguish between "Syncing" and "Draft" states.
+- Local SQLite allows reading the catalog unconditionally.
+- Writes (like Sold Out toggles) are captured locally and synced later.
+
+#### Memory Constraints
+Older Android devices aggressively kill background apps.
+- The app must resume precisely where Carlos left off, even if suspended while drafting a complex quote.
+- This requires deep persistence of UI state, not just data models.
+
+#### Navigation Hierarchy
+- The traditional "Hamburger menu -> Settings -> Submenu" is a desktop anti-pattern applied to mobile.
+- OHC must use a shallow navigation structure. 90% of a persona's daily tasks must be reachable within a maximum of two taps from the home screen.
+- For Maya: The home screen is her inbox.
+- For Fatima: The home screen is the order queue.
+- For Priya: The home screen is the POS scanner.
+
+### The App Size Contract
+- The downloaded bundle size must remain under 15MB.
+- Heavy assets (fonts, non-critical images) must be deferred.
+- Every MB added reduces conversion rates in low-bandwidth regions by an estimated 1-3%.
+
+### Accessibility
+- **Target Touch Area**: Minimum 48x48dp for all interactive elements.
+- **Contrast**: WCAG AAA standard for primary actions. Fatima needs to see the "Sold Out" button in direct sunlight.
+- **Typography**: Dynamic Type support. If Carlos increases his system font size because he forgot his reading glasses, the app layout must adapt without truncating text or breaking buttons.

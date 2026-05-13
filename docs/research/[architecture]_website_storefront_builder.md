@@ -56,3 +56,25 @@ P0
 
 ## Estimated Scope
 Large
+
+### Template Engine and Customization
+- The Smart Builder relies on a highly flexible, data-driven template engine.
+- Instead of raw HTML/CSS, the templates define layout structures and styling tokens that can be dynamically populated by the AI.
+- Users can override AI choices (e.g., manually changing the primary color), but the system ensures the overall design remains coherent and accessible.
+
+### Performance and SEO
+- The generated storefronts must score 90+ on Google Lighthouse out-of-the-box.
+- This requires aggressive optimization: image compression, lazy loading, minimizing JavaScript payloads, and efficient CSS delivery.
+- Semantic HTML and auto-generated meta tags ensure strong organic search visibility.
+- "The Promoter" agent can periodically review the site's SEO performance and suggest improvements.
+
+### Extensibility and Third-Party Integrations
+- While OHC provides core functionality, users may need to integrate specialized tools (e.g., a specific review widget or analytics tracking code).
+- The Smart Builder must securely support these integrations without compromising the site's performance or security.
+- This is handled via a controlled "App Market" or predefined integration points, rather than allowing arbitrary code injection.
+
+### Preview and Publishing Workflow
+- The transition from "Draft" to "Live" must be instantaneous from the user's perspective.
+- Behind the scenes, the system handles the complexities of CDN cache invalidation, DNS updates (if using a custom domain), and asset deployment.
+- The user can preview changes safely in a sandbox environment before committing them to the live site.
+- A robust version history allows the user to easily revert to a previous state if they make a mistake.
