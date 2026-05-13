@@ -264,7 +264,7 @@ impl VectorRepository {
                         let record = EmbeddingRecord {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
-                            agent_id: row.get("agent_id"),
+                            agent_id: row.try_get("agent_id").unwrap_or_default(),
                             content: row.get("content"),
                             embedding,
                             source_type: row.get("source_type"),
@@ -273,7 +273,7 @@ impl VectorRepository {
                             reference_count: row.get("reference_count"),
                             reliability_score: row.get("reliability_score"),
                             owner_override: row.get("owner_override"),
-                            metadata: row.get("metadata"),
+                            metadata: row.try_get("metadata").unwrap_or_default(),
                         };
                         all_records.push(record);
                     }
@@ -297,10 +297,9 @@ impl VectorRepository {
                         1.0 - similarity
                     }
 
-                    let query_emb: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
                     all_records.sort_by(|a, b| {
-                        let dist_a = cosine_distance(&a.embedding, &query_emb);
-                        let dist_b = cosine_distance(&b.embedding, &query_emb);
+                        let dist_a = cosine_distance(&a.embedding, query_embedding);
+                        let dist_b = cosine_distance(&b.embedding, query_embedding);
                         dist_a.partial_cmp(&dist_b).unwrap_or(std::cmp::Ordering::Equal)
                     });
 
@@ -445,7 +444,7 @@ impl VectorRepository {
                     let a = EmbeddingRecord {
                         id: row.get("a_id"),
                         tenant_id: row.get("a_tenant_id"),
-                        agent_id: row.get::<Option<String>, _>("a_agent_id").unwrap_or_default(),
+                        agent_id: row.try_get("a_agent_id").unwrap_or_default(),
                         content: row.get("a_content"),
                         embedding: a_embedding,
                         source_type: row.get("a_source_type"),
@@ -454,13 +453,13 @@ impl VectorRepository {
                         reference_count: row.get("a_reference_count"),
                         reliability_score: row.get("a_reliability_score"),
                         owner_override: row.get("a_owner_override"),
-                        metadata: row.get("a_metadata"),
+                        metadata: row.try_get("a_metadata").unwrap_or_default(),
                     };
 
                     let b = EmbeddingRecord {
                         id: row.get("b_id"),
                         tenant_id: row.get("b_tenant_id"),
-                        agent_id: row.get::<Option<String>, _>("b_agent_id").unwrap_or_default(),
+                        agent_id: row.try_get("b_agent_id").unwrap_or_default(),
                         content: row.get("b_content"),
                         embedding: b_embedding,
                         source_type: row.get("b_source_type"),
@@ -469,7 +468,7 @@ impl VectorRepository {
                         reference_count: row.get("b_reference_count"),
                         reliability_score: row.get("b_reliability_score"),
                         owner_override: row.get("b_owner_override"),
-                        metadata: row.get("b_metadata"),
+                        metadata: row.try_get("b_metadata").unwrap_or_default(),
                     };
 
                     conflicts.push((a, b));
@@ -507,7 +506,7 @@ impl VectorRepository {
                         let a = EmbeddingRecord {
                             id: row.get("a_id"),
                             tenant_id: row.get("a_tenant_id"),
-                            agent_id: row.get::<Option<String>, _>("a_agent_id").unwrap_or_default(),
+                            agent_id: row.try_get("a_agent_id").unwrap_or_default(),
                             content: row.get("a_content"),
                             embedding: a_embedding,
                             source_type: row.get("a_source_type"),
@@ -516,13 +515,13 @@ impl VectorRepository {
                             reference_count: row.get("a_reference_count"),
                             reliability_score: row.get("a_reliability_score"),
                             owner_override: row.get("a_owner_override"),
-                            metadata: row.get("a_metadata"),
+                            metadata: row.try_get("a_metadata").unwrap_or_default(),
                         };
 
                         let b = EmbeddingRecord {
                             id: row.get("b_id"),
                             tenant_id: row.get("b_tenant_id"),
-                            agent_id: row.get::<Option<String>, _>("b_agent_id").unwrap_or_default(),
+                            agent_id: row.try_get("b_agent_id").unwrap_or_default(),
                             content: row.get("b_content"),
                             embedding: b_embedding,
                             source_type: row.get("b_source_type"),
@@ -531,7 +530,7 @@ impl VectorRepository {
                             reference_count: row.get("b_reference_count"),
                             reliability_score: row.get("b_reliability_score"),
                             owner_override: row.get("b_owner_override"),
-                            metadata: row.get("b_metadata"),
+                            metadata: row.try_get("b_metadata").unwrap_or_default(),
                         };
 
                         conflicts.push((a, b));
@@ -556,7 +555,7 @@ impl VectorRepository {
                         let record = EmbeddingRecord {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
-                            agent_id: row.get::<Option<String>, _>("agent_id").unwrap_or_default(),
+                            agent_id: row.try_get("agent_id").unwrap_or_default(),
                             content: row.get("content"),
                             embedding,
                             source_type: row.get("source_type"),
@@ -565,7 +564,7 @@ impl VectorRepository {
                             reference_count: row.get("reference_count"),
                             reliability_score: row.get("reliability_score"),
                             owner_override: row.get("owner_override"),
-                            metadata: row.get("metadata"),
+                            metadata: row.try_get("metadata").unwrap_or_default(),
                         };
                         all_records.push(record);
                     }
