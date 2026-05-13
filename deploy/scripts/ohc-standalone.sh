@@ -30,6 +30,8 @@ export OHC_STATUS_DIR="${OHC_RUNTIME_DIR}/status"
 
 if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
   export OHC_TELEMETRY_ENABLED=false
+else
+  export OHC_TELEMETRY_ENABLED=true
 fi
 
 echo -e "${DIM}[1/2] Provisioning local standalone state boundaries...${RESET}"
