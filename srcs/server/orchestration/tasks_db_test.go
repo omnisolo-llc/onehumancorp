@@ -931,3 +931,26 @@ func TestSqliteTaskStore_GetTasksByOrganization_ParseDateError(t *testing.T) {
 	assert.True(t, tasks[0].CreatedAt.IsZero())
 	assert.True(t, tasks[0].UpdatedAt.IsZero())
 }
+
+func TestSqliteTaskStore_Ping(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	store := NewSqliteTaskStore(db)
+	err := store.Ping(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestPostgresTaskStore_Ping(t *testing.T) {
+	db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := NewPostgresTaskStore(db)
+
+	mock.ExpectPing()
+
+	err = store.Ping(context.Background())
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}

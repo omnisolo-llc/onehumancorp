@@ -322,3 +322,44 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		require.Equal(t, expected, synced)
 	}
 }
+
+func (m *mockPostgresProvider) Ping(ctx context.Context) error {
+	return nil
+}
+
+func TestHybridMCPRAGDaemon_ProbeHealth(t *testing.T) {
+	db := setupSyncTestDB(t)
+	defer db.Close()
+
+	daemon := NewHybridMCPRAGDaemon(db, "http://remote")
+	err := daemon.ProbeHealth(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestSyncCompletedEscalations_MissingInCloud(t *testing.T) {
+	db := setupSyncTestDB(t)
+	defer db.Close()
+
+	localDB := NewSqliteTaskStore(db)
+	cloudDB := setupSyncTestDB(t)
+	defer cloudDB.Close()
+
+	mockCloud := &mockPostgresProvider{NewSqliteTaskStore(cloudDB)}
+
+	ctx := context.Background()
+
+	task := &SharedTask{
+		ID:             "task-missing",
+		OrganizationID: "org-1",
+		Title:          "Lost Task",
+		Status:         "CLOUD_PROCESSING",
+	}
+	require.NoError(t, localDB.CreateTask(ctx, task))
+
+	err := syncCompletedEscalations(ctx, localDB, mockCloud)
+	assert.NoError(t, err)
+
+	updatedLocal, err := localDB.GetTask(ctx, "task-missing")
+	require.NoError(t, err)
+	assert.Equal(t, "CLOUD_ESCALATION", updatedLocal.Status)
+}

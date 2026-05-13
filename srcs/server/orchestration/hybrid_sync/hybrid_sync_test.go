@@ -112,3 +112,22 @@ func TestSyncLocalToCloud(t *testing.T) {
 	err = mock.ExpectationsWereMet()
 	require.NoError(t, err)
 }
+
+func TestDefaultMissionSynchronizer_ProbeHealth(t *testing.T) {
+	localDB := setupTestDB(t)
+	defer localDB.Close()
+
+	cloudDB, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+	require.NoError(t, err)
+	defer cloudDB.Close()
+
+	localStore := orchestration.NewSqliteTaskStore(localDB)
+	cloudStore := orchestration.NewPostgresTaskStore(cloudDB)
+	sync := NewMissionSynchronizer(localStore, cloudStore)
+
+	mock.ExpectPing()
+
+	err = sync.ProbeHealth(context.Background())
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}

@@ -30,6 +30,7 @@ type TaskStore interface {
 	GetTask(ctx context.Context, id string) (*SharedTask, error)
 	UpdateTaskStatus(ctx context.Context, id string, status string) error
 	GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error)
+	Ping(ctx context.Context) error
 }
 
 // PostgresTaskStore implementation
@@ -39,6 +40,10 @@ type PostgresTaskStore struct {
 
 func NewPostgresTaskStore(db *sql.DB) *PostgresTaskStore {
 	return &PostgresTaskStore{db: db}
+}
+
+func (s *PostgresTaskStore) Ping(ctx context.Context) error {
+	return s.db.PingContext(ctx)
 }
 
 func (s *PostgresTaskStore) ClaimTask(ctx context.Context, organizationID string, agentID string) (*SharedTask, error) {
@@ -259,6 +264,10 @@ type SqliteTaskStore struct {
 
 func NewSqliteTaskStore(db *sql.DB) *SqliteTaskStore {
 	return &SqliteTaskStore{db: db}
+}
+
+func (s *SqliteTaskStore) Ping(ctx context.Context) error {
+	return s.db.PingContext(ctx)
 }
 
 func (s *SqliteTaskStore) ClaimTask(ctx context.Context, organizationID string, agentID string) (*SharedTask, error) {

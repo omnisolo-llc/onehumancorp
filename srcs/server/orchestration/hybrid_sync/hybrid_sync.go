@@ -10,6 +10,7 @@ import (
 // MissionSynchronizer safely copies tasks from the local SQLite agent_missions to the Cloud Postgres DB.
 type MissionSynchronizer interface {
 	SyncLocalToCloud(ctx context.Context, mission *orchestration.SharedTask) error
+	ProbeHealth(ctx context.Context) error
 }
 
 type DefaultMissionSynchronizer struct {
@@ -20,6 +21,10 @@ func NewMissionSynchronizer(localStore orchestration.TaskStore, cloudStore orche
 	return &DefaultMissionSynchronizer{
 		cloudStore: cloudStore,
 	}
+}
+
+func (s *DefaultMissionSynchronizer) ProbeHealth(ctx context.Context) error {
+	return s.cloudStore.Ping(ctx)
 }
 
 func (s *DefaultMissionSynchronizer) SyncLocalToCloud(ctx context.Context, mission *orchestration.SharedTask) error {

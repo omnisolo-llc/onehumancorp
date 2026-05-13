@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Triage Report: Maintainer Chore Work</title>
+<style>
+  body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: #f0f4f8;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .card {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(15px) saturate(200%);
+    -webkit-backdrop-filter: blur(15px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 600px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  }
+  h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    margin-top: 0;
+    color: #1a202c;
+  }
+  h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px;
+    margin-top: 20px;
+    color: #2d3748;
+  }
+  .badge {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #e2e8f0;
+    color: #4a5568;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 15px;
+  }
+  ul {
+    padding-left: 20px;
+  }
+  li {
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+  .status {
+    color: #38a169;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="badge">cleanup</div>
+  <h1>Triage Report: Agent Missions Health</h1>
+  <p><strong>Status:</strong> <span class="status">CLEANED & VERIFIED</span></p>
+
+  <h2>Summary</h2>
+  <p>Implemented health guardianship and PRUNED log noise while resolving stuck missions.</p>
+
+  <h2>Details</h2>
+  <ul>
+    <li>Pruned excessive debug logging in sync_daemon to eliminate noise.</li>
+    <li>Added <code>Ping()</code> to <code>TaskStore</code> interfaces and implementations for robust health checks.</li>
+    <li>Added <code>ProbeHealth()</code> to <code>MissionSynchronizer</code> for local-to-cloud mission sync probing.</li>
+    <li>Fixed "stuck" missions: updated <code>syncCompletedEscalations</code> to gracefully revert missing cloud missions back to <code>CLOUD_ESCALATION</code> from <code>CLOUD_PROCESSING</code>.</li>
+    <li>Safely enforced <code>SanitizePayloadFunc</code> application on task payload boundaries.</li>
+  </ul>
+</div>
+</body>
+</html>

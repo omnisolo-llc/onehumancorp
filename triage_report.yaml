@@ -1,8 +1,7 @@
-issue_category: cleanup
-status: completed
+issue_category: "cleanup"
+summary: "Implemented health guardianship and PRUNED log noise while resolving stuck missions."
 details:
-  - Addressed Fault Triage requirement by organizing signals into standard categories.
-  - Reduced verbosity of health monitor logs from Warn/Error to Debug.
-  - Sanitized the agent_missions queue in sip.rs to prevent stuck missions.
-debt_report: |
-  Fixed unused import warnings in `src/app/ui_tests/setup_wizard_hero_test.rs` by removing `Rc` and `RefCell`.
+  - Pruned debug logging in sync_daemon to eliminate noise.
+  - Added Ping() to TaskStore, SqliteTaskStore, PostgresTaskStore.
+  - Added ProbeHealth() to MissionSynchronizer, DefaultMissionSynchronizer, HybridMCPRAGDaemon.
+  - Updated syncCompletedEscalations to revert missing cloud missions back to CLOUD_ESCALATION from CLOUD_PROCESSING to prevent stuck states using safe localDB.UpdateTaskStatus method instead of unsafe manual SQL execution.
