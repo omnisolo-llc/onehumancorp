@@ -1490,7 +1490,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
-    let store = std::sync::Arc::new(auth::Store::new());
+    let mut store_inner = auth::Store::new();
+    let repo_opt: Option<std::sync::Arc<dyn auth::UserRepository>> = if crate::config::get().multitenant {
+        Some(std::sync::Arc::new(auth::postgres_store::PgUserRepository::new(db.pool.clone())))
+    } else {
+        None
+    };
+    store_inner.repo = repo_opt.clone();
+    let store = std::sync::Arc::new(store_inner);
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if crate::config::get().telemetry_enabled {
@@ -1579,7 +1586,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store)))
+        .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(auth::AuthServiceServerImpl::new(store, repo_opt)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(crate::ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))

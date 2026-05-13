@@ -94,6 +94,7 @@ pub struct Store {
     secret: Vec<u8>,
     #[allow(dead_code)]
     oidc_cfg: RwLock<OIDCConfig>,
+    pub repo: Option<Arc<dyn UserRepository>>,
 }
 
 impl Store {
@@ -186,6 +187,7 @@ impl Store {
                 client_id,
                 enabled,
             }),
+            repo: None,
         };
 
         store.seed_default_admin(now);
@@ -458,7 +460,13 @@ impl Store {
                     if crate::config::get().multitenant && data.claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
                         return Err("Invalid token: organization_id is required in cloud mode".to_string());
                     }
-                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
+                    let org_id = data.claims.organization_id.clone().unwrap_or_default();
+                    let is_rev = if let Some(repo) = &self.repo {
+                        repo.is_revoked(&data.claims.jti, &org_id).await.unwrap_or(false)
+                    } else {
+                        self.is_revoked(&data.claims.jti, &org_id)
+                    };
+                    if is_rev {
                         return Err("token revoked".to_string());
                     }
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
@@ -494,11 +502,12 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct AuthServiceServerImpl {
     pub store: Arc<Store>,
+    pub repo: Option<Arc<dyn UserRepository>>,
 }
 
 impl AuthServiceServerImpl {
-    pub fn new(store: Arc<Store>) -> Self {
-        Self { store }
+    pub fn new(store: Arc<Store>, repo: Option<Arc<dyn UserRepository>>) -> Self {
+        Self { store, repo }
     }
 }
 
@@ -511,20 +520,45 @@ impl AuthService for AuthServiceServerImpl {
             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
         }
 
-        match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
-            Ok(user) => {
-                match self.store.issue_token(&user) {
-                    Ok(token) => {
-                         let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
-                         Ok(Response::new(LoginResponse {
-                             token,
-                             expires_at,
-                         }))
+        if let Some(repo) = &self.repo {
+            match repo.get_by_username(&req.username, &req.organization_id).await {
+                Ok(user) => {
+                    if !user.active {
+                        return Err(Status::unauthenticated("account disabled"));
                     }
-                    Err(e) => Err(Status::internal(e)),
+                    if verify(&req.password, &user.password_hash).unwrap_or(false) {
+                        match self.store.issue_token(&user) {
+                            Ok(token) => {
+                                 let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
+                                 Ok(Response::new(LoginResponse {
+                                     token,
+                                     expires_at,
+                                 }))
+                            }
+                            Err(e) => Err(Status::internal(e)),
+                        }
+                    } else {
+                        Err(Status::unauthenticated("invalid credentials"))
+                    }
                 }
+                Err(e) => Err(Status::unauthenticated(e)),
             }
-            Err(e) => Err(Status::unauthenticated(e)),
+        } else {
+            match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
+                Ok(user) => {
+                    match self.store.issue_token(&user) {
+                        Ok(token) => {
+                             let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
+                             Ok(Response::new(LoginResponse {
+                                 token,
+                                 expires_at,
+                             }))
+                        }
+                        Err(e) => Err(Status::internal(e)),
+                    }
+                }
+                Err(e) => Err(Status::unauthenticated(e)),
+            }
         }
     }
 
@@ -541,20 +575,52 @@ impl AuthService for AuthServiceServerImpl {
             req.roles
         };
         
-        match self.store.create_user(req.username, req.email, req.password, roles, req.organization_id) {
-            Ok(user) => {
-                match self.store.issue_token(&user) {
-                    Ok(token) => {
-                         let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
-                         Ok(Response::new(LoginResponse {
-                             token,
-                             expires_at,
-                         }))
+        if let Some(repo) = &self.repo {
+            let password_hash = hash(&req.password, DEFAULT_COST).map_err(|e| Status::internal(e.to_string()))?;
+            let now = Utc::now();
+            let user = User {
+                id: format!("user-{}", now.timestamp()),
+                username: req.username.clone(),
+                email: req.email.clone(),
+                password_hash,
+                roles: roles.clone(),
+                active: true,
+                organization_id: Some(req.organization_id.clone()),
+                created_at: now,
+                updated_at: now,
+                oidc_subject: None,
+            };
+            match repo.create_user(user.clone(), &req.organization_id).await {
+                Ok(_) => {
+                    match self.store.issue_token(&user) {
+                        Ok(token) => {
+                             let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
+                             Ok(Response::new(LoginResponse {
+                                 token,
+                                 expires_at,
+                             }))
+                        }
+                        Err(e) => Err(Status::internal(e)),
                     }
-                    Err(e) => Err(Status::internal(e)),
                 }
+                Err(e) => Err(Status::already_exists(e)),
             }
-            Err(e) => Err(Status::already_exists(e)),
+        } else {
+            match self.store.create_user(req.username, req.email, req.password, roles, req.organization_id) {
+                Ok(user) => {
+                    match self.store.issue_token(&user) {
+                        Ok(token) => {
+                             let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
+                             Ok(Response::new(LoginResponse {
+                                 token,
+                                 expires_at,
+                             }))
+                        }
+                        Err(e) => Err(Status::internal(e)),
+                    }
+                }
+                Err(e) => Err(Status::already_exists(e)),
+            }
         }
     }
 
@@ -566,7 +632,12 @@ impl AuthService for AuthServiceServerImpl {
                     if let Ok(claims) = self.store.validate_token(token).await {
                         let exp = chrono::DateTime::from_timestamp(claims.exp as i64, 0)
                             .unwrap_or_else(|| chrono::Utc::now());
-                        let _ = self.store.revoke_token(claims.jti, exp, &claims.organization_id.unwrap_or_default());
+                        let org_id = claims.organization_id.unwrap_or_default();
+                        if let Some(repo) = &self.repo {
+                            let _ = repo.revoke_token(claims.jti, exp, &org_id).await;
+                        } else {
+                            let _ = self.store.revoke_token(claims.jti, exp, &org_id);
+                        }
                     }
                 }
             }
@@ -589,8 +660,13 @@ impl AuthService for AuthServiceServerImpl {
         let claims = self.store.validate_token(token).await
             .map_err(|e| Status::unauthenticated(e))?;
 
-        let user = self.store.get_user(&claims.sub, "")
-            .ok_or_else(|| Status::not_found("user not found"))?;
+        let user = if let Some(repo) = &self.repo {
+            repo.get_by_id(&claims.sub, &claims.organization_id.clone().unwrap_or_default()).await
+                .map_err(|_| Status::not_found("user not found"))?
+        } else {
+            self.store.get_user(&claims.sub, "")
+                .ok_or_else(|| Status::not_found("user not found"))?
+        };
 
         Ok(Response::new(UserProto {
             id: user.id,
@@ -607,7 +683,11 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn list_users(&self, request: Request<ListUsersRequest>) -> Result<Response<ListUsersResponse>, Status> {
         let req = request.into_inner();
-        let users = self.store.list_users(&req.organization_id);
+        let users = if let Some(repo) = &self.repo {
+            repo.list_users(&req.organization_id).await.unwrap_or_default()
+        } else {
+            self.store.list_users(&req.organization_id)
+        };
         let proto_users = users.into_iter().map(|u| UserProto {
             id: u.id,
             username: u.username,
@@ -625,63 +705,148 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn create_user(&self, request: Request<CreateUserRequest>) -> Result<Response<UserProto>, Status> {
         let req = request.into_inner();
-        match self.store.create_user(req.username, req.email, req.password, req.roles, req.organization_id) {
-            Ok(u) => Ok(Response::new(UserProto {
-                id: u.id,
-                username: u.username,
-                email: u.email,
-                roles: u.roles,
-                active: u.active,
-                organization_id: u.organization_id.unwrap_or_default(),
-                created_at_unix: u.created_at.timestamp(),
-                updated_at_unix: u.updated_at.timestamp(),
-                oidc_subject: u.oidc_subject.unwrap_or_default(),
-            })),
-            Err(e) => Err(Status::already_exists(e)),
+        if let Some(repo) = &self.repo {
+            let password_hash = hash(&req.password, DEFAULT_COST).map_err(|e| Status::internal(e.to_string()))?;
+            let now = Utc::now();
+            let user = User {
+                id: format!("user-{}", now.timestamp()),
+                username: req.username.clone(),
+                email: req.email.clone(),
+                password_hash,
+                roles: req.roles.clone(),
+                active: true,
+                organization_id: Some(req.organization_id.clone()),
+                created_at: now,
+                updated_at: now,
+                oidc_subject: None,
+            };
+            match repo.create_user(user.clone(), &req.organization_id).await {
+                Ok(_) => Ok(Response::new(UserProto {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    roles: user.roles,
+                    active: user.active,
+                    organization_id: user.organization_id.unwrap_or_default(),
+                    created_at_unix: user.created_at.timestamp(),
+                    updated_at_unix: user.updated_at.timestamp(),
+                    oidc_subject: user.oidc_subject.unwrap_or_default(),
+                })),
+                Err(e) => Err(Status::already_exists(e)),
+            }
+        } else {
+            match self.store.create_user(req.username, req.email, req.password, req.roles, req.organization_id) {
+                Ok(u) => Ok(Response::new(UserProto {
+                    id: u.id,
+                    username: u.username,
+                    email: u.email,
+                    roles: u.roles,
+                    active: u.active,
+                    organization_id: u.organization_id.unwrap_or_default(),
+                    created_at_unix: u.created_at.timestamp(),
+                    updated_at_unix: u.updated_at.timestamp(),
+                    oidc_subject: u.oidc_subject.unwrap_or_default(),
+                })),
+                Err(e) => Err(Status::already_exists(e)),
+            }
         }
     }
 
     async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<UserProto>, Status> {
         let req = request.into_inner();
-        match self.store.get_user(&req.id, &req.organization_id) {
-            Some(u) => Ok(Response::new(UserProto {
-                id: u.id,
-                username: u.username,
-                email: u.email,
-                roles: u.roles,
-                active: u.active,
-                organization_id: u.organization_id.unwrap_or_default(),
-                created_at_unix: u.created_at.timestamp(),
-                updated_at_unix: u.updated_at.timestamp(),
-                oidc_subject: u.oidc_subject.unwrap_or_default(),
-            })),
-            None => Err(Status::not_found("user not found")),
+        if let Some(repo) = &self.repo {
+            match repo.get_by_id(&req.id, &req.organization_id).await {
+                Ok(u) => Ok(Response::new(UserProto {
+                    id: u.id,
+                    username: u.username,
+                    email: u.email,
+                    roles: u.roles,
+                    active: u.active,
+                    organization_id: u.organization_id.unwrap_or_default(),
+                    created_at_unix: u.created_at.timestamp(),
+                    updated_at_unix: u.updated_at.timestamp(),
+                    oidc_subject: u.oidc_subject.unwrap_or_default(),
+                })),
+                Err(e) => Err(Status::not_found(e)),
+            }
+        } else {
+            match self.store.get_user(&req.id, &req.organization_id) {
+                Some(u) => Ok(Response::new(UserProto {
+                    id: u.id,
+                    username: u.username,
+                    email: u.email,
+                    roles: u.roles,
+                    active: u.active,
+                    organization_id: u.organization_id.unwrap_or_default(),
+                    created_at_unix: u.created_at.timestamp(),
+                    updated_at_unix: u.updated_at.timestamp(),
+                    oidc_subject: u.oidc_subject.unwrap_or_default(),
+                })),
+                None => Err(Status::not_found("user not found")),
+            }
         }
     }
 
     async fn update_user(&self, request: Request<UpdateUserRequest>) -> Result<Response<UserProto>, Status> {
         let req = request.into_inner();
-        match self.store.update_user(&req.id, req.email, Some(req.roles), req.active, &req.organization_id) {
-            Ok(u) => Ok(Response::new(UserProto {
-                id: u.id,
-                username: u.username,
-                email: u.email,
-                roles: u.roles,
-                active: u.active,
-                organization_id: u.organization_id.unwrap_or_default(),
-                created_at_unix: u.created_at.timestamp(),
-                updated_at_unix: u.updated_at.timestamp(),
-                oidc_subject: u.oidc_subject.unwrap_or_default(),
-            })),
-            Err(e) => Err(Status::internal(e)),
+        if let Some(repo) = &self.repo {
+            match repo.get_by_id(&req.id, &req.organization_id).await {
+                Ok(mut u) => {
+                    if let Some(email) = req.email.clone() {
+                        u.email = email;
+                    }
+                    u.roles = req.roles.clone();
+                    if let Some(active) = req.active {
+                        u.active = active;
+                    }
+                    u.updated_at = Utc::now();
+                    match repo.update_user(u.clone(), &req.organization_id).await {
+                        Ok(_) => Ok(Response::new(UserProto {
+                            id: u.id,
+                            username: u.username,
+                            email: u.email,
+                            roles: u.roles,
+                            active: u.active,
+                            organization_id: u.organization_id.unwrap_or_default(),
+                            created_at_unix: u.created_at.timestamp(),
+                            updated_at_unix: u.updated_at.timestamp(),
+                            oidc_subject: u.oidc_subject.unwrap_or_default(),
+                        })),
+                        Err(e) => Err(Status::internal(e)),
+                    }
+                }
+                Err(e) => Err(Status::not_found(e)),
+            }
+        } else {
+            match self.store.update_user(&req.id, req.email, Some(req.roles), req.active, &req.organization_id) {
+                Ok(u) => Ok(Response::new(UserProto {
+                    id: u.id,
+                    username: u.username,
+                    email: u.email,
+                    roles: u.roles,
+                    active: u.active,
+                    organization_id: u.organization_id.unwrap_or_default(),
+                    created_at_unix: u.created_at.timestamp(),
+                    updated_at_unix: u.updated_at.timestamp(),
+                    oidc_subject: u.oidc_subject.unwrap_or_default(),
+                })),
+                Err(e) => Err(Status::internal(e)),
+            }
         }
     }
 
     async fn delete_user(&self, request: Request<DeleteUserRequest>) -> Result<Response<EmptyResponse>, Status> {
         let req = request.into_inner();
-        match self.store.delete_user(&req.id, &req.organization_id) {
-            Ok(_) => Ok(Response::new(EmptyResponse {})),
-            Err(e) => Err(Status::not_found(e)),
+        if let Some(repo) = &self.repo {
+            match repo.delete_user(&req.id, &req.organization_id).await {
+                Ok(_) => Ok(Response::new(EmptyResponse {})),
+                Err(e) => Err(Status::not_found(e)),
+            }
+        } else {
+            match self.store.delete_user(&req.id, &req.organization_id) {
+                Ok(_) => Ok(Response::new(EmptyResponse {})),
+                Err(e) => Err(Status::not_found(e)),
+            }
         }
     }
 
@@ -894,7 +1059,7 @@ mod tests {
             organization_id: "".to_string(),
         });
         
-        let resp = AuthServiceServerImpl::new(s).login(req).await.unwrap();
+        let resp = AuthServiceServerImpl::new(s, None).login(req).await.unwrap();
         let resp = resp.into_inner();
         assert!(!resp.token.is_empty());
     }
@@ -910,7 +1075,7 @@ mod tests {
             organization_id: "".to_string(),
         });
         
-        let resp = AuthServiceServerImpl::new(s).register(req).await.unwrap();
+        let resp = AuthServiceServerImpl::new(s, None).register(req).await.unwrap();
         let resp = resp.into_inner();
         assert!(!resp.token.is_empty());
     }
@@ -922,7 +1087,7 @@ mod tests {
             organization_id: "".to_string(),
         });
         
-        let resp = AuthServiceServerImpl::new(s).list_users(req).await.unwrap();
+        let resp = AuthServiceServerImpl::new(s, None).list_users(req).await.unwrap();
         let resp = resp.into_inner();
         assert_eq!(resp.users.len(), 1);
         assert_eq!(resp.users[0].username, "admin");
@@ -936,7 +1101,7 @@ mod tests {
             permissions: vec!["read".to_string()],
         });
         
-        let resp = AuthServiceServerImpl::new(s).create_role(req).await.unwrap();
+        let resp = AuthServiceServerImpl::new(s, None).create_role(req).await.unwrap();
         let resp = resp.into_inner();
         assert_eq!(resp.name, "new_role");
         assert_eq!(resp.permissions, vec!["read".to_string()]);
@@ -1039,7 +1204,7 @@ mod isolation_tests {
             std::env::set_var("JWT_SECRET", "test_secret");
         }
         let s = Arc::new(Store::new());
-        let svc = AuthServiceServerImpl::new(s.clone());
+        let svc = AuthServiceServerImpl::new(s.clone(), None);
 
         let req = tonic::Request::new(LoginRequest {
             username: "test".to_string(),

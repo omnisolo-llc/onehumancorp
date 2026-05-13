@@ -123,18 +123,19 @@ impl IntegrationsRegistry {
     }
 
     pub fn connect(&self, integration_id: &str, base_url: &str, creds: ConnectIntegrationRequest) -> Result<IntegrationInstance, String> {
+        let tenant_key = format!("{}_{}", creds.bot_token, integration_id);
         let mut insts = self.instances.write().unwrap();
         let inst = IntegrationInstance {
-            id: integration_id.to_string(),
+            id: tenant_key.clone(),
             name: integration_id.to_string(),
             category: "default".to_string(),
             status: "connected".to_string(),
             base_url: base_url.to_string(),
         };
-        insts.insert(integration_id.to_string(), inst.clone());
+        insts.insert(tenant_key.clone(), inst.clone());
 
         let mut credentials = self.credentials.write().unwrap();
-        credentials.insert(integration_id.to_string(), IntegrationCredentials {
+        credentials.insert(tenant_key.clone(), IntegrationCredentials {
             bot_token: creds.bot_token.clone(),
             chat_id: creds.chat_id.clone(),
             webhook_url: creds.webhook_url.clone(),
@@ -143,16 +144,16 @@ impl IntegrationsRegistry {
         });
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
+            clients.insert(tenant_key.clone(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
         }
         if integration_id == "nats" {
             let base_url_clone = base_url.to_string();
             let nats_clients = std::sync::Arc::clone(&self.nats_clients);
-            let integration_id_clone = integration_id.to_string();
+            let tenant_key_clone = tenant_key.clone();
             tokio::spawn(async move {
                 if let Ok(provider) = crate::integrations::nats::provider::NatsProvider::new(&base_url_clone).await {
                     let mut clients = nats_clients.write().unwrap();
-                    clients.insert(integration_id_clone, std::sync::Arc::new(provider));
+                    clients.insert(tenant_key_clone, std::sync::Arc::new(provider));
                 }
             });
         }
