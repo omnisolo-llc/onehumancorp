@@ -292,6 +292,37 @@ mod security_tests {
     use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
+    async fn test_multitenant_idor_system_bypass_is_prevented_at_runtime() {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(url) => url,
+            Err(_) => return,
+        };
+
+        if database_url.starts_with("sqlite") {
+            return;
+        }
+
+        let pool = PgPoolOptions::new()
+            .acquire_timeout(Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+
+        let mut tx = match pool.begin().await {
+            Ok(tx) => tx,
+            Err(_) => return,
+        };
+
+        let is_multitenant = ::server_config::get().multitenant;
+        if is_multitenant {
+            let res = ::server_common::auth_utils::set_org_context(&mut *tx, "system").await;
+            assert!(res.is_err(), "set_org_context MUST fail for system tenant in multitenant mode");
+        } else {
+            let res = ::server_common::auth_utils::set_org_context(&mut *tx, "system").await;
+            assert!(res.is_ok(), "set_org_context SHOULD succeed for system tenant in standalone mode");
+        }
+    }
+
+    #[tokio::test]
     async fn test_multitenant_idor_system_bypass_prevention() {
         let database_url = match std::env::var("DATABASE_URL") {
             Ok(url) => url,

@@ -4,6 +4,10 @@ pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sql
 where
     E: Executor<'a, Database = Postgres>,
 {
+    if org_id == "system" && ::server_config::get().multitenant {
+        return Err(sqlx::Error::Configuration("CRITICAL SECURITY ERROR: System tenant bypass attempted in Cloud/Multitenant mode. Tenant isolation breached.".into()));
+    }
+
     if org_id == "system" && !::server_config::get().multitenant {
         // Elevate privileges for system-level queries.
         // We cannot issue multiple queries because sqlx extended protocol doesn't allow it,

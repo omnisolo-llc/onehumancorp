@@ -198,6 +198,10 @@ impl Store {
         let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
         let enabled = !issuer_url.is_empty();
 
+        if ::server_config::get().multitenant && secret.len() < 32 {
+            panic!("JWT_SECRET is cryptographically weak. Must be at least 32 bytes to issue tokens in Cloud Mode.");
+        }
+
         let store = Store {
             users: RwLock::new(HashMap::new()),
             roles: RwLock::new(roles),
