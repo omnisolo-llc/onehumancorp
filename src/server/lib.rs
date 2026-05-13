@@ -1676,7 +1676,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
                         <div class="bottom-nav glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
+                            <button class="nav-item">Add Product</button>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Messages</button>
                             <button class="nav-item">Analytics</button>
