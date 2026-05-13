@@ -5,10 +5,8 @@ use chrono::Utc;
 use uuid::Uuid;
 
 pub async fn bench_queue_latency() {
-    tracing::info!("Benchmarking AI Job Dispatch Latency...");
 
-    tracing::info!("--- Cloud Mode (Postgres) ---");
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     if database_url != "postgres://localhost/dummy" && database_url.starts_with("postgres") {
         let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -19,19 +17,13 @@ pub async fn bench_queue_latency() {
             bench_queue("AI Job Dispatch Latency Cloud Mode (Postgres)", pg_queue).await;
         }
     }
-
-    tracing::info!("--- Standalone Mode (Memory) ---");
     let mem_queue = Arc::new(MemoryTaskQueue::new());
     bench_queue("AI Job Dispatch Latency Standalone Mode (Memory)", mem_queue).await;
 }
 
 pub async fn bench_db_query_time() {
-    tracing::info!("Benchmarking Database Query Time...");
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-    if database_url == "postgres://localhost/dummy" {
-        return;
-    }
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     let iterations = 1000;
 
@@ -46,7 +38,6 @@ pub async fn bench_db_query_time() {
             pg_times.push(start.elapsed().as_micros());
         }
         pg_times.sort();
-        println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[(iterations as f32 * 0.95) as usize], pg_times[(iterations as f32 * 0.99) as usize]);
     }
 
     // Standalone Mode (SQLite)
@@ -58,16 +49,11 @@ pub async fn bench_db_query_time() {
         sqlite_times.push(start.elapsed().as_micros());
     }
     sqlite_times.sort();
-    println!("Database Query Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us", sqlite_times[iterations / 2], sqlite_times[(iterations as f32 * 0.95) as usize], sqlite_times[(iterations as f32 * 0.99) as usize]);
 }
 
 pub async fn bench_api_response_time() {
-    tracing::info!("Benchmarking API Response Time...");
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-    if database_url == "postgres://localhost/dummy" {
-        return;
-    }
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     let iterations = 100;
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
@@ -90,7 +76,6 @@ pub async fn bench_api_response_time() {
             cloud_times.push(start.elapsed().as_micros());
         }
         cloud_times.sort();
-        println!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[(iterations as f32 * 0.95) as usize], cloud_times[(iterations as f32 * 0.99) as usize]);
     }
 
     // Standalone setup
@@ -115,18 +100,12 @@ pub async fn bench_api_response_time() {
         standalone_times.push(start.elapsed().as_micros());
     }
     standalone_times.sort();
-    println!("API Response Time Standalone Mode: p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[(iterations as f32 * 0.95) as usize], standalone_times[(iterations as f32 * 0.99) as usize]);
 }
 
 pub async fn bench_dashboard_snapshot() {
-    println!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-
-    if database_url == "postgres://localhost/dummy" {
-        return;
-    }
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
@@ -208,7 +187,6 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     fetch_times.sort();
-    println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 
     let req_mobile = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
     let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
@@ -232,16 +210,11 @@ pub async fn bench_dashboard_snapshot() {
 
     let res_mobile = dashboard_service.get_dashboard(req_mobile_t).await.unwrap().into_inner();
     let res_desktop = dashboard_service.get_dashboard(req_desktop_t).await.unwrap().into_inner();
-
-    println!("Mobile optimized meetings length: {}, desktop: {}", res_mobile.meetings.len(), res_desktop.meetings.len());
     if !res_mobile.meetings.is_empty() {
-        println!("Mobile meeting 0 transcript len: {}", res_mobile.meetings[0].transcript.len());
-        println!("Desktop meeting 0 transcript len: {}", res_desktop.meetings[0].transcript.len());
+
         assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
         assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop payload should contain transcripts");
     }
-
-    println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 }
 
 pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
@@ -303,8 +276,6 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let deq_p95 = if iterations > 0 { dequeue_times[(iterations as f32 * 0.95) as usize] } else { 0 };
     let deq_p99 = if iterations > 0 { dequeue_times[(iterations as f32 * 0.99) as usize] } else { 0 };
 
-    println!("{}: Batch Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
-    println!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
 }
 
 #[cfg(test)]
@@ -328,13 +299,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        println!("DEBUG: db_url = {}", db_url);
-        if db_url == "dummy" {
-            println!("DEBUG: skipping because db_url is dummy");
-            return;
-        }
-        println!("RUNNING BENCHMARK DASHBOARD SNAPSHOT");
+        let _db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
         bench_dashboard_snapshot().await;
     }
 
@@ -343,7 +308,7 @@ mod tests {
         let mem_queue = Arc::new(MemoryTaskQueue::new());
         bench_queue("Memory_Stress", mem_queue).await;
 
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
         if database_url != "postgres://localhost/dummy" && database_url.starts_with("postgres") {
             if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect(&database_url).await {
                 let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
