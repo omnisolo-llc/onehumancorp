@@ -3,8 +3,8 @@ import { test, expect } from '@playwright/test';
 test('lens audit: fully verify login error states', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.locator('text="One Human Corp"').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('text="Sign in to manage your business"').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('text="One Human Corp"').first()).toBeVisible();
+    await expect(page.locator('text="Sign in to manage your business"').first()).toBeVisible();
 
     // Try to login with empty credentials
     await page.click('button:has-text("Sign In")');
@@ -17,27 +17,27 @@ test('lens audit: fully verify login error states', async ({ page }) => {
 
     // Switch to sign up mode
     await page.click('button:has-text("New here? Create an account")');
-    await expect(page.locator('text="Create an account to start your business"').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('button:has-text("Sign Up")').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('text="Create an account to start your business"').first()).toBeVisible();
+    await expect(page.locator('button:has-text("Sign Up")').first()).toBeVisible();
 
     // Verify SSO button
-    await expect(page.locator('button:has-text("Use Google or Apple")').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('button:has-text("Use Google or Apple")').first()).toBeVisible();
 
     // Verify start business
-    await expect(page.locator('button:has-text("🚀 Start Business Setup")').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('button:has-text("🚀 Start Business Setup")').first()).toBeVisible();
 });
 
 test('lens audit: fully verify login mode toggling', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.locator('text="Sign in to manage your business"').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('text="Sign in to manage your business"').first()).toBeVisible();
     await page.click('button:has-text("New here? Create an account")');
-    await expect(page.locator('text="Create an account to start your business"').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('button:has-text("Sign Up")').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('text="Create an account to start your business"').first()).toBeVisible();
+    await expect(page.locator('button:has-text("Sign Up")').first()).toBeVisible();
 
     await page.click('button:has-text("Have an account? Sign In")');
-    await expect(page.locator('text="Sign in to manage your business"').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('button:has-text("Sign In")').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('text="Sign in to manage your business"').first()).toBeVisible();
+    await expect(page.locator('button:has-text("Sign In")').first()).toBeVisible();
 });
 
 test('lens audit: fully verify login input states', async ({ page }) => {
@@ -79,5 +79,5 @@ test('lens audit: fully verify start business routing', async ({ page }) => {
     await page.click('button:has-text("🚀 Start Business Setup")');
 
     // Wait for the setup wizard modal/screen to open by checking for its contents
-    await expect(page.locator('text="Your business, live in minutes."').filter({ visible: true }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="Your business, live in minutes."').first()).toBeVisible({ timeout: 5000 });
 });
