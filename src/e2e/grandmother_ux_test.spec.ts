@@ -21,7 +21,7 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
     await page.click('button:has-text("Menu")');
     await page.click('button:has-text("Connect Custom Software")');
 
-    await expect(page.locator('text=Connect Custom Software').last()).toBeVisible();
+    await expect(page.locator('text=Connect Custom Software')).toBeVisible();
   });
 
   test('API Docs screen uses Custom Integration label', async ({ page }) => {
@@ -45,7 +45,7 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
     await page.click('button:has-text("Menu")');
     await page.click('button:has-text("Connect Custom Software")');
 
-    await expect(page.locator('text=Product Data Access').last()).toBeVisible();
+    await expect(page.locator('text=Product Data Access')).toBeVisible();
     await expect(page.locator('text=Read Product List')).toBeVisible();
   });
 });
