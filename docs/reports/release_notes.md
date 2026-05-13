@@ -1,9 +1,7 @@
-# OHC Hybrid Agentic OS Release Notes: v0.4.41
+# OHC Hybrid Agentic OS Release Notes: v0.4.42
 
 ## Cloud (Scaling) Improvements
-- Enhanced backend scaling capabilities.
-- OCI container improvements.
+- Add missing database tables to Postgres schema to ensure full parity with Standalone SQLite schema for multi-tenant deployments.
 
 ## Standalone (Privacy/Offline) Improvements
-- Desktop application refinements for better local execution.
-- Improved privacy guarantees for standalone mode.
+- Implement a comprehensive end-to-end testing suite validating hybrid reliability across both SQLite and Postgres targets.
