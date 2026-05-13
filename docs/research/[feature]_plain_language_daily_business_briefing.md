@@ -1,19 +1,26 @@
-### Title
-[Feature] Plain-Language Daily Business Briefing
+# [feature] Plain Language Daily Business Briefing
 
-**Problem Statement:**
-Founders suffer from "Financial Fog" (35% pain point frequency) and are overwhelmed by complex dashboards with raw metrics. They need actionable insights in human language, not charts.
+**Title**: Implement Plain Language Daily Business Briefing
 
-**Research Report:**
-- Competitors provide traditional analytics dashboards that require interpretation.
-- OHC's "Business Advisor" persona should translate data into simple English.
+**Problem Statement**:
+Analytics dashboards (like Google Analytics or even Shopify's dashboard) are intimidating for small business owners. They don't want to parse charts; they want to be told what happened and what to do next.
 
-**Design Doc:**
-- **UI Flow:** A daily push notification leading to a single "Briefing" screen.
-- **Content:** 3-4 bullet points (e.g., "You had 8 orders this week. Vegan cake requests doubled. Consider adding a vegan chocolate option!").
+**Research Report**:
+- Users want to feel in control without data overload.
+- No competitor currently offers a plain-text, narrative daily summary.
 
-**Implementation Prompt:**
-Create the UI and backend logic for a daily "Business Briefing". The backend should aggregate daily metrics and use the LLM provider to generate a short, plain-language summary. The frontend should display this summary prominently upon first login each day, tailored for a 375px mobile view.
+**Design Doc**:
+- **Architecture**:
+  - Nightly cron job aggregates daily metrics (sales, visits, abandoned carts, low inventory).
+  - LLM summarizes the data into a friendly 3-sentence paragraph.
+  - System dispatches a push notification and saves the summary to the user's dashboard feed.
+- **UI/UX Flow (Mobile 375px first)**:
+  - Push notification at 8:00 AM local time.
+  - Tapping opens the app to the Home screen.
+  - Top card displays the briefing (e.g., "Good morning! You made $150 yesterday...").
 
-**Priority:** P1
-**Estimated Scope:** Medium
+**Implementation Prompt**:
+Create a background job that aggregates daily store data and uses an LLM to generate a plain-language summary paragraph. Implement the push notification dispatch and a mobile-first (375px) dashboard card to display the daily briefing.
+
+**Priority**: P2
+**Estimated Scope**: Medium
