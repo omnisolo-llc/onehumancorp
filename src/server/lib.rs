@@ -1623,10 +1623,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 </head>
                 <body>
                     <nav id="main-nav" style="display: none;">
+
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
+                        <a onclick="showScreen('help-center-screen')">Help Center <span style="font-size: 10px; background: #4ecca3; color: #0f172a; padding: 2px 5px; border-radius: 10px; margin-left: 5px;">?</span></a>
+
                         <a onclick="showScreen('agents-screen')">Agents</a>
                         <a onclick="showScreen('setup-screen')">Setup Wizard</a>
-                        <a onclick="showScreen('api-screen')">Software</a>
+                        <a onclick="showScreen('api-screen')" data-tooltip-id="nav-software">Software</a>
                     </nav>
 
                     <!-- Login Screen -->
@@ -1659,28 +1662,33 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
-                            <p>My Business: <strong>Active</strong></p>
+                            <p>My Business: <strong data-tooltip-id="stat-active">Active</strong></p>
                             <button onclick="showScreen('inbox-screen')">Check Messages</button>
                         </div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
+                            <button onclick="showScreen('agents-screen')" data-tooltip-id="btn-agents">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Update Setup</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
-                            <button>Video Tutorials</button>
+
+                            <button onclick="showScreen('help-center-screen')">📚 Help Center</button>
+                            <button onclick="showScreen('video-tutorials-screen')">▶️ Video Tutorials</button>
+                            <button onclick="showScreen('changelog-screen')">✨ What's New</button>
+                            <button class="secondary" onclick="startWalkthrough('setup-store')">🎯 Tour: Set up your store</button>
+
                         </div>
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
                         <div class="bottom-nav glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
+                            <button class="nav-item" onclick="console.log('action_add_product')" data-tooltip-id="btn-add-product">Add Product</button>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Messages</button>
                             <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Share Store</button>
+                            <button class="nav-item" data-tooltip-id="btn-share">Share Store</button>
                         </div>
                     </div>
 
@@ -1703,13 +1711,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
-                    <!-- API Screen -->
-                    <div id="api-screen" class="screen">
-                        <h1>Custom Integration</h1>
-                        <h1>Custom Software</h1>
-                        <p>Manage your custom software connections here.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
+
 
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
@@ -1809,7 +1811,1049 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
+
+                    <!-- Help Center Screen -->
+                    <div id="help-center-screen" class="screen glass">
+                        <h1>Help Center</h1>
+                        <p>Welcome! We're here to help you grow your business. Search or browse our guides below.</p>
+                        <input type="text" id="help-search" placeholder="Search for answers (e.g., 'How do I accept credit cards?')" onkeyup="searchHelp()" />
+
+                        <div class="help-categories" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                            <button class="secondary" onclick="showHelpCategory('getting-started')">🚀 Getting Started</button>
+                            <button class="secondary" onclick="showHelpCategory('my-store')">🛒 My Store</button>
+                            <button class="secondary" onclick="showHelpCategory('payments')">💳 Payments</button>
+                            <button class="secondary" onclick="showHelpCategory('ai-agents')">🤖 AI Agents</button>
+                            <button class="secondary" onclick="showHelpCategory('marketing')">📈 Marketing</button>
+                            <button class="secondary" onclick="showHelpCategory('account')">⚙️ Account & Billing</button>
+                        </div>
+
+                        <div id="help-content-area">
+
+                            <div id="help-category-glossary" class="help-category-content" style="display: none;">
+                                <h2>Business Glossary</h2>
+                                <p>Simple explanations for common business terms.</p>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">A/B Testing</h3>
+                                    <p style="line-height: 1.6;">A way to compare two versions of a webpage or email to see which one performs better. For example, trying two different subject lines to see which gets more people to open an email.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Abandoned Cart</h3>
+                                    <p style="line-height: 1.6;">When a customer adds items to their online shopping cart but leaves the website without completing the purchase. You can often win these customers back with a polite reminder email.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Accounts Payable</h3>
+                                    <p style="line-height: 1.6;">Money your business owes to suppliers or vendors for goods or services purchased on credit. Essentially, your unpaid bills.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Accounts Receivable</h3>
+                                    <p style="line-height: 1.6;">Money owed to your business by customers who have purchased goods or services on credit. Essentially, bills you are waiting for customers to pay.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Affiliate Marketing</h3>
+                                    <p style="line-height: 1.6;">A way to earn money by promoting other people's products. If someone buys through your unique link, you earn a small commission.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Amortization</h3>
+                                    <p style="line-height: 1.6;">An accounting term that means spreading out the cost of an intangible asset (like a patent or trademark) over its useful life.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Analytics</h3>
+                                    <p style="line-height: 1.6;">Data and statistics about your website or business. Analytics tell you things like how many visitors you have, where they come from, and what they buy.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Assets</h3>
+                                    <p style="line-height: 1.6;">Things your business owns that have value, like cash, inventory, equipment, or property.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">B2B (Business-to-Business)</h3>
+                                    <p style="line-height: 1.6;">A business model where a company sells products or services to other companies, rather than to individual consumers.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">B2C (Business-to-Consumer)</h3>
+                                    <p style="line-height: 1.6;">A business model where a company sells products or services directly to individual consumers.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Balance Sheet</h3>
+                                    <p style="line-height: 1.6;">A financial statement that shows what your business owns (assets), what it owes (liabilities), and the owner's equity at a specific point in time.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Bounce Rate</h3>
+                                    <p style="line-height: 1.6;">The percentage of people who visit a webpage and then leave immediately without clicking on anything else. A high bounce rate might mean your page isn't giving visitors what they expect.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Brand Identity</h3>
+                                    <p style="line-height: 1.6;">The visual and emotional elements that make up your business's image, including your logo, colors, fonts, and the tone of voice you use in your marketing.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Break-Even Point</h3>
+                                    <p style="line-height: 1.6;">The point at which your business's total revenue equals its total expenses. Once you pass this point, you start making a profit.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Burn Rate</h3>
+                                    <p style="line-height: 1.6;">The rate at which a new company is spending its startup capital before it starts generating positive cash flow. Important for knowing how long your money will last.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Call to Action (CTA)</h3>
+                                    <p style="line-height: 1.6;">A clear instruction telling your audience what you want them to do next, like 'Buy Now', 'Sign Up', or 'Learn More'.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Capital</h3>
+                                    <p style="line-height: 1.6;">The money or assets a business needs to operate and grow. This can include cash, equipment, or investments from owners or outside parties.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Cash Flow</h3>
+                                    <p style="line-height: 1.6;">The movement of money in and out of your business. Positive cash flow means more money is coming in than going out.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Churn Rate</h3>
+                                    <p style="line-height: 1.6;">The percentage of customers who stop doing business with you over a given period of time. A lower churn rate is better.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Conversion Rate</h3>
+                                    <p style="line-height: 1.6;">The percentage of visitors to your website who take a desired action, like making a purchase or signing up for a newsletter.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Cost of Goods Sold (COGS)</h3>
+                                    <p style="line-height: 1.6;">The direct costs associated with producing the goods your business sells. This includes materials and direct labor, but not indirect expenses like rent or marketing.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Customer Acquisition Cost (CAC)</h3>
+                                    <p style="line-height: 1.6;">The total amount of money you spend to acquire a new customer, including marketing and sales expenses.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Customer Lifetime Value (CLV)</h3>
+                                    <p style="line-height: 1.6;">The total amount of money a customer is expected to spend with your business over the course of their relationship with you.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Customer Relationship Management (CRM)</h3>
+                                    <p style="line-height: 1.6;">Software or a system used to manage interactions with current and potential customers, keeping track of their contact info, purchase history, and preferences.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Depreciation</h3>
+                                    <p style="line-height: 1.6;">An accounting method of allocating the cost of a tangible asset (like a piece of equipment or a vehicle) over its useful life.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Dropshipping</h3>
+                                    <p style="line-height: 1.6;">A retail fulfillment method where a store doesn't keep the products it sells in stock. Instead, when a store sells a product, it purchases the item from a third party and has it shipped directly to the customer.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">E-commerce</h3>
+                                    <p style="line-height: 1.6;">The buying and selling of goods or services over the internet.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Equity</h3>
+                                    <p style="line-height: 1.6;">The value of the owner's interest in the business, calculated as total assets minus total liabilities.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Fixed Costs</h3>
+                                    <p style="line-height: 1.6;">Business expenses that stay the same regardless of how much you sell, like rent, insurance, and salaries.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Fulfillment</h3>
+                                    <p style="line-height: 1.6;">The entire process of receiving, packaging, and shipping orders to customers.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Gross Margin</h3>
+                                    <p style="line-height: 1.6;">The percentage of total sales revenue that a company retains after incurring the direct costs associated with producing the goods or services sold.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Gross Profit</h3>
+                                    <p style="line-height: 1.6;">Your total revenue minus the Cost of Goods Sold (COGS). This shows how much money you make before deducting operating expenses like marketing and rent.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Inbound Marketing</h3>
+                                    <p style="line-height: 1.6;">A marketing strategy focused on attracting customers through content and interactions that are helpful and relevant, rather than interruptive advertising.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Inventory Turnover</h3>
+                                    <p style="line-height: 1.6;">A measure of how many times a business sells and replaces its inventory over a certain period. A higher turnover rate generally indicates strong sales.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Invoice</h3>
+                                    <p style="line-height: 1.6;">A document sent by a seller to a buyer, listing the products or services provided and the amount owed.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Key Performance Indicator (KPI)</h3>
+                                    <p style="line-height: 1.6;">A measurable value that demonstrates how effectively a company is achieving key business objectives. Examples include sales growth, customer retention, or profit margin.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Landing Page</h3>
+                                    <p style="line-height: 1.6;">A standalone web page created specifically for a marketing or advertising campaign. It's where a visitor 'lands' after clicking a link in an email or ad, designed to encourage a specific action.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Lead Generation</h3>
+                                    <p style="line-height: 1.6;">The process of attracting and converting strangers into people who have indicated an interest in your company's product or service (leads).</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Liabilities</h3>
+                                    <p style="line-height: 1.6;">Financial debts or obligations that your business owes to others, such as loans, accounts payable, or mortgages.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Liquidity</h3>
+                                    <p style="line-height: 1.6;">How easily a business can convert its assets into cash to pay off its short-term debts.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Margin</h3>
+                                    <p style="line-height: 1.6;">The difference between a product or service's selling price and the cost of production. Usually expressed as a percentage.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Marketing Funnel</h3>
+                                    <p style="line-height: 1.6;">A model that describes the customer journey from their first interaction with your brand to the final purchase. Stages typically include Awareness, Interest, Desire, and Action.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Net Profit</h3>
+                                    <p style="line-height: 1.6;">Your total revenue minus all expenses, including Cost of Goods Sold, operating expenses, taxes, and interest. This is your true bottom line.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Niche</h3>
+                                    <p style="line-height: 1.6;">A specialized segment of the market for a particular kind of product or service. Finding a niche helps you target a specific audience.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Operating Expenses (OPEX)</h3>
+                                    <p style="line-height: 1.6;">The ongoing costs of running a business, excluding the Cost of Goods Sold. Examples include rent, utilities, marketing, and office supplies.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Outbound Marketing</h3>
+                                    <p style="line-height: 1.6;">Traditional marketing methods where a company initiates the conversation and sends its message out to an audience, such as cold calling, TV ads, or direct mail.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Overhead</h3>
+                                    <p style="line-height: 1.6;">The ongoing business expenses not directly attributed to creating a product or service. Similar to operating expenses.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Point of Sale (POS)</h3>
+                                    <p style="line-height: 1.6;">The place where a customer executes the payment for goods or services, like a cash register or a secure online checkout page.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Profit and Loss Statement (P&L)</h3>
+                                    <p style="line-height: 1.6;">Also known as an income statement, this financial report summarizes revenues, costs, and expenses incurred during a specific period, usually a month, quarter, or year.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Return on Investment (ROI)</h3>
+                                    <p style="line-height: 1.6;">A measure used to evaluate the efficiency or profitability of an investment. Calculated by dividing the net profit by the cost of the investment.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Search Engine Optimization (SEO)</h3>
+                                    <p style="line-height: 1.6;">The process of improving your website to increase its visibility when people search for products or services related to your business on search engines like Google.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Target Audience</h3>
+                                    <p style="line-height: 1.6;">The specific group of consumers most likely to want your product or service, characterized by demographics, interests, and behaviors.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Unique Selling Proposition (USP)</h3>
+                                    <p style="line-height: 1.6;">The distinct factor that makes your product or service better than or different from the competition. It's why customers should choose you.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Variable Costs</h3>
+                                    <p style="line-height: 1.6;">Business expenses that change in proportion to the volume of goods or services a business produces, like raw materials or shipping costs.</p>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Working Capital</h3>
+                                    <p style="line-height: 1.6;">The difference between a company's current assets and current liabilities. It measures a company's operational efficiency and short-term financial health.</p>
+                                </div>
+
+                            </div>
+                            <div id="help-category-getting-started" class="help-category-content" style="display: none;">
+                                <h2>Getting Started</h2>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Welcome to OneHuman Corp</h3>
+                                    <p style="line-height: 1.6;">Welcome to your new digital storefront! We built this platform so you can focus on what you do best: running your business. This guide will walk you through the basics of setting up your shop, adding your first product, and launching your website to the world. Don't worry if you aren't technical – our tools are designed specifically for small business owners.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Setting up your business profile</h3>
+                                    <p style="line-height: 1.6;">Your business profile tells customers who you are. Make sure to add a clear logo, a friendly description, and accurate contact information. This builds trust and helps people decide to buy from you.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Choosing the right template</h3>
+                                    <p style="line-height: 1.6;">We offer several design templates. Choose one that matches your brand's personality. You can always change it later without losing any of your products or settings.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Understanding the dashboard</h3>
+                                    <p style="line-height: 1.6;">Your dashboard is your home base. From here, you can see recent sales, messages from customers, and alerts from your AI assistants. Check it daily to stay on top of your business.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Connecting your social media</h3>
+                                    <p style="line-height: 1.6;">Linking your Facebook and Instagram accounts allows customers to easily find your profiles. It also helps our Marketing Agent suggest better content for you to post. Go to Settings > Social to connect them.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">How to preview your store</h3>
+                                    <p style="line-height: 1.6;">Before you go live, you might want to see what your store looks like to customers. Click the 'Preview' button in the top right corner. You can view it as it would appear on a computer or a mobile phone.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Setting your store hours</h3>
+                                    <p style="line-height: 1.6;">If you have a physical location or specific times you answer emails, set your store hours. This sets good expectations for when customers will hear back from you.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Understanding the mobile app</h3>
+                                    <p style="line-height: 1.6;">You can manage your business on the go! Download the OneHuman Corp app on your phone. You can reply to customers, add products, and see your sales while you are away from your computer.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Writing an 'About Us' page</h3>
+                                    <p style="line-height: 1.6;">Customers love buying from people, not just faceless companies. Use your About Us page to tell your story. Why did you start this business? What makes your products special?</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Getting help when you need it</h3>
+                                    <p style="line-height: 1.6;">If you get stuck, we are here to help. You can read these guides, ask our AI Help bot a question, or reach out to our human support team via the 'Contact Support' button at the bottom of the page.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+                            </div>
+                            <div id="help-category-my-store" class="help-category-content" style="display: none;">
+                                <h2>My Store</h2>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Adding your first product</h3>
+                                    <p style="line-height: 1.6;">To add a product, go to your dashboard and click 'Add Product'. Give it a clear name, a fair price, and a great photo. Good lighting makes a huge difference in product photos! Write a description that tells customers exactly what they are getting and why they need it.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Managing your inventory</h3>
+                                    <p style="line-height: 1.6;">Keep track of what you have in stock. If you sell physical items, enter the quantity you have on hand. We will automatically show 'Sold Out' when you run out, so you never accidentally sell something you don't have.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Organizing products into categories</h3>
+                                    <p style="line-height: 1.6;">Make it easy for customers to find what they want by grouping similar items together. For example, if you run a clothing store, create categories for 'Shirts', 'Pants', and 'Accessories'.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Setting up shipping options</h3>
+                                    <p style="line-height: 1.6;">Decide how you want to get your products to your customers. You can offer local pickup, flat-rate shipping, or calculated shipping based on weight. Be clear about your shipping times to set good expectations.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">How to write great product descriptions</h3>
+                                    <p style="line-height: 1.6;">A good description helps sell the product. Instead of just listing facts, talk about the benefits. How will this product make your customer's life better, easier, or more fun?</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Taking professional-looking photos</h3>
+                                    <p style="line-height: 1.6;">You don't need a fancy camera. Use your smartphone, find a spot near a window for natural light, and use a plain background like a white sheet of paper. Show the product from a few different angles.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Setting up a 'Coming Soon' page</h3>
+                                    <p style="line-height: 1.6;">If you are still working on your store, you can put up a 'Coming Soon' page. This lets people know you exist and allows them to enter their email address so you can message them when you launch.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Adding digital products</h3>
+                                    <p style="line-height: 1.6;">You can sell things that aren't physical, like ebooks, music, or online courses. Choose 'Digital Product' when adding an item, and upload the file. We will automatically email it to the customer after they pay.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Managing product reviews</h3>
+                                    <p style="line-height: 1.6;">Positive reviews build trust. After a customer buys something, we automatically send an email asking for a review. You can view and respond to these reviews in your dashboard. Always thank people for their feedback!</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Handling out-of-stock items</h3>
+                                    <p style="line-height: 1.6;">If an item is popular and sells out, you can let customers enter their email to be notified when it comes back. This is a great way to ensure you don't lose a sale.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+                            </div>
+                            <div id="help-category-payments" class="help-category-content" style="display: none;">
+                                <h2>Payments</h2>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Connecting your bank account</h3>
+                                    <p style="line-height: 1.6;">Before you can get paid, you need to tell us where to send your money. Go to Settings > Payments and enter your bank details securely. We process payments daily so you get your money fast.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Accepting credit cards</h3>
+                                    <p style="line-height: 1.6;">We accept all major credit cards. You don't need a separate merchant account. When a customer buys something, the money goes straight to your connected bank account minus a small processing fee.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Handling refunds</h3>
+                                    <p style="line-height: 1.6;">Sometimes things don't work out. If a customer needs a refund, you can easily issue it from the Orders tab. You can refund the full amount or just a portion of it. The money will be returned to their original payment method.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Understanding sales tax</h3>
+                                    <p style="line-height: 1.6;">Taxes can be confusing. We help by automatically calculating the right sales tax based on where your customer lives. You can view your tax reports anytime to help with accounting.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">When will I get paid?</h3>
+                                    <p style="line-height: 1.6;">After a customer makes a purchase, the money usually takes 2 business days to arrive in your bank account. The first payment ever might take up to 7 days while your bank verifies your account.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Setting up a tip jar</h3>
+                                    <p style="line-height: 1.6;">If you provide a service or want to let customers show extra appreciation, you can enable tips at checkout. This is completely optional for both you and your customers.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Dealing with a disputed charge</h3>
+                                    <p style="line-height: 1.6;">If a customer tells their bank they didn't make a purchase, it's called a dispute. We will help you provide evidence, like tracking numbers, to prove the item was delivered.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">How processing fees work</h3>
+                                    <p style="line-height: 1.6;">Every time a customer uses a credit card, the credit card companies charge a small fee. We clearly list this fee on every order so you always know exactly how much money you are taking home.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Accepting payments in person</h3>
+                                    <p style="line-height: 1.6;">If you sell at craft fairs or have a physical shop, you can use our mobile app to accept payments in person. Just type in the amount and tap their card.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Sending invoices</h3>
+                                    <p style="line-height: 1.6;">Sometimes you need to bill a customer later. You can create a professional-looking invoice and email it to them directly from your dashboard. They can click a link in the email to pay securely online.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+                            </div>
+                            <div id="help-category-ai-agents" class="help-category-content" style="display: none;">
+                                <h2>Ai Agents</h2>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">What are AI Agents?</h3>
+                                    <p style="line-height: 1.6;">Think of AI Agents as your digital employees. They work 24/7 in the background. The Support Agent can answer common customer questions, and the Marketing Agent can help write emails. They are here to save you time.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Training your Support Agent</h3>
+                                    <p style="line-height: 1.6;">Your Support Agent learns from the information you give it. Add details about your return policy, store hours, and product materials. The more it knows, the better it can help your customers without bothering you.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Using the Marketing Agent</h3>
+                                    <p style="line-height: 1.6;">Need to write a newsletter? Ask the Marketing Agent. Just give it a topic, like 'Summer Sale', and it will write a friendly email you can send to your customers. It's like having a copywriter on your team.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Reviewing Agent activity</h3>
+                                    <p style="line-height: 1.6;">You can always see what your agents are doing. Go to the Agents tab to review conversations they've had with customers or content they've created. You are always in control.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">The Customer Success Agent</h3>
+                                    <p style="line-height: 1.6;">This agent automatically follows up with customers a week after they buy something. It makes sure they are happy and politely asks if they would like to leave a review. It's great for building loyalty.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">How do the agents sound?</h3>
+                                    <p style="line-height: 1.6;">We've programmed the agents to sound friendly, polite, and professional. They do not sound like robots. You can read examples of their conversations in the Agent Settings menu.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">When an agent doesn't know the answer</h3>
+                                    <p style="line-height: 1.6;">If a customer asks a question the Support Agent hasn't been trained on, the agent will politely say it needs to check with the owner. It will then send the message to your inbox for you to handle.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Adding custom knowledge</h3>
+                                    <p style="line-height: 1.6;">You can upload documents, like a PDF of your menu or a spreadsheet of your ingredient list, directly to the Support Agent's brain. It will read the document and use that information to answer questions.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Agent pricing and limits</h3>
+                                    <p style="line-height: 1.6;">On the standard plan, your agents can answer 500 customer messages per month for free. If you need more, you can upgrade your plan. The Marketing Agent has no limits on how many emails it can draft for you.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Turning an agent off</h3>
+                                    <p style="line-height: 1.6;">If you want to handle everything yourself for a while, you can pause any agent with a single click. Simply go to the Agents page and toggle the switch to 'Off'.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+                            </div>
+                            <div id="help-category-marketing" class="help-category-content" style="display: none;">
+                                <h2>Marketing</h2>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Getting your first customers</h3>
+                                    <p style="line-height: 1.6;">The easiest way to get your first sales is to share your store with friends and family. Post your link on your personal social media accounts. Word of mouth is incredibly powerful for new businesses.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Setting up a discount code</h3>
+                                    <p style="line-height: 1.6;">Everyone loves a deal! Create a discount code like 'WELCOME10' to give new customers 10% off their first order. You can limit how many times a code can be used or set an expiration date.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Collecting email addresses</h3>
+                                    <p style="line-height: 1.6;">Email is the best way to keep in touch with your customers. Add a signup form to your store. Send them updates about new products, sales, and behind-the-scenes looks at your business.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Understanding your analytics</h3>
+                                    <p style="line-height: 1.6;">Your Analytics page shows you how many people are visiting your store and what they are buying. Use this information to figure out what's working. If a lot of people visit a product but don't buy, you might need better photos or a lower price.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Creating an abandoned cart email</h3>
+                                    <p style="line-height: 1.6;">Sometimes people put items in their cart but forget to check out. You can turn on a setting to automatically email them a friendly reminder. This is a proven way to recover lost sales.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Writing a great newsletter</h3>
+                                    <p style="line-height: 1.6;">Don't just sell in your emails. Share helpful tips, stories about your business, or behind-the-scenes photos. People are more likely to buy from someone they feel connected to.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Running a flash sale</h3>
+                                    <p style="line-height: 1.6;">Create excitement by offering a large discount for a very short time, like 24 hours. Make sure to email your list and post on social media to let everyone know it's happening.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Offering free shipping</h3>
+                                    <p style="line-height: 1.6;">Free shipping is a huge incentive for buyers. You can offer free shipping on all orders, or set a minimum (e.g., 'Free shipping on orders over $50'). This encourages customers to add more items to their cart.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Partnering with other businesses</h3>
+                                    <p style="line-height: 1.6;">Find another local business that sells complementary products. For example, if you sell coffee beans, partner with someone who sells handmade mugs. You can promote each other to your respective audiences.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Understanding SEO</h3>
+                                    <p style="line-height: 1.6;">SEO stands for Search Engine Optimization. It's how you get found on Google. The best way to improve your SEO is to use clear, descriptive titles for your products and write detailed descriptions.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+                            </div>
+                            <div id="help-category-account" class="help-category-content" style="display: none;">
+                                <h2>Account</h2>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Changing your password</h3>
+                                    <p style="line-height: 1.6;">To keep your account safe, use a strong password. You can change your password anytime in Settings > Security. If you forget it, use the 'Forgot Password' link on the login page.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Managing your subscription</h3>
+                                    <p style="line-height: 1.6;">View your current billing plan and past invoices in Settings > Billing. You can upgrade or downgrade your plan at any time based on what your business needs.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Adding team members</h3>
+                                    <p style="line-height: 1.6;">If you have employees, you can give them their own login. Go to Settings > Team and invite them. You can restrict what they are allowed to see and do, so your sensitive information stays private.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Closing your store</h3>
+                                    <p style="line-height: 1.6;">We'd be sad to see you go, but if you need to close your store, you can do so in Settings. Make sure to fulfill all your open orders and download your customer list before closing.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Updating your billing credit card</h3>
+                                    <p style="line-height: 1.6;">If the credit card you use to pay your OneHuman Corp subscription expires, you can easily update it in Settings > Billing. This ensures your store stays online without interruption.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Exporting your data</h3>
+                                    <p style="line-height: 1.6;">You own your data. You can download a spreadsheet of all your customers, orders, and products at any time. Go to Settings > Data Export to download everything.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Changing your business name</h3>
+                                    <p style="line-height: 1.6;">If you rebrand, you can update your store name in Settings > General. Remember to also check if you need to update your custom domain to match the new name.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Upgrading to an annual plan</h3>
+                                    <p style="line-height: 1.6;">You can save money by paying for a full year upfront instead of month-to-month. Go to Settings > Billing and select 'Switch to Annual Plan' to lock in the discount.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Finding your tax forms</h3>
+                                    <p style="line-height: 1.6;">At the end of the year, we provide the necessary tax forms (like a 1099-K in the US) if you meet the sales threshold. You can download these securely from the Billing page.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+
+                                <div class="help-article" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                    <h3 style="margin-top: 0;">Transferring ownership</h3>
+                                    <p style="line-height: 1.6;">If you sell your business, you can transfer ownership of the OneHuman Corp account to the new owner. Contact support to initiate this secure process.</p>
+                                    <button class="secondary" style="font-size: 12px; padding: 5px 10px;">Was this helpful? 👍</button>
+                                </div>
+                            </div>
+
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Video Tutorials Screen -->
+                    <div id="video-tutorials-screen" class="screen glass">
+                        <h1>Video Tutorials</h1>
+                        <p>Watch short, easy-to-follow videos on how to manage your business.</p>
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 15px;" id="video-tutorial-list">
+                        </div>
+                        <div id="video-player-overlay" style="display:none; margin-top: 20px; background: black; padding: 20px; border-radius: 8px; text-align: center;">
+                            <h3 id="video-title">Playing Video</h3>
+                            <div style="width: 100%; height: 200px; background: #333; display: flex; align-items: center; justify-content: center;">
+                                <video id="tutorial-video-player" width="100%" controls>
+                                  <source src="" type="video/mp4">
+                                  Your browser does not support the video tag.
+                                </video>
+                            </div>
+                            <button onclick="document.getElementById('video-player-overlay').style.display='none'; document.getElementById('tutorial-video-player').pause();" style="margin-top: 15px;">Close Video</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- API Reference Screen (Advanced) -->
+                    <div id="api-screen" class="screen glass">
+                        <h1>Developer API Reference</h1>
+                        <p>Warning: This section is for advanced users and developers who want to write custom software. You do not need to use this to run your business.</p>
+                        <div id="swagger-ui-container">
+                            <p>Loading interactive API documentation...</p>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Changelog Screen -->
+                    <div id="changelog-screen" class="screen glass">
+                        <h1>What's New</h1>
+                        <p>We are constantly improving the platform to help you sell more. Here are the latest updates.</p>
+
+                        <div class="card">
+                            <h3>May 2024 Updates</h3>
+                            <img src="https://via.placeholder.com/600x200?text=New+Shipping+Labels" style="max-width: 100%; border-radius: 8px; margin-bottom: 10px;" />
+                            <ul>
+                                <li><strong>Better Shipping Labels:</strong> You can now print shipping labels directly from your dashboard! This saves you a trip to the post office.</li>
+                                <li><strong>Faster Payouts:</strong> Money from sales will now arrive in your bank account one day faster.</li>
+                                <li><strong>New Email Templates:</strong> The Marketing Agent has 5 new templates for welcoming new customers.</li>
+                            </ul>
+                        </div>
+
+                        <div class="card">
+                            <h3>April 2024 Updates</h3>
+                            <img src="https://via.placeholder.com/600x200?text=Inventory+Alerts" style="max-width: 100%; border-radius: 8px; margin-bottom: 10px;" />
+                            <ul>
+                                <li><strong>Inventory Alerts:</strong> We will now send you an email when a product is running low so you can restock before you sell out.</li>
+                                <li><strong>Mobile Dashboard Improved:</strong> The dashboard is now much easier to read on your phone.</li>
+                            </ul>
+                        </div>
+                        <p><a href="/changelog" target="_blank" style="color: #4ecca3;">View full changelog on our website →</a></p>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- AI Help Widget (Floating) -->
+                    <div id="ai-help-widget" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+                        <button id="ai-help-button" onclick="toggleAiHelp()" style="border-radius: 50px; width: 60px; height: 60px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 24px; display: flex; align-items: center; justify-content: center; margin: 0;">❓</button>
+
+                        <div id="ai-help-panel" class="glass" style="display: none; position: absolute; bottom: 80px; right: 0; width: 320px; height: 400px; flex-direction: column; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                            <div style="background: #4ecca3; color: #0f172a; padding: 15px; font-weight: bold; border-top-left-radius: 16px; border-top-right-radius: 16px; display: flex; justify-content: space-between;">
+                                <span>Support Agent</span>
+                                <span style="cursor:pointer;" onclick="toggleAiHelp()">✕</span>
+                            </div>
+                            <div id="ai-help-chat-history" style="flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+                                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; align-self: flex-start; max-width: 80%;">
+                                    Hi there! I'm your support assistant. What do you need help with today?
+                                </div>
+                            </div>
+                            <div style="padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); display: flex;">
+                                <input type="text" id="ai-help-input" placeholder="Type a question..." style="margin-bottom: 0; border-radius: 4px 0 0 4px; flex: 1;" onkeypress="if(event.key === 'Enter') submitAiHelp()"/>
+                                <button onclick="submitAiHelp()" style="margin: 0; border-radius: 0 4px 4px 0; padding: 0 15px;">Send</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <script src="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui-bundle.js"></script>
+                    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css">
                     <script>
+                        // Help Center Logic
+                        function showHelpCategory(categoryId) {
+                            document.querySelectorAll('.help-category-content').forEach(el => el.style.display = 'none');
+                            const target = document.getElementById('help-category-' + categoryId);
+                            if (target) target.style.display = 'block';
+                            document.getElementById('help-search').value = '';
+                            searchHelp(); // reset search
+                        }
+
+                        function searchHelp() {
+                            const query = document.getElementById('help-search').value.toLowerCase();
+                            if (query.length > 0) {
+                                document.querySelectorAll('.help-category-content').forEach(el => el.style.display = 'block'); // show all categories
+                            } else {
+                                // Default back to showing nothing or the first category
+                            }
+
+                            document.querySelectorAll('.help-article').forEach(article => {
+                                const text = article.innerText.toLowerCase();
+                                if (text.includes(query)) {
+                                    article.style.display = 'block';
+                                } else {
+                                    article.style.display = 'none';
+                                }
+                            });
+                        }
+
+                        // Video Tutorial Logic (Fetching metadata from backend mock)
+                        const backendVideoMetadata = [
+                            { id: 'setup', title: 'How to setup your first product', duration: '1:20', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+                            { id: 'shipping', title: 'Setting up shipping rates', duration: '0:55', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+                            { id: 'domain', title: 'Connecting a custom domain', duration: '1:45', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+                            { id: 'taxes', title: 'Understanding automated taxes', duration: '2:10', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+                            { id: 'ai', title: 'Training your Support Agent', duration: '1:15', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+                            { id: 'marketing', title: 'Sending your first email newsletter', duration: '2:30', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+                            { id: 'payouts', title: 'How and when you get paid', duration: '1:05', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+                            { id: 'refunds', title: 'Processing a refund', duration: '0:45', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+                            { id: 'discounts', title: 'Creating discount codes', duration: '1:10', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+                            { id: 'analytics', title: 'Reading your sales reports', duration: '1:50', url: 'https://www.w3schools.com/html/mov_bbb.mp4' }
+                        ];
+
+                        function renderVideoList() {
+                            const list = document.getElementById('video-tutorial-list');
+                            if(!list) return;
+                            list.innerHTML = '';
+                            backendVideoMetadata.forEach(video => {
+                                list.innerHTML += `<div class="card" onclick="playVideo('${video.id}', '${video.url}', '${video.title}')">▶️ ${video.title} (${video.duration})</div>`;
+                            });
+                        }
+
+                        function playVideo(id, url, titleStr) {
+                            const overlay = document.getElementById('video-player-overlay');
+                            const title = document.getElementById('video-title');
+                            const player = document.getElementById('tutorial-video-player');
+
+                            overlay.style.display = 'block';
+                            title.innerText = "Playing tutorial: " + titleStr;
+                            player.src = url;
+                            player.play();
+                            overlay.scrollIntoView({ behavior: 'smooth' });
+                        }
+
+                        // AI Help Chat Logic (Routing to backend agent mock)
+                        function toggleAiHelp() {
+                            const panel = document.getElementById('ai-help-panel');
+                            panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+                        }
+
+                        async function submitAiHelp() {
+                            const input = document.getElementById('ai-help-input');
+                            const text = input.value.trim();
+                            if (!text) return;
+
+                            const history = document.getElementById('ai-help-chat-history');
+
+                            // Add user message
+                            const userMsg = document.createElement('div');
+                            userMsg.style = "background: #4ecca3; color: #0f172a; padding: 10px; border-radius: 8px; align-self: flex-end; max-width: 80%;";
+                            userMsg.innerText = text;
+                            history.appendChild(userMsg);
+
+                            input.value = '';
+                            history.scrollTop = history.scrollHeight;
+
+                            // Route to backend specialized Help Agent (mocked via fetch to health endpoint for simulation)
+                            try {
+                                await fetch('/api/v1/health'); // Simulate backend call to agent router
+
+                                let response = "I'm looking that up for you...";
+                                let link = "";
+
+                                const t = text.toLowerCase();
+                                if (t.includes('pay') || t.includes('credit card') || t.includes('money')) {
+                                    response = "To accept payments, go to Settings > Payments and connect your bank account. We process payments daily so you get your money fast.";
+                                    link = "<br/><br/><a href='#' onclick=\"showScreen('help-center-screen'); showHelpCategory('payments'); toggleAiHelp();\" style='color: #fff; text-decoration: underline;'>Read the full article →</a>";
+                                } else if (t.includes('product') || t.includes('add') || t.includes('sell')) {
+                                    response = "You can add a new product from your Dashboard. Click the 'Add Product' button, upload a photo, and set your price.";
+                                    link = "<br/><br/><a href='#' onclick=\"showScreen('help-center-screen'); showHelpCategory('my-store'); toggleAiHelp();\" style='color: #fff; text-decoration: underline;'>Read the full article →</a>";
+                                } else if (t.includes('agent') || t.includes('ai')) {
+                                    response = "AI Agents are like digital employees. You can train them by adding business details in the Agents tab.";
+                                    link = "<br/><br/><a href='#' onclick=\"showScreen('help-center-screen'); showHelpCategory('ai-agents'); toggleAiHelp();\" style='color: #fff; text-decoration: underline;'>Read the full article →</a>";
+                                } else {
+                                    response = "I found some information that might help in our Help Center. Try searching for your specific issue there.";
+                                    link = "<br/><br/><a href='#' onclick=\"showScreen('help-center-screen'); toggleAiHelp();\" style='color: #fff; text-decoration: underline;'>Open Help Center →</a>";
+                                }
+
+                                const aiMsg = document.createElement('div');
+                                aiMsg.style = "background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; align-self: flex-start; max-width: 80%;";
+                                aiMsg.innerHTML = response + link;
+                                history.appendChild(aiMsg);
+                                history.scrollTop = history.scrollHeight;
+                            } catch (e) {
+                                const aiMsg = document.createElement('div');
+                                aiMsg.style = "background: rgba(255,107,107,0.1); color: #ff6b6b; padding: 10px; border-radius: 8px; align-self: flex-start; max-width: 80%;";
+                                aiMsg.innerHTML = "Sorry, my connection to the backend is down. Please try again later.";
+                                history.appendChild(aiMsg);
+                            }
+                        }
+
+                        // Contextual Tooltip Registry Logic
+                        const tooltipRegistry = {
+                            'btn-add-product': 'Click here to add a new item to your store.',
+                            'btn-agents': 'Manage your AI assistants here.',
+                            'nav-software': 'Connect third-party tools like accounting software.',
+                            'btn-share': 'Get a link to your store to share on social media.',
+                            'stat-active': 'Your store is live and can accept customers right now.',
+                            'menu-help': 'Open the Help Center for guides and support.'
+                        };
+
+                        // Inject tooltip target data into existing dashboard UI elements
+                        document.addEventListener("DOMContentLoaded", () => {
+                            renderVideoList();
+
+                            // Initialize Swagger UI for API Docs
+                            const openapiSpec = {
+                                openapi: '3.0.0',
+                                info: { title: 'OneHuman Corp API', version: '1.0.0' },
+                                paths: {
+                                    '/api/v1/products': {
+                                        get: {
+                                            summary: 'Get Products',
+                                            responses: { '200': { description: 'A list of products' } }
+                                        }
+                                    },
+                                    '/api/v1/orders': {
+                                        post: {
+                                            summary: 'Create Order',
+                                            responses: { '201': { description: 'Order created' } }
+                                        }
+                                    }
+                                }
+                            };
+                            if (window.SwaggerUIBundle) {
+                                window.SwaggerUIBundle({
+                                    spec: openapiSpec,
+                                    dom_id: '#swagger-ui-container',
+                                });
+                            }
+
+                            // Setup global tooltip listener
+                            const tooltipDiv = document.createElement('div');
+                            tooltipDiv.style = "position: absolute; display: none; background: rgba(15, 23, 42, 0.95); border: 1px solid #4ecca3; color: white; padding: 10px; border-radius: 8px; font-size: 14px; max-width: 250px; z-index: 9999; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5);";
+                            document.body.appendChild(tooltipDiv);
+
+                            document.body.addEventListener('mouseover', (e) => {
+                                const id = e.target.getAttribute('data-tooltip-id');
+                                if (id && tooltipRegistry[id]) {
+                                    tooltipDiv.innerText = tooltipRegistry[id];
+                                    tooltipDiv.style.display = 'block';
+
+                                    const rect = e.target.getBoundingClientRect();
+                                    tooltipDiv.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+                                    tooltipDiv.style.left = (rect.left + window.scrollX) + 'px';
+                                }
+                            });
+
+                            document.body.addEventListener('mouseout', (e) => {
+                                if (e.target.getAttribute('data-tooltip-id')) {
+                                    tooltipDiv.style.display = 'none';
+                                }
+                            });
+
+                            // Mobile long-press logic
+                            let pressTimer;
+                            document.body.addEventListener('touchstart', (e) => {
+                                const id = e.target.getAttribute('data-tooltip-id');
+                                if (id && tooltipRegistry[id]) {
+                                    pressTimer = window.setTimeout(() => {
+                                        tooltipDiv.innerText = tooltipRegistry[id];
+                                        tooltipDiv.style.display = 'block';
+
+                                        const touch = e.touches[0];
+                                        tooltipDiv.style.top = (touch.pageY + 15) + 'px';
+                                        tooltipDiv.style.left = (touch.pageX - 100) + 'px';
+                                    }, 500); // 500ms long press
+                                }
+                            });
+
+                            document.body.addEventListener('touchend', () => {
+                                clearTimeout(pressTimer);
+                                tooltipDiv.style.display = 'none';
+                            });
+                        });
+
+                        // Interactive Walkthrough Engine
+                        const walkthroughs = {
+                            'setup-store': [
+                                { target: '.bottom-nav button:nth-child(1)', text: 'Step 1: Start by adding your first product here.' },
+                                { target: '#main-nav a:nth-child(3)', text: 'Step 2: Next, activate an AI Agent to help with support.' },
+                                { target: '.bottom-nav button:nth-child(5)', text: 'Step 3: Finally, share your store link with friends!' }
+                            ]
+                        };
+
+                        let currentWalkthrough = null;
+                        let currentStep = 0;
+                        const walkthroughHighlight = document.createElement('div');
+                        walkthroughHighlight.style = "position: absolute; display: none; border: 3px solid #4ecca3; border-radius: 4px; pointer-events: none; z-index: 9998; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); transition: all 0.3s ease;";
+
+                        const walkthroughBubble = document.createElement('div');
+                        walkthroughBubble.style = "position: absolute; display: none; background: white; color: #0f172a; padding: 15px; border-radius: 8px; font-weight: bold; z-index: 9999; max-width: 250px;";
+                        walkthroughBubble.innerHTML = "<span id='wt-text'></span><br/><br/><button id='wt-next' onclick='nextWalkthroughStep()' style='padding: 5px 10px; font-size: 12px; margin-bottom: 0;'>Next Step</button> <button onclick='stopWalkthrough()' class='secondary' style='padding: 5px 10px; font-size: 12px; margin-bottom: 0;'>Close</button>";
+
+                        document.addEventListener("DOMContentLoaded", () => {
+                            document.body.appendChild(walkthroughHighlight);
+                            document.body.appendChild(walkthroughBubble);
+                        });
+
+                        function startWalkthrough(id) {
+                            if (!walkthroughs[id]) return;
+                            currentWalkthrough = walkthroughs[id];
+                            currentStep = 0;
+                            showWalkthroughStep();
+                        }
+
+                        function nextWalkthroughStep() {
+                            currentStep++;
+                            if (currentStep >= currentWalkthrough.length) {
+                                stopWalkthrough();
+                            } else {
+                                showWalkthroughStep();
+                            }
+                        }
+
+                        function stopWalkthrough() {
+                            walkthroughHighlight.style.display = 'none';
+                            walkthroughBubble.style.display = 'none';
+                            currentWalkthrough = null;
+                        }
+
+                        function showWalkthroughStep() {
+                            const step = currentWalkthrough[currentStep];
+                            const el = document.querySelector(step.target);
+
+                            if (el) {
+                                // Scroll into view if needed
+                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                                setTimeout(() => {
+                                    const rect = el.getBoundingClientRect();
+
+                                    walkthroughHighlight.style.top = (rect.top + window.scrollY - 5) + 'px';
+                                    walkthroughHighlight.style.left = (rect.left + window.scrollX - 5) + 'px';
+                                    walkthroughHighlight.style.width = (rect.width + 10) + 'px';
+                                    walkthroughHighlight.style.height = (rect.height + 10) + 'px';
+                                    walkthroughHighlight.style.display = 'block';
+
+                                    document.getElementById('wt-text').innerText = step.text;
+                                    walkthroughBubble.style.top = (rect.bottom + window.scrollY + 15) + 'px';
+                                    walkthroughBubble.style.left = (rect.left + window.scrollX) + 'px';
+
+                                    if (currentStep === currentWalkthrough.length - 1) {
+                                        document.getElementById('wt-next').innerText = "Finish";
+                                    } else {
+                                        document.getElementById('wt-next').innerText = "Next Step";
+                                    }
+
+                                    walkthroughBubble.style.display = 'block';
+                                }, 300); // wait for scroll
+                            }
+                        }
+                    </script>
+<script>
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
