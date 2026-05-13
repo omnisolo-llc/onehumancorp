@@ -302,6 +302,12 @@ export component SetupWizard inherits Window {
                     VerticalBox { alignment: center; padding: 12px; Text { text: "📦 Physical products"; font-family: "Inter"; font-size: 16px; color: white; } }
                     TouchArea { clicked => { toggle_sell_physical(); } }
                 }
+                if (business_type != "Service Business" && business_type != "Restaurant / Food") : GlassCard {
+                    height: 50px;
+                    background: sell_physical ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "Physical products"; font-family: "Inter"; font-size: 16px; color: white; } }
+                    TouchArea { clicked => { toggle_sell_physical(); } }
+                }
                 if (business_type != "Restaurant / Food") : GlassCard {
                     height: 50px;
                     background: sell_digital ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
@@ -337,7 +343,7 @@ export component SetupWizard inherits Window {
                     height: 70px;
                     background: payment_pref == "online" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🌐 Online only"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Online only"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Get paid on your website (instant setup)"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_payment_pref("online"); save_state(); } }
@@ -567,7 +573,7 @@ export component SetupWizard inherits Window {
                     height: 80px;
                     background: domain_choice == "subdomain" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px;
-                        Text { text: "🌐 Free OHC Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Free OHC Domain"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "mybusiness.ohc.app"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                     }
                     TouchArea { clicked => { select_domain("subdomain"); save_state(); } }
@@ -764,7 +770,7 @@ export component SetupWizard inherits Window {
             }
             if (step == 0) : Rectangle { width: 80px; } // spacer
 
-            if (step > 0 && step < 9 && step != 1) : GlassCard {
+            if (step > 0 && step < 9) : GlassCard {
                 height: 44px;
                 background: rgba(168, 85, 247, 0.8);
                 VerticalBox { alignment: center; Text { text: "Next →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
@@ -797,6 +803,10 @@ export component SetupWizard inherits Window {
                 background: rgba(16, 185, 129, 1.0);
                 VerticalBox { alignment: center; Text { text: "View Welcome Checklist →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => { step = 10; } }
+            }
+            if (step == 9 && launch_success) : Button {
+                text: "Copy Store Link";
+                clicked => { copy_link(shareable_link); }
             }
 
             if (step == 10) : GlassCard {

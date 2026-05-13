@@ -40,6 +40,9 @@ export component AgentHire inherits Window {
             
             HorizontalBox {
                 spacing: 10px;
+                Button { text: "The Ambassador"; clicked => { selected_role = "The Ambassador"; agent_name = "Customer Support"; } }
+                Button { text: "The Promoter"; clicked => { selected_role = "The Promoter"; agent_name = "Marketing"; } }
+                Button { text: "The Salesperson"; clicked => { selected_role = "The Salesperson"; agent_name = "Sales"; } }
                 for role in roles : Button {
                     text: role;
                     clicked => { selected_role = role; agent_name = "Senior " + role; }
@@ -82,11 +85,7 @@ export component AgentHire inherits Window {
             spacing: 10px;
             Text { text: "Step 5 — Select Capabilities"; font-size: 18px; font-weight: 700; color: #1e293b; }
             HorizontalBox {
-                Text { text: "Read my emails"; color: #1e293b; }
-                CheckBox { checked: cap_email; toggled => { cap_email = !cap_email; } }
-            }
-            HorizontalBox {
-                Text { text: "Send messages on my behalf"; color: #1e293b; }
+                Text { text: "Reply to customer messages"; color: #1e293b; }
                 CheckBox { checked: cap_message; toggled => { cap_message = !cap_message; } }
             }
         }
@@ -97,6 +96,11 @@ export component AgentHire inherits Window {
             Text { text: "Step 6 — Resource Limits"; font-size: 18px; font-weight: 700; color: #1e293b; }
             Text { text: "Max sessions per day: 50"; color: #1e293b; }
             Text { text: "[ Slider ]"; color: #64748b; horizontal-alignment: center; }
+        }
+
+        // Step 7: Activated
+        if (step == 7) : VerticalBox {
+            Text { text: "Helper Activated ✓"; font-size: 18px; font-weight: 700; color: #10b981; }
         }
 
         // Step 6: Confirm
@@ -111,7 +115,7 @@ export component AgentHire inherits Window {
                 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Name: " + agent_name; color: #1e293b; }
+                    Text { text: "Helper: " + agent_name; color: #1e293b; }
                     Text { text: "Role: " + selected_role; color: #1e293b; }
                     Text { text: "Provider: " + selected_provider; color: #1e293b; }
                 }
@@ -128,12 +132,13 @@ export component AgentHire inherits Window {
             }
             Rectangle {} // Spacer
             Button {
-                text: step == 6 ? "Deploy Helper" : "Next";
+                text: step == 6 ? "Activate" : "Next";
                 enabled: next_enabled;
                 clicked => {
                     if (step < 6) {
                         step = step + 1;
                     } else {
+                        step = step + 1;
                         deploy_agent(agent_name, selected_role, selected_provider);
                     }
                 }

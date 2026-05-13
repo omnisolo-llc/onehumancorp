@@ -104,6 +104,12 @@ export component PromptTuning inherits Window {
                 GlassCard {
                     height: 44px;
                     background: focus_only_business ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px; Text { text: "🎯 Only about my products"; font-family: "Inter"; font-size: 14px; color: white; } }
+                    TouchArea { clicked => { focus_only_business = !focus_only_business; } }
+                }
+                GlassCard {
+                    height: 44px;
+                    background: focus_only_business ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                     VerticalBox { alignment: center; padding: 12px; Text { text: "🎯 Only discuss business"; font-family: "Inter"; font-size: 14px; color: white; } }
                     TouchArea { clicked => { focus_only_business = !focus_only_business; } }
                 }

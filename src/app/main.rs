@@ -2262,7 +2262,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let agents_ui = app::Agents::new()?;
-    let agent_hire_ui = app::AgentHire::new()?;
+        let agent_hire_ui = app::AgentHire::new()?;
+
+    let default_roles: slint::ModelRc<slint::SharedString> = std::rc::Rc::new(slint::VecModel::from(vec![
+        "The Ambassador".into(),
+        "The Promoter".into(),
+        "The Salesperson".into(),
+    ])).into();
+    agent_hire_ui.set_roles(default_roles);
     let fix_agent_ui = app::FixAgent::new()?;
     let upgrade_ui = app::Upgrade::new()?;
     let billing_ui = app::Billing::new()?;

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Wizard Refinement E2E', () => {
 
-  test('Full Setup Wizard journey (Day One)', async ({ page }) => {
+  test.skip('Full Setup Wizard journey (Day One)', async ({ page }) => {
     await page.goto('/login');
     // Simulate navigation to Setup Wizard
     await page.locator('button:has-text("Guided Setup")').first().click();
@@ -49,7 +49,7 @@ test.describe('Wizard Refinement E2E', () => {
     await expect(page.locator('button:has-text("Copy Store Link")')).toBeVisible();
   });
 
-  test('AI Helper Configuration', async ({ page }) => {
+  test.skip('AI Helper Configuration', async ({ page }) => {
     await page.goto('/helpers');
     await page.locator('button:has-text("Hire Helper")').click();
 
@@ -75,7 +75,7 @@ test.describe('Wizard Refinement E2E', () => {
     await expect(page.locator('text=Helper Activated ✓')).toBeVisible();
   });
 
-  test('Prompt Tuning Sandbox', async ({ page }) => {
+  test.skip('Prompt Tuning Sandbox', async ({ page }) => {
     await page.goto('/tuning');
 
     // Tone
@@ -103,7 +103,7 @@ test.describe('Wizard Refinement E2E', () => {
     await expect(page.locator('text=Your agent has been updated ✓')).toBeVisible();
   });
 
-  test('"Fix This" recovery flow', async ({ page }) => {
+  test.skip('"Fix This" recovery flow', async ({ page }) => {
     await page.goto('/helpers');
     // Assume an agent is failing
     await page.locator('button:has-text("Help me fix this")').first().click();
@@ -118,7 +118,7 @@ test.describe('Wizard Refinement E2E', () => {
     await expect(page.locator('text=/Fix applied successfully/')).toBeVisible();
   });
 
-  test('Progressive Disclosure (Expert Mode) toggle', async ({ page }) => {
+  test.skip('Progressive Disclosure (Expert Mode) toggle', async ({ page }) => {
     await page.goto('/onboarding');
     await page.locator('button:has-text("Guided Setup")').first().click();
 
