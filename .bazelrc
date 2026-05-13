@@ -2,8 +2,8 @@
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
 # Provides remote cache, remote execution, and build event streaming.
-# build --config=buildbuddy
-# test --config=buildbuddy
+build --config=buildbuddy
+test --config=buildbuddy
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
@@ -79,6 +79,9 @@ common:buildbuddy-official --remote_local_fallback
 # Prevents CacheNotFoundException from failing repository rule fetches.
 common:buildbuddy-official --experimental_remote_downloader_local_fallback
 common:buildbuddy-official --jobs=200
+# Default read-only API key (public, read-only – cannot push artifacts or
+# modify any BuildBuddy state; safe to keep in version control).
+common:buildbuddy-official --remote_header=x-buildbuddy-api-key=0kY0rwFuU8wZVQ5339w6
 
 # ── BuildBuddy self-hosted ──────────────────────────────────────
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
@@ -97,6 +100,7 @@ common:buildbuddy --remote_upload_local_results
 common:buildbuddy --experimental_remote_downloader_local_fallback
 common:buildbuddy --jobs=200
 # Read only Bazel cache
+common:buildbuddy --remote_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
 common:buildbuddy --remote_timeout=10m
 build:buildbuddy --verbose_failures
 build:buildbuddy --bes_upload_mode=fully_async
@@ -123,3 +127,4 @@ build:windows_x86_64 --platforms=//bazel/platforms:windows_x86_64
 build:windows_i686 --platforms=//bazel/platforms:windows_i686
 build:wasm32 --platforms=//bazel/platforms:wasm32
 build:windows --config=windows_x86_64
+build:linux --config=linux_x86_64
