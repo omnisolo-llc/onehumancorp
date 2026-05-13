@@ -113,7 +113,7 @@ void main() {
       expect(find.text('mycustomdomain.ohc.app'), findsOneWidget);
 
       // Launch!
-      await tester.tap(find.text('Publish'));
+      await tester.tap(find.text('Launch My AI Team'));
       await tester.pump(const Duration(seconds: 2));
 
       // Step 10: Checklist

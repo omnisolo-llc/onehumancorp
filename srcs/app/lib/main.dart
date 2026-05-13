@@ -5,8 +5,8 @@ import 'screens/unified_inbox_screen.dart';
 import 'screens/business_setup_wizard_screen.dart';
 import 'screens/help/help_center_screen.dart';
 import 'screens/help/ai_help_chat_screen.dart';
-// removed missing import
-// removed missing import
+import 'screens/help/video_tutorials_screen.dart';
+import 'screens/help/walkthrough_screen.dart';
 import 'screens/referral_program_screen.dart';
 import 'widgets/milestone_notification.dart';
 
@@ -80,7 +80,7 @@ class DashboardScreen extends StatelessWidget {
               title: const Text('App Tour', style: TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(context); // Close drawer
-                Navigator.pushNamed(context, '/'); // placeholder
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const WalkthroughScreen()));
               },
             ),
             ListTile(
@@ -88,7 +88,7 @@ class DashboardScreen extends StatelessWidget {
               title: const Text('Video Tutorials', style: TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(context); // Close drawer
-                Navigator.pushNamed(context, '/'); // placeholder
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const VideoTutorialsScreen()));
               },
             ),
           ],
