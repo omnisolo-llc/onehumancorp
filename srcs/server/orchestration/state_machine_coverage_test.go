@@ -12,7 +12,7 @@ func TestTaskStateMachine_ProcessEvent_Failure(t *testing.T) {
 	db := setupSMTestDB(t)
 	defer db.Close()
 
-	sm := NewTaskStateMachine(db, nil)
+	sm := NewTaskStateMachine(db)
 	ctx := context.Background()
 
 	// Insert parent task

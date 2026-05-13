@@ -41,7 +41,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			to_state TEXT NOT NULL,
 			agent_id TEXT,
 			reason TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
 	if err != nil {

@@ -67,7 +67,7 @@ func TestSubAgentWorker_Poll(t *testing.T) {
 	_, err = db.Exec("INSERT INTO sub_agent_jobs (id, task_id, status) VALUES ('job-1', 'task-1', 'PENDING')")
 	require.NoError(t, err)
 
-	sm := NewTaskStateMachine(db, nil)
+	sm := NewTaskStateMachine(db)
 	spawner := &mockSubAgentSpawner{}
 
 	worker := NewSubAgentWorker(db, sm, spawner)
@@ -103,7 +103,7 @@ func TestSubAgentWorker_Poll_Failure(t *testing.T) {
 	_, err = db.Exec("INSERT INTO sub_agent_jobs (id, task_id, status) VALUES ('job-2', 'task-2', 'PENDING')")
 	require.NoError(t, err)
 
-	sm := NewTaskStateMachine(db, nil)
+	sm := NewTaskStateMachine(db)
 	spawner := &mockSubAgentSpawner{errToReturn: assert.AnError}
 
 	worker := NewSubAgentWorker(db, sm, spawner)
