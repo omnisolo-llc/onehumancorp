@@ -221,6 +221,47 @@ test.describe('Integrations Page', () => {
   });
 
 
+
+  test('should show Ayrshare integration', async ({ page }) => {
+    await expect(page.locator('text=/Ayrshare/i')).toBeVisible();
+  });
+
+  test('should connect Ayrshare integration', async ({ page }) => {
+    const ayrshareBtn = page.locator('text=Ayrshare').locator('..').locator('button:has-text("Configure")').first();
+    await ayrshareBtn.click();
+    await expect(page.locator('text=/Ayrshare/i')).toBeVisible();
+  });
+
+  test('should show Listmonk integration', async ({ page }) => {
+    await expect(page.locator('text=/Listmonk/i')).toBeVisible();
+  });
+
+  test('should connect Listmonk integration', async ({ page }) => {
+    const listmonkBtn = page.locator('text=Listmonk').locator('..').locator('button:has-text("Configure")').first();
+    await listmonkBtn.click();
+    await expect(page.locator('text=/Listmonk/i')).toBeVisible();
+  });
+
+  test('should show EasyPost integration', async ({ page }) => {
+    await expect(page.locator('text=/EasyPost/i')).toBeVisible();
+  });
+
+  test('should connect EasyPost integration', async ({ page }) => {
+    const easypostBtn = page.locator('text=EasyPost').locator('..').locator('button:has-text("Configure")').first();
+    await easypostBtn.click();
+    await expect(page.locator('text=/EasyPost/i')).toBeVisible();
+  });
+
+  test('should show Jitsi Meet integration', async ({ page }) => {
+    await expect(page.locator('text=/Jitsi Meet/i')).toBeVisible();
+  });
+
+  test('should connect Jitsi Meet integration', async ({ page }) => {
+    const jitsiBtn = page.locator('text=Jitsi Meet').locator('..').locator('button:has-text("Configure")').first();
+    await jitsiBtn.click();
+    await expect(page.locator('text=/Jitsi Meet/i')).toBeVisible();
+  });
+
 test.describe('Pipeline Management', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
