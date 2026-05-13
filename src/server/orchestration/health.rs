@@ -20,14 +20,12 @@ pub async fn run_health_monitor(
         };
 
         if !ping_ok {
-            tracing::trace!("HEALTH MONITOR: Active probe (ping) failed or timed out.");
         }
 
         // Hybrid mode health check
         if let Ok(health) = monitor_hub.check_health().await {
             if let Some(ready) = health.get("hybrid_mode_ready").and_then(|v| v.as_bool()) {
                 if !ready {
-                    tracing::trace!("HEALTH MONITOR: Hybrid mode is degraded.");
                 }
             }
         }
@@ -38,7 +36,6 @@ pub async fn run_health_monitor(
                 if sync_errors > 10 {
                     tracing::warn!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
                 } else if sync_errors > 0 {
-                    tracing::trace!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
                 }
             }
         }
@@ -49,7 +46,6 @@ pub async fn run_health_monitor(
                 let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
 
                 if agents.is_empty() {
-                    tracing::trace!("HEALTH MONITOR: No active agents found."); // Reduced noise
                 }
 
                 let mut active_agent_ids = std::collections::HashSet::new();
@@ -71,7 +67,6 @@ pub async fn run_health_monitor(
                     if *count >= threshold {
                         to_fire_now.push(agent_id.clone());
                     } else {
-                        tracing::trace!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count); // Reduced noise
                     }
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);
@@ -82,10 +77,8 @@ pub async fn run_health_monitor(
                 }
             }
             Ok(Err(e)) => {
-                tracing::trace!("HEALTH MONITOR: Failed to get active agents: {}", e);
             }
             Err(_) => {
-                tracing::trace!("HEALTH MONITOR: Timed out waiting for active agents list from transport");
             }
         }
     }

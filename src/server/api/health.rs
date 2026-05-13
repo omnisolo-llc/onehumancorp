@@ -13,6 +13,8 @@ pub async fn health_handler(
         "cloud_connected": false,
         "hybrid_mode_ready": false,
         "local_to_cloud_sync_queue": 0,
+        "sync_error_count": 0,
+        "local_to_cloud_sync_health": "unknown"
     }));
 
     let stuck_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'")
@@ -26,6 +28,9 @@ pub async fn health_handler(
         "db_ping": health.get("db_ping_ms").unwrap_or(&serde_json::json!(0)),
         "sync_backlog": health.get("local_to_cloud_sync_queue").unwrap_or(&serde_json::json!(0)),
         "stuck_missions": stuck_missions,
-        "mesh_active": health.get("mesh_active").unwrap_or(&serde_json::json!(false))
+        "mesh_active": health.get("mesh_active").unwrap_or(&serde_json::json!(false)),
+        "hybrid_mode_ready": health.get("hybrid_mode_ready").unwrap_or(&serde_json::json!(false)),
+        "sync_error_count": health.get("sync_error_count").unwrap_or(&serde_json::json!(0)),
+        "local_to_cloud_sync_health": health.get("local_to_cloud_sync_health").unwrap_or(&serde_json::json!("unknown"))
     }))
 }
