@@ -2034,6 +2034,37 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
                         }
 
+                        function simulateOrder() {
+                            const panel = document.getElementById('agent-activity-panel');
+                            if (panel) panel.style.display = 'block';
+                            const feed = document.getElementById('agent-activity-feed');
+                            if (feed) {
+                                feed.innerHTML = '';
+                                setTimeout(() => {
+                                    let op = document.createElement('p');
+                                    op.innerText = 'Operations processed OrderReceived';
+                                    feed.appendChild(op);
+                                }, 500);
+                                setTimeout(() => {
+                                    let cs = document.createElement('p');
+                                    cs.innerText = 'Customer Success drafted confirmation';
+                                    feed.appendChild(cs);
+                                }, 1000);
+                            }
+                        }
+
+                        function toggleThreshold(checkbox, department) {
+                            console.log('Toggled threshold for', department, checkbox.checked);
+                            const label = checkbox.previousElementSibling;
+                            if (label) {
+                                if (checkbox.checked) {
+                                    label.innerText = 'Auto-execute';
+                                } else {
+                                    label.innerText = 'Draft-for-review';
+                                }
+                            }
+                        }
+
                         // Attach event listener for the grandma hint
                         document.addEventListener('click', (e) => {
                             if (e.target.innerText === '?') {
