@@ -1874,6 +1874,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                      <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
+                        <h1>Setup Wizard</h1>
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
@@ -1921,8 +1922,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-7" style="display: none;">
                             <h1>Create your account</h1>
                             <input type="text" placeholder="e.g. Maya Smith" />
+                            <input type="text" placeholder="Your Full Name" />
                             <input type="email" placeholder="you@email.com" />
+                            <input type="email" placeholder="your@email.com" />
                             <input type="password" placeholder="Password" />
+                            <input type="password" placeholder="Create a strong password" />
+                            <button onclick="nextStep(8)">Review & Launch</button>
                             <button onclick="nextStep(8)">Next →</button>
                         </div>
                         <div id="step-8" style="display: none;">
@@ -1930,11 +1935,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="nextStep(9)">Modern</button>
                             <button class="secondary" onclick="nextStep(9)">Bold</button>
+                            <button class="secondary" onclick="nextStep(9)">✨ Modern</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose a Domain</h1>
                             <h1>Choose your domain</h1>
                             <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep(10)">Get a free sub-domain</button>
                             <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
                             <br/><button onclick="nextStep(10)">Next →</button>
                         </div>
@@ -1945,22 +1952,35 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
                         </div>
                         <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
+                            <h1>Almost there</h1>
                             <button onclick="nextStep(100)">Publish my business →</button>
+                            <button onclick="nextStep(100)">Launch!</button>
                         </div>
                         <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
+                            <h1>Onboarding Complete!</h1>
+                            <p>🎉 Success! Your business is live! 🎉</p>
                             <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
+                            <button onclick="showScreen('checklist-screen')">Continue to Setup Checklist</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                         </div>
 
                         <div id="checklist-screen" class="screen">
-                            <h1>You're set up! Here's what to do next:</h1>
+                            <h1>Welcome Checklist</h1>
+                            <h2>You're set up! Here's what to do next:</h2>
                             <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
+                            <p>
+                                <input type="checkbox" id="add-products-chk">
+                                <label for="add-products-chk">⬜ Add 3 more products</label>
+                            </p>
+                            <p>
+                                <input type="checkbox" id="connect-ig-chk">
+                                <label for="connect-ig-chk" onclick="showScreen('integrations-screen')">⬜ Connect Instagram</label>
+                            </p>
+                            <p>
+                                <input type="checkbox" id="share-link-chk">
+                                <label for="share-link-chk" onclick="showScreen('referrals-screen')">⬜ Share your link with a friend</label>
+                            </p>
+                            <div id="checklist-progress"></div>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
                         <div id="step-101" style="display: none;">
@@ -2003,7 +2023,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button onclick="handleLogin(this)">Login</button>
                         <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
                         <button class="secondary">Use Google or Apple</button>
-                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
+                        <button class="secondary" onclick="showScreen('setup-screen')">Start Setup</button>
+                    </div>
+
+                    <!-- Signup Screen -->
+                    <div id="signup-screen" class="screen glass" style="display: none;">
+                        <h1>Create an Account</h1>
+                        <p>Join One Human Corp today</p>
+                        <input type="email" placeholder="Email Address" />
+                        <input type="password" placeholder="Password" />
+                        <button onclick="handleSignup(this)">Sign Up</button>
+                        <p>Already have an account? <a href="javascript:void(0)" onclick="showScreen('login-screen')">Log in</a></p>
+                        <button class="secondary">Continue with Google / Apple</button>
                     </div>
 
                     <script>
@@ -2012,12 +2043,37 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
                             
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'integrations-screen' || id === 'referrals-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
                         }
+
+                        // Checklist specific logic
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const checkboxes = document.querySelectorAll('#checklist-screen input[type="checkbox"]');
+                            const progress = document.getElementById('checklist-progress');
+
+                            function updateProgress() {
+                                if (!progress) return;
+                                const checked = Array.from(checkboxes).filter(c => c.checked).length;
+                                const total = checkboxes.length;
+                                const percentage = total > 0 ? Math.round((checked / total) * 100) : 0;
+
+                                if (checked === total && total > 0) {
+                                    progress.innerHTML = `<p style="color: green; font-weight: bold;">Congratulations! You completed the checklist!</p>`;
+                                } else if (total > 0) {
+                                    progress.innerHTML = `<p>Completion: ${percentage}%</p>`;
+                                }
+                            }
+
+                            checkboxes.forEach(chk => {
+                                chk.addEventListener('change', updateProgress);
+                            });
+
+                            updateProgress();
+                        });
 
                         function simulateOrder() {
                             const feed = document.getElementById('agent-activity-feed');
@@ -2107,6 +2163,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
                     </script>
+                        <div id="integrations" class="screen" style="display: none;">
+                            <h1>Integrations</h1>
+                            <p>Connect your third party services here.</p>
+                            <button onclick="showScreen(&#39;checklist-screen&#39;)">Back to Checklist →</button>
+                        </div>
+                        <div id="referrals" class="screen" style="display: none;">
+                            <h1>Referrals</h1>
+                            <p>Share your link and earn rewards.</p>
+                            <button onclick="showScreen(&#39;checklist-screen&#39;)">Back to Checklist →</button>
+                        </div>
                 </body>
             </html>
         "#,
