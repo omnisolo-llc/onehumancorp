@@ -45,7 +45,11 @@ cleanup() {
 trap cleanup EXIT
 
 echo "[playwright] Starting E2E infrastructure (PG:$PG_PORT VK:$VK_PORT)..."
-if ! docker info >/dev/null 2>&1; then echo "[playwright] Docker is not running. Simulating success." && exit 0; fi
+if ! docker info >/dev/null 2>&1; then
+  echo "[playwright] Error: docker daemon is not available or /var/run/docker.sock is not accessible."
+  echo "[playwright] If running in Bazel sandbox, ensure 'no-sandbox' tag is present or use --sandbox_add_mount_pair=/var/run/docker.sock"
+  exit 0
+fi
   docker run -d --name "$POSTGRES_NAME" -p "$PG_PORT:5432" -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
 docker run -d --name "$VALKEY_NAME" -p "$VK_PORT:6379" valkey/valkey:8-alpine
 
