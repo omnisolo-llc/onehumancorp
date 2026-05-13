@@ -20,7 +20,7 @@ defaults:
 
 jobs:
   bazel-test:
-    runs-on: ubuntu-latest
+    runs-on: oci-runner # ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -38,22 +38,8 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v5
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         with:
           go-version: "1.24"
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
 
       - name: Install Bazelisk
         run: |
@@ -64,10 +50,10 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: false
-          disk-cache: false
-          repository-cache: false
-          external-cache: false
-          cache-save: false
+          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+          repository-cache: true
+          external-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
@@ -85,7 +71,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('go.sum') }}
           restore-keys: |
             ${{ runner.os }}-playwright-
 
@@ -102,7 +88,7 @@ jobs:
             //...
 
   bazel-build:
-    runs-on: ubuntu-latest
+    runs-on: oci-runner # ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -120,19 +106,8 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v5
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         with:
           go-version: "1.24"
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
 
       - name: Install Bazelisk
         run: |
@@ -143,10 +118,10 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: false
-          disk-cache: false
-          repository-cache: false
-          external-cache: false
-          cache-save: false
+          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+          repository-cache: true
+          external-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
@@ -167,7 +142,7 @@ jobs:
           bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
 
   # playwright-e2e:
-  #   runs-on: ubuntu-latest
+  #   runs-on: oci-runner # ubuntu-latest
   #   timeout-minutes: 60
   #   steps:
   #     - uses: actions/checkout@v6
@@ -185,19 +160,8 @@ jobs:
 
   #     - name: Set up Go
   #       uses: actions/setup-go@v5
-  #       env:
-  #         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   #       with:
   #         go-version: "1.24"
-
-  #     - name: Set up Node
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: "24"
-  #         cache: "npm"
-
-  #     - name: Install dependencies
-  #       run: npm ci
 
   #     - name: Install Bazelisk
   #       run: |
@@ -208,10 +172,10 @@ jobs:
   #       uses: bazel-contrib/setup-bazel@0.19.0
   #       with:
   #         bazelisk-cache: false
-  #         disk-cache: false
-  #         repository-cache: false
-  #         external-cache: false
-  #         cache-save: false
+  #         disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+  #         repository-cache: true
+  #         external-cache: true
+  #         cache-save: ${{ github.event_name != 'pull_request' }}
   #         bazelrc: |
   #           common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
   #           build --config=buildbuddy
