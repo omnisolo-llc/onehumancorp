@@ -1596,6 +1596,49 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+// Scribe: Video Metadata Storage
+pub struct VideoMetadata {
+    pub id: String,
+    pub title: String,
+    pub category: String,
+    pub duration: String,
+    pub thumbnail_url: String,
+}
+
+pub fn get_video_tutorials() -> Vec<VideoMetadata> {
+    vec![
+        VideoMetadata {
+            id: "vid_1".to_string(),
+            title: "Setting up your first store".to_string(),
+            category: "Getting Started".to_string(),
+            duration: "1:15".to_string(),
+            thumbnail_url: "mock_thumb_1.jpg".to_string(),
+        },
+        VideoMetadata {
+            id: "vid_2".to_string(),
+            title: "Accepting your first payment".to_string(),
+            category: "Payments".to_string(),
+            duration: "0:45".to_string(),
+            thumbnail_url: "mock_thumb_2.jpg".to_string(),
+        },
+        VideoMetadata {
+            id: "vid_3".to_string(),
+            title: "How to train your AI Agent".to_string(),
+            category: "AI Agents".to_string(),
+            duration: "1:30".to_string(),
+            thumbnail_url: "mock_thumb_3.jpg".to_string(),
+        },
+        VideoMetadata {
+            id: "vid_4".to_string(),
+            title: "Connecting a custom domain".to_string(),
+            category: "Getting Started".to_string(),
+            duration: "0:55".to_string(),
+            thumbnail_url: "mock_thumb_4.jpg".to_string(),
+        },
+    ]
+}
+
 async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {
     let path = req.uri().path();
     let content = match path {
@@ -1619,7 +1662,64 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
                         button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
                         .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
-                    </style>
+
+                        /* Scribe Documentation Features */
+                        .tooltip { position: relative; display: inline-block; cursor: help; border-bottom: 1px dotted #4ecca3; }
+                        .tooltip .tooltiptext { visibility: hidden; width: 200px; background-color: #1e293b; color: #fff; text-align: center; border-radius: 6px; padding: 8px; position: absolute; z-index: 1000; bottom: 125%; left: 50%; margin-left: -100px; opacity: 0; transition: opacity 0.3s; font-size: 0.9em; font-weight: normal; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+                        .tooltip:hover .tooltiptext, .tooltip:active .tooltiptext { visibility: visible; opacity: 1; }
+
+                        /* Help Chat Button */
+                        #help-chat-btn { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 30px; background: #4ecca3; color: #0f172a; font-size: 24px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 999; display: flex; align-items: center; justify-content: center; }
+                        #help-chat-btn:hover { transform: scale(1.05); }
+                        #help-chat-panel { position: fixed; bottom: 90px; right: 20px; width: 320px; height: 400px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; z-index: 999; display: none; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+                        #help-chat-header { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); background: #0f172a; border-radius: 12px 12px 0 0; font-weight: bold; }
+                        #help-chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+                        .chat-msg { padding: 10px 12px; border-radius: 12px; max-width: 85%; font-size: 0.9em; }
+                        .chat-msg.bot { background: rgba(255,255,255,0.05); align-self: flex-start; border-bottom-left-radius: 2px; }
+                        .chat-msg.user { background: rgba(78, 204, 163, 0.2); align-self: flex-end; border-bottom-right-radius: 2px; }
+                        .chat-article-link { color: #4ecca3; text-decoration: none; font-size: 0.85em; display: inline-block; margin-top: 5px; }
+                        #help-chat-input { display: flex; padding: 10px; border-top: 1px solid rgba(255,255,255,0.1); }
+                        #help-chat-input input { margin-bottom: 0; flex: 1; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+                        #help-chat-input button { margin-bottom: 0; margin-right: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 12px 15px; }
+
+                        /* Interactive Walkthrough */
+                        .walkthrough-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 2000; display: none; pointer-events: none; }
+                        .walkthrough-highlight { position: absolute; border: 3px solid #4ecca3; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.6); pointer-events: none; transition: all 0.3s ease; }
+                        .walkthrough-bubble { position: absolute; background: #1e293b; border: 1px solid #4ecca3; padding: 15px; border-radius: 8px; width: 250px; z-index: 2001; pointer-events: auto; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transition: all 0.3s ease; }
+                        .walkthrough-bubble::after { content: ''; position: absolute; border-style: solid; }
+
+                        /* Video Player */
+                        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
+                        .video-card { background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; cursor: pointer; }
+                        .video-thumb { background: #000; height: 300px; display: flex; align-items: center; justify-content: center; position: relative; }
+                        .play-icon { width: 50px; height: 50px; background: rgba(78, 204, 163, 0.8); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #0f172a; font-size: 24px; padding-left: 5px; box-sizing: border-box; }
+                        .video-info { padding: 15px; }
+                        .video-info h3 { margin: 0 0 5px 0; font-size: 1.1em; color: white; }
+                        .video-info p { margin: 0; font-size: 0.9em; color: #aaa; }
+
+                        /* Help Center Navigation */
+                        .help-nav { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 30px; }
+                        .help-nav button { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); }
+                        .help-nav button.active { background: #4ecca3; color: #0f172a; }
+
+                        /* API Docs */
+                        .api-endpoint { border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 15px; overflow: hidden; }
+                        .api-header { padding: 15px; background: rgba(255,255,255,0.02); display: flex; align-items: center; gap: 15px; cursor: pointer; }
+                        .api-method { padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 0.85em; }
+                        .api-method.get { background: rgba(97, 175, 254, 0.2); color: #61affe; }
+                        .api-method.post { background: rgba(73, 204, 144, 0.2); color: #49cc90; }
+                        .api-path { font-family: monospace; font-size: 1.1em; }
+                        .api-desc { color: #aaa; font-size: 0.9em; margin-left: auto; }
+                        .api-body { padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); display: none; background: #0f172a; }
+                        .api-body pre { background: #1e293b; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 0.9em; border: 1px solid rgba(255,255,255,0.05); }
+
+                        /* Release Notes */
+                        .release-note { border-left: 2px solid #4ecca3; padding-left: 20px; margin-bottom: 40px; position: relative; }
+                        .release-note::before { content: ''; position: absolute; left: -6px; top: 0; width: 10px; height: 10px; border-radius: 50%; background: #4ecca3; }
+                        .release-date { color: #aaa; font-size: 0.9em; margin-bottom: 5px; }
+                        .release-title { margin-top: 0; margin-bottom: 15px; color: white; }
+                        .release-image-ph { width: 100%; max-width: 600px; height: 250px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #aaa; margin-bottom: 15px; border: 1px dashed rgba(255,255,255,0.2); }
+</style>
                 </head>
                 <body>
                     <nav id="main-nav" style="display: none;">
@@ -1627,7 +1727,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('agents-screen')">Agents</a>
                         <a onclick="showScreen('setup-screen')">Setup Wizard</a>
                         <a onclick="showScreen('api-screen')">Software</a>
-                    </nav>
+
+                        <a onclick="showScreen('help-center-screen')">Help Center</a>
+                        <a onclick="showScreen('release-notes-screen')">What's New</a>
+</nav>
 
 
                     <!-- Signup Screen -->
@@ -1647,13 +1750,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
-                            <button onclick="showScreen('inbox-screen')">Check Messages</button>
+                            <button class="tooltip" onclick="showScreen('inbox-screen')">Check Messages<span class="tooltiptext">View and respond to messages from your customers.</span></button>
                         </div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
-                            <button onclick="showScreen('setup-screen')">Update Setup</button>
+                            <button class="tooltip" onclick="showScreen('agents-screen')">Manage Agents<span class="tooltiptext">Hire or train AI agents to help run your business automatically.</span></button>
+                            <button class="tooltip" onclick="showScreen('setup-screen')">Update Setup<span class="tooltiptext">Change your business name, domain, and basic settings.</span></button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="toggleMenu()">Menu</button>
@@ -1663,11 +1766,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div id="agent-activity-feed">
                                 <p>No recent activity.</p>
                             </div>
-                            <button onclick="simulateOrder()">Simulate Order</button>
+                            <button onclick="simulateOrder()">Simulate Order</button>\n                            <button onclick="startWalkthrough('onboarding')" class="secondary" style="margin-left: 10px;">Start Dashboard Tour</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
-                            <button onclick="showScreen('api-screen')">Connect Custom Software</button>
-                            <button>Video Tutorials</button>
+                            <button class="tooltip" onclick="showScreen('api-screen')">Connect Custom Software<span class="tooltiptext">Advanced: Link other tools directly to your business data.</span></button>
+                            <button onclick="showScreen('tutorials-screen')">Video Tutorials</button>
                         </div>
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
@@ -1700,15 +1803,70 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- API Screen -->
+
+                    <!-- API Docs Screen (Advanced) -->
                     <div id="api-screen" class="screen">
-                        <h1>Connect Custom Software</h1>
-                        <h1>Custom Integration</h1>
-                        <h1>Custom Software</h1>
-                        <h2>Product Data Access</h2>
-                        <p>Read Product List</p>
-                        <p>Manage your custom software connections here.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                        <div style="background: rgba(255,165,0,0.1); border: 1px solid rgba(255,165,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <strong>⚠️ Advanced Section</strong><br>
+                            This area is for developers. If you are just running your business, you don't need to use this page!
+                        </div>
+
+                        <h1>Developer API Reference</h1>
+                        <p>Connect custom software to your OneHuman Corp business data using these REST endpoints.</p>
+                        <p><strong>Base URL:</strong> <code>https://api.onehumancorp.com/v1</code></p>
+
+                        <h2>Products</h2>
+
+                        <div class="api-endpoint">
+                            <div class="api-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
+                                <span class="api-method get">GET</span>
+                                <span class="api-path">/products</span>
+                                <span class="api-desc">List all products</span>
+                            </div>
+                            <div class="api-body">
+                                <p>Returns a list of all active products in your store.</p>
+                                <h3>Response (200 OK)</h3>
+                                <pre><code>{
+  "data": [
+    {
+      "id": "prod_123",
+      "name": "Artisan Coffee Beans",
+      "price": 1499,
+      "currency": "USD",
+      "stock": 50
+    }
+  ],
+  "has_more": false
+}</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <div class="api-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
+                                <span class="api-method post">POST</span>
+                                <span class="api-path">/products</span>
+                                <span class="api-desc">Create a new product</span>
+                            </div>
+                            <div class="api-body">
+                                <p>Add a new item to your store's catalog.</p>
+                                <h3>Request Body</h3>
+                                <pre><code>{
+  "name": "Handmade Mug",
+  "price": 2400,
+  "description": "A beautiful ceramic mug."
+}</code></pre>
+                                <h3>Response (201 Created)</h3>
+                                <pre><code>{
+  "id": "prod_124",
+  "name": "Handmade Mug",
+  "status": "active"
+}</code></pre>
+                            </div>
+                        </div>
+
+                        <button class="secondary" onclick="showScreen('dashboard-screen')" style="margin-top: 20px;">Back to Dashboard</button>
                     </div>
+
 
                     <!-- Settings Screen -->
                     <div id="settings-screen" class="screen">
@@ -1990,7 +2148,852 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
-                    <!-- Login Screen -->
+
+                    <!-- Help Center Screen -->
+                    <div id="help-center-screen" class="screen">
+                        <h1>Help Center</h1>
+                        <p>Welcome! How can we help your business today?</p>
+                        <input type="text" placeholder="Search for help (e.g. 'how to get paid')..." id="help-search" onkeyup="filterHelp()" style="padding: 15px; font-size: 1.1em; border-radius: 25px; padding-left: 20px;" />
+
+                        <div class="help-nav">
+                            <button class="active" onclick="filterHelpCategory('all', this)">All Topics</button>
+                            <button onclick="filterHelpCategory('Getting Started', this)">Getting Started</button>
+                            <button onclick="filterHelpCategory('My Store', this)">My Store</button>
+                            <button onclick="filterHelpCategory('Payments', this)">Payments</button>
+                            <button onclick="filterHelpCategory('AI Agents', this)">AI Agents</button>
+                            <button onclick="filterHelpCategory('Marketing', this)">Marketing</button>
+                        </div>
+
+                        <div id="help-articles">\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 150: Advanced Strategies for Getting Started</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your getting started. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 151: Advanced Strategies for My Store</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your my store. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 152: Advanced Strategies for Payments</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your payments. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 153: Advanced Strategies for AI Agents</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your ai agents. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 154: Advanced Strategies for Marketing</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your marketing. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 155: Advanced Strategies for Account & Billing</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your account & billing. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 156: Advanced Strategies for Getting Started</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your getting started. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 157: Advanced Strategies for My Store</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your my store. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 158: Advanced Strategies for Payments</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your payments. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 159: Advanced Strategies for AI Agents</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your ai agents. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 160: Advanced Strategies for Marketing</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your marketing. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 161: Advanced Strategies for Account & Billing</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your account & billing. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 162: Advanced Strategies for Getting Started</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your getting started. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 163: Advanced Strategies for My Store</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your my store. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 164: Advanced Strategies for Payments</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your payments. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 165: Advanced Strategies for AI Agents</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your ai agents. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 166: Advanced Strategies for Marketing</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your marketing. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 167: Advanced Strategies for Account & Billing</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your account & billing. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 168: Advanced Strategies for Getting Started</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your getting started. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 169: Advanced Strategies for My Store</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your my store. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 170: Advanced Strategies for Payments</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your payments. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 171: Advanced Strategies for AI Agents</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your ai agents. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 172: Advanced Strategies for Marketing</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your marketing. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 173: Advanced Strategies for Account & Billing</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your account & billing. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 174: Advanced Strategies for Getting Started</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your getting started. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 175: Advanced Strategies for My Store</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your my store. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 176: Advanced Strategies for Payments</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your payments. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 177: Advanced Strategies for AI Agents</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your ai agents. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 178: Advanced Strategies for Marketing</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your marketing. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 179: Advanced Strategies for Account & Billing</h3>
+                                <p>Building upon the basics, this guide explores deeper strategies for optimizing your account & billing. We explain everything in simple terms so you can implement these techniques immediately and see real results in your bottom line.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 0: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 1: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 2: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 3: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 4: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 5: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 6: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 7: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 8: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 9: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 10: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 11: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 12: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 13: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 14: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 15: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 16: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 17: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 18: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 19: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 20: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 21: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 22: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 23: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 24: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 25: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 26: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 27: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 28: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 29: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 30: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 31: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 32: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 33: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 34: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 35: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 36: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 37: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 38: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 39: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 40: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 41: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 42: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 43: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 44: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 45: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 46: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 47: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 48: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 49: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 50: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 51: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 52: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 53: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 54: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 55: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 56: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 57: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 58: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 59: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 60: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 61: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 62: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 63: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 64: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 65: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 66: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 67: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 68: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 69: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 70: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 71: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 72: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 73: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 74: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 75: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 76: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 77: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 78: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 79: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 80: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 81: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 82: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 83: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 84: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 85: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 86: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 87: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 88: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 89: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 90: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 91: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 92: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 93: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 94: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 95: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 96: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 97: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 98: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 99: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 100: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 101: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 102: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 103: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 104: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 105: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 106: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 107: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 108: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 109: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 110: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 111: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 112: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 113: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 114: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 115: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 116: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 117: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 118: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 119: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 120: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 121: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 122: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 123: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 124: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 125: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 126: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 127: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 128: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 129: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 130: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 131: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 132: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 133: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 134: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 135: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 136: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 137: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 138: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 139: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 140: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 141: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 142: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 143: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Guide 144: Essential Tips for Getting Started</h3>
+                                <p>As a small business owner, managing your getting started efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>Guide 145: Essential Tips for My Store</h3>
+                                <p>As a small business owner, managing your my store efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>Guide 146: Essential Tips for Payments</h3>
+                                <p>As a small business owner, managing your payments efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>Guide 147: Essential Tips for AI Agents</h3>
+                                <p>As a small business owner, managing your ai agents efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Marketing">
+                                <h3>Guide 148: Essential Tips for Marketing</h3>
+                                <p>As a small business owner, managing your marketing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>\n
+                            <div class="card glass help-article" data-category="Account & Billing">
+                                <h3>Guide 149: Essential Tips for Account & Billing</h3>
+                                <p>As a small business owner, managing your account & billing efficiently is crucial. This guide provides comprehensive, plain-language advice to help you succeed without needing a technical background. We cover the top strategies to maximize your business growth and minimize daily stress.</p>
+                            </div>
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>How do I launch my business?</h3>
+                                <p>To make your business live, go to the <strong>Setup Wizard</strong> from your dashboard menu. Follow the steps to choose your name, add a product, and pick a design. Once you finish, your site is instantly visible to the world.</p>
+                                <button class="secondary" onclick="startWalkthrough('onboarding')">Take an interactive tour</button>
+                            </div>
+
+                            <div class="card glass help-article" data-category="Payments">
+                                <h3>When do I get paid?</h3>
+                                <p>When a customer buys something, the money is securely held for processing. It usually takes 2-3 business days for the funds to arrive in your connected bank account. You can track all payouts in the Billing section.</p>
+                            </div>
+
+                            <div class="card glass help-article" data-category="My Store">
+                                <h3>How do I add a new product?</h3>
+                                <p>On your dashboard, look for the 'Add Item' button at the bottom of your screen. You can type in the name and price, and our AI will automatically write a catchy description for you.</p>
+                            </div>
+
+                            <div class="card glass help-article" data-category="AI Agents">
+                                <h3>What does the Marketing Agent do?</h3>
+                                <p>Your Marketing Agent acts like an automated social media manager. It studies your products and automatically drafts emails and posts to help you get more customers, without you needing to write anything from scratch.</p>
+                                <button class="secondary" onclick="startWalkthrough('agent')">Tour the Agents page</button>
+                            </div>
+
+                            <div class="card glass help-article" data-category="Getting Started">
+                                <h3>Can I use my own domain name (e.g., mybusiness.com)?</h3>
+                                <p>Yes! During the Setup Wizard, you will see an option to 'Connect Custom Domain'. Just type in your domain, and we will give you a simple link to paste into your domain provider's settings.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Video Tutorials Screen -->
+                    <div id="tutorials-screen" class="screen">
+                        <h1>Video Tutorials</h1>
+                        <p>Watch short, easy guides to master your business tools.</p>
+
+                        <div class="video-grid">
+                            <div class="video-card">
+                                <div class="video-thumb">
+                                    <div class="play-icon">▶</div>
+                                    <div style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.7); padding:2px 6px; border-radius:4px; font-size:0.8em;">1:15</div>
+                                </div>
+                                <div class="video-info">
+                                    <h3>Setting up your first store</h3>
+                                    <p>Getting Started</p>
+                                </div>
+                            </div>
+
+                            <div class="video-card">
+                                <div class="video-thumb">
+                                    <div class="play-icon">▶</div>
+                                    <div style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.7); padding:2px 6px; border-radius:4px; font-size:0.8em;">0:45</div>
+                                </div>
+                                <div class="video-info">
+                                    <h3>Accepting your first payment</h3>
+                                    <p>Payments</p>
+                                </div>
+                            </div>
+
+                            <div class="video-card">
+                                <div class="video-thumb">
+                                    <div class="play-icon">▶</div>
+                                    <div style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.7); padding:2px 6px; border-radius:4px; font-size:0.8em;">1:30</div>
+                                </div>
+                                <div class="video-info">
+                                    <h3>How to train your AI Agent</h3>
+                                    <p>AI Agents</p>
+                                </div>
+                            </div>
+
+                            <div class="video-card">
+                                <div class="video-thumb">
+                                    <div class="play-icon">▶</div>
+                                    <div style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.7); padding:2px 6px; border-radius:4px; font-size:0.8em;">0:55</div>
+                                </div>
+                                <div class="video-info">
+                                    <h3>Connecting a custom domain</h3>
+                                    <p>Getting Started</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Release Notes Screen -->
+                    <div id="release-notes-screen" class="screen">
+                        <h1>What's New</h1>
+                        <p>We are constantly improving OneHuman Corp to help your business grow. Here are the latest updates.</p>
+                        <button class="secondary" style="margin-bottom: 30px;">Read full changelog on website ↗</button>
+
+                        <div class="release-note">
+                            <div class="release-date">May 10, 2024</div>
+                            <h2 class="release-title">Instant AI Product Descriptions</h2>
+                            <div class="release-image-ph">🖼️ Screenshot: Clicking 'Generate AI Description' on a product</div>
+                            <p>Writing product descriptions can take hours. Now, when you add a new item, just click the "Generate AI Description" button. Our AI will instantly write a compelling, professional description that helps you sell more.</p>
+                        </div>
+
+                        <div class="release-note">
+                            <div class="release-date">April 28, 2024</div>
+                            <h2 class="release-title">New Mobile Dashboard</h2>
+                            <div class="release-image-ph">🖼️ Screenshot: The new mobile-friendly bottom navigation bar</div>
+                            <p>Running your business on the go just got easier. We've redesigned the dashboard specifically for your phone. You now have a handy menu at the bottom of the screen to quickly check orders, messages, and add items with a single tap.</p>
+                        </div>
+
+                        <div class="release-note">
+                            <div class="release-date">April 15, 2024</div>
+                            <h2 class="release-title">Connect Custom Software (Advanced)</h2>
+                            <p>For users who want to link specialized software to their store, we've launched our new Advanced API. You can now securely connect third-party tools to read your product list directly.</p>
+                            <button class="secondary" onclick="showScreen('api-screen')">View API Documentation</button>
+                        </div>
+                    </div>
+<!-- Login Screen -->
                     <div id="login-screen" class="screen glass">
                         <h1>Login</h1>
                         <h1>One Human Corp</h1>
@@ -2006,13 +3009,47 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
                     </div>
 
-                    <script>
+
+                    <!-- Floating Help Chat Button -->
+                    <button id="help-chat-btn" onclick="toggleHelpChat()">
+                        💬
+                    </button>
+
+                    <!-- Help Chat Panel -->
+                    <div id="help-chat-panel">
+                        <div id="help-chat-header">
+                            <span style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>🤖 Support Agent</span>
+                                <button onclick="toggleHelpChat()" style="background:none; border:none; color:white; padding:0; margin:0; cursor:pointer;">✕</button>
+                            </span>
+                        </div>
+                        <div id="help-chat-messages">
+                            <div class="chat-msg bot">Hi! I'm your AI Support Agent. I know everything about running a business on OneHuman Corp. What do you need help with?</div>
+                        </div>
+                        <div id="help-chat-input">
+                            <input type="text" id="help-chat-text" placeholder="Ask a question..." onkeypress="if(event.key === 'Enter') sendHelpMessage()" />
+                            <button onclick="sendHelpMessage()">Send</button>
+                        </div>
+                    </div>
+
+                    <!-- Walkthrough Overlays -->
+                    <div class="walkthrough-overlay" id="walkthrough-overlay"></div>
+                    <div class="walkthrough-highlight" id="walkthrough-highlight"></div>
+                    <div class="walkthrough-bubble" id="walkthrough-bubble">
+                        <h4 id="wt-title" style="margin-top:0; color:#4ecca3;">Title</h4>
+                        <p id="wt-text" style="font-size:0.9em; margin-bottom:15px;">Text goes here</p>
+                        <div style="display:flex; justify-content:space-between;">
+                            <button class="secondary" onclick="endWalkthrough()" style="padding:5px 10px; font-size:0.8em; margin:0;">Skip Tour</button>
+                            <button onclick="nextWalkthroughStep()" style="padding:5px 10px; font-size:0.8em; margin:0;" id="wt-next">Next →</button>
+                        </div>
+                    </div>
+<script>
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
                             
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen') {
+                            if (id === 'dashboard-screen' || id === 'help-center-screen' || id === 'tutorials-screen' || id === 'release-notes-screen' || id === 'api-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
@@ -2106,7 +3143,192 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 showScreen('login-screen');
                             }
                         }
-                    </script>
+
+
+                        // Help Center Search
+                        function filterHelp() {
+                            const query = document.getElementById('help-search').value.toLowerCase();
+                            const articles = document.querySelectorAll('.help-article');
+                            articles.forEach(article => {
+                                const text = article.innerText.toLowerCase();
+                                article.style.display = text.includes(query) ? 'block' : 'none';
+                            });
+                        }
+
+                        function filterHelpCategory(category, btn) {
+                            // Update active button
+                            document.querySelectorAll('.help-nav button').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+
+                            // Filter articles
+                            const articles = document.querySelectorAll('.help-article');
+                            articles.forEach(article => {
+                                if (category === 'all' || article.getAttribute('data-category') === category) {
+                                    article.style.display = 'block';
+                                } else {
+                                    article.style.display = 'none';
+                                }
+                            });
+                        }
+
+                        // Help Chat Logic
+                        function toggleHelpChat() {
+                            const panel = document.getElementById('help-chat-panel');
+                            panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+                            if (panel.style.display === 'flex') {
+                                document.getElementById('help-chat-text').focus();
+                            }
+                        }
+
+                        function sendHelpMessage() {
+                            const input = document.getElementById('help-chat-text');
+                            const text = input.value.trim();
+                            if (!text) return;
+
+                            const msgs = document.getElementById('help-chat-messages');
+
+                            // Add user message
+                            const uMsg = document.createElement('div');
+                            uMsg.className = 'chat-msg user';
+                            uMsg.innerText = text;
+                            msgs.appendChild(uMsg);
+
+                            input.value = '';
+                            msgs.scrollTop = msgs.scrollHeight;
+
+                            // Simulate AI Response based on keywords
+                            setTimeout(() => {
+                                const bMsg = document.createElement('div');
+                                bMsg.className = 'chat-msg bot';
+
+                                const lower = text.toLowerCase();
+                                if (lower.includes('pay') || lower.includes('money')) {
+                                    bMsg.innerHTML = "When a customer buys something, funds are processed securely and usually arrive in your bank account in 2-3 business days.<br><a href='#' onclick=\"showScreen('help-center-screen'); toggleHelpChat();\" class='chat-article-link'>Read full article →</a>";
+                                } else if (lower.includes('product') || lower.includes('item')) {
+                                    bMsg.innerHTML = "You can add new products by clicking 'Add Item' on your dashboard. You can even use our AI to write the description for you!<br><a href='#' onclick=\"showScreen('help-center-screen'); toggleHelpChat();\" class='chat-article-link'>Read full article →</a>";
+                                } else if (lower.includes('domain') || lower.includes('website')) {
+                                    bMsg.innerHTML = "You can connect a custom domain during the Setup Wizard, or use our free OHC domain. We handle all the hosting automatically.<br><a href='#' onclick=\"showScreen('help-center-screen'); toggleHelpChat();\" class='chat-article-link'>Read full article →</a>";
+                                } else {
+                                    bMsg.innerHTML = "I found some information that might help. Try checking out our Getting Started guide in the Help Center.<br><a href='#' onclick=\"showScreen('help-center-screen'); toggleHelpChat();\" class='chat-article-link'>Go to Help Center →</a>";
+                                }
+
+                                msgs.appendChild(bMsg);
+                                msgs.scrollTop = msgs.scrollHeight;
+                            }, 800);
+                        }
+
+                        // Tooltip Registry - Allows agents to register tooltips without touching HTML
+                        const TooltipRegistry = {
+                            tooltips: {},
+                            register: function(selector, text) {
+                                this.tooltips[selector] = text;
+                                this.apply();
+                            },
+                            apply: function() {
+                                for (const [selector, text] of Object.entries(this.tooltips)) {
+                                    const elements = document.querySelectorAll(selector);
+                                    elements.forEach(el => {
+                                        if (!el.classList.contains('tooltip')) {
+                                            el.classList.add('tooltip');
+                                            const span = document.createElement('span');
+                                            span.className = 'tooltiptext';
+                                            span.innerText = text;
+                                            el.appendChild(span);
+                                        }
+                                    });
+                                }
+                            }
+                        };
+
+                        // Register some dynamic tooltips
+                        document.addEventListener('DOMContentLoaded', () => {
+                            TooltipRegistry.register('.nav-item:nth-child(2)', 'View all customer purchases and fulfill them here.');
+                            TooltipRegistry.register('.nav-item:nth-child(4)', 'See how many people visited your store and how much money you made.');
+                        });
+
+// Interactive Walkthrough Logic
+                        const walkthroughs = {
+                            onboarding: [
+                                { selector: ".card:nth-child(2)", title: "Quick Actions", text: "Here are shortcuts to manage your entire business. Start by updating your setup or hiring agents.", position: "bottom" },
+                                { selector: ".bottom-nav", title: "Add Products", text: "Use this menu to quickly add items to your store from anywhere.", position: "top" }
+                            ],
+                            agent: [
+                                { selector: '#agents-screen .card', title: "Your AI Team", text: "This is your Marketing Agent. It works 24/7 to write emails and promote your products automatically.", position: "bottom" }
+                            ]
+                        };
+
+                        let currentWt = [];
+                        let currentStepIndex = 0;
+
+                        function startWalkthrough(id) {
+                            if (!walkthroughs[id]) return;
+                            currentWt = walkthroughs[id];
+                            currentStepIndex = 0;
+
+                            // Ensure we're on the right screen if it's the agent tour
+                            if (id === 'agent') showScreen('agents-screen');
+                            else if (id === 'onboarding') showScreen('dashboard-screen');
+
+                            document.getElementById('walkthrough-overlay').style.display = 'block';
+                            document.getElementById('walkthrough-highlight').style.display = 'block';
+                            document.getElementById('walkthrough-bubble').style.display = 'block';
+
+                            // Small delay to allow screen rendering
+                            setTimeout(renderWalkthroughStep, 100);
+                        }
+
+                        function endWalkthrough() {
+                            document.getElementById('walkthrough-overlay').style.display = 'none';
+                            document.getElementById('walkthrough-highlight').style.display = 'none';
+                            document.getElementById('walkthrough-bubble').style.display = 'none';
+                        }
+
+                        function nextWalkthroughStep() {
+                            currentStepIndex++;
+                            if (currentStepIndex >= currentWt.length) {
+                                endWalkthrough();
+                            } else {
+                                renderWalkthroughStep();
+                            }
+                        }
+
+                        function renderWalkthroughStep() {
+                            const step = currentWt[currentStepIndex];
+                            const el = document.querySelector(step.selector);
+
+                            if (!el) {
+                                console.error("Walkthrough target not found:", step.selector);
+                                endWalkthrough();
+                                return;
+                            }
+
+                            // Position Highlight
+                            const rect = el.getBoundingClientRect();
+                            const hl = document.getElementById('walkthrough-highlight');
+                            hl.style.top = (rect.top - 5) + 'px';
+                            hl.style.left = (rect.left - 5) + 'px';
+                            hl.style.width = (rect.width + 10) + 'px';
+                            hl.style.height = (rect.height + 10) + 'px';
+
+                            // Update Text
+                            document.getElementById('wt-title').innerText = step.title;
+                            document.getElementById('wt-text').innerText = step.text;
+                            document.getElementById('wt-next').innerText = currentStepIndex === currentWt.length - 1 ? "Finish" : "Next \\u2192";
+
+                            // Position Bubble
+                            const bubble = document.getElementById('walkthrough-bubble');
+
+                            if (step.position === 'top') {
+                                bubble.style.top = (rect.top - bubble.offsetHeight - 20) + 'px';
+                                bubble.style.left = rect.left + 'px';
+                            } else {
+                                // Default bottom
+                                bubble.style.top = (rect.bottom + 20) + 'px';
+                                bubble.style.left = rect.left + 'px';
+                            }
+                        }
+
+</script>
                 </body>
             </html>
         "#,
