@@ -1679,7 +1679,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
                         <div class="bottom-nav glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
+                            <button class="nav-item" onclick="console.log('action_add_product')">Add Item</button>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Messages</button>
                             <button class="nav-item">Analytics</button>
@@ -1725,31 +1725,42 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Free Starter</h3>
                             <p>$0 / month</p>
-                            <ul><li>1 Agent</li><li>500MB Storage</li></ul>
+                            <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
                             <button onclick="showScreen('dashboard-screen')">Start Free</button>
                         </div>
                         <div class="card glass">
                             <h3>Pro Professional</h3>
                             <p>$29 / month</p>
                             <p>Recommended</p>
-                            <ul><li>10 Agents</li><li>10GB Storage</li></ul>
+                            <ul><li>10 Agents Limit</li><li>10GB Storage</li><li>Priority Support</li></ul>
                             <button onclick="showScreen('dashboard-screen')">Choose Pro</button>
                         </div>
                         <div class="card glass">
                             <h3>Business Enterprise</h3>
                             <p>$79 / month</p>
-                            <ul><li>Unlimited Agents</li><li>100GB Storage</li></ul>
+                            <ul><li>Unlimited Agents</li><li>100GB Storage</li><li>24/7 Support</li></ul>
                             <button>Contact Sales</button>
                         </div>
                         <div class="card glass">
                             <h3>FAQ</h3>
                             <div class="faq-item">
                                 <p class="question">How do I upgrade?</p>
-                                <p class="answer">Click the upgrade button.</p>
+                                <p class="answer">Answer: Click the upgrade button.</p>
                             </div>
                         </div>
                         <p>100% money back guarantee. Secure SSL payments.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                        <div class="card glass">
+                            <h2>Frequently Asked Questions</h2>
+                            <div class="faq-item" onclick="this.classList.toggle('active')">
+                                <h3>How do I upgrade?</h3>
+                                <p class="answer">Answer: You can upgrade anytime from the My Plan page.</p>
+                            </div>
+                            <div class="faq-item" onclick="this.classList.toggle('active')">
+                                <h3>What is the storage limit?</h3>
+                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free.</p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- My Plan Page -->
@@ -1759,7 +1770,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Next billing: 2024-06-01</p>
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
-                            <p>Storage Used: 0MB / 500MB</p>
+                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
                             <p>Projected Cost this Month: $1.23</p>
                             <button onclick="showScreen('pricing-screen')">Add Credits</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
@@ -1779,7 +1790,59 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
                     </div>
 
-                    <!-- Setup Wizard -->
+                     <!-- Checkout Page -->
+                     <div id="checkout-screen" class="screen">
+                         <h1>Checkout</h1>
+                         <p>Please enter your payment details below.</p>
+                         <div class="card glass">
+                             <p>100% money back guarantee. Secure SSL payments.</p>
+                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
+                             <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
+                         </div>
+                     </div>
+
+                     <!-- Diagnostics Page -->
+                     <div id="diagnostics-screen" class="screen">
+                         <h1>Diagnostics</h1>
+                         <p>System Status: All systems operational</p>
+                         <p>Database: Healthy</p>
+                         <p>Redis: Healthy</p>
+                         <p>Server Uptime: 99.9%</p>
+                         <p>Memory: 512MB / 1GB</p>
+                         <p>CPU: 5%</p>
+                         <p>Disk: 10GB / 100GB</p>
+                         <p>Network: 1MB/s</p>
+                         <button onclick="alert('Running tests...')">Run Test</button>
+                         <div class="card glass">
+                            <h2>Recent Logs</h2>
+                            <p>All good.</p>
+                         </div>
+                     </div>
+
+                     <!-- Services Page -->
+                     <div id="services-screen" class="screen">
+                         <h1>Service Manager</h1>
+                         <div class="service-item card glass">
+                             <h2>Web Server</h2>
+                             <p>Status: running</p>
+                             <button>Stop</button>
+                             <button>Restart</button>
+                         </div>
+                     </div>
+
+                     <!-- Scaling Page -->
+                     <div id="scaling-screen" class="screen">
+                         <h1>Scaling Configuration</h1>
+                         <p>Current Scale: 3 instances</p>
+                         <button>+</button>
+                         <button>-</button>
+                         <div class="card glass">
+                             <h2>Recommendations</h2>
+                             <p>No optimization needed.</p>
+                         </div>
+                     </div>
+
+                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
@@ -1883,7 +1946,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
                             
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
@@ -1936,21 +1999,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         const path = window.location.pathname;
                         const urlParams = new URLSearchParams(window.location.search);
                         
-                        if (urlParams.has('signup') || path === '/signup') {
-                            showScreen('signup-screen');
-                        } else if (path === '/agents') {
-                            showScreen('agents-screen');
-                        } else if (path === '/business-setup') {
-                            showScreen('setup-screen');
-                        } else if (path === '/login') {
-                            showScreen('login-screen');
-                        } else if (path === '/pricing') {
-                            showScreen('pricing-screen');
-                        } else if (path === '/my-plan' || path === '/billing') {
-                            showScreen('my-plan-screen');
+                        if (localStorage.getItem('isLoggedIn') === 'true') {
+                            if (path === '/pricing') {
+                                showScreen('pricing-screen');
+                            } else if (path === '/my-plan' || path === '/billing') {
+                                showScreen('my-plan-screen');
+                            } else if (path === '/agents') {
+                                showScreen('agents-screen');
+                            } else if (path === '/diagnostics') {
+                                showScreen('diagnostics-screen');
+                            } else if (path === '/services') {
+                                showScreen('services-screen');
+                            } else if (path === '/scaling') {
+                                showScreen('scaling-screen');
+                            } else if (path === '/business-setup') {
+                                showScreen('setup-screen');
+                            } else if (path === '/checkout') {
+                                showScreen('checkout-screen');
+                            } else {
+                                showScreen('dashboard-screen');
+                            }
                         } else {
-                            // Default to dashboard for ease of testing
-                            showScreen('dashboard-screen');
+                            if (urlParams.has('signup') || path === '/signup') {
+                                showScreen('signup-screen');
+                            } else if (path === '/pricing') {
+                                showScreen('pricing-screen');
+                            } else if (path === '/my-plan' || path === '/billing') {
+                                showScreen('my-plan-screen');
+                            } else {
+                                showScreen('login-screen');
+                            }
                         }
                     </script>
                 </body>
