@@ -52,6 +52,7 @@ pkg_deb(
     package = "ohc-app",
     version = "0.4.41+1",
     description = "One Human Corp Desktop Application",
+
     section = "utils",
     priority = "optional",
     data = ":app_tar",
@@ -68,6 +69,7 @@ pkg_rpm(
     license = "Apache-2.0",
     summary = "One Human Corp Desktop Application",
     description = "One Human Corp Desktop Application",
+    release = "1",
     srcs = [":app_files"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
