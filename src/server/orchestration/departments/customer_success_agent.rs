@@ -26,6 +26,18 @@ impl Department for CustomerSuccessAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.order.fulfillment_ready" {
+            let risk = ActionRisk::DraftForReview;
+            self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                "Send personalized thank you & shipping ETA".to_string(),
+                event.tenant_id.clone(),
+                risk,
+                event.payload.clone(),
+            ).await.map(|_| ())?;
+            return Ok(());
+        }
+
         if event.event_type == "tenant.message.received" {
             let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
                 id: uuid::Uuid::new_v4().to_string(),

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('Order placement triggers Operations and Customer Success AI agents', async ({ page }) => {
+test('Order placement triggers Operations and Customer Success AI agents chained workflow', async ({ page }) => {
     // Navigate to the home page
     await page.goto('/');
 
@@ -12,14 +12,17 @@ test('Order placement triggers Operations and Customer Success AI agents', async
     // Wait for the Dashboard
     await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
-    // Simulate placing an order
-    await page.click('button:has-text("Simulate Order")');
+    // Trigger the flow
+    await page.click('button:has-text("Test Order")');
 
-    // Check if the dashboard feed or agent activity panel is visible
-    // Wait for the feed to load
-    await expect(page.locator('text="Agent Activity"')).toBeVisible();
-
-    // Verify state transition output is visible
+    // Wait for Operations agent activity (AutoExecute action)
     await expect(page.locator('text="Operations processed OrderReceived"')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text="Customer Success drafted confirmation"')).toBeVisible({ timeout: 5000 });
+
+    // Wait for Customer Success agent draft activity (DraftForReview)
+    await expect(page.locator('text="Send personalized thank you & shipping ETA"')).toBeVisible({ timeout: 5000 });
+
+    // Verify that the Draft-for-Review approval card surfaces
+    await expect(page.locator('text="Tasks for You to Approve"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="Send personalized thank you & shipping ETA"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="Approve & Send"')).toBeVisible({ timeout: 5000 });
 });

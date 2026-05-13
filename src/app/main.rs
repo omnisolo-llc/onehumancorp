@@ -6043,7 +6043,7 @@ mod docs_tests {
                     let mut approvals: Vec<app::UiPendingApproval> = d_ui.get_pending_approvals().iter().collect();
                     approvals.push(app::UiPendingApproval {
                         task_id: "draft_1".into(),
-                        title: "Review SMS to Customer".into(),
+                        title: "Send personalized thank you & shipping ETA".into(),
                         proposed_content: "Thank you for your order! Your cake is being prepared.".into(),
                         helper_name: "The Ambassador (Customer Success)".into(),
                     });
