@@ -12,6 +12,10 @@ rust_library(
         "sandbox/ast.rs",
         "sandbox/permissions.rs",
         "sandbox/wrapper.rs",
+        "transport/mod.rs",
+        "transport/bridge.rs",
+        "transport/in_process.rs",
+        "transport/redis_pubsub.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
@@ -25,11 +29,27 @@ rust_library(
         "@crates//:serde_json",
         "@crates//:sqlx",
         "@crates//:tokio",
+        "@crates//:dashmap",
+        "@crates//:tracing",
         "@crates//:tree-sitter",
         "@crates//:tree-sitter-bash",
         "@crates//:uuid",
+        "@crates//:redis",
+        "@crates//:futures",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
+    ],
+)
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "server_harness_test",
+    crate = ":server_harness",
+    deps = [
+        "@crates//:tokio",
+        "@crates//:dashmap",
+        "@crates//:tracing",
     ],
 )

@@ -1346,7 +1346,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Mesh API server
     let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
-    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
+    let mesh_transport = crate::orchestration::hub::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
         is_cloud
     ).await.expect("Failed to create MeshTransport");
