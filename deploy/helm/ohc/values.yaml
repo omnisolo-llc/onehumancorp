@@ -167,3 +167,9 @@ kube-prometheus-stack:
         label: grafana_dashboard
         labelValue: "1"
 
+
+# Unified Logging for Cloud Mode
+unifiedLogging:
+  enabled: true
+  format: "json"
+  level: "info"

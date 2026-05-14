@@ -45,12 +45,26 @@
   "panels": [
     {
       "type": "text",
+      "title": "OHC Visual Excellence",
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "content": "<div style=\"backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); color: #fff;\"><h1>OHC Infra Observability</h1><p>Premium CSS Tokens Applied</p></div>",
+        "mode": "html"
+      }
+    },
+    {
+      "type": "text",
       "title": "OHC Aesthetics",
       "gridPos": {
         "h": 2,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 3
       },
       "options": {
         "mode": "html",
@@ -67,7 +81,7 @@
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 3
       },
       "id": 1,
       "options": {
@@ -139,7 +153,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 3
+        "y": 6
       },
       "id": 2,
       "options": {
@@ -230,7 +244,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 3
+        "y": 6
       },
       "id": 3,
       "options": {

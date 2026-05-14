@@ -12,6 +12,24 @@ spec:
     name: {{ include "ohc.fullname" . }}-backend
   minReplicas: {{ .Values.backend.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.backend.autoscaling.maxReplicas }}
+
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 4
+        periodSeconds: 15
+      selectPolicy: Max
   metrics:
     - type: Resource
       resource:
@@ -41,6 +59,24 @@ spec:
     name: {{ include "ohc.fullname" . }}-core
   minReplicas: {{ .Values.ohcCore.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.ohcCore.autoscaling.maxReplicas }}
+
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 4
+        periodSeconds: 15
+      selectPolicy: Max
   metrics:
     - type: Resource
       resource:
@@ -70,6 +106,24 @@ spec:
     name: {{ include "ohc.fullname" . }}-chatwoot
   minReplicas: {{ .Values.chatwoot.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.chatwoot.autoscaling.maxReplicas }}
+
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 4
+        periodSeconds: 15
+      selectPolicy: Max
   metrics:
     - type: Resource
       resource:
@@ -101,6 +155,24 @@ spec:
     name: {{ include "ohc.fullname" . }}-powersync
   minReplicas: {{ .Values.powersync.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.powersync.autoscaling.maxReplicas }}
+
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 4
+        periodSeconds: 15
+      selectPolicy: Max
   metrics:
     - type: Resource
       resource:

@@ -239,14 +239,16 @@ mod tests {
         let res = buffer_metric(&pool, "test_standalone", "counter", 1.0, labels).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'test_standalone'")
-            .fetch_one(&pool)
+        let row = tokio::time::timeout(std::time::Duration::from_millis(5000), sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'test_standalone'")
+            .fetch_one(&pool))
             .await
+            .expect("Query timed out")
             .unwrap();
 
         use sqlx::Row;
         let count: i64 = row.get(0);
-                assert_eq!(count, 0, "Metric should not be buffered in standalone mode");
+        assert_eq!(count, 0, "Metric should not be buffered in standalone mode");
+
             });
         });
     }
