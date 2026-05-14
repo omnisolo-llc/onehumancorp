@@ -1,0 +1,14 @@
+{
+  "title": "Competitor Audit Glassmorphism Dashboard",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Probes Completed",
+      "transparent": true
+    }
+  ],
+  "style": {
+    "background": "rgba(255, 255, 255, 0.03)",
+    "backdropFilter": "blur(20px) saturate(200%)"
+  }
+}

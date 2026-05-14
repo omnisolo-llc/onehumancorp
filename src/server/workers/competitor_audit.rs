@@ -20,17 +20,14 @@ impl CompetitorAuditWorker {
 
             loop {
                 interval.tick().await;
-                if let Err(e) = Self::run_audit(&db).await {
+                if let Err(e) = Self::run_audit(&db, ".agent-task/memory").await {
                     tracing::error!("CompetitorAuditWorker run_audit failed: {}", e);
                 }
             }
         });
     }
 
-    pub async fn run_audit(db: &crate::db::DB) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Implement `CompetitorAuditWorker` that periodically probes competitor update channels.
-        // Integrates with OHC-SIP by publishing findings to `.agent-task/memory/`.
-
+    pub async fn run_audit(db: &crate::db::DB, memory_dir: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let competitors = vec![
             ("AI coding assistant", "https://api.github.com/repos/cursor/cursor/commits"),
             ("OpenClaw", "https://api.github.com/repos/openclaw/openclaw/commits"),
@@ -45,7 +42,6 @@ impl CompetitorAuditWorker {
             let id = Uuid::new_v4().to_string();
             let probed_at = Utc::now();
 
-            // In a real scenario we might fetch actual data. For now, try fetching to see if endpoint is live.
             let metrics_data = match client.get(url).send().await {
                 Ok(resp) => {
                     let status = resp.status();
@@ -70,7 +66,6 @@ impl CompetitorAuditWorker {
                     .await?;
                 }
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
-                    // SQLite fallback implementation
                     sqlx::query("INSERT INTO competitor_metrics (id, tenant_id, competitor_name, metrics_data, probed_at) VALUES (?, ?, ?, ?, ?)")
                         .bind(&id)
                         .bind("system")
@@ -83,12 +78,11 @@ impl CompetitorAuditWorker {
             }
         }
 
-        // Ensure the directory exists
-        std::fs::create_dir_all(".agent-task/memory")?;
+        std::fs::create_dir_all(memory_dir)?;
 
         let findings = "Competitor Audit Finding: OHC-HA dynamic escalation is functioning. Local SQLite fallback is operational.";
         std::fs::write(
-            format!(".agent-task/memory/competitor_audit_{}.txt", Utc::now().timestamp()),
+            std::path::Path::new(memory_dir).join(format!("competitor_audit_{}.txt", Utc::now().timestamp())),
             findings
         )?;
 
@@ -98,15 +92,63 @@ impl CompetitorAuditWorker {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::*;
+    use crate::db::{DB, DbStore};
+    use sqlx::sqlite::SqlitePoolOptions;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[tokio::test]
-    async fn test_worker_initialization() {
-        // Skip full DB initialization in fast unit tests because connection timeout
-        // makes the test suite flaky. We can manually create a simplified DB struct
-        // if we needed to, but for this test's scope (90% cover logic), we verify the
-        // struct builds. In a real environment we'd use a MockPool or sqlite in-memory.
-        // For now, let's just assert our basic understanding.
-        assert_eq!(2 + 2, 4);
+    async fn test_run_audit() {
+        let db_uri = format!("file:memdb{}?mode=memory&cache=shared", SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos());
+        let pool = SqlitePoolOptions::new()
+            .connect(&db_uri)
+            .await
+            .expect("Failed to connect to sqlite");
+
+        // Set up schema
+        sqlx::query("CREATE TABLE IF NOT EXISTS competitor_metrics (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, competitor_name TEXT NOT NULL, metrics_data TEXT NOT NULL, probed_at DATETIME NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP);")
+            .execute(&pool)
+            .await
+            .expect("Failed to create table");
+
+        // Mock DB using the sqlite connection
+        let mock_db = DB {
+            pool: crate::db::get_pool(), // unused fallback
+            store: DbStore::Sqlite(pool.clone()),
+        };
+
+        let temp_dir = std::env::temp_dir().join(".agent-task-test").join("memory");
+
+        let result = CompetitorAuditWorker::run_audit(&mock_db, temp_dir.to_str().unwrap()).await;
+        assert!(result.is_ok());
+
+        // Check if rows were inserted
+        let row = sqlx::query("SELECT COUNT(*) as count FROM competitor_metrics")
+            .fetch_one(&pool)
+            .await
+            .expect("Failed to count rows");
+
+        use sqlx::Row;
+        let count: i64 = row.get("count");
+        assert_eq!(count, 3); // 3 competitors
+
+        // Check file was created
+        assert!(temp_dir.exists());
+        let entries = std::fs::read_dir(&temp_dir).unwrap();
+        let mut found = false;
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let name = entry.file_name().into_string().unwrap();
+                if name.starts_with("competitor_audit_") && name.ends_with(".txt") {
+                    found = true;
+                    let content = std::fs::read_to_string(entry.path()).unwrap();
+                    assert!(content.contains("Competitor Audit Finding: OHC-HA dynamic escalation is functioning"));
+                    // Cleanup
+                    std::fs::remove_file(entry.path()).unwrap();
+                    break;
+                }
+            }
+        }
+        assert!(found, "Audit memory file not found");
     }
 }
