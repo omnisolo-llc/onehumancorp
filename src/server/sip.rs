@@ -476,9 +476,9 @@ mod tests {
                 .unwrap();
 
 
-            let status: String = row.get("status");
+            let status: String = row.try_get("status").unwrap();
 
-            let log: String = row.get("mission_log");
+            let log: String = row.try_get("mission_log").unwrap();
 
             assert_eq!(status, "blocked");
             assert!(log.contains("Missing dependencies"));
@@ -493,7 +493,7 @@ mod tests {
                 .unwrap();
 
 
-            let log2: String = row2.get("mission_log");
+            let log2: String = row2.try_get("mission_log").unwrap();
             assert!(log2.contains("Missing dependencies\nAnother blocker"));
 
             // Clean up
@@ -570,7 +570,7 @@ mod tests {
                 .unwrap();
 
 
-            let status: String = row.get("status");
+            let status: String = row.try_get("status").unwrap();
             assert_eq!(status, "FAILED");
 
             sqlx::query("DELETE FROM agent_missions WHERE id = 'stale_mission_1'").execute(&pool).await.unwrap();
