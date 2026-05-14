@@ -68,18 +68,33 @@ impl AutoDreamPipeline {
             LIMIT 100
         ";
 
-        let tasks = sqlx::query(query)
-            .fetch_all(&self.db.pool)
-            .await
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+        let mut rows_data = Vec::new();
+        match &self.db.store {
+            crate::db::DbStore::Sqlite(pool) => {
+                let tasks = sqlx::query(query).fetch_all(pool).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                for row in tasks {
+                    let task_id: String = row.get("id");
+                    let tenant_id: String = row.get("organization_id");
+                    let agent_id: Option<String> = row.try_get("assigned_agent_id").unwrap_or(None);
+                    let payload: String = row.try_get("payload").unwrap_or_default();
+                    let log: Option<String> = row.try_get("deliberation_log").unwrap_or(None);
+                    rows_data.push((task_id, tenant_id, agent_id, payload, log));
+                }
+            }
+            crate::db::DbStore::Postgres => {
+                let tasks = sqlx::query(query).fetch_all(&self.db.pool).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                for row in tasks {
+                    let task_id: String = row.get("id");
+                    let tenant_id: String = row.get("organization_id");
+                    let agent_id: Option<String> = row.try_get("assigned_agent_id").unwrap_or(None);
+                    let payload: String = row.try_get("payload").unwrap_or_default();
+                    let log: Option<String> = row.try_get("deliberation_log").unwrap_or(None);
+                    rows_data.push((task_id, tenant_id, agent_id, payload, log));
+                }
+            }
+        };
 
-        for row in tasks {
-            let task_id: String = row.get("id");
-            let tenant_id: String = row.get("organization_id");
-            let agent_id: Option<String> = row.try_get("assigned_agent_id").unwrap_or(None);
-
-            let payload: String = row.try_get("payload").unwrap_or_default();
-            let log: Option<String> = row.try_get("deliberation_log").unwrap_or(None);
+        for (task_id, tenant_id, agent_id, payload, log) in rows_data {
 
             let content = format!("Task Payload:\n{}\nDeliberation Log:\n{}", payload, log.unwrap_or_default());
 
@@ -112,22 +127,34 @@ impl AutoDreamPipeline {
                     Ok(emb_str) => {
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        let insert_query = "
-                            INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, task_id)
-                            VALUES ($1, $2, $3, $4, $5::vector, $6, $7)
-                        ";
-
-                        sqlx::query(insert_query)
-                            .bind(&mem_id)
-                            .bind(&tenant_id)
-                            .bind(&agent_id)
-                            .bind(&chunk)
-                            .bind(&emb_str)
-                            .bind("TASK_SUMMARY")
-                            .bind(&task_id)
-                            .execute(&self.db.pool)
-                            .await
-                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                        match &self.db.store {
+                            crate::db::DbStore::Sqlite(pool) => {
+                                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, task_id) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                                    .bind(&mem_id)
+                                    .bind(&tenant_id)
+                                    .bind(&agent_id)
+                                    .bind(&chunk)
+                                    .bind(&emb_str)
+                                    .bind("TASK_SUMMARY")
+                                    .bind(&task_id)
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                            }
+                            crate::db::DbStore::Postgres => {
+                                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, task_id) VALUES ($1, $2, $3, $4, $5::vector, $6, $7)")
+                                    .bind(&mem_id)
+                                    .bind(&tenant_id)
+                                    .bind(&agent_id)
+                                    .bind(&chunk)
+                                    .bind(&emb_str)
+                                    .bind("TASK_SUMMARY")
+                                    .bind(&task_id)
+                                    .execute(&self.db.pool)
+                                    .await
+                                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                            }
+                        }
                     }
                     Err(e) => {
                         tracing::error!("AutoDreamPipeline: Failed to generate embedding for task {}: {}", task_id, e);
@@ -196,5 +223,49 @@ mod tests {
             .unwrap();
 
         assert_eq!(count.0, 1);
+    }
+
+    #[tokio::test]
+    async fn test_process_closed_tasks_sqlite() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool_sqlite = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let db = Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool_sqlite.clone())
+        });
+
+        if let crate::db::DbStore::Sqlite(ref pool) = db.store {
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS consolidated_memory (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, agent_id TEXT, content TEXT NOT NULL, embedding TEXT, source_type TEXT NOT NULL, task_id TEXT);").execute(pool).await;
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, mission_id TEXT, title TEXT, status TEXT, priority TEXT, payload TEXT, assigned_agent_id TEXT, deliberation_log TEXT);").execute(pool).await;
+
+            let _ = sqlx::query("DELETE FROM consolidated_memory").execute(pool).await;
+            let _ = sqlx::query("DELETE FROM shared_tasks").execute(pool).await;
+
+            let task_id = "test-task-1-sqlite";
+            let _ = sqlx::query("INSERT INTO shared_tasks (id, organization_id, status, payload) VALUES (?, 'org1', 'COMPLETED', 'some payload')")
+                .bind(task_id)
+                .execute(pool)
+                .await;
+
+            let mock_llm = Arc::new(MockLLMClient {
+                embedding: vec![0.1, 0.2, 0.3],
+            });
+
+            let pipeline = AutoDreamPipeline::new(db.clone(), mock_llm);
+            let res = pipeline.process_closed_tasks().await;
+            assert!(res.is_ok());
+
+            let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE task_id = ?")
+                .bind(task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+
+            assert_eq!(count.0, 1);
+        }
     }
 }

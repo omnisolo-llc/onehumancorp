@@ -258,7 +258,10 @@ impl VectorRepository {
 
                     let mut all_records = Vec::new();
                     for row in rows {
-                        let emb_str_res: String = row.try_get("embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("embedding")).unwrap_or_default());
+                        let emb_str_res: String = match row.try_get("embedding") {
+                            Ok(s) => s,
+                            Err(_) => String::from_utf8(row.try_get::<Vec<u8>, _>("embedding").unwrap_or_default()).unwrap_or_default(),
+                        };
                         let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
 
                         let record = EmbeddingRecord {
@@ -498,8 +501,15 @@ impl VectorRepository {
                         .map_err(|e| e.to_string())?;
 
                     for row in rows {
-                        let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("a_embedding")).unwrap_or_default());
-                        let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("b_embedding")).unwrap_or_default());
+                        // Fallback logic for environments without sqlite-vec where data might be blobs or strings
+                        let a_emb_str: String = match row.try_get("a_embedding") {
+                            Ok(s) => s,
+                            Err(_) => String::from_utf8(row.try_get::<Vec<u8>, _>("a_embedding").unwrap_or_default()).unwrap_or_default(),
+                        };
+                        let b_emb_str: String = match row.try_get("b_embedding") {
+                            Ok(s) => s,
+                            Err(_) => String::from_utf8(row.try_get::<Vec<u8>, _>("b_embedding").unwrap_or_default()).unwrap_or_default(),
+                        };
 
                         let a_embedding: Vec<f32> = serde_json::from_str(&a_emb_str).unwrap_or_default();
                         let b_embedding: Vec<f32> = serde_json::from_str(&b_emb_str).unwrap_or_default();
@@ -550,7 +560,10 @@ impl VectorRepository {
 
                     let mut all_records = Vec::new();
                     for row in rows {
-                        let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("embedding")).unwrap_or_default());
+                        let emb_str: String = match row.try_get("embedding") {
+                            Ok(s) => s,
+                            Err(_) => String::from_utf8(row.try_get::<Vec<u8>, _>("embedding").unwrap_or_default()).unwrap_or_default(),
+                        };
                         let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
 
                         let record = EmbeddingRecord {
