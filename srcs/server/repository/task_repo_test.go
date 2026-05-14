@@ -22,6 +22,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
+			tenant_id TEXT,
 			assigned_agent_role TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,

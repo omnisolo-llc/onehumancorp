@@ -79,10 +79,31 @@ type AgentMemory struct {
 	RawContext json.RawMessage `json:"raw_context" db:"raw_context"`
 	CreatedAt  time.Time       `json:"created_at" db:"created_at"`
 }
+
 // Task represents a task in the Shared Task List State Machine.
 type Task struct {
 	ID        string    `json:"id" db:"id"`
+	TenantID  string    `json:"tenant_id" db:"tenant_id"`
 	Status    string    `json:"status" db:"status"` // "PENDING", "IN_PROGRESS", "COMPLETED", "FAILED"
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
+// Agent represents an AI agent employed by a tenant.
+type Agent struct {
+	ID         string    `json:"id" db:"id"`
+	TenantID   string    `json:"tenant_id" db:"tenant_id"`
+	Department string    `json:"department" db:"department"`
+	Status     string    `json:"status" db:"status"`
+	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+}
+
+// Memory represents a general agent memory.
+type Memory struct {
+	ID         string      `json:"id" db:"id"`
+	TenantID   string      `json:"tenant_id" db:"tenant_id"`
+	CustomerID *string     `json:"customer_id,omitempty" db:"customer_id"`
+	Embedding  interface{} `json:"embedding" db:"embedding"`
+	Context    string      `json:"context" db:"context"`
+	CreatedAt  time.Time   `json:"created_at" db:"created_at"`
 }

@@ -56,8 +56,8 @@ func (r *sqlTaskRepository) CreateTask(ctx context.Context, task *Task) error {
 	}
 
 	query := `
-		INSERT INTO tasks (id, organization_id, parent_task_id, title, description, status, assigned_agent_role, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO tasks (id, organization_id, parent_task_id, title, description, status, assigned_agent_role, tenant_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		task.ID,
@@ -67,6 +67,7 @@ func (r *sqlTaskRepository) CreateTask(ctx context.Context, task *Task) error {
 		task.Description,
 		task.Status,
 		task.AssignedAgentRole,
+		orgID, // tenant_id is synonymous with organization_id in this context
 		task.CreatedAt,
 		task.UpdatedAt,
 	)

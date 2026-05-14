@@ -26,14 +26,18 @@ func TestProvider_CreateTask_Postgres(t *testing.T) {
 	provider := &Provider{DB: db}
 
 	task := &Task{
-		ID:     "task-1",
-		Status: "PENDING",
+		ID:       "task-1",
+		TenantID: "tenant-1",
+		Status:   "PENDING",
 	}
 
-	mock.ExpectQuery(`INSERT INTO tasks \(id, status, created_at, updated_at\)`).
-		WithArgs("task-1", "PENDING").
+	mock.ExpectBegin()
+	mock.ExpectExec(`SELECT set_config\('app\.current_tenant', \$1, true\)`).WithArgs("tenant-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectQuery(`INSERT INTO tasks \(id, tenant_id, status, created_at, updated_at\)`).
+		WithArgs("task-1", "tenant-1", "PENDING").
 		WillReturnRows(sqlmock.NewRows([]string{"created_at", "updated_at"}).
 			AddRow(time.Now(), time.Now()))
+	mock.ExpectCommit()
 
 
 	db.Exec(`
@@ -44,7 +48,8 @@ func TestProvider_CreateTask_Postgres(t *testing.T) {
 		);
 	`)
 
-	err = provider.CreateTask(context.Background(), task)
+	ctx := context.WithValue(context.Background(), TenantKey, "tenant-1")
+	err = provider.CreateTask(ctx, task)
 	assert.NoError(t, err)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
@@ -60,15 +65,17 @@ func TestProvider_CreateTask_SQLite(t *testing.T) {
 	provider := &Provider{DB: db}
 
 	task := &Task{
-		ID:     "task-1",
-		Status: "PENDING",
+		ID:       "task-1",
+		TenantID: "tenant-1",
+		Status:   "PENDING",
 	}
 
-	mock.ExpectExec(`INSERT INTO tasks \(id, status, created_at, updated_at\)`).
-		WithArgs("task-1", "PENDING").
+	mock.ExpectExec(`INSERT INTO tasks \(id, tenant_id, status, created_at, updated_at\)`).
+		WithArgs("task-1", "tenant-1", "PENDING").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err = provider.CreateTask(context.Background(), task)
+	ctx := context.WithValue(context.Background(), TenantKey, "tenant-1")
+	err = provider.CreateTask(ctx, task)
 	assert.NoError(t, err)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
@@ -92,21 +99,23 @@ func TestProvider_ClaimTask_Postgres(t *testing.T) {
 	provider := &Provider{DB: db, RedisClient: rdb}
 
 	mock.ExpectBegin()
-	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 FOR UPDATE SKIP LOCKED`).
-		WithArgs("task-1").
+	mock.ExpectExec(`SELECT set_config\('app\.current_tenant', \$1, true\)`).WithArgs("tenant-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 AND tenant_id = \$2 FOR UPDATE SKIP LOCKED`).
+		WithArgs("task-1", "tenant-1").
 		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
-	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \$1`).
-		WithArgs("task-1").
+	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \$1 AND tenant_id = \$2`).
+		WithArgs("task-1", "tenant-1").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
-	err = provider.ClaimTask(context.Background(), "task-1")
+	ctx := context.WithValue(context.Background(), TenantKey, "tenant-1")
+	err = provider.ClaimTask(ctx, "task-1")
 	assert.NoError(t, err)
 	assert.NoError(t, mock.ExpectationsWereMet())
 
 	// Test lock already acquired by another redis client
 	mr.Set("task_lock:task-2", "locked")
-	err = provider.ClaimTask(context.Background(), "task-2")
+	err = provider.ClaimTask(ctx, "task-2")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "could not acquire distributed lock")
 }
@@ -121,26 +130,27 @@ func TestProvider_ClaimTask_SQLite(t *testing.T) {
 
 	provider := &Provider{DB: db}
 
-	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).
-		WithArgs("task-1").
+	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \? AND tenant_id = \?`).
+		WithArgs("task-1", "tenant-1").
 		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
-	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING'`).
-		WithArgs("task-1").
+	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING' AND tenant_id = \?`).
+		WithArgs("task-1", "tenant-1").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err = provider.ClaimTask(context.Background(), "task-1")
+	ctx := context.WithValue(context.Background(), TenantKey, "tenant-1")
+	err = provider.ClaimTask(ctx, "task-1")
 	assert.NoError(t, err)
 	assert.NoError(t, mock.ExpectationsWereMet())
 
 	// Test concurrent modification
-	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).
-		WithArgs("task-1").
+	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \? AND tenant_id = \?`).
+		WithArgs("task-1", "tenant-1").
 		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
-	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING'`).
-		WithArgs("task-1").
+	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING' AND tenant_id = \?`).
+		WithArgs("task-1", "tenant-1").
 		WillReturnResult(sqlmock.NewResult(1, 0)) // 0 rows affected
 
-	err = provider.ClaimTask(context.Background(), "task-1")
+	err = provider.ClaimTask(ctx, "task-1")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "concurrent modification")
 }
@@ -159,27 +169,31 @@ func TestProvider_ClaimTask_Postgres_Errors(t *testing.T) {
 	defer db.Close()
 	provider := &Provider{DB: db, RedisClient: rdb}
 
+	ctx := context.WithValue(context.Background(), TenantKey, "tenant-1")
+
 	// Test BeginTx error
 	mock.ExpectBegin().WillReturnError(errors.New("begin tx error"))
-	err = provider.ClaimTask(context.Background(), "task-tx")
+	err = provider.ClaimTask(ctx, "task-tx")
 	assert.Error(t, err)
 
 	// Test query error
 	db2, mock2, _ := sqlmock.New()
 	provider2 := &Provider{DB: db2, RedisClient: rdb}
 	mock2.ExpectBegin()
-	mock2.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 FOR UPDATE SKIP LOCKED`).
-		WithArgs("task-q").WillReturnError(errors.New("query err"))
-	err = provider2.ClaimTask(context.Background(), "task-q")
+	mock2.ExpectExec(`SELECT set_config\('app\.current_tenant', \$1, true\)`).WithArgs("tenant-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock2.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 AND tenant_id = \$2 FOR UPDATE SKIP LOCKED`).
+		WithArgs("task-q", "tenant-1").WillReturnError(errors.New("query err"))
+	err = provider2.ClaimTask(ctx, "task-q")
 	assert.Error(t, err)
 
 	// Test task not found
 	db3, mock3, _ := sqlmock.New()
 	provider3 := &Provider{DB: db3, RedisClient: rdb}
 	mock3.ExpectBegin()
-	mock3.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 FOR UPDATE SKIP LOCKED`).
-		WithArgs("task-miss").WillReturnError(sql.ErrNoRows)
-	err = provider3.ClaimTask(context.Background(), "task-miss")
+	mock3.ExpectExec(`SELECT set_config\('app\.current_tenant', \$1, true\)`).WithArgs("tenant-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock3.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 AND tenant_id = \$2 FOR UPDATE SKIP LOCKED`).
+		WithArgs("task-miss", "tenant-1").WillReturnError(sql.ErrNoRows)
+	err = provider3.ClaimTask(ctx, "task-miss")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "task not found")
 
@@ -187,9 +201,10 @@ func TestProvider_ClaimTask_Postgres_Errors(t *testing.T) {
 	db4, mock4, _ := sqlmock.New()
 	provider4 := &Provider{DB: db4, RedisClient: rdb}
 	mock4.ExpectBegin()
-	mock4.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 FOR UPDATE SKIP LOCKED`).
-		WithArgs("task-claimed").WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("COMPLETED"))
-	err = provider4.ClaimTask(context.Background(), "task-claimed")
+	mock4.ExpectExec(`SELECT set_config\('app\.current_tenant', \$1, true\)`).WithArgs("tenant-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock4.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 AND tenant_id = \$2 FOR UPDATE SKIP LOCKED`).
+		WithArgs("task-claimed", "tenant-1").WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("COMPLETED"))
+	err = provider4.ClaimTask(ctx, "task-claimed")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "already claimed")
 }
@@ -203,21 +218,23 @@ func TestProvider_ClaimTask_SQLite_Errors(t *testing.T) {
 	defer db.Close()
 	provider := &Provider{DB: db}
 
+	ctx := context.WithValue(context.Background(), TenantKey, "tenant-1")
+
 	// query error
-	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).WillReturnError(errors.New("db error"))
-	err = provider.ClaimTask(context.Background(), "task-1")
+	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \? AND tenant_id = \?`).WillReturnError(errors.New("db error"))
+	err = provider.ClaimTask(ctx, "task-1")
 	assert.Error(t, err)
 
 	// wrong status
-	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("IN_PROGRESS"))
-	err = provider.ClaimTask(context.Background(), "task-1")
+	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \? AND tenant_id = \?`).WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("IN_PROGRESS"))
+	err = provider.ClaimTask(ctx, "task-1")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "already claimed")
 
     // exec error
-	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
-	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING'`).WillReturnError(errors.New("exec error"))
-	err = provider.ClaimTask(context.Background(), "task-1")
+	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \? AND tenant_id = \?`).WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
+	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING' AND tenant_id = \?`).WillReturnError(errors.New("exec error"))
+	err = provider.ClaimTask(ctx, "task-1")
 	assert.Error(t, err)
 }
 
@@ -230,13 +247,16 @@ func TestProvider_CreateTask_Postgres_Errors(t *testing.T) {
 	defer db.Close()
 	provider := &Provider{DB: db}
 
-	task := &Task{ID: "task-err", Status: "PENDING"}
+	ctx := context.WithValue(context.Background(), TenantKey, "tenant-1")
+	task := &Task{ID: "task-err", TenantID: "tenant-1", Status: "PENDING"}
 
-	mock.ExpectQuery(`INSERT INTO tasks \(id, status, created_at, updated_at\)`).
-		WithArgs("task-err", "PENDING").
+	mock.ExpectBegin()
+	mock.ExpectExec(`SELECT set_config\('app\.current_tenant', \$1, true\)`).WithArgs("tenant-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectQuery(`INSERT INTO tasks \(id, tenant_id, status, created_at, updated_at\)`).
+		WithArgs("task-err", "tenant-1", "PENDING").
 		WillReturnError(errors.New("insert error"))
 
-	err = provider.CreateTask(context.Background(), task)
+	err = provider.CreateTask(ctx, task)
 	assert.Error(t, err)
 }
 
@@ -249,13 +269,14 @@ func TestProvider_CreateTask_SQLite_Errors(t *testing.T) {
 	defer db.Close()
 	provider := &Provider{DB: db}
 
-	task := &Task{ID: "task-err", Status: "PENDING"}
+	ctx := context.WithValue(context.Background(), TenantKey, "tenant-1")
+	task := &Task{ID: "task-err", TenantID: "tenant-1", Status: "PENDING"}
 
-	mock.ExpectExec(`INSERT INTO tasks \(id, status, created_at, updated_at\)`).
-		WithArgs("task-err", "PENDING").
+	mock.ExpectExec(`INSERT INTO tasks \(id, tenant_id, status, created_at, updated_at\)`).
+		WithArgs("task-err", "tenant-1", "PENDING").
 		WillReturnError(errors.New("insert error"))
 
-	err = provider.CreateTask(context.Background(), task)
+	err = provider.CreateTask(ctx, task)
 	assert.Error(t, err)
 }
 
@@ -273,15 +294,18 @@ func TestProvider_ClaimTask_Postgres_ExecError(t *testing.T) {
 	defer db.Close()
 	provider := &Provider{DB: db, RedisClient: rdb}
 
+	ctx := context.WithValue(context.Background(), TenantKey, "tenant-1")
+
 	mock.ExpectBegin()
-	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 FOR UPDATE SKIP LOCKED`).
-		WithArgs("task-1").
+	mock.ExpectExec(`SELECT set_config\('app\.current_tenant', \$1, true\)`).WithArgs("tenant-1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 AND tenant_id = \$2 FOR UPDATE SKIP LOCKED`).
+		WithArgs("task-1", "tenant-1").
 		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
-	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \$1`).
-		WithArgs("task-1").
+	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \$1 AND tenant_id = \$2`).
+		WithArgs("task-1", "tenant-1").
 		WillReturnError(errors.New("exec error"))
 
-	err = provider.ClaimTask(context.Background(), "task-1")
+	err = provider.ClaimTask(ctx, "task-1")
 	assert.Error(t, err)
 }
 
@@ -297,7 +321,8 @@ func TestProvider_ClaimTask_Postgres_RedisError(t *testing.T) {
 	defer db.Close()
 	provider := &Provider{DB: db, RedisClient: rdb}
 
-	err = provider.ClaimTask(context.Background(), "task-1")
+	ctx := context.WithValue(context.Background(), TenantKey, "tenant-1")
+	err = provider.ClaimTask(ctx, "task-1")
 	assert.Error(t, err)
 }
 
@@ -311,14 +336,16 @@ func TestProvider_ClaimTask_SQLite_RowsAffectedError(t *testing.T) {
 
 	provider := &Provider{DB: db}
 
-	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).
-		WithArgs("task-1").
+	ctx := context.WithValue(context.Background(), TenantKey, "tenant-1")
+
+	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \? AND tenant_id = \?`).
+		WithArgs("task-1", "tenant-1").
 		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("PENDING"))
-	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING'`).
-		WithArgs("task-1").
+	mock.ExpectExec(`UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = \? AND status = 'PENDING' AND tenant_id = \?`).
+		WithArgs("task-1", "tenant-1").
 		WillReturnResult(sqlmock.NewErrorResult(errors.New("rows affected error")))
 
-	err = provider.ClaimTask(context.Background(), "task-1")
+	err = provider.ClaimTask(ctx, "task-1")
 	assert.Error(t, err)
 }
 
