@@ -16,9 +16,7 @@ export struct SwarmAgentStatus {
 export component SwarmObservabilityPanel inherits Rectangle {
     width: 100%;
     height: 100%;
-    background: rgba(15, 23, 42, 0.85); // Dark semi-transparent backdrop
-    drop-shadow-blur: 20px;
-    drop-shadow-color: rgba(0, 0, 0, 0.5);
+    background: transparent;
 
     in property <[SwarmActivity]> activities;
     in property <[SwarmAgentStatus]> agent_statuses;
@@ -28,40 +26,42 @@ export component SwarmObservabilityPanel inherits Rectangle {
     TouchArea {
         width: 100%;
         height: 100%;
-        // Blocks touches from going through to underlying content
-    }
 
-    VerticalBox {
-        padding: 24px;
-        spacing: 20px;
+        GlassCard {
+            width: 100%;
+            height: 100%;
 
-        HorizontalBox {
-            alignment: space-between;
-            Text {
-                text: "AI Agent Activity";
-                font-family: "Outfit";
-                font-size: 24px;
-                font-weight: 700;
-                color: white;
-                vertical-alignment: center;
-            }
-            Button {
-                text: "Close";
-                width: 80px;
-                height: 44px;
-                clicked => { close(); }
-            }
-        }
+            VerticalBox {
+                padding: 24px;
+                spacing: 20px;
 
-        VerticalBox {
-            spacing: 16px;
-            Text {
-                text: "Active Agents";
-                font-family: "Inter";
-                font-size: 16px;
-                font-weight: 600;
-                color: #cbd5e1;
-            }
+                HorizontalBox {
+                    alignment: space-between;
+                    Text {
+                        text: "My Team's Activity";
+                        font-family: "Outfit";
+                        font-size: 24px;
+                        font-weight: 700;
+                        color: white;
+                        vertical-alignment: center;
+                    }
+                    Button {
+                        text: "Close";
+                        width: 80px;
+                        height: 44px;
+                        clicked => { close(); }
+                    }
+                }
+
+                VerticalBox {
+                    spacing: 16px;
+                    Text {
+                        text: "My Active AI Team";
+                        font-family: "Inter";
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: #cbd5e1;
+                    }
 
             for status in agent_statuses : GlassCard {
                 border-color: status.is_active ? rgba(16, 185, 129, 0.5) : rgba(255, 255, 255, 0.1);
@@ -110,7 +110,7 @@ export component SwarmObservabilityPanel inherits Rectangle {
         VerticalBox {
             spacing: 16px;
             Text {
-                text: "Activity Feed";
+                text: "Business Automations Feed";
                 font-family: "Inter";
                 font-size: 16px;
                 font-weight: 600;
@@ -147,5 +147,7 @@ export component SwarmObservabilityPanel inherits Rectangle {
         }
 
         Rectangle {} // Bottom Spacer
+            }
+        }
     }
 }

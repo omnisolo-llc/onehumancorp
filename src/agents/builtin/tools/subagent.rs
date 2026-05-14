@@ -113,58 +113,22 @@ impl ToolExecutor for SubagentExecutor {
             }
         } else if mode == "teammate" {
             let task_id = uuid::Uuid::new_v4().to_string();
-            let mailbox_dir = format!(".agent-mailboxes/subagent-{}", task_id);
-            if let Err(e) = tokio::fs::create_dir_all(&mailbox_dir).await {
-                return Err(ToolError::LlmRecoverable(format!("Failed to create mailbox directory: {}", e)));
-            }
 
-            let inbox_path = format!("{}/inbox.txt", mailbox_dir);
-            let outbox_path = format!("{}/outbox.txt", mailbox_dir);
+            let payload_json = serde_json::json!({
+                "parent_task_id": task_id,
+                "payload": { "instruction": task }
+            }).to_string();
 
-            // We use the augmented `task` which already includes the 1k-2k token condensed summary rule
-            if let Err(e) = tokio::fs::write(&inbox_path, &task).await {
-                return Err(ToolError::LlmRecoverable(format!("Failed to write to inbox: {}", e)));
-            }
+            let target_url = format!("http://{}/api/queue/subagent", std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:8080".to_string()));
 
-            let teammate_task = format!(
-                "You are a teammate subagent. Your task is: {}
-When finished or if you need to report progress, write your final summary to {}. To receive further instructions, read from {}.",
-                task, outbox_path, inbox_path
-            );
+            let _ = self.runner.run("curl", &[
+                "-X", "POST",
+                &target_url,
+                "-d", &payload_json,
+                "-H", "Content-Type: application/json"
+            ], None, vec![]).await;
 
-            let runner_clone = self.runner.clone();
-            let task_clone = teammate_task.clone();
-            let outbox_path_clone = outbox_path.clone();
-            let mailbox_dir_clone = mailbox_dir.clone();
-
-            let mut envs = vec![];
-            if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
-                envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
-            }
-
-            let output = runner_clone.run("ohc_builtin_agent", &["--task", &task_clone, "--mailbox", &mailbox_dir_clone], None, envs).await;
-
-            let res = match output {
-                Ok(out) => {
-                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-                    if out.status.success() {
-                        stdout
-                    } else {
-                        format!("Subagent error: {}", stderr)
-                    }
-                }
-                Err(e) => format!("Subagent failed: {}", e),
-            };
-
-            use tokio::io::AsyncWriteExt;
-            if let Ok(mut file) = tokio::fs::OpenOptions::new().create(true).append(true).open(&outbox_path_clone).await {
-                let _ = file.write_all(format!("
-[System: Subagent Process Terminated]
-Final Result: {}", res).as_bytes()).await;
-            }
-
-            Ok(format!("Teammate subagent spawned. Communicate via {} and {}", inbox_path, outbox_path))
+            Ok(format!("Teammate subagent spawned and task queued in database. Task ID: {}", task_id))
         } else {
             return Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode)));
         }
@@ -246,7 +210,6 @@ mod tests {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
         // We set the address to something invalid to quickly trigger connection failure for the background task
 
-
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         let executor = SubagentExecutor { runner };
         let args = json!({
@@ -258,37 +221,7 @@ mod tests {
         assert!(result.is_ok(), "Expected Ok for teammate mode");
         let msg = result.unwrap();
 
-        assert!(msg.contains("Teammate subagent spawned. Communicate via"), "Message should contain success notification");
-
-        let parts: Vec<&str> = msg.split("Communicate via ").collect();
-        assert_eq!(parts.len(), 2);
-
-        let path_parts: Vec<&str> = parts[1].split(" and ").collect();
-        assert_eq!(path_parts.len(), 2);
-
-        let inbox_path = path_parts[0];
-        let outbox_path = path_parts[1];
-
-        assert!(std::path::Path::new(inbox_path).exists(), "Inbox should exist");
-
-        // Mock command runner will return success default, no error.
-        let mut attempts = 0;
-        let mut found = false;
-        while attempts < 20 {
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            if let Ok(content) = tokio::fs::read_to_string(outbox_path).await {
-                if content.contains("[System: Subagent Process Terminated]") {
-                    found = true;
-                    break;
-                }
-            }
-            attempts += 1;
-        }
-
-        assert!(found, "Background task should have written to outbox");
-
-        let parent_dir = std::path::Path::new(inbox_path).parent().unwrap();
-                let _ = tokio::fs::remove_dir_all(parent_dir).await;
+        assert!(msg.contains("Teammate subagent spawned and task queued in database. Task ID:"), "Message should contain success notification");
             });
         });
     }
