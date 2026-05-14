@@ -77,8 +77,8 @@ jobs:
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
 
-    #  - name: Build release artifacts
-     #   run: bazelisk build //release:all_release_artifacts --config=linux
+      - name: Build release artifacts
+        run: bazelisk build //release:all_release_artifacts --config=linux
 
       - name: Test
         run: |
