@@ -8,25 +8,16 @@ use opentelemetry::KeyValue;
 pub struct ViolationStore {
     pool: Option<PgPool>,
     violation_counter: Counter<u64>,
-    pub token_usage_counter: Counter<u64>,
-    pub llm_cost_counter: Counter<u64>,
-    pub storage_bytes_counter: Counter<u64>,
 }
 
 impl ViolationStore {
     pub fn new(pool: Option<PgPool>) -> Self {
         let meter = global::meter("ohc.harness.telemetry");
         let violation_counter = meter.u64_counter("ohc_agent_violations_total").build();
-        let token_usage_counter = meter.u64_counter("ohc_tenant_token_usage_total").build();
-        let llm_cost_counter = meter.u64_counter("ohc_tenant_llm_cost_cents").build();
-        let storage_bytes_counter = meter.u64_counter("ohc_storage_bytes_total").build();
 
         Self {
             pool,
             violation_counter,
-            token_usage_counter,
-            llm_cost_counter,
-            storage_bytes_counter,
         }
     }
 
@@ -55,7 +46,7 @@ impl ViolationStore {
             // Actually, in `sqlx`, to insert into a `JSONB` column without casting, one can use `sqlx::types::Json` or just cast it in the query `CAST($6 as JSONB)`. However, since SQLite doesn't have `JSONB`, casting breaks on SQLite.
             // Better to use `sqlx::types::Json`.
 
-            let redacted_details = ::server_telemetry::redact_interface_pii(details);
+            let redacted_details = crate::telemetry::redact_interface_pii(details);
             let json_value: sqlx::types::Json<Value> = sqlx::types::Json(redacted_details);
 
             // Execute in an explicit transaction to set RLS correctly
@@ -63,7 +54,7 @@ impl ViolationStore {
 
             // Since PgPool is specifically a PostgreSQL pool, it can never be SQLite.
             // We can safely apply the SET LOCAL for PostgreSQL.
-            sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            sqlx::query("SET LOCAL app.current_tenant = $1")
                 .bind(tenant_id)
                 .execute(&mut *tx)
                 .await?;
@@ -168,5 +159,4 @@ mod tests {
         // Clean up
         let _ = sqlx::query("DELETE FROM agent_violations WHERE session_id = 'test-session'").execute(&pool).await;
     }
-
 }

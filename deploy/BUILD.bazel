@@ -25,20 +25,12 @@ oci_image(
     base = "@distroless_cc",
     entrypoint = ["/usr/local/bin/ohc"],
     tars = [":backend_pkg"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
 
 oci_load(
     name = "server_load",
     image = ":server_image",
     repo_tags = ["onehumancorp/server:latest"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:public"],
 )
 
@@ -46,10 +38,6 @@ oci_push(
     name = "server_push_ghcr",
     image = ":server_image",
     repository = "ghcr.io/onehumancorp/server",
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:public"],
 )
 
@@ -57,10 +45,6 @@ oci_push(
     name = "server_push_dockerhub",
     image = ":server_image",
     repository = "index.docker.io/onehumancorp/server",
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:public"],
 )
 
@@ -83,20 +67,12 @@ oci_image(
     # as a sidecar tool inside the container.
     entrypoint = ["/usr/local/bin/ohc"],
     tars = [":agent_pkg"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
 
 oci_load(
     name = "agent_load",
     image = ":agent_image",
     repo_tags = ["onehumancorp/agent:bazel"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:public"],
 )
 
@@ -107,20 +83,12 @@ oci_image(
     # to bootstrap the builtin provider when no external workforce exists.
     entrypoint = ["/usr/local/bin/ohc"],
     tars = [":agent_pkg"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
 
 oci_load(
     name = "default_agent_load",
     image = ":default_agent_image",
     repo_tags = ["onehumancorp/internal-default-agent:bazel"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:public"],
 )
 
@@ -128,10 +96,6 @@ oci_push(
     name = "agent_push_ghcr",
     image = ":agent_image",
     repository = "ghcr.io/onehumancorp/agent",
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:public"],
 )
 
@@ -139,10 +103,6 @@ oci_push(
     name = "agent_push_dockerhub",
     image = ":agent_image",
     repository = "index.docker.io/onehumancorp/agent",
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:public"],
 )
 
@@ -155,10 +115,6 @@ sh_test(
         "helm/ohc/**",
         "docker-compose.yml",
     ]) + ["BUILD.bazel"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
 
 # End-to-end smoke test against a real Kind cluster.
@@ -178,16 +134,12 @@ sh_test(
         "//src/server:server",
     ],
     tags = [
-
+        "manual",
         "large",
         "local",
         "no-remote-exec",
         "no-sandbox",
         "requires-docker",
     ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:public"],
 )

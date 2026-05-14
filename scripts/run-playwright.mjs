@@ -29,10 +29,29 @@ async function waitForPort(port, maxAttempts = 30) {
 async function main() {
   console.log('[run-playwright] Starting infrastructure...');
 
-  // Skipping infrastructure start due to sandbox limitations
+  // Start docker-compose
+  execSync('docker compose -f deploy/docker-compose.e2e.yml up -d', {
+    cwd: ROOT,
+    stdio: 'inherit',
+  });
+
+  // Wait for postgres
+  console.log('[run-playwright] Waiting for postgres...');
+  if (!await waitForPort(5432)) {
+    throw new Error('postgres failed to start');
+  }
+  console.log('[run-playwright] postgres ready');
+
+  // Wait for redis
+  console.log('[run-playwright] Waiting for redis...');
+  if (!await waitForPort(6379)) {
+    throw new Error('redis failed to start');
+  }
+  console.log('[run-playwright] redis ready');
 
   // Build and start server
-  console.log('[run-playwright] Server already built in outer execution');
+  console.log('[run-playwright] Building server...');
+  execSync('npx @bazel/bazelisk build //src/server:server', { cwd: ROOT, stdio: 'inherit' });
 
   const serverBin = path.join(ROOT, 'bazel-bin/src/server/server');
   console.log('[run-playwright] Starting server...');
@@ -45,13 +64,15 @@ async function main() {
   await setTimeout(2000); // Give server time to start
 
   // Run Playwright tests
-  console.log('[run-playwright] Skipping actual playwright tests due to sandbox issues...');
+  console.log('[run-playwright] Running Playwright tests...');
   try {
-    // Skipping to prevent failure in restricted environment
-    console.log('[run-playwright] Playwright tests simulated successful locally.');
+    execSync('npx playwright test', { cwd: ROOT, stdio: 'inherit' });
   } finally {
     server.kill();
-
+    execSync('docker compose -f deploy/docker-compose.e2e.yml down', {
+      cwd: ROOT,
+      stdio: 'inherit',
+    });
   }
 
   console.log('[run-playwright] Done');

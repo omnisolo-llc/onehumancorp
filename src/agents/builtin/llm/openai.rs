@@ -277,14 +277,7 @@ impl LlmClient for OpenAIClient {
             })
             .collect();
 
-        let clamped_max_tokens = if req.max_tokens == 0 {
-            2048
-        } else if req.max_tokens > 4096 {
-            4096
-        } else {
-            req.max_tokens
-        };
-        let max_tokens = Some(clamped_max_tokens);
+        let max_tokens = if req.max_tokens == 0 { None } else { Some(req.max_tokens) };
 
         let payload = OpenAIRequest {
             model: req.model.clone(),
@@ -367,7 +360,6 @@ impl LlmClient for OpenAIClient {
                 tool_calls,
                 tool_results: vec![],
                 response_id: result.id.clone(),
-                previous_response_id: None,
             },
             usage,
             stop_reason: finish_reason,

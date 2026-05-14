@@ -24,7 +24,7 @@ mod tests {
         assert!(!acquired2);
 
         // Simulate lag / timeout -> wait for TTL to pass
-        tokio::task::yield_now().await; sleep(Duration::from_millis(2100)).await;
+        sleep(Duration::from_millis(2100)).await;
 
         // Recovery: Agent 2 should now acquire
         let acquired2_retry = transport.acquire_lock("system_lock", "agent_2", 2).await.unwrap();
@@ -118,33 +118,12 @@ mod tests {
         // guarantees the underlying bounded logic without network drift.
         let start = std::time::Instant::now();
         let slow_operation = async {
-            tokio::task::yield_now().await; sleep(Duration::from_millis(2050)).await;
+            sleep(Duration::from_millis(3000)).await;
             "ok"
         };
 
         let result = timeout(Duration::from_millis(2000), slow_operation).await;
         assert!(result.is_err()); // Timeout triggers
         assert!(start.elapsed() < Duration::from_millis(2500));
-    }
-
-    #[tokio::test]
-    async fn test_caching_strategy_resilience() {
-        // Simulates caching strategy behavior ensuring it doesn't break when Redis is unavailable.
-        let mut retries = 0;
-        let mut success = false;
-        while retries < 3 {
-            // Emulate hitting memory cache
-            success = true;
-            break;
-        }
-        assert!(success, "Caching strategy must be resilient");
-    }
-
-    #[tokio::test]
-    async fn test_ai_token_efficiency() {
-        // Ensures AI token efficiency optimization logic correctly compresses text.
-        let raw_text = "This is a very long text that has many words and needs to be compressed.";
-        let compressed_text = "This is a very long text that has many words and needs to be compressed."; // Mocking compression behavior
-        assert_eq!(compressed_text.len(), raw_text.len()); // A real compress would be <. Doing this simply to verify test framework detects.
     }
 }

@@ -78,10 +78,6 @@ message B2BHandshakeRequest {
   repeated string allowed_roles = 3;
 }
 
-message SyncMissionStatus {
-  bool success = 1;
-}
-
 // Incident / SRE messages
 message Incident {
   string id = 1;

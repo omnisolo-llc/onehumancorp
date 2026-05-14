@@ -33,8 +33,6 @@ pub struct Message {
     pub tool_results: Vec<ToolResult>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub response_id: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub previous_response_id: Option<String>,
 }
 
 impl Message {
@@ -45,7 +43,6 @@ impl Message {
             tool_calls: vec![],
             tool_results: vec![],
             response_id: None,
-            previous_response_id: None,
         }
     }
 
@@ -56,18 +53,6 @@ impl Message {
             tool_calls: vec![],
             tool_results: vec![],
             response_id: None,
-            previous_response_id: None,
-        }
-    }
-
-    pub fn system(content: impl Into<String>) -> Self {
-        Self {
-            role: Role::System,
-            content: content.into(),
-            tool_calls: vec![],
-            tool_results: vec![],
-            response_id: None,
-            previous_response_id: None,
         }
     }
 }
@@ -128,7 +113,6 @@ pub struct ToolDefinition {
     pub parameters: serde_json::Value,
 }
 
-/// Error Handling (Compounding Error Prevention): LangGraph Mechanic (4-types): 1) Transient, 2) LLM-recoverable, 3) User-fixable, 4) Unexpected
 /// 4-tier Error enum for Tool Execution (LangGraph mechanics).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ToolError {

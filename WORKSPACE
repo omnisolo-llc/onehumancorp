@@ -115,11 +115,3 @@ go_deps()
 
 # gazelle:repository_macro repositories.bzl%go_repositories
 go_repositories()
-
-go_repository(
-    name = "com_github_stretchr_testify",
-    build_file_generation = "on",
-    importpath = "github.com/stretchr/testify",
-    sum = "h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYK4Q=",
-    version = "v1.8.4",
-)

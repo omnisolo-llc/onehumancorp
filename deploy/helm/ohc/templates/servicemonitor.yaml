@@ -1,4 +1,4 @@
-{{- if dig "kube-prometheus-stack" "enabled" false (.Values | toYaml | fromYaml) }}
+{{- if dig "kube-prometheus-stack" "enabled" false .Values }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:

@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::wizard_service_server::WizardService;
+use crate::ohc::orchestration::*;
+use crate::ohc::orchestration::wizard_service_server::WizardService;
 use std::sync::RwLock;
 
 pub struct MyWizardService {
@@ -184,12 +184,6 @@ impl WizardService for MyWizardService {
             });
         }
 
-        health_checks.push(DiagnosticCheckProto {
-            check: "HYBRID_MODE_SWITCHING".to_string(),
-            status: "ok".to_string(),
-            message: "Hybrid-mode switching mechanisms are active".to_string(),
-        });
-
         Ok(Response::new(OnboardingVerifyResponse {
             status: resp_status.to_string(),
             mode: mode.to_string(),
@@ -202,7 +196,7 @@ impl WizardService for MyWizardService {
 mod tests {
     use super::*;
     use tonic::Request;
-    use ::server_ohc::orchestration::EmptyRequest;
+    use crate::ohc::orchestration::EmptyRequest;
     use std::sync::Mutex;
     use std::sync::OnceLock;
 
@@ -212,79 +206,73 @@ mod tests {
     }
 
 
-    #[test]
-    fn test_verify_onboarding_standalone_sqlite_ok() {
+    #[tokio::test]
+    async fn test_verify_onboarding_standalone_sqlite_ok() {
         let _guard = env_lock();
-        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
-            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-                let service = MyWizardService::new();
-                let request = Request::new(EmptyRequest {});
-                let response = service.verify_onboarding(request).await.unwrap().into_inner();
-                assert_eq!(response.status, "healthy");
-                assert_eq!(response.mode, "standalone");
-                let has_ok_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "ok");
-                assert!(has_ok_db);
-                let has_hybrid_check = response.diagnostics.iter().any(|d| d.check == "HYBRID_MODE_SWITCHING" && d.status == "ok");
-                assert!(has_hybrid_check);
-                let has_local_sync_check = response.diagnostics.iter().any(|d| d.check == "LOCAL_TO_CLOUD_SYNC" && d.status == "ok");
-                assert!(has_local_sync_check);
-            });
-        });
+        let old_standalone = std::env::var("STANDALONE_MODE").ok();
+        let old_db_url = std::env::var("DATABASE_URL").ok();
+
+        unsafe { std::env::set_var("STANDALONE_MODE", "true"); }
+        unsafe { std::env::set_var("DATABASE_URL", "sqlite://local.db"); }
+
+        let service = MyWizardService::new();
+        let request = Request::new(EmptyRequest {});
+        let response = service.verify_onboarding(request).await.unwrap().into_inner();
+
+        assert_eq!(response.status, "healthy");
+        assert_eq!(response.mode, "standalone");
+
+        let has_ok_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "ok");
+        assert!(has_ok_db);
+
+        if let Some(v) = old_standalone { unsafe { std::env::set_var("STANDALONE_MODE", v); } } else { unsafe { std::env::remove_var("STANDALONE_MODE"); } }
+        if let Some(v) = old_db_url { unsafe { std::env::set_var("DATABASE_URL", v); } } else { unsafe { std::env::remove_var("DATABASE_URL"); } }
     }
 
-
-
-    #[test]
-    fn test_verify_onboarding_standalone_sqlite_missing() {
+    #[tokio::test]
+    async fn test_verify_onboarding_standalone_sqlite_missing() {
         let _guard = env_lock();
-        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", None::<&str>)], || {
-            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-                let service = MyWizardService::new();
-                let request = Request::new(EmptyRequest {});
-                let response = service.verify_onboarding(request).await.unwrap().into_inner();
-                assert_eq!(response.status, "degraded");
-                assert_eq!(response.mode, "standalone");
-                let has_missing_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "missing");
-                assert!(has_missing_db);
-            });
-        });
+        let old_standalone = std::env::var("STANDALONE_MODE").ok();
+        let old_db_url = std::env::var("DATABASE_URL").ok();
+
+        unsafe { std::env::set_var("STANDALONE_MODE", "true"); }
+        unsafe { std::env::remove_var("DATABASE_URL"); }
+
+        let service = MyWizardService::new();
+        let request = Request::new(EmptyRequest {});
+        let response = service.verify_onboarding(request).await.unwrap().into_inner();
+
+        assert_eq!(response.status, "degraded");
+        assert_eq!(response.mode, "standalone");
+
+        let has_missing_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "missing");
+        assert!(has_missing_db);
+
+        if let Some(v) = old_standalone { unsafe { std::env::set_var("STANDALONE_MODE", v); } } else { unsafe { std::env::remove_var("STANDALONE_MODE"); } }
+        if let Some(v) = old_db_url { unsafe { std::env::set_var("DATABASE_URL", v); } } else { unsafe { std::env::remove_var("DATABASE_URL"); } }
     }
 
-
-
-    #[test]
-    fn test_verify_onboarding_standalone_sqlite_invalid() {
+    #[tokio::test]
+    async fn test_verify_onboarding_standalone_sqlite_invalid() {
         let _guard = env_lock();
-        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("postgres://localhost/db"))], || {
-            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-                let service = MyWizardService::new();
-                let request = Request::new(EmptyRequest {});
-                let response = service.verify_onboarding(request).await.unwrap().into_inner();
-                assert_eq!(response.status, "degraded");
-                assert_eq!(response.mode, "standalone");
-                let has_invalid_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "invalid");
-                assert!(has_invalid_db);
-            });
-        });
-    }
+        let old_standalone = std::env::var("STANDALONE_MODE").ok();
+        let old_db_url = std::env::var("DATABASE_URL").ok();
 
-    #[test]
-    fn test_verify_onboarding_hybrid_mode_probes() {
-        let _guard = env_lock();
-        temp_env::with_vars(vec![("STANDALONE_MODE", Some("false")), ("DATABASE_URL", Some("postgres://db")), ("REDIS_URL", Some("redis://cache"))], || {
-            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-                let service = MyWizardService::new();
-                let request = Request::new(EmptyRequest {});
-                let response = service.verify_onboarding(request).await.unwrap().into_inner();
-                assert_eq!(response.status, "healthy");
-                assert_eq!(response.mode, "cloud");
-                let has_hybrid_check = response.diagnostics.iter().any(|d| d.check == "HYBRID_MODE_SWITCHING" && d.status == "ok");
-                assert!(has_hybrid_check);
-                let has_local_sync_check = response.diagnostics.iter().any(|d| d.check == "LOCAL_TO_CLOUD_SYNC" && d.status == "ok");
-                assert!(has_local_sync_check);
-            });
-        });
-    }
+        unsafe { std::env::set_var("STANDALONE_MODE", "true"); }
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost/db"); }
 
+        let service = MyWizardService::new();
+        let request = Request::new(EmptyRequest {});
+        let response = service.verify_onboarding(request).await.unwrap().into_inner();
+
+        assert_eq!(response.status, "degraded");
+        assert_eq!(response.mode, "standalone");
+
+        let has_invalid_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "invalid");
+        assert!(has_invalid_db);
+
+        if let Some(v) = old_standalone { unsafe { std::env::set_var("STANDALONE_MODE", v); } } else { unsafe { std::env::remove_var("STANDALONE_MODE"); } }
+        if let Some(v) = old_db_url { unsafe { std::env::set_var("DATABASE_URL", v); } } else { unsafe { std::env::remove_var("DATABASE_URL"); } }
+    }
 
 }

@@ -63,11 +63,6 @@ pub fn calculate_cost(model: &str, prompt_tokens: i64, completion_tokens: i64, c
     (cached_tokens as f64 * pricing.cached_cost / 1_000_000.0)
 }
 
-pub fn calculate_cost_cents(model: &str, prompt_tokens: i64, completion_tokens: i64, cached_tokens: i64) -> i64 {
-    let cost = calculate_cost(model, prompt_tokens, completion_tokens, cached_tokens);
-    (cost * 100.0).round() as i64
-}
-
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
 pub struct CostConfig {
     pub cost_per_input_token: f64,
@@ -146,13 +141,6 @@ mod tests {
 
         let cost = calculate_cost("local-model", 1000000, 1000000, 1000000);
         assert_eq!(cost, 0.0);
-    }
-
-    #[test]
-    fn test_calculate_cost_cents() {
-        // Test with a known model
-        let cost = calculate_cost_cents("claude-3-opus", 1000000, 1000000, 0);
-        assert_eq!(cost, 9000);
     }
 
     #[test]

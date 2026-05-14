@@ -1,4 +1,6 @@
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
+#[allow(unused_imports)]
+use ohc_builtin_agent_core::types::{Message, Role};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::process::Command;
@@ -19,9 +21,6 @@ pub struct Feature {
     pub status: String, // "pending", "in_progress", "completed"
 }
 
-/// The "Ralph Loop": For long-running asynchronous tasks spanning multiple context windows.
-/// Phase 1 (Initializer Agent): Sets up environment, writes init script, progress file, feature list, and makes initial git commit.
-/// Phase 2 (Coding Agent): In every subsequent session, reads git logs and progress files to orient itself, picks the highest-priority incomplete feature, works, commits, and updates the summary.
 /// The Ralph Loop for long-running asynchronous tasks spanning multiple context windows.
 pub struct RalphLoop {
     pub agent: Arc<Agent>,

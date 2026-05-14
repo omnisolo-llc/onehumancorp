@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
-use ::server_pricing::calculator::{self, CostConfig};
-use opentelemetry::global;
-use opentelemetry::metrics::Counter;
-use opentelemetry::KeyValue;
+use crate::pricing::calculator::{self, CostConfig};
 
 #[derive(Clone)]
 pub struct AuditEvent {
@@ -31,20 +28,11 @@ pub struct CostAuditor {
     total_network_cost: Mutex<f64>,
     agent_revenues: Mutex<HashMap<String, f64>>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
-    agent_storage_bytes: Mutex<HashMap<String, i64>>,
     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
-    llm_cost_counter: Counter<f64>,
-    storage_savings_counter: Counter<f64>,
-    compute_cost_counter: Counter<f64>,
 }
 
 impl CostAuditor {
     pub fn new(config: CostConfig) -> Self {
-        let meter = global::meter("ohc.billing");
-        let llm_cost_counter = meter.f64_counter("ohc_llm_cost_total").build();
-        let storage_savings_counter = meter.f64_counter("ohc_storage_savings_total").build();
-        let compute_cost_counter = meter.f64_counter("ohc_compute_cost_total").build();
-
         CostAuditor {
             config,
             agent_costs: Mutex::new(HashMap::new()),
@@ -56,11 +44,7 @@ impl CostAuditor {
             total_network_cost: Mutex::new(0.0),
             agent_revenues: Mutex::new(HashMap::new()),
             agent_output_tokens: Mutex::new(HashMap::new()),
-            agent_storage_bytes: Mutex::new(HashMap::new()),
             telemetry_tx: None,
-            llm_cost_counter,
-            storage_savings_counter,
-            compute_cost_counter,
         }
     }
 
@@ -87,8 +71,6 @@ impl CostAuditor {
         let mut agent_output_tokens = self.agent_output_tokens.lock().unwrap();
         let current_tokens = agent_output_tokens.entry(event.agent_id.clone()).or_insert(0);
         *current_tokens += event.output_tokens;
-
-        self.llm_cost_counter.add(cost, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         if let Some(tx) = &self.telemetry_tx {
             let _ = tx.send(event.clone());
@@ -136,8 +118,6 @@ impl CostAuditor {
         let mut storage_savings = self.storage_savings.lock().unwrap();
         *storage_savings += savings;
         
-        self.storage_savings_counter.add(savings, &[]);
-
         savings
     }
 
@@ -151,28 +131,19 @@ impl CostAuditor {
         *total_cost
     }
 
-    pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64, i64)> {
+    pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64)> {
         let agent_costs = self.agent_costs.lock().unwrap();
         let agent_revenues = self.agent_revenues.lock().unwrap();
         let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
-        let agent_storage_bytes = self.agent_storage_bytes.lock().unwrap();
         let mut result = Vec::new();
         for (agent_id, cost) in agent_costs.iter() {
             let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
             let output_tokens = agent_output_tokens.get(agent_id).unwrap_or(&0);
-            let storage_bytes = agent_storage_bytes.get(agent_id).unwrap_or(&0);
             let roi = self.calculate_roi(*cost, *revenue);
             let efficiency = self.calculate_efficiency(*cost, *output_tokens);
-            result.push((agent_id.clone(), *cost, *output_tokens, roi, efficiency, *storage_bytes));
+            result.push((agent_id.clone(), *cost, *output_tokens, roi, efficiency));
         }
         result
-    }
-
-
-    pub fn record_agent_storage(&self, agent_id: &str, bytes: i64) {
-        let mut agent_storage_bytes = self.agent_storage_bytes.lock().unwrap();
-        let current_bytes = agent_storage_bytes.entry(agent_id.to_string()).or_insert(0);
-        *current_bytes += bytes;
     }
 
     pub fn get_total_tokens(&self) -> i64 {
@@ -214,8 +185,6 @@ impl CostAuditor {
         *total_cost += total;
         *total_compute_cost += compute_cost;
         *total_network_cost += network_cost;
-
-        self.compute_cost_counter.add(total, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         total
     }
@@ -285,7 +254,7 @@ impl CostAuditor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::server_pricing::calculator::CostConfig;
+    use crate::pricing::calculator::CostConfig;
 
     #[test]
     fn test_cost_auditor() {

@@ -35,15 +35,15 @@ while true; do
         2) (set -e; bash "$SCRIPT_DIR/ohc-env-wizard.sh") || echo -e "${PURPLE}Environment Wizard returned non-zero exit status ($?).${RESET}" ;;
         3) (set -e; bash "$SCRIPT_DIR/ohc-diagnostics.sh") || echo -e "${PURPLE}Diagnostics returned non-zero exit status ($?).${RESET}" ;;
         4) (set -e; bash "$SCRIPT_DIR/ohc-standalone.sh") || echo -e "${PURPLE}Quick Start returned non-zero exit status ($?).${RESET}" ;;
-        5) (bash "$SCRIPT_DIR/ohc-agent-wizard.sh") || echo -e "${PURPLE}Agent Provisioning returned non-zero exit status ($?).${RESET}" ;;
+        5) (set -e; bash "$SCRIPT_DIR/ohc-agent-wizard.sh") || echo -e "${PURPLE}Agent Provisioning returned non-zero exit status ($?).${RESET}" ;;
         6)
             if ! command -v sqlite3 &> /dev/null; then
                 echo -e "${PURPLE}✗ sqlite3 is not installed. Please install it to perform the DB Health Check.${RESET}"
-            elif [ -f "$HOME/.ohc-local-data/standalone.db" ]; then
+            elif [ -f "local_standalone.db" ]; then
                 echo -e "${GREEN}✓ Standalone DB found. Checking tables...${RESET}"
-                sqlite3 "$HOME/.ohc-local-data/standalone.db" ".tables" || echo -e "${PURPLE}DB Check failed with exit status $?.${RESET}"
+                sqlite3 "local_standalone.db" ".tables" || echo -e "${PURPLE}DB Check failed with exit status $?.${RESET}"
             else
-                echo -e "${PURPLE}✗ standalone.db not found in $HOME/.ohc-local-data/.${RESET}"
+                echo -e "${PURPLE}✗ local_standalone.db not found in the current directory.${RESET}"
             fi
             ;;
         7) (set -e; bash "$SCRIPT_DIR/ohc-cloud-start.sh") || echo -e "${PURPLE}Cloud Start returned non-zero exit status ($?).${RESET}" ;;

@@ -6,40 +6,37 @@ backend:
     port: 8080
   networkPolicy:
     enabled: true
-  vpa:
-    enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 3
-    maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 85
   resources:
     requests:
-      cpu: "200m"
-      memory: "256Mi"
+      cpu: "500m"
+      memory: "512Mi"
     limits:
-      cpu: "1000m"
-      memory: "2Gi"
+      cpu: "2000m"
+      memory: "4Gi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
   multiTenant: true
 
+  resourceQuota:
+    enabled: true
+    requests:
+      cpu: "10"
+      memory: "10Gi"
+      ephemeralStorage: "50Gi"
+    limits:
+      cpu: "40"
+      memory: "80Gi"
+      ephemeralStorage: "100Gi"
+      pods: "50"
   networkPolicy:
     enabled: true
-
-resourceQuota:
-  enabled: true
-  requests:
-    cpu: "20"
-    memory: "20Gi"
-    ephemeralStorage: "50Gi"
-  limits:
-    cpu: "60"
-    memory: "120Gi"
-    ephemeralStorage: "150Gi"
-    pods: "200"
 
 # OHC Core — Rust library (settings · agent scheduler · meeting rooms · chat)
 # In cloud-native mode the core runs as a dedicated micro-service.
@@ -51,21 +48,19 @@ ohcCore:
     port: 18789
   networkPolicy:
     enabled: true
-  vpa:
-    enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 3
-    maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 85
   resources:
     requests:
-      cpu: "50m"
-      memory: "64Mi"
+      cpu: "100m"
+      memory: "128Mi"
     limits:
-      cpu: "200m"
-      memory: "256Mi"
+      cpu: "500m"
+      memory: "512Mi"
 
 # Redis subchart (Bitnami) – used for session caching and pub/sub
 redis:
@@ -95,14 +90,12 @@ chatwoot:
     port: 3000
   networkPolicy:
     enabled: true
-  vpa:
-    enabled: true
   autoscaling:
     enabled: true
     minReplicas: 1
     maxReplicas: 5
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 85
   resources:
     requests:
       cpu: "500m"
@@ -138,14 +131,12 @@ powersync:
     targetPort: 8080
   networkPolicy:
     enabled: true
-  vpa:
-    enabled: true
   autoscaling:
     enabled: true
     minReplicas: 1
     maxReplicas: 5
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 85
   resources:
     requests:
       cpu: "50m"
@@ -159,11 +150,19 @@ kube-prometheus-stack:
   enabled: true
   grafana:
     enabled: true
-    env:
-      GF_LOG_CONSOLE_FORMAT: "json"
     sidecar:
       dashboards:
         enabled: true
         label: grafana_dashboard
         labelValue: "1"
 
+# Pushgateway for Prometheus metrics
+pushgateway:
+  enabled: true
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "512Mi"

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
-use super::{User, UserRepository};
-use ::server_common::auth_utils::set_org_context;
+use crate::auth::{User, UserRepository};
+use crate::utils::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 
@@ -51,13 +51,21 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1";
+        let query = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
+        } else {
+            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND organization_id = $2"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            sqlx::query(query).bind(id).fetch_one(&mut *tx).await
+        } else {
+            sqlx::query(query).bind(id).bind(org_id).fetch_one(&mut *tx).await
+        }.map_err(|e| e.to_string())?;
 
         // Parse roles from JSON string
         let roles_json: String = row.get("roles");
@@ -79,13 +87,21 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by username
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1";
+        let query = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
+        } else {
+            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND organization_id = $2"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(username).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            sqlx::query(query).bind(username).fetch_one(&mut *tx).await
+        } else {
+            sqlx::query(query).bind(username).bind(org_id).fetch_one(&mut *tx).await
+        }.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
@@ -106,13 +122,21 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by email
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1";
+        let query = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
+        } else {
+            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND organization_id = $2"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(email).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            sqlx::query(query).bind(email).fetch_one(&mut *tx).await
+        } else {
+            sqlx::query(query).bind(email).bind(org_id).fetch_one(&mut *tx).await
+        }.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
@@ -133,13 +157,21 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by oidc_subject
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1";
+        let query = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
+        } else {
+            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND organization_id = $2"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(sub).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            sqlx::query(query).bind(sub).fetch_one(&mut *tx).await
+        } else {
+            sqlx::query(query).bind(sub).bind(org_id).fetch_one(&mut *tx).await
+        }.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
@@ -159,13 +191,21 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at";
+        let query = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
+        } else {
+            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE organization_id = $1 ORDER BY created_at"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let rows = sqlx::query(query).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?;
+        let rows = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            sqlx::query(query).fetch_all(&mut *tx).await
+        } else {
+            sqlx::query(query).bind(org_id).fetch_all(&mut *tx).await
+        }.map_err(|e| e.to_string())?;
 
         let mut users = Vec::new();
         for row in rows {
@@ -191,29 +231,52 @@ impl UserRepository for PgUserRepository {
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
 
-        let query = r#"
+        let query = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
             organization_id=$7, oidc_subject=$8, updated_at=$9
             WHERE id=$1 RETURNING id
-            "#;
+            "#
+        } else {
+            r#"
+            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+            organization_id=$7, oidc_subject=$8, updated_at=$9
+            WHERE id=$1 AND organization_id=$10 RETURNING id
+            "#
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let res = sqlx::query(query)
-            .bind(&user.id)
-            .bind(&user.username)
-            .bind(&user.email)
-            .bind(&user.password_hash)
-            .bind(roles_json)
-            .bind(user.active)
-            .bind(&user.organization_id)
-            .bind(&user.oidc_subject)
-            .bind(user.updated_at)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+        let res = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            sqlx::query(query)
+                .bind(&user.id)
+                .bind(&user.username)
+                .bind(&user.email)
+                .bind(&user.password_hash)
+                .bind(roles_json)
+                .bind(user.active)
+                .bind(&user.organization_id)
+                .bind(&user.oidc_subject)
+                .bind(user.updated_at)
+                .fetch_optional(&mut *tx)
+                .await
+        } else {
+            sqlx::query(query)
+                .bind(&user.id)
+                .bind(&user.username)
+                .bind(&user.email)
+                .bind(&user.password_hash)
+                .bind(roles_json)
+                .bind(user.active)
+                .bind(&user.organization_id)
+                .bind(&user.oidc_subject)
+                .bind(user.updated_at)
+                .bind(org_id)
+                .fetch_optional(&mut *tx)
+                .await
+        }.map_err(|e| e.to_string())?;
 
         if res.is_none() {
             return Err("user not found or unauthorized".to_string());
@@ -225,13 +288,21 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
-        let query = "DELETE FROM users WHERE id = $1 RETURNING id";
+        let query = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            "DELETE FROM users WHERE id = $1 RETURNING id"
+        } else {
+            "DELETE FROM users WHERE id = $1 AND organization_id = $2 RETURNING id"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let res = sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+        let res = if org_id == "system" || (!crate::config::get().multitenant && org_id.is_empty()) {
+            sqlx::query(query).bind(id).fetch_optional(&mut *tx).await
+        } else {
+            sqlx::query(query).bind(id).bind(org_id).fetch_optional(&mut *tx).await
+        }.map_err(|e| e.to_string())?;
 
         if res.is_none() {
             return Err("user not found or unauthorized".to_string());
@@ -248,7 +319,7 @@ impl UserRepository for PgUserRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, current_setting('app.current_tenant', true))
+            INSERT INTO revoked_tokens (jti, expires_at) VALUES ($1, $2)
             ON CONFLICT (jti) DO NOTHING
             "#
         )
@@ -292,39 +363,6 @@ mod security_tests {
     use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
-    async fn test_multitenant_idor_system_bypass_prevention() {
-        let database_url = match std::env::var("DATABASE_URL") {
-            Ok(url) => url,
-            Err(_) => return,
-        };
-
-        if database_url.starts_with("sqlite") {
-            return; // Postgres-specific test
-        }
-
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(Duration::from_millis(50))
-            .connect_lazy(&database_url)
-            .unwrap();
-
-        let repo = PgUserRepository::new(pool.clone());
-
-        // Since we can't reliably override the global `::server_config::get().multitenant` inline here
-        // without unsafe/mocking because it returns a reference to a static OnceLock, we simulate the query generation logic.
-
-        // Cloud multitenant mode should NOT allow bypassing.
-        let is_multitenant = true;
-        let org_id = "system";
-        let should_bypass = !is_multitenant && org_id == "system";
-
-        // Ensure the condition strictly evaluates to false when multitenant is true.
-        assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
-
-        let res = repo.get_by_id("dummy_id", "system").await;
-        assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
-    }
-
-    #[tokio::test]
     async fn test_revoke_token_uses_transaction_and_tenant_context() {
         let database_url = match std::env::var("DATABASE_URL") {
             Ok(url) => url,
@@ -335,7 +373,7 @@ mod security_tests {
             return; // Postgres-specific test
         }
 
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = PgPoolOptions::new()
             .acquire_timeout(Duration::from_millis(50))
             .connect_lazy(&database_url)
             .unwrap();

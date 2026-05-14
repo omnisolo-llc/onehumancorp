@@ -32,24 +32,12 @@ fi
 echo -e "${DIM}[3/4] Launching local backend...${RESET}"
 export OHC_MULTITENANT=false
 export OHC_SOURCE_MODE=standalone
-export TOKIO_WORKER_THREADS=2
-export RAYON_NUM_THREADS=2
-bazelisk run //src/server:server &
+bazelisk run //src/server:ohc &
 SERVER_PID=$!
-echo -e "${GREEN}✓ Server started with PID $SERVER_PID${RESET}"
+echo -e "${GREEN}✓ Server started with PID $SERVER_PID. To stop, run: kill $SERVER_PID${RESET}"
 
 echo -e "${DIM}[4/4] Running Diagnostics...${RESET}"
 yes | bash deploy/scripts/ohc-diagnostics.sh || true
 
 echo -e "${BOLD}Next steps:${RESET}"
 echo -e "  Use ${CYAN}./deploy/scripts/ohc_hybrid_cli.sh${RESET} to manage the OS, switch to Cloud Mode, or seed mock data."
-
-function cleanup {
-  echo -e "\n${DIM}[Shutting down...]${RESET}"
-  kill -TERM $SERVER_PID 2>/dev/null || true
-  wait $SERVER_PID 2>/dev/null || true
-  echo -e "${GREEN}✓ Local processes terminated successfully.${RESET}"
-}
-trap cleanup EXIT
-
-wait $SERVER_PID 2>/dev/null || true

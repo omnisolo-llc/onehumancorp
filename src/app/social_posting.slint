@@ -1,0 +1,52 @@
+import { Button, VerticalBox, HorizontalBox, StandardTableView, LineEdit, TextEdit } from "std-widgets.slint";
+
+export component SocialPosting inherits Window {
+    in-out property <string> post_content: "";
+    in-out property <bool> is_connected_instagram: false;
+    in-out property <bool> is_connected_facebook: false;
+
+    callback connect_instagram();
+    callback connect_facebook();
+    callback generate_post();
+    callback schedule_post();
+    callback approve_post();
+
+    VerticalBox {
+        Text {
+            text: "Social Media Auto-Posting";
+            font-size: 24px;
+        }
+
+        HorizontalBox {
+            Button {
+                text: root.is_connected_instagram ? "Instagram Connected" : "Connect Instagram";
+                clicked => { root.connect_instagram(); }
+            }
+            Button {
+                text: root.is_connected_facebook ? "Facebook Connected" : "Connect Facebook";
+                clicked => { root.connect_facebook(); }
+            }
+        }
+
+        Button {
+            text: "Generate Post with AI";
+            clicked => { root.generate_post(); }
+        }
+
+        TextEdit {
+            text: root.post_content;
+            edited(text) => { root.post_content = text; }
+        }
+
+        HorizontalBox {
+            Button {
+                text: "Approve Post";
+                clicked => { root.approve_post(); }
+            }
+            Button {
+                text: "Schedule Post";
+                clicked => { root.schedule_post(); }
+            }
+        }
+    }
+}

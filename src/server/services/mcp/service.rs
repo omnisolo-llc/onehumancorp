@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::mcp_service_server::McpService;
+use crate::ohc::orchestration::*;
+use crate::ohc::orchestration::mcp_service_server::McpService;
 use std::sync::{Arc, RwLock};
 use crate::integrations::registry::IntegrationsRegistry;
 use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
@@ -77,15 +77,7 @@ impl McpService for MyMcpService {
         &self,
         request: Request<McpInvokeRequest>,
     ) -> Result<Response<McpInvokeResponse>, Status> {
-        let md = request.metadata().clone();
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-
-        let mut req = request.into_inner();
-        // OVERRIDE the request body's spiffe_id with the one from the authenticated session
-        // to prevent multi-tenant safety issue where tenant_id is read from request body
-        if !spiffe_id_str.is_empty() {
-            req.spiffe_id = spiffe_id_str.to_string();
-        }
+        let req = request.into_inner();
         
         if req.tool_id.is_empty() {
             return Err(Status::invalid_argument("toolId is required"));
@@ -227,7 +219,7 @@ impl McpService for MyMcpService {
     ) -> Result<Response<EmptyResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
@@ -245,15 +237,8 @@ impl McpService for MyMcpService {
 
         let grounding_content = sip_db.load_grounding_content().await;
 
-        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
-        let _permit = if is_standalone {
-            Some(crate::sip::get_sqlite_limiter().acquire().await.unwrap())
-        } else {
-            None
-        };
-
         let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         for m in req.missions {
             sip_db.delegate_mission_with_tx(&mut tx, &m.id, &m.status, &m.payload, m.force_local, &grounding_content)
@@ -272,22 +257,15 @@ impl McpService for MyMcpService {
     ) -> Result<Response<EmptyResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
         }
 
         let req = request.into_inner();
-        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
-        let _permit = if is_standalone {
-            Some(crate::sip::get_sqlite_limiter().acquire().await.unwrap())
-        } else {
-            None
-        };
-
         let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let query = "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, organization_id) \
                      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5) \
@@ -315,12 +293,12 @@ impl McpService for MyMcpService {
 mod tests {
     use super::*;
     use tonic::Request;
-    use ::server_ohc::orchestration::{SyncMissionsRequest, SyncContextRequest};
+    use crate::ohc::orchestration::{SyncMissionsRequest, SyncContextRequest};
 
     #[tokio::test]
     async fn test_sync_missions_unauthenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
@@ -338,7 +316,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_context_unauthenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
@@ -361,7 +339,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_missions_authenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
@@ -381,7 +359,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_context_authenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }

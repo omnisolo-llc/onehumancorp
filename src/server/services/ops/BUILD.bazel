@@ -1,8 +1,0 @@
-filegroup(
-    name = "srcs",
-    srcs = [
-        "mod.rs",
-        "service.rs",
-    ],
-    visibility = ["//src/server/services:__pkg__"],
-)

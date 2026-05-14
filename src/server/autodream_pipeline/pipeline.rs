@@ -7,16 +7,11 @@ use tokio::time::{sleep, Duration};
 pub struct AutoDreamPipeline {
     db: Arc<DB>,
     llm_client: Arc<dyn LLMClient>,
-    pub cache: Option<Arc<::server_pricing::cache::LocalEmbeddingCache>>,
 }
 
 impl AutoDreamPipeline {
     pub fn new(db: Arc<DB>, llm_client: Arc<dyn LLMClient>) -> Self {
-        AutoDreamPipeline { db, llm_client, cache: None }
-    }
-
-    pub fn new_with_cache(db: Arc<DB>, llm_client: Arc<dyn LLMClient>, cache: Arc<::server_pricing::cache::LocalEmbeddingCache>) -> Self {
-        AutoDreamPipeline { db, llm_client, cache: Some(cache) }
+        AutoDreamPipeline { db, llm_client }
     }
 
     pub fn start_worker(&self) {
@@ -87,29 +82,9 @@ impl AutoDreamPipeline {
             let chunks = Self::chunk_content(&content, 2000);
 
             for chunk in chunks {
-                let cached_embedding = if let Some(cache) = &self.cache {
-                    cache.get(&chunk)
-                } else {
-                    None
-                };
-
-                let embedding_res = if let Some(emb_str) = cached_embedding {
-                    Ok(emb_str)
-                } else {
-                    match self.llm_client.generate_embedding(&chunk).await {
-                        Ok(embedding) => {
-                            let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
-                            if let Some(cache) = &self.cache {
-                                cache.set(&chunk, &emb_str);
-                            }
-                            Ok(emb_str)
-                        }
-                        Err(e) => Err(e),
-                    }
-                };
-
-                match embedding_res {
-                    Ok(emb_str) => {
+                match self.llm_client.generate_embedding(&chunk).await {
+                    Ok(embedding) => {
+                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
                         let insert_query = "
@@ -164,7 +139,7 @@ mod tests {
             return;
         }
 
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .connect(&database_url)
             .await
             .unwrap();

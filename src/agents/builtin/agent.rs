@@ -21,15 +21,12 @@ pub enum AgentEvent {
     IterationStarted { iteration: i32, message_count: usize },
     CheckpointSaved { iteration: i32, path: String },
     Handoff { target_agent: String },
-    RewindOccurred { iteration: i32, checkpoint_id: String, reason: String },
 }
 
 /// Configuration for a single agent run.
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
     pub agent_id: String,
-    /// Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-    pub max_retries: usize,
     pub model: String,
     pub server_system_message: String,
     pub developer_instructions: String,
@@ -39,8 +36,7 @@ pub struct AgentRunConfig {
     pub max_iterations: i32,
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
-        pub enable_harness_thickness_optimization: bool,
-pub enable_llmcompiler_plan_and_execute: bool,
+    pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_acon_context_strategy: bool,
     pub enable_observation_masking: bool,
     pub observation_masking_threshold: usize,
@@ -49,13 +45,8 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_context_compaction: bool,
     pub compaction_threshold_tokens: i32,
     pub enable_llm_judge: bool,
-    pub enable_computational_guides: bool,
-    pub computational_guide_command: String,
-    pub enable_visual_verification: bool,
-    pub visual_verification_command: String,
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
-    pub enable_git_checkpointing: bool,
     pub state_scratchpad_path: Option<String>,
     pub workspace_path: Option<String>,
     pub project_trusted: bool,
@@ -65,20 +56,14 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub approved_tool_calls: Vec<String>,
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
-    pub enable_single_agent_maximization: bool,
-    pub enable_vercel_tool_scoping_metric: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
-    pub enable_time_travel_rewind: bool,
-    pub max_rewind_attempts: usize,
-    pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
 }
 
 impl Default for AgentRunConfig {
     fn default() -> Self {
         Self {
             agent_id: "default-agent".to_string(),
-            max_retries: 2,
             model: String::new(),
             server_system_message: String::new(),
             developer_instructions: String::new(),
@@ -88,8 +73,7 @@ impl Default for AgentRunConfig {
             max_iterations: 100,
             max_task_tokens: 100_000,
             confidence_threshold: 0.0,
-                        enable_harness_thickness_optimization: false,
-enable_llmcompiler_plan_and_execute: false,
+            enable_llmcompiler_plan_and_execute: false,
             enable_acon_context_strategy: false,
             enable_observation_masking: true,
             observation_masking_threshold: 3,
@@ -98,13 +82,8 @@ enable_llmcompiler_plan_and_execute: false,
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
             enable_llm_judge: false,
-            enable_computational_guides: false,
-            computational_guide_command: String::new(),
-            enable_visual_verification: false,
-            visual_verification_command: String::new(),
             guardrails: None,
             enable_state_checkpointing: false,
-            enable_git_checkpointing: false,
             state_scratchpad_path: None,
             workspace_path: None,
             project_trusted: true,
@@ -114,13 +93,8 @@ enable_llmcompiler_plan_and_execute: false,
             approved_tool_calls: vec![],
             thread_id: None,
             resume_from_checkpoint_id: None,
-            enable_single_agent_maximization: false,
-            enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
-            enable_time_travel_rewind: false,
-            max_rewind_attempts: 3,
-            long_term_memory: None,
         }
     }
 }
@@ -156,38 +130,6 @@ impl AgentProgress {
 // 3. Developer Instructions
 // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
 // 5. Conversation History (happens at run loop)
-
-pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> String {
-    let mut current_dir = start_dir.to_path_buf();
-    let mut contents = Vec::new();
-    let mut max_depth = 50;
-
-    loop {
-        let agent_file = current_dir.join("AGENTS.md");
-        if agent_file.exists() && agent_file.is_file() {
-            if let Ok(content) = tokio::fs::read_to_string(&agent_file).await {
-                contents.push(content);
-            }
-        }
-
-        if !current_dir.pop() || max_depth == 0 {
-            break;
-        }
-        max_depth -= 1;
-    }
-
-    // Order: more deeply-nested files take precedence
-    let mut combined = String::new();
-    for (i, content) in contents.iter().enumerate() {
-        if i > 0 {
-            combined.push_str("\n\n---\n\n");
-        }
-        combined.push_str(content);
-    }
-
-    combined
-}
-
 pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
     let mut end_idx = 32768;
     if cfg.user_instructions.len() > 32768 {
@@ -279,175 +221,18 @@ impl Agent {
     }
 
     /// Run the agent loop. Calls `on_event` for each event.
-    #[tracing::instrument(skip(self, on_event, cfg), fields(model = %cfg.model))]
-    /// Anthropic Claude Agent SDK Archetype: Implements the harness via a single `query()` function
-    /// that returns an async iterator streaming messages. Uses a "dumb loop" Gather-Act-Verify cycle:
-    /// gather context (search files, read code) -> take action (edit files, run commands) -> verify results (run tests, check output).
-    pub async fn run_anthropic_dumb_loop<F>(
-        &self,
-        cfg: &AgentRunConfig,
-        initial_message: &str,
-        session_tools: &[ohc_builtin_agent_tools::Tool],
-        on_event: &mut F,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
-    where
-        F: FnMut(AgentEvent) + Send + Sync,
-    {
-        on_event(AgentEvent::RunStarted { iteration: 0 });
-
-        let mut messages = vec![crate::types::Message::user(initial_message)];
-        let phases = ["Gather", "Act", "Verify"];
-
-        for (i, phase) in phases.iter().enumerate() {
-            on_event(AgentEvent::IterationStarted { iteration: i as i32, message_count: messages.len() });
-
-            let phase_prompt = match *phase {
-                "Gather" => "Phase: Gather context. Use read-only tools like read, head, grep to search files and read code.",
-                "Act" => "Phase: Take action. Use mutating tools like write, edit, bash to edit files and run commands based on gathered context.",
-                "Verify" => "Phase: Verify results. Use bash to run tests or check output to verify your actions.",
-                _ => unreachable!(),
-            };
-
-            let req = crate::types::ChatRequest {
-                model: cfg.model.clone(),
-                system: format!("{}\n\nYou are in the {} phase.", cfg.server_system_message, phase_prompt),
-                messages: messages.clone(),
-                tools: session_tools.iter().map(|t| crate::types::ToolDefinition {
-                    name: t.name.clone(),
-                    description: t.description.clone(),
-                    parameters: t.parameters.clone(),
-                }).collect(),
-                max_tokens: cfg.max_tokens,
-                temperature: cfg.temperature,
-            };
-
-            let resp = self.llm.chat(req).await?;
-            let msg = resp.message;
-            messages.push(msg.clone());
-
-            if msg.tool_calls.is_empty() {
-                if *phase == "Verify" {
-                    return Ok(msg.content);
-                } else {
-                    continue;
-                }
-            }
-
-            // Component: Tools (Read-only concurrent, mutating serial)
-            let mut read_only_calls = vec![];
-            let mut mutating_calls = vec![];
-
-            for tc in &msg.tool_calls {
-                if let Some(tool) = session_tools.iter().find(|t| t.name == tc.name) {
-                    if tool.is_read_only {
-                        read_only_calls.push(tc.clone());
-                    } else {
-                        mutating_calls.push(tc.clone());
-                    }
-                } else {
-                    // Default to mutating if not found
-                    mutating_calls.push(tc.clone());
-                }
-            }
-
-            let mut tool_results = vec![crate::types::ToolResult { tool_call_id: String::new(), content: String::new(), error: String::new() }; msg.tool_calls.len()];
-
-            let mut read_only_futures = Vec::new();
-            for tc in &read_only_calls {
-                let tc_clone = tc.clone();
-                let session_tools_clone = session_tools.to_vec();
-                let messages_clone = messages.clone();
-                read_only_futures.push(async move {
-                    let r = match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
-                        Ok(res) => res,
-                        Err(e) => format!("Error: {:?}", e),
-                    };
-                    (tc_clone, r)
-                });
-            }
-            let ro_results = futures::future::join_all(read_only_futures).await;
-            for (tc, r) in ro_results {
-                let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
-
-                on_event(AgentEvent::ToolCall {
-                    name: tc.name.clone(),
-                    args_json: tc.arguments.to_string(),
-                    result: r.clone(),
-                    iteration: i as i32,
-                });
-
-                tool_results[idx] = crate::types::ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content: r,
-                    error: String::new(),
-                };
-            }
-
-            for tc in &mutating_calls {
-                let r = match self.execute_tool(tc, session_tools, &messages).await {
-                    Ok(res) => res,
-                    Err(e) => format!("Error: {:?}", e),
-                };
-
-                let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
-
-                on_event(AgentEvent::ToolCall {
-                    name: tc.name.clone(),
-                    args_json: tc.arguments.to_string(),
-                    result: r.clone(),
-                    iteration: i as i32,
-                });
-
-                tool_results[idx] = crate::types::ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content: r,
-                    error: String::new(),
-                };
-            }
-
-            messages.push(crate::types::Message {
-                role: crate::types::Role::Tool,
-                content: String::new(),
-                tool_calls: vec![],
-                tool_results,
-                response_id: None,
-                previous_response_id: None,
-            });
-        }
-
-        // Final fallback if Verify phase didn't exit
-        let req = crate::types::ChatRequest {
-            model: cfg.model.clone(),
-            system: "Summarize the final result of the Gather-Act-Verify cycle.".to_string(),
-            messages: messages.clone(),
-            tools: vec![],
-            max_tokens: cfg.max_tokens,
-            temperature: cfg.temperature,
-        };
-        let resp = self.llm.chat(req).await?;
-        Ok(resp.message.content)
-    }
+    #[tracing::instrument(skip(self, _on_event, cfg), fields(model = %cfg.model))]
     pub async fn run_langgraph<F>(
         &self,
         cfg: &AgentRunConfig,
         initial_message: &str,
         session_tools: Vec<crate::tools::Tool>,
         initial_messages: &mut Vec<Message>,
-        on_event: &mut F,
+        _on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
-        // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
-        // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
-        if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
-            let err_msg = "Task requires multi-agent split: >10 overlapping tools provided".to_string();
-
-            // Workaround to call the generic closure since on_event is a generic F.
-            // Wait, we can just return the error directly.
-            return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
-        }
-
         // Add initial message if needed
         if !initial_message.is_empty() {
             initial_messages.push(Message::user(initial_message));
@@ -521,7 +306,6 @@ impl Agent {
                         tool_calls,
                         tool_results,
                         response_id: None,
-                previous_response_id: None,
                     });
                 }
 
@@ -540,38 +324,33 @@ impl Agent {
                         let mut current_total = state.get("total_tokens").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
                         current_total += total_tokens_this_turn;
 
-                        let mut final_content = resp.message.content.clone();
-                        let mut has_tool_calls = !resp.message.tool_calls.is_empty();
-
                         if llm_cfg_c.max_task_tokens > 0 && current_total > llm_cfg_c.max_task_tokens {
-                            final_content = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
-                            has_tool_calls = false; // Prevent further tool calls
+                            return Err(format!("Terminal condition reached: token budget exhausted ({} / {}).", current_total, llm_cfg_c.max_task_tokens));
                         }
 
-                        let final_tool_calls = if has_tool_calls {
-                            resp.message.tool_calls.iter().map(|tc| serde_json::json!({
-                                "id": tc.id,
-                                "name": tc.name,
-                                "arguments": tc.arguments,
-                            })).collect::<Vec<_>>()
-                        } else {
-                            vec![]
-                        };
-
+                        let has_tool_calls = !resp.message.tool_calls.is_empty();
                         let mut update = serde_json::json!({
                             "has_tool_calls": has_tool_calls,
                             "total_tokens": current_total,
                             "last_message": {
                                 "role": "assistant",
-                                "content": final_content,
-                                "tool_calls": final_tool_calls
+                                "content": resp.message.content,
+                                "tool_calls": resp.message.tool_calls.iter().map(|tc| serde_json::json!({
+                                    "id": tc.id,
+                                    "name": tc.name,
+                                    "arguments": tc.arguments,
+                                })).collect::<Vec<_>>()
                             }
                         });
                         // Also append to messages array using the reducer
                         update.as_object_mut().unwrap().insert("messages".to_string(), serde_json::json!([{
                                 "role": "assistant",
-                                "content": final_content,
-                                "tool_calls": final_tool_calls
+                                "content": resp.message.content,
+                                "tool_calls": resp.message.tool_calls.iter().map(|tc| serde_json::json!({
+                                    "id": tc.id,
+                                    "name": tc.name,
+                                    "arguments": tc.arguments,
+                                })).collect::<Vec<_>>()
                         }]));
                         Ok(update)
                     }
@@ -582,14 +361,12 @@ impl Agent {
 
         // --- NODE 2: Tool Execution ---
         let tool_tools = session_tools_arc.clone();
-        let cfg_max_retries = cfg.max_retries;
         graph.add_node("tool_node", move |state| {
             let tt = tool_tools.clone();
             Box::pin(async move {
                 let last_msg = state.get("last_message").unwrap();
                 let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
 
-                let mut error_counts = state.get("error_counts").unwrap().as_object().unwrap().clone();
                 let mut read_only_calls = Vec::new();
                 let mut mutating_calls = Vec::new();
 
@@ -616,8 +393,8 @@ impl Agent {
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             let mut retry_count = 0;
-                            let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                            let final_res;
+                            let max_retries = 2;
+                            let mut final_res;
 
                             loop {
                                 match tool.execute.execute(args.clone()).await {
@@ -656,8 +433,6 @@ impl Agent {
                     let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
                     match final_res {
                         Ok(res) => {
-                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
-                            error_counts.insert(tool_name, serde_json::json!(0));
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
                                 "content": res,
@@ -665,12 +440,6 @@ impl Agent {
                             });
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
-                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
-                            error_counts.insert(tool_name.clone(), serde_json::json!(count));
-                            if count > cfg_max_retries as u64 {
-                                return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
-                            }
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
                                 "content": "",
@@ -678,19 +447,17 @@ impl Agent {
                             });
                         }
                         Err(crate::types::ToolError::Transient(msg)) => {
-                            return Err(format!("Unexpected tool error: Transient error after retries: {}", msg));
+                            tool_results_json[idx] = serde_json::json!({
+                                "tool_call_id": id,
+                                "content": "",
+                                "error": format!("Transient error after retries: {}", msg)
+                            });
                         }
                         Err(crate::types::ToolError::UserFixable(msg)) => {
                             return Err(format!("USER_FIXABLE:{}", msg));
                         }
-                        Err(crate::types::ToolError::Fatal(msg)) => {
-                            return Err(format!("Fatal tool error: {}", msg));
-                        }
-                        Err(crate::types::ToolError::Unexpected(msg)) => {
-                            return Err(format!("Unexpected tool error: {}", msg));
-                        }
-                        Err(crate::types::ToolError::HandoffRequested(target)) => {
-                            return Err(format!("Handoff requested to {}", target));
+                        Err(e) => {
+                            return Err(e.to_string());
                         }
                     }
                 }
@@ -704,8 +471,8 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
-                        let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                        let final_res;
+                        let max_retries = 2;
+                        let mut final_res;
 
                         loop {
                             match tool.execute.execute(args.clone()).await {
@@ -733,7 +500,6 @@ impl Agent {
 
                         match final_res {
                             Ok(res) => {
-                                error_counts.insert(name.to_string(), serde_json::json!(0));
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
                                     "content": res,
@@ -741,11 +507,6 @@ impl Agent {
                                 });
                             }
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
-                                error_counts.insert(name.to_string(), serde_json::json!(count));
-                                if count > cfg_max_retries as u64 {
-                                    return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
-                                }
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
                                     "content": "",
@@ -753,19 +514,17 @@ impl Agent {
                                 });
                             }
                             Err(crate::types::ToolError::Transient(msg)) => {
-                                return Err(format!("Unexpected tool error: Transient error after retries: {}", msg));
+                                tool_results_json[idx] = serde_json::json!({
+                                    "tool_call_id": id,
+                                    "content": "",
+                                    "error": format!("Transient error after retries: {}", msg)
+                                });
                             }
                             Err(crate::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE:{}", msg));
                             }
-                            Err(crate::types::ToolError::Fatal(msg)) => {
-                                return Err(format!("Fatal tool error: {}", msg));
-                            }
-                            Err(crate::types::ToolError::Unexpected(msg)) => {
-                                return Err(format!("Unexpected tool error: {}", msg));
-                            }
-                            Err(crate::types::ToolError::HandoffRequested(target)) => {
-                                return Err(format!("Handoff requested to {}", target));
+                            Err(e) => {
+                                return Err(e.to_string());
                             }
                         }
                     } else {
@@ -779,7 +538,6 @@ impl Agent {
 
                 Ok(serde_json::json!({
                     "has_tool_calls": false, // Clear flag
-                    "error_counts": error_counts,
                     "messages": [{
                         "role": "tool",
                         "content": "",
@@ -828,8 +586,7 @@ impl Agent {
         let initial_state = serde_json::json!({
             "messages": msgs_json,
             "has_tool_calls": false,
-            "total_tokens": 0,
-            "error_counts": {}
+            "total_tokens": 0
         });
 
         match graph.run(initial_state).await {
@@ -837,33 +594,17 @@ impl Agent {
                 let final_msgs = final_state.get("messages").unwrap().as_array().unwrap();
                 let last_msg = final_msgs.last().unwrap();
                 let content = last_msg.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                on_event(AgentEvent::TaskComplete { content: content.clone() });
-
-                // Cross-Department Memory Consolidation for LangGraph
-                if !content.is_empty() {
-                    if let Some(store) = &self.memory_store {
-                        let content_to_store = content.clone();
-                        let store_clone = store.clone();
-                        tokio::spawn(async move {
-                            if let Err(e) = store_clone.store(&content_to_store, vec!["AUTO_CONSOLIDATED_LANGGRAPH".to_string()]).await {
-                                tracing::error!("Failed to auto-consolidate LangGraph memory: {}", e);
-                            } else {
-                                tracing::debug!("Successfully auto-consolidated LangGraph memory.");
-                            }
-                        });
-                    }
-                }
-
+                _on_event(AgentEvent::TaskComplete { content: content.clone() });
                 Ok(content)
             }
             Err(e) => {
                 if let Some(msg) = e.strip_prefix("USER_FIXABLE:") {
                     let err_msg = format!("User intervention required: {}", msg);
-                    on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                    _on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
                     return Err(err_msg.into());
                 }
                 let err_msg = format!("LangGraph Error: {}", e);
-                on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                _on_event(AgentEvent::TaskError { error: err_msg.clone() });
                 Err(err_msg.into())
             }
         }
@@ -906,53 +647,12 @@ impl Agent {
         };
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
-        let plan_resp = self.llm.chat(plan_req.clone()).await?;
+        let plan_resp = self.llm.chat(plan_req).await?;
         let plan_json_text = plan_resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
 
         on_event(AgentEvent::RunStarted { iteration: 1 });
 
-        let plan: Vec<serde_json::Value> = match serde_json::from_str(plan_json_text) {
-            Ok(p) => p,
-            Err(e) => {
-                // Fallback mechanic: Legacy RetryWithErrorOutputParser
-                // Feed the original prompt, the failed completion, and the parsing error back to the model.
-                let mut attempt = 0;
-                let mut current_req = plan_req; // Dummy validation comment: Output Parsing Fallback test coverage
-                tracing::debug!("Output Parsing: Fallback logic triggered.");
-                let mut last_error = e.to_string();
-                let mut final_plan = None;
-
-                current_req.messages.push(Message::assistant(plan_resp.message.content.clone()));
-                let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON array without markdown formatting.", e);
-                current_req.messages.push(Message::user(error_msg));
-
-                while attempt < 3 {
-                    attempt += 1;
-                    let resp = self.llm.chat(current_req.clone()).await?;
-                    let completion = resp.message.content.clone();
-
-                    let json_text = completion.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
-                    match serde_json::from_str(json_text) {
-                        Ok(p) => {
-                            final_plan = Some(p);
-                            break;
-                        }
-                        Err(e) => {
-                            last_error = e.to_string();
-                            current_req.messages.push(Message::assistant(completion));
-                            let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON array without markdown formatting.", e);
-                            current_req.messages.push(Message::user(error_msg));
-                        }
-                    }
-                }
-
-                if let Some(p) = final_plan {
-                    p
-                } else {
-                    return Err(format!("Failed to parse planner output as JSON array after retries. Last error: {}", last_error).into());
-                }
-            }
-        };
+        let plan: Vec<serde_json::Value> = serde_json::from_str(plan_json_text).map_err(|e| format!("Failed to parse planner output as JSON array: {} (Output: {})", e, plan_json_text))?;
 
         // Phase 2: Execution
         let mut executed_steps = Vec::new();
@@ -978,41 +678,9 @@ impl Agent {
                  return Err(Box::new(e));
             }
 
-            let mut retry_count = 0;
-            let max_retries = cfg.max_retries;
-            let result = loop {
-                match self.execute_tool(&dummy_tc, session_tools, &[]).await {
-                    Ok(res) => break res,
-                    Err(crate::types::ToolError::Transient(msg)) => {
-                        if retry_count < max_retries {
-                            retry_count += 1;
-                            let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                            tokio::time::sleep(backoff).await;
-                            continue;
-                        } else {
-                            break format!("Error executing planned step: Transient error after retries: {}", msg);
-                        }
-                    }
-                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        // Since plan-and-execute can't immediately feed back to the LLM within the same loop easily,
-                        // we add it to the execution summary so the replier sees the error and can try to fix it or report it.
-                        break format!("Error executing planned step (LlmRecoverable): {}", msg);
-                    }
-                    Err(crate::types::ToolError::UserFixable(msg)) => {
-                        let err = format!("USER_FIXABLE: {}", msg);
-                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                        return Err(err.into());
-                    }
-                    Err(crate::types::ToolError::Fatal(msg)) => {
-                        return Err(format!("Fatal tool error: {}", msg).into());
-                    }
-                    Err(crate::types::ToolError::Unexpected(msg)) => {
-                        return Err(format!("Unexpected tool error: {}", msg).into());
-                    }
-                    Err(e) => {
-                        return Err(format!("Fatal tool error: {:?}", e).into());
-                    }
-                }
+            let result = match self.execute_tool(&dummy_tc, session_tools, &[]).await {
+                Ok(res) => res,
+                Err(e) => format!("Error executing planned step: {:?}", e),
             };
 
             on_event(AgentEvent::ToolCall {
@@ -1046,86 +714,6 @@ impl Agent {
         Ok(final_resp.message.content)
     }
 
-    /// Anthropic Claude Agent SDK Archetype: Implements the harness via a single `query()` function
-    /// that returns an async iterator (stream) of messages. Uses a "dumb loop" Gather-Act-Verify cycle.
-    pub fn query(
-        self: Arc<Self>,
-        cfg: AgentRunConfig,
-        initial_message: String,
-    ) -> tokio::sync::mpsc::UnboundedReceiver<AgentEvent> {
-        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-
-        tokio::spawn(async move {
-            let mut on_event = |event: AgentEvent| {
-                // We use an unbounded channel so send does not block or drop events if the consumer is slow.
-                let _ = tx.send(event);
-            };
-
-            if let Err(e) = self.run(&cfg, &initial_message, &mut on_event).await {
-                // Propagate the error through the stream so it is not silently swallowed.
-                let _ = tx.send(AgentEvent::TaskError { error: format!("Agent run failed: {}", e) });
-            }
-        });
-
-        rx
-    }
-
-    /// Master Catalog B.6. Output Parsing via Native Tool Calls
-    /// Uses a schema-constrained response by forcing a specific tool call.
-    pub async fn run_structured<T: serde::de::DeserializeOwned + Send + Sync + 'static, F>(
-        &self,
-        cfg: &AgentRunConfig,
-        initial_message: &str,
-        output_schema: serde_json::Value,
-        on_event: &mut F,
-    ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
-    where
-        F: FnMut(AgentEvent) + Send + Sync,
-    {
-        let mut final_cfg = cfg.clone();
-
-        // Append instruction to force the use of the structured output tool
-        final_cfg.server_system_message = format!(
-            "{}\n\nCRITICAL INSTRUCTION: You MUST call the `return_structured_output` tool to return your final structured answer. Do NOT return raw text as the final answer.",
-            final_cfg.server_system_message
-        );
-
-        let mut structured_tools = self.tools.clone();
-
-        // We define a dummy executor because the tool is intercepted before execution
-        struct DummyExecutor;
-        #[async_trait::async_trait]
-        impl crate::tools::ToolExecutor for DummyExecutor {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
-                Ok("Dummy".to_string())
-            }
-        }
-
-        structured_tools.push(crate::tools::Tool {
-            name: "return_structured_output".to_string(),
-            description: "Returns the final output matching the required JSON schema.".to_string(),
-            is_read_only: false,
-            parameters: output_schema,
-            execute: std::sync::Arc::new(DummyExecutor),
-        });
-
-        let temp_agent = Agent {
-            llm: self.llm.clone(),
-            tools: structured_tools,
-            progress: self.progress.clone(),
-            memory_store: self.memory_store.clone(),
-            checkpointer: self.checkpointer.clone(),
-            observation_store: self.observation_store.clone(),
-        };
-
-        // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
-        let raw_json_str = temp_agent.run(&final_cfg, initial_message, on_event).await?;
-
-        let parsed: T = serde_json::from_str(&raw_json_str)
-            .map_err(|e| format!("Failed to parse JSON into struct: {}. Raw: {}", e, raw_json_str))?;
-        Ok(parsed)
-    }
-
     pub async fn run<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -1135,82 +723,21 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
-        let mut self_with_memory = self;
-        let owned_agent;
-        if let Some(ltm) = &cfg.long_term_memory {
-            owned_agent = Agent {
-                llm: self.llm.clone(),
-                tools: self.tools.clone(),
-                progress: self.progress.clone(),
-                memory_store: Some(ltm.clone()),
-                checkpointer: self.checkpointer.clone(),
-                observation_store: self.observation_store.clone(),
-            };
-            self_with_memory = &owned_agent;
-        }
 
-        let session_tools = self_with_memory.tools.clone();
-
-        let mut final_cfg = cfg.clone();
-
-        // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
-        if let Some(ref wp) = final_cfg.workspace_path {
-            let start_dir = std::path::Path::new(wp);
-            let cascading_md = load_cascading_agents_md(start_dir).await;
-            if !cascading_md.is_empty() {
-                if !final_cfg.user_instructions.is_empty() {
-                    final_cfg.user_instructions = format!("{}\n\n{}", cascading_md, final_cfg.user_instructions);
-                } else {
-                    final_cfg.user_instructions = cascading_md;
-                }
-            }
-        }
-
-        let mut end_idx = 32768;
-        if final_cfg.user_instructions.len() > 32768 {
-            while end_idx > 0 && !final_cfg.user_instructions.is_char_boundary(end_idx) {
-                end_idx -= 1;
-            }
-            final_cfg.user_instructions.truncate(end_idx);
-        }
-
-        if final_cfg.enable_harness_thickness_optimization {
-            let model_lower = final_cfg.model.to_lowercase();
-            // Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
-            if model_lower.contains("gpt-4o") || model_lower.contains("claude-3-5-sonnet") || model_lower.contains("o1") {
-                final_cfg.enable_llmcompiler_plan_and_execute = false;
-                final_cfg.server_system_message = final_cfg.server_system_message.replace("You must think step by step and make a detailed plan.", "");
-                final_cfg.server_system_message = final_cfg.server_system_message.replace("Make a plan before executing.", "");
-            }
-        }
-        if final_cfg.enable_llmcompiler_plan_and_execute {
-            return self.run_plan_and_execute(&final_cfg, initial_message, &session_tools, on_event).await;
+        let session_tools = self.tools.clone();
+        if cfg.enable_llmcompiler_plan_and_execute {
+            return self.run_plan_and_execute(cfg, initial_message, &session_tools, on_event).await;
         }
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
 
-        // Tool Scoping: *Vercel Metric:* Removed 80% of tools from v0 for better results.
-        if final_cfg.enable_vercel_tool_scoping_metric && session_tools.len() > 5 {
-            let keep_count = (session_tools.len() as f64 * 0.2).max(1.0) as usize;
-            session_tools.truncate(keep_count);
-        }
-
-        if final_cfg.enable_lazy_tool_loading {
+        if cfg.enable_lazy_tool_loading {
             let active_tools_clone = active_tools.clone();
             session_tools.push(crate::tools::lazy_load::lazy_load_tool(active_tools_clone));
-            // Tool Scoping (Claude Lazy-loading): Achieves 95% context reduction via lazy-loading.
-        }
-
-        // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
-        // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
-        if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
-            let err_msg = "Task requires multi-agent split: >10 overlapping tools provided".to_string();
-            on_event(AgentEvent::TaskError { error: err_msg.clone() });
-            return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
         }
 
         // OpenAI Mechanic: Input Guardrails
-        if let Some(guard_cfg) = &final_cfg.guardrails {
+        if let Some(guard_cfg) = &cfg.guardrails {
             if let Err(e) = crate::guardrails::check_input(initial_message, guard_cfg) {
                 on_event(AgentEvent::TaskError { error: e.clone() });
                 return Err(e.into());
@@ -1227,15 +754,15 @@ impl Agent {
         let mut malformed_retries = 0;
         let max_malformed_retries = 3;
 
-        let mut messages: Vec<Message> = final_cfg.injected_context.clone().unwrap_or_default();
+        let mut messages: Vec<Message> = cfg.injected_context.clone().unwrap_or_default();
         let mut last_checkpoint_id: Option<String> = None;
 
-        if final_cfg.enable_langgraph_mechanic {
-            return self_with_memory.run_langgraph(&final_cfg, initial_message, session_tools, &mut messages, on_event).await;
+        if cfg.enable_langgraph_mechanic {
+            return self.run_langgraph(cfg, initial_message, session_tools, &mut messages, on_event).await;
         }
 
-        if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
-            if let Some(resume_id) = &final_cfg.resume_from_checkpoint_id {
+        if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
+            if let Some(resume_id) = &cfg.resume_from_checkpoint_id {
                 let cp = checkpointer.get_checkpoint(thread_id, resume_id).await
                     .map_err(|e| format!("Failed to fetch requested checkpoint {}: {}", resume_id, e))?
                     .ok_or_else(|| format!("Requested checkpoint {} not found", resume_id))?;
@@ -1243,7 +770,6 @@ impl Agent {
                 messages = serde_json::from_value::<Vec<Message>>(cp.data.clone())
                     .map_err(|e| format!("Failed to deserialize requested checkpoint: {}", e))?;
                 last_checkpoint_id = Some(cp.checkpoint_id.clone());
-                checkpointer.restore_checkpoint(resume_id).await.map_err(|e| format!("Failed to restore workspace: {}", e))?;
             } else {
                 if let Ok(checkpoints) = checkpointer.list_checkpoints(thread_id).await {
                     if let Some(cp) = checkpoints.first() {
@@ -1257,9 +783,9 @@ impl Agent {
         }
 
         let generated_uuid_path = format!(".agent_checkpoint_{}.json", uuid::Uuid::new_v4());
-        let scratchpad_path = final_cfg.state_scratchpad_path.clone().unwrap_or(generated_uuid_path);
+        let scratchpad_path = cfg.state_scratchpad_path.clone().unwrap_or(generated_uuid_path);
 
-        if messages.is_empty() && final_cfg.enable_state_checkpointing {
+        if messages.is_empty() && cfg.enable_state_checkpointing {
             if let Ok(contents) = tokio::fs::read_to_string(&scratchpad_path).await {
                 if let Ok(saved_msgs) = serde_json::from_str::<Vec<Message>>(&contents) {
                     messages = saved_msgs;
@@ -1274,21 +800,14 @@ impl Agent {
         }
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
-        let mut last_response_id: Option<String> = None;
         let mut last_assistant_content = String::new();
 
-        let max_iterations = if final_cfg.max_iterations <= 0 { 100 } else { final_cfg.max_iterations };
+        let max_iterations = if cfg.max_iterations <= 0 { 100 } else { cfg.max_iterations };
 
-        let mut combined_system = build_hierarchical_system_prompt(&final_cfg, &session_tools);
+        let mut combined_system = build_hierarchical_system_prompt(cfg, &session_tools);
 
         // Long-Term Memory Retrieval
-        let mut checkpoint_history: Vec<String> = Vec::new();
-        if let Some(id) = &last_checkpoint_id {
-            checkpoint_history.push(id.clone());
-        }
-        let mut rewind_attempts_remaining = final_cfg.max_rewind_attempts;
-
-        if let Some(store) = &self_with_memory.memory_store {
+        if let Some(store) = &self.memory_store {
             match store.retrieve(initial_message, 5).await {
                 Ok(memories) => {
                     if !memories.is_empty() {
@@ -1313,11 +832,7 @@ impl Agent {
             }
         }
 
-        let mut turn_count = 0;
-        while turn_count < max_iterations {
-            let iteration = turn_count;
-            turn_count += 1;
-
+        for iteration in 0..max_iterations {
             on_event(AgentEvent::IterationStarted {
                 iteration,
                 message_count: messages.len(),
@@ -1326,7 +841,7 @@ impl Agent {
             let mut final_messages = messages.clone();
 
             // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
-            if final_cfg.enable_acon_context_strategy {
+            if cfg.enable_acon_context_strategy {
                 let msg_count = final_messages.len();
                 if msg_count > 3 {
                     // We preserve the last 2 messages (usually assistant + tool results)
@@ -1346,35 +861,35 @@ impl Agent {
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
             // High-signal context at the very beginning and very end.
-            if final_cfg.enable_lost_in_the_middle_prevention {
+            if cfg.enable_lost_in_the_middle_prevention {
                 let mut reminder_text = String::new();
-                if !final_cfg.developer_instructions.is_empty() {
-                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", final_cfg.developer_instructions));
+                if !cfg.developer_instructions.is_empty() {
+                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", cfg.developer_instructions));
                 }
-                if !final_cfg.user_instructions.is_empty() && final_messages.len() > 3 {
+                if !cfg.user_instructions.is_empty() && final_messages.len() > 3 {
                     // Truncate user instructions if it's too long, just to remind the core objective
                     let mut end_idx = 1000;
-                    if final_cfg.user_instructions.len() > 1000 {
-                        while end_idx > 0 && !final_cfg.user_instructions.is_char_boundary(end_idx) {
+                    if cfg.user_instructions.len() > 1000 {
+                        while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
                             end_idx -= 1;
                         }
                     } else {
-                        end_idx = final_cfg.user_instructions.len();
+                        end_idx = cfg.user_instructions.len();
                     }
-                    let summary = &final_cfg.user_instructions[..end_idx];
+                    let summary = &cfg.user_instructions[..end_idx];
                     reminder_text.push_str(&format!("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}...]", summary));
                 }
 
                 if !reminder_text.is_empty() {
                     final_messages.push(Message::user(reminder_text.trim()));
                 }
-            } else if !final_cfg.developer_instructions.is_empty() {
-                final_messages.push(Message::user(format!("[System Reminder: {}]", final_cfg.developer_instructions)));
+            } else if !cfg.developer_instructions.is_empty() {
+                final_messages.push(Message::user(format!("[System Reminder: {}]", cfg.developer_instructions)));
             }
 
             let mut req_tools = Vec::new();
             for t in &session_tools {
-                if !final_cfg.enable_lazy_tool_loading
+                if !cfg.enable_lazy_tool_loading
                     || t.name == "ToolSearch"
                     || t.name == "LazyLoadTools"
                     || active_tools.read().await.contains(&t.name)
@@ -1388,16 +903,13 @@ impl Agent {
             }
 
             let req = ChatRequest {
-                model: final_cfg.model.clone(),
+                model: cfg.model.clone(),
                 system: combined_system.clone(),
                 messages: final_messages,
                 tools: req_tools,
-                max_tokens: final_cfg.max_tokens,
-                temperature: final_cfg.temperature,
+                max_tokens: cfg.max_tokens,
+                temperature: cfg.temperature,
             };
-
-            // Intelligent Context Truncation to save tokens
-            let req = ohc_builtin_agent_llm::truncate_chat_request(req, 10000); // Limit history to ~10k words
 
             let resp = match self.llm.chat(req).await {
                 Ok(r) => r,
@@ -1425,10 +937,6 @@ impl Agent {
                 }
             };
 
-                        if let Some(rid) = &resp.response_id {
-                last_response_id = Some(rid.clone());
-            }
-
             let turn_input_tokens = resp.usage.input_tokens;
             let output_tokens = resp.usage.output_tokens;
             let total_tokens = (turn_input_tokens + output_tokens) as i64;
@@ -1436,23 +944,22 @@ impl Agent {
             global_turn_tokens += output_tokens;
 
             // Telemetry: Record token usage
-            let model_label = KeyValue::new("model", final_cfg.model.clone());
-            let agent_label = KeyValue::new("agent_id", final_cfg.agent_id.clone());
+            let model_label = KeyValue::new("model", cfg.model.clone());
+            let agent_label = KeyValue::new("agent_id", cfg.agent_id.clone());
             token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "input")]);
             token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
 
             // Enforce Server-side token budget strictly every turn
-            if global_turn_tokens >= final_cfg.max_task_tokens {
-                let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
-                on_event(AgentEvent::TextChunk { content: msg.clone() });
-                on_event(AgentEvent::TaskComplete { content: msg.clone() });
-                return Ok(msg);
+            if global_turn_tokens >= cfg.max_task_tokens {
+                let err_msg = format!("Terminal condition reached: Server-side token budget exhausted ({} / {}). Agent transitioning to PAUSED state.", global_turn_tokens, cfg.max_task_tokens);
+                on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                return Err(err_msg.into());
             }
 
             // Unified Cost Calculation Mechanic
             // Note: We use the local pricing calculator logic to avoid a direct
             // dependency on server_lib which would cause a circular dependency.
-            let input_cost_per_m = match final_cfg.model.to_lowercase().as_str() {
+            let input_cost_per_m = match cfg.model.to_lowercase().as_str() {
                 m if m.contains("gpt-4o") && !m.contains("mini") => 5.0,
                 m if m.contains("gpt-4-turbo") => 10.0,
                 m if m.contains("gpt-3.5") || m.contains("gpt-4o-mini") => 0.15,
@@ -1462,7 +969,7 @@ impl Agent {
                 m if m.contains("claude-3-haiku") => 0.25,
                 _ => 3.0,
             };
-            let output_cost_per_m = match final_cfg.model.to_lowercase().as_str() {
+            let output_cost_per_m = match cfg.model.to_lowercase().as_str() {
                 m if m.contains("gpt-4o") && !m.contains("mini") => 15.0,
                 m if m.contains("gpt-4-turbo") => 30.0,
                 m if m.contains("gpt-3.5") || m.contains("gpt-4o-mini") => 0.60,
@@ -1501,15 +1008,14 @@ impl Agent {
             if stop_reason == "max_tokens" || stop_reason == "length" {
                 let decision = check_token_budget(
                     &mut budget_tracker,
-                    final_cfg.max_task_tokens,
+                    cfg.max_task_tokens,
                     global_turn_tokens,
                 );
 
                 if decision.action == BudgetAction::Stop {
-                    let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
-                    on_event(AgentEvent::TextChunk { content: msg.clone() });
-                    on_event(AgentEvent::TaskComplete { content: msg.clone() });
-                    return Ok(msg);
+                    let err_msg = format!("Terminal condition reached: token budget exhausted ({} / {}).", global_turn_tokens, cfg.max_task_tokens);
+                    on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                    return Err(ToolError::Fatal(err_msg).into());
                 }
                 if decision.action == BudgetAction::Continue {
                     // Add the budget nudge to messages and continue.
@@ -1530,78 +1036,17 @@ impl Agent {
             let tool_call_counter = meter.u64_counter("ohc_agent_tool_execution_total").build();
             for tc in &tool_calls {
                 tool_call_counter.add(1, &[
-                    KeyValue::new("agent_id", final_cfg.agent_id.clone()),
+                    KeyValue::new("agent_id", cfg.agent_id.clone()),
                     KeyValue::new("tool_name", tc.name.clone())
                 ]);
             }
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
-                // Computational/Guides (feedforward verification)
-                if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
-                    let wd = final_cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-                    let mut cmd = std::process::Command::new("bash");
-                    cmd.arg("-c").arg(&final_cfg.computational_guide_command).current_dir(wd);
-
-                    match cmd.output() {
-                        Ok(output) => {
-                            if !output.status.success() {
-                                let stdout = String::from_utf8_lossy(&output.stdout);
-                                let stderr = String::from_utf8_lossy(&output.stderr);
-                                let err_msg = format!(
-                                    "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
-                                    final_cfg.computational_guide_command, stdout, stderr
-                                );
-                                messages.push(Message::user(err_msg));
-                                continue;
-                            }
-                        }
-                        Err(e) => {
-                            let err_msg = format!("Failed to execute computational guide command '{}': {}", final_cfg.computational_guide_command, e);
-                            messages.push(Message::user(err_msg));
-                            continue;
-                        }
-                    }
-                }
-
-                // Visual Verification (screenshots via Playwright or Slint)
-                if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
-                    let wd = final_cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-                    let mut cmd = std::process::Command::new("bash");
-                    cmd.arg("-c").arg(&final_cfg.visual_verification_command).current_dir(wd);
-
-                    match cmd.output() {
-                        Ok(output) => {
-                            if !output.status.success() {
-                                let stdout = String::from_utf8_lossy(&output.stdout);
-                                let stderr = String::from_utf8_lossy(&output.stderr);
-                                let err_msg = format!(
-                                    "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
-                                    final_cfg.visual_verification_command, stdout, stderr
-                                );
-                                messages.push(Message::user(err_msg));
-                                continue;
-                            } else {
-                                let stdout = String::from_utf8_lossy(&output.stdout);
-                                if stdout.contains("REJECT") {
-                                    let err_msg = format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim());
-                                    messages.push(Message::user(err_msg));
-                                    continue;
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            let err_msg = format!("Failed to execute visual verification command '{}': {}", final_cfg.visual_verification_command, e);
-                            messages.push(Message::user(err_msg));
-                            continue;
-                        }
-                    }
-                }
-
                 // Inferential/Sensors (LLM-as-judge subagent)
-                if final_cfg.enable_llm_judge {
+                if cfg.enable_llm_judge {
                     let judge_req = ChatRequest {
-                        model: final_cfg.model.clone(),
+                        model: cfg.model.clone(),
                         system: "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Output ONLY 'APPROVE' or 'REJECT: <reason>'.".to_string(),
                         messages: vec![Message::user(format!("Evaluate this output:
 {}", last_assistant_content))],
@@ -1633,7 +1078,7 @@ impl Agent {
                 // For now, we'll assume the model is confident if it didn't use more tools.
 
                 // OpenAI Mechanic: Output Guardrails
-                if let Some(guard_cfg) = &final_cfg.guardrails {
+                if let Some(guard_cfg) = &cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_output(&last_assistant_content, guard_cfg) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
                         return Err(e.into());
@@ -1668,41 +1113,25 @@ impl Agent {
             // For now, we will collect events and results from the concurrent execution, then emit them sequentially.
             // We will execute the read-only calls concurrently using `futures::future::join_all`.
 
-            // Output Parsing mechanic: Schema-Constrained Responses
-            // Intercept special output formatting tool natively
-            if let Some(tc) = mutating_calls.iter().chain(read_only_calls.iter()).find(|t| t.name == "return_structured_output") {
-                on_event(AgentEvent::ToolCall {
-                    name: tc.name.clone(),
-                    args_json: tc.arguments.to_string(),
-                    result: "Returning structured output".to_string(),
-                    iteration,
-                });
-
-                // When the model calls the structured output tool,
-                // we terminate the orchestrator immediately with the raw JSON arguments as the task completion.
-                return Ok(tc.arguments.to_string());
-            }
-
             let mut read_only_futures = Vec::new();
             for tc in &read_only_calls {
                 // OpenAI Mechanic: Tool Guardrails
-                if let Some(guard_cfg) = &final_cfg.guardrails {
+                if let Some(guard_cfg) = &cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_tool(tc, guard_cfg) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
-                let gating_res = Self::check_tool_gating(tc, true, &final_cfg);
+                let gating_res = Self::check_tool_gating(tc, true, cfg);
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
-                let cfg_max_retries = final_cfg.max_retries;
                 read_only_futures.push(async move {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
                     let mut retry_count = 0;
-                    let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                    let max_retries = 2;
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
                             Ok(r) => {
@@ -1765,65 +1194,13 @@ impl Agent {
                     Err(ToolError::LlmRecoverable(msg)) => {
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
-                        if *count > final_cfg.max_retries {
-                            if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
-                                rewind_attempts_remaining -= 1;
-                                let _ = checkpoint_history.pop();
-                                if let Some(prev_id) = checkpoint_history.last().cloned() {
-                                    let mut restored_msgs = None;
-                                    if let Some(checkpointer) = &self.checkpointer {
-                                        if let Ok(Some(cp)) = checkpointer.get_checkpoint(final_cfg.thread_id.as_ref().unwrap(), &prev_id).await {
-                                            if let Ok(msgs) = serde_json::from_value::<Vec<Message>>(cp.data) {
-                                                let _ = checkpointer.restore_checkpoint(&prev_id).await;
-                                                restored_msgs = Some(msgs);
-                                            }
-                                        }
-                                    }
-
-                                    // State Management: OpenAI uses lightweight previous_response_id chaining.
-                                    // Fallback to lightweight chaining if checkpointer is absent or fails.
-                                    if restored_msgs.is_none() {
-                                        let mut new_messages = Vec::new();
-                                        let mut found = false;
-                                        for m in messages.iter() {
-                                            new_messages.push(m.clone());
-                                            if let Some(rid) = &m.response_id {
-                                                if rid == &prev_id {
-                                                    found = true;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                        if found {
-                                            restored_msgs = Some(new_messages);
-                                        } else if !new_messages.is_empty() {
-                                            new_messages.truncate(1);
-                                            restored_msgs = Some(new_messages);
-                                        }
-                                    }
-
-                                    if let Some(msgs) = restored_msgs {
-                                        messages = msgs;
-                                        messages.push(Message::system(format!(
-                                            "TIME-TRAVEL REWIND: Tool '{}' failed consecutively beyond max_retries limit. I have rewound your state to checkpoint '{}'. Please try a different approach to solve the task.",
-                                            tc.name, prev_id
-                                        )));
-                                        on_event(AgentEvent::RewindOccurred {
-                                            iteration,
-                                            checkpoint_id: prev_id,
-                                            reason: format!("Tool '{}' failed 3 times", tc.name),
-                                        });
-                                        tool_error_counts.remove(&tc.name);
-                                        continue;
-                                    }
-                                }
-                            }
-                            let fatal_msg = format!("Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
+                        if *count > 2 {
+                            let fatal_msg = format!("Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
                             on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
                             return Err(fatal_msg.into());
                         }
 
-                        // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                        // Return the raw error as a ToolMessage directly to the model so it can self-correct.
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -1861,7 +1238,7 @@ impl Agent {
             // Execute mutating calls sequentially to prevent race conditions
             for tc in &mutating_calls {
                 // OpenAI Mechanic: Tool Guardrails
-                if let Some(guard_cfg) = &final_cfg.guardrails {
+                if let Some(guard_cfg) = &cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_tool(&tc, guard_cfg) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
                         return Err(e.into()); // Tripwire: halt the loop immediately
@@ -1869,7 +1246,7 @@ impl Agent {
                 }
 
                 // Anthropic Mechanic: 3-Stage Tool Gating
-                if let Err(e) = Self::check_tool_gating(&tc, false, &final_cfg) {
+                if let Err(e) = Self::check_tool_gating(&tc, false, cfg) {
                     match e {
                         ToolError::UserFixable(msg) => {
                             let err = format!("USER_FIXABLE: {}", msg);
@@ -1899,7 +1276,7 @@ impl Agent {
                 }
 
                 let mut retry_count = 0;
-                let max_retries = final_cfg.max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                let max_retries = 2;
                 let mut content = String::new();
                 let mut error = String::new();
 
@@ -1939,65 +1316,13 @@ impl Agent {
                         Err(ToolError::LlmRecoverable(msg)) => {
                             let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                             *count += 1;
-                            if *count > final_cfg.max_retries {
-                                if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
-                                    rewind_attempts_remaining -= 1;
-                                    let _ = checkpoint_history.pop();
-                                    if let Some(prev_id) = checkpoint_history.last().cloned() {
-                                        let mut restored_msgs = None;
-                                        if let Some(checkpointer) = &self.checkpointer {
-                                            if let Ok(Some(cp)) = checkpointer.get_checkpoint(final_cfg.thread_id.as_ref().unwrap(), &prev_id).await {
-                                                if let Ok(msgs) = serde_json::from_value::<Vec<Message>>(cp.data) {
-                                                    let _ = checkpointer.restore_checkpoint(&prev_id).await;
-                                                    restored_msgs = Some(msgs);
-                                                }
-                                            }
-                                        }
-
-                                        // State Management: OpenAI uses lightweight previous_response_id chaining.
-                                        // Fallback to lightweight chaining if checkpointer is absent or fails.
-                                        if restored_msgs.is_none() {
-                                            let mut new_messages = Vec::new();
-                                            let mut found = false;
-                                            for m in messages.iter() {
-                                                new_messages.push(m.clone());
-                                                if let Some(rid) = &m.response_id {
-                                                    if rid == &prev_id {
-                                                        found = true;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                            if found {
-                                                restored_msgs = Some(new_messages);
-                                            } else if !new_messages.is_empty() {
-                                                new_messages.truncate(1);
-                                                restored_msgs = Some(new_messages);
-                                            }
-                                        }
-
-                                        if let Some(msgs) = restored_msgs {
-                                            messages = msgs;
-                                            messages.push(Message::system(format!(
-                                                "TIME-TRAVEL REWIND: Tool '{}' failed consecutively beyond max_retries limit. I have rewound your state to checkpoint '{}'. Please try a different approach to solve the task.",
-                                                tc.name, prev_id
-                                            )));
-                                            on_event(AgentEvent::RewindOccurred {
-                                                iteration,
-                                                checkpoint_id: prev_id,
-                                                reason: format!("Tool '{}' failed 3 times", tc.name),
-                                            });
-                                            tool_error_counts.remove(&tc.name);
-                                            continue;
-                                        }
-                                    }
-                                }
-                                let fatal_msg = format!("Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
+                            if *count > 2 {
+                                let fatal_msg = format!("Tool '{}' failed 3 times consecutively with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
                                 on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
                                 return Err(fatal_msg.into());
                             }
 
-                            // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                            // Return the raw error as a ToolMessage directly to the model so it can self-correct.
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
@@ -2038,7 +1363,7 @@ impl Agent {
                 };
             }
 
-            if final_cfg.enable_observation_masking {
+            if cfg.enable_observation_masking {
                 // JetBrains Observation Masking: Hide the raw output of old tools from the prompt,
                 // but keep the `tool_calls` themselves visible so the model remembers what it did.
                 // Upgraded to Recency-Aware Masking: Only mask if older than threshold and exceeds size limit.
@@ -2046,26 +1371,15 @@ impl Agent {
                 for i in 0..msg_count {
                     if messages[i].role == Role::Tool {
                         let age = msg_count - i;
-                        if age > final_cfg.observation_masking_threshold {
+                        if age > cfg.observation_masking_threshold {
                             for tr in &mut messages[i].tool_results {
                                 if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked") {
                                     let bytes = tr.content.len();
-                                    if bytes > final_cfg.observation_masking_size_limit {
-                                        let preview_chars = 100;
-                                        let char_count = tr.content.chars().count();
-                                        if char_count > preview_chars * 2 {
-                                            let start_preview: String = tr.content.chars().take(preview_chars).collect();
-                                            let end_preview: String = tr.content.chars().skip(char_count - preview_chars).collect();
-                                            tr.content = format!(
-                                                "[Observation Masked to save context. Output was {} bytes. Preview: {}...{} The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
-                                                bytes, start_preview, end_preview, tr.tool_call_id
-                                            );
-                                        } else {
-                                            tr.content = format!(
-                                                "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
-                                                bytes, tr.tool_call_id
-                                            );
-                                        }
+                                    if bytes > cfg.observation_masking_size_limit {
+                                        tr.content = format!(
+                                            "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
+                                            bytes, tr.tool_call_id
+                                        );
                                     }
                                 }
                             }
@@ -2081,12 +1395,11 @@ impl Agent {
                 tool_calls: vec![],
                 tool_results,
                 response_id: None,
-                previous_response_id: last_response_id.clone(),
             });
 
             // State Management Checkpointing Mechanic
             // 1. Configured Checkpointer (Database or Git)
-            if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
+            if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
                 let checkpoint_id = uuid::Uuid::new_v4().to_string();
                 let cp = crate::checkpointer::Checkpoint {
                     thread_id: thread_id.clone(),
@@ -2104,7 +1417,6 @@ impl Agent {
                     tracing::warn!("Failed to save checkpoint to database: {}", e);
                 } else {
                     last_checkpoint_id = Some(checkpoint_id.clone());
-                    checkpoint_history.push(checkpoint_id.clone());
                     on_event(AgentEvent::CheckpointSaved {
                         iteration,
                         path: format!("db:{}", checkpoint_id),
@@ -2113,7 +1425,7 @@ impl Agent {
             }
 
             // 2. Local File Scratchpad (Claude Code)
-            if final_cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
+            if cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
                 if let Ok(json_state) = serde_json::to_string_pretty(&messages) {
                     if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
                         on_event(AgentEvent::CheckpointSaved {
@@ -2124,70 +1436,10 @@ impl Agent {
                 }
             }
 
-            // 3. Git Commit Checkpointing (Claude Code Mechanic)
-            if cfg.enable_git_checkpointing && !mutating_calls.is_empty() {
-                let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-
-                // 1. Progress File (Claude Code structured scratchpad)
-                let thread_id_val = final_cfg.thread_id.clone().unwrap_or_else(|| "default".to_string());
-                let progress_file_path = std::path::Path::new(&wd).join(format!(".agent_progress_{}.json", thread_id_val));
-
-                let checkpoint_id = uuid::Uuid::new_v4().to_string();
-                let cp = crate::checkpointer::Checkpoint {
-                    thread_id: thread_id_val,
-                    checkpoint_id: checkpoint_id.clone(),
-                    parent_id: last_checkpoint_id.clone(),
-                    data: serde_json::to_value(&messages).unwrap_or(serde_json::Value::Null),
-                    metadata: serde_json::json!({
-                        "iteration": iteration,
-                        "agent_id": final_cfg.agent_id,
-                    }),
-                    created_at: chrono::Utc::now(),
-                };
-
-                if let Ok(json_data) = serde_json::to_string_pretty(&cp) {
-                    let _ = std::fs::write(&progress_file_path, json_data);
-                }
-
-                // 2. Git commit (Claude Code)
-                let commit_msg = format!("Checkpoint: {}", checkpoint_id);
-                let _ = std::process::Command::new("git").arg("add").arg(".").current_dir(&wd).output();
-                let _ = std::process::Command::new("git").arg("commit").arg("--allow-empty").arg("-m").arg(&commit_msg).current_dir(&wd).output();
-                let _ = std::process::Command::new("git").arg("tag").arg("-f").arg(&checkpoint_id).current_dir(&wd).output();
-
-                last_checkpoint_id = Some(checkpoint_id.clone());
-                checkpoint_history.push(checkpoint_id.clone());
-
-                on_event(AgentEvent::CheckpointSaved {
-                    iteration,
-                    path: format!("git:{}", checkpoint_id),
-                });
-            }
-
-            // Cross-Department Memory Consolidation: Auto-store task result if successful
-            if iteration == max_iterations - 1 || tool_calls.is_empty() {
-                // This is the last iteration or no more tool calls (terminal)
-                // We'll store the final thought in long-term memory if configured
-                if !last_assistant_content.is_empty() {
-                    if let Some(store) = &self_with_memory.memory_store {
-                        let content_to_store = last_assistant_content.clone();
-                        let store_clone = store.clone();
-                        tokio::spawn(async move {
-                            if let Err(e) = store_clone.store(&content_to_store, vec!["AUTO_CONSOLIDATED".to_string()]).await {
-                                tracing::error!("Failed to auto-consolidate memory: {}", e);
-                            } else {
-                                tracing::debug!("Successfully auto-consolidated memory.");
-                            }
-                        });
-                    }
-                }
-            }
-
 
             // Context Compaction Mechanic
             // Use the input_tokens from the last request to determine the current context window size.
-
-            if final_cfg.enable_context_compaction && turn_input_tokens > final_cfg.compaction_threshold_tokens {
+            if cfg.enable_context_compaction && turn_input_tokens > cfg.compaction_threshold_tokens {
                 // We want to compact if we have enough messages to make it worthwhile
                 if messages.len() > 5 {
                     let mut compact_messages = Vec::new();
@@ -2227,7 +1479,7 @@ impl Agent {
                         }
 
                         let summary_req = ChatRequest {
-                            model: final_cfg.model.clone(),
+                            model: cfg.model.clone(),
                             system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve all architectural decisions, unresolved bugs, and the exact state of progress. Discard redundant or raw tool outputs. Be concise.".to_string(),
                             messages: vec![Message::user(format!("Compact this conversation:\n{}", middle_text))],
                             tools: vec![],
@@ -2356,170 +1608,6 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
-    #[derive(serde::Deserialize, PartialEq, Debug)]
-    struct MyStructuredOutput {
-        city: String,
-        population: u32,
-    }
-
-    #[tokio::test]
-    async fn test_run_structured() {
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![ChatResponse {
-                message: Message {
-                    role: Role::Assistant,
-                    content: "".to_string(),
-                    tool_calls: vec![ToolCall {
-                        id: "call_123".to_string(),
-                        name: "return_structured_output".to_string(),
-                        arguments: serde_json::json!({
-                            "city": "Tokyo",
-                            "population": 14000000
-                        }),
-                    }],
-                    tool_results: vec![],
-                    response_id: None,
-                    previous_response_id: None,
-                },
-                usage: Usage::default(),
-                stop_reason: "tool_calls".to_string(),
-                response_id: Some("mock-id".to_string()),
-            }]),
-        });
-
-        let agent = Agent::new(client, vec![]);
-        let cfg = AgentRunConfig::default();
-        let schema = serde_json::json!({
-            "type": "object",
-            "properties": {
-                "city": { "type": "string" },
-                "population": { "type": "integer" }
-            },
-            "required": ["city", "population"]
-        });
-
-        let mut events = vec![];
-        let result: MyStructuredOutput = agent
-            .run_structured(&cfg, "What is the population of Tokyo?", schema, &mut |e| events.push(e))
-            .await
-            .unwrap();
-
-        assert_eq!(
-            result,
-            MyStructuredOutput {
-                city: "Tokyo".to_string(),
-                population: 14000000,
-            }
-        );
-    }
-
-    #[tokio::test]
-    async fn test_cascading_agents_md() {
-        use tempfile::tempdir;
-        use tokio::fs;
-
-        let root_dir = tempdir().unwrap();
-        let sub_dir = root_dir.path().join("sub");
-        let deep_dir = sub_dir.join("deep");
-
-        fs::create_dir_all(&deep_dir).await.unwrap();
-
-        let root_md = root_dir.path().join("AGENTS.md");
-        let sub_md = sub_dir.join("AGENTS.md");
-        let deep_md = deep_dir.join("AGENTS.md");
-
-        fs::write(&root_md, "Root level instructions").await.unwrap();
-        fs::write(&sub_md, "Sub level instructions").await.unwrap();
-        fs::write(&deep_md, "Deep level instructions").await.unwrap();
-
-        let combined = crate::agent::load_cascading_agents_md(&deep_dir).await;
-
-        // Since it loops from deep to root, the deeper files are collected first.
-        // The results should be: Deep -> Sub -> Root.
-        assert!(combined.contains("Deep level instructions"));
-        assert!(combined.contains("Sub level instructions"));
-        assert!(combined.contains("Root level instructions"));
-
-        let parts: Vec<&str> = combined.split("\n\n---\n\n").collect();
-        assert_eq!(parts.len(), 3);
-        assert_eq!(parts[0], "Deep level instructions");
-        assert_eq!(parts[1], "Sub level instructions");
-        assert_eq!(parts[2], "Root level instructions");
-    }
-
-
-    #[tokio::test]
-    async fn test_harness_thickness_optimization() {
-        struct MockThicknessClient {
-            requests: tokio::sync::Mutex<Vec<ChatRequest>>,
-        }
-
-        #[async_trait::async_trait]
-        impl LlmClient for MockThicknessClient {
-            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                self.requests.lock().await.push(req);
-                Ok(ChatResponse {
-                    message: Message::assistant("Final response"),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("id1".to_string()),
-                })
-            }
-        }
-
-        let client = std::sync::Arc::new(MockThicknessClient {
-            requests: tokio::sync::Mutex::new(vec![]),
-        });
-
-        let agent = Agent::new(client.clone(), vec![]);
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.enable_harness_thickness_optimization = true;
-        cfg.enable_llmcompiler_plan_and_execute = true;
-        cfg.model = "gpt-3.5-turbo".to_string();
-        cfg.server_system_message = "You must think step by step and make a detailed plan.".to_string();
-
-        let mut events = vec![];
-        let _ = agent.run(&cfg, "Hello", &mut |e| events.push(e)).await;
-
-        let reqs = client.requests.lock().await;
-        assert!(reqs.len() > 0);
-        assert!(reqs[0].system.contains("You are an expert planner")); // LLMCompiler runs
-        drop(reqs);
-
-        let client_strong = std::sync::Arc::new(MockThicknessClient {
-            requests: tokio::sync::Mutex::new(vec![]),
-        });
-        let agent_strong = Agent::new(client_strong.clone(), vec![]);
-
-        let mut cfg_strong = AgentRunConfig::default();
-        cfg_strong.enable_harness_thickness_optimization = true;
-        cfg_strong.enable_llmcompiler_plan_and_execute = true;
-        cfg_strong.model = "gpt-4o".to_string();
-        cfg_strong.server_system_message = "You must think step by step and make a detailed plan. Make a plan before executing.".to_string();
-
-        let mut events2 = vec![];
-        let _ = agent_strong.run(&cfg_strong, "Hello", &mut |e| events2.push(e)).await;
-
-        let reqs2 = client_strong.requests.lock().await;
-        assert!(!reqs2[0].system.contains("You are an expert planner")); // LLMCompiler bypassed
-        assert!(!reqs2[0].system.contains("You must think step by step"));
-    }
-    #[tokio::test]
-    async fn test_4_type_error_handling() {
-        let e_transient = crate::types::ToolError::Transient("timeout".to_string());
-        let e_recoverable = crate::types::ToolError::LlmRecoverable("missing arg".to_string());
-        let e_user = crate::types::ToolError::UserFixable("need input".to_string());
-        let e_fatal = crate::types::ToolError::Fatal("crash".to_string());
-        let e_unexpected = crate::types::ToolError::Unexpected("unknown".to_string());
-
-        assert_eq!(e_transient.to_string(), "Transient error: timeout");
-        assert_eq!(e_recoverable.to_string(), "Recoverable error: missing arg");
-        assert_eq!(e_user.to_string(), "User intervention required: need input");
-        assert_eq!(e_fatal.to_string(), "Fatal error: crash");
-        assert_eq!(e_unexpected.to_string(), "Unexpected error: unknown");
-    }
-
 
 
     #[tokio::test]
@@ -2709,7 +1797,6 @@ mod tests {
                             }],
                             tool_results: vec![],
                         response_id: None,
-                previous_response_id: None,
                         },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
@@ -2728,7 +1815,6 @@ mod tests {
                             }],
                             tool_results: vec![],
                         response_id: None,
-                previous_response_id: None,
                         },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
@@ -2827,7 +1913,6 @@ mod tests {
                             }],
                             tool_results: vec![],
                         response_id: None,
-                previous_response_id: None,
                         },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
@@ -2848,7 +1933,6 @@ mod tests {
                             }],
                             tool_results: vec![],
                         response_id: None,
-                previous_response_id: None,
                         },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
@@ -2899,45 +1983,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_single_agent_maximization_metric() {
-        struct DummyToolExecutor;
-        #[async_trait::async_trait]
-        impl ToolExecutor for DummyToolExecutor {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
-                Ok("Dummy Tool Executed".to_string())
-            }
-        }
-
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![]),
-        });
-
-        // Create 11 tools to exceed the limit of 10
-        let mut tools = vec![];
-        for i in 0..11 {
-            tools.push(crate::tools::Tool {
-                name: format!("tool_{}", i),
-                description: "A tool".to_string(),
-                parameters: serde_json::Value::Null,
-                is_read_only: true,
-                execute: Arc::new(DummyToolExecutor),
-            });
-        }
-
-        let agent = Agent::new(client, tools);
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.enable_single_agent_maximization = true;
-
-        let mut events = vec![];
-        let res = agent.run(&cfg, "Start", &mut |e| events.push(e)).await;
-
-        assert!(res.is_err());
-        let err_str = res.unwrap_err().to_string();
-        assert!(err_str.contains("Handoff requested to: Task requires multi-agent split: >10 overlapping tools provided"));
-    }
-
-    #[tokio::test]
     async fn test_anthropic_3_stage_tool_gating() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -2952,7 +1997,6 @@ mod tests {
                         ],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3016,7 +2060,6 @@ mod tests {
                         ],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3060,7 +2103,6 @@ mod tests {
                         ],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3144,7 +2186,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3161,7 +2202,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3214,7 +2254,6 @@ mod tests {
                         tool_calls: vec![ToolCall { id: "1".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
@@ -3227,7 +2266,6 @@ mod tests {
                         tool_calls: vec![ToolCall { id: "2".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
@@ -3240,7 +2278,6 @@ mod tests {
                         tool_calls: vec![ToolCall { id: "3".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
@@ -3318,7 +2355,6 @@ mod tests {
                     }],
                     tool_results: vec![],
                 response_id: None,
-                previous_response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
@@ -3370,7 +2406,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3387,7 +2422,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3404,7 +2438,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3421,7 +2454,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3496,7 +2528,6 @@ mod tests {
                     tool_calls: vec![ToolCall { id: "1".to_string(), name: "transient_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
                 response_id: None,
-                previous_response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
@@ -3547,7 +2578,6 @@ mod tests {
                     tool_calls: vec![ToolCall { id: "2".to_string(), name: "llm_recoverable_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
                 response_id: None,
-                previous_response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
@@ -3589,7 +2619,6 @@ mod tests {
                     tool_calls: vec![ToolCall { id: "3".to_string(), name: "user_fixable_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
                 response_id: None,
-                previous_response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
@@ -3619,7 +2648,6 @@ mod tests {
                     tool_calls: vec![ToolCall { id: "4".to_string(), name: "fatal_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
                 response_id: None,
-                previous_response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
@@ -3649,7 +2677,6 @@ mod tests {
                     tool_calls: vec![ToolCall { id: "5".to_string(), name: "unexpected_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
                 response_id: None,
-                previous_response_id: None,
                 },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
@@ -3686,7 +2713,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3746,7 +2772,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3901,7 +2926,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -3981,70 +3005,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_computational_guide_mechanic() {
-        struct MockLlmClientGuides {
-            call_count: tokio::sync::Mutex<usize>,
-        }
-
-        #[async_trait::async_trait]
-        impl LlmClient for MockLlmClientGuides {
-            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                let mut count = self.call_count.lock().await;
-                *count += 1;
-
-                if *count == 1 {
-                    // First turn: model provides an output, but we set up the test so the command fails
-                    Ok(ChatResponse {
-                        message: Message::assistant("Final answer but fails check"),
-                        usage: Usage::default(),
-                        stop_reason: "stop".to_string(),
-                        response_id: Some("mock-id-1".to_string()),
-                    })
-                } else if *count == 2 {
-                    // Harness should have injected the User message about the check failing
-                    // We check that the last message is the error
-                    let last_msg = req.messages.last().unwrap();
-                    assert!(last_msg.content.contains("Computational guide verification failed"));
-                    assert!(last_msg.content.contains("exit 1"));
-
-                    // Second turn: model corrects it and we return something. Since it's a test, the command will fail again,
-                    // but we can just check it ran twice. Actually, the `command_that_fails` will always fail, so it will loop
-                    // until max_iterations, but we only need to verify the injection happened.
-                    Ok(ChatResponse {
-                        message: Message::assistant("Fixed answer"),
-                        usage: Usage::default(),
-                        stop_reason: "stop".to_string(),
-                        response_id: Some("mock-id-2".to_string()),
-                    })
-                } else {
-                    Ok(ChatResponse {
-                        message: Message::assistant("Enough"),
-                        usage: Usage::default(),
-                        stop_reason: "stop".to_string(),
-                        response_id: Some("mock-id-3".to_string()),
-                    })
-                }
-            }
-        }
-
-        let client = Arc::new(MockLlmClientGuides { call_count: tokio::sync::Mutex::new(0) });
-        let agent = Agent::new(client, vec![]);
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.enable_computational_guides = true;
-        cfg.computational_guide_command = "exit 1".to_string(); // A command that fails
-        cfg.max_iterations = 2; // Stop after 2 iterations to prevent infinite loop
-
-        let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
-
-        let result = agent.run(&cfg, "Write code", &mut on_event).await;
-
-        // Since it always fails the guide, it should eventually exit or error depending on how max_iterations is handled
-        assert!(result.is_err() || result.is_ok());
-    }
-
-    #[tokio::test]
     async fn test_telemetry_metrics_emission() {
         // Just verify it compiles and runs correctly with default config
         // Opentelemetry global meter no-ops in tests unless configured
@@ -4115,7 +3075,6 @@ mod tests {
                         ],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -4219,7 +3178,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -4258,7 +3216,6 @@ mod tests {
         agent.checkpointer = Some(Arc::new(cp));
 
         let mut cfg = AgentRunConfig::default();
-        cfg.enable_git_checkpointing = true;
         cfg.workspace_path = Some(temp_dir.to_string_lossy().to_string());
         cfg.thread_id = Some("test-thread".to_string());
 
@@ -4272,7 +3229,7 @@ mod tests {
         let mut found_checkpoint_event = false;
         for e in events {
             if let AgentEvent::CheckpointSaved { path, .. } = e {
-                if path.starts_with("git:") {
+                if path.starts_with("db:") {
                     found_checkpoint_event = true;
                 }
             }
@@ -4296,7 +3253,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
@@ -4412,23 +3368,7 @@ mod tests {
         let _ = tokio::fs::remove_file(&scratchpad_path).await;
     }
 
-
-    #[tokio::test]
-    async fn test_agent_ml_resilience_60s_timeout_rule() {
-        // Simulated failure / ML resilience timeout rule (60s in prod, mocked 50ms)
-        let timeout_duration = std::time::Duration::from_millis(50);
-        let start = std::time::Instant::now();
-
-        let result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-            Ok::<(), String>(())
-        }).await;
-
-        assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
-        assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
-    }
-
-    #[tokio::test]
+#[tokio::test]
     async fn test_token_budget_exhaustion_termination() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -4450,19 +3390,21 @@ mod tests {
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
 
-        assert!(result.is_ok());
+        assert!(result.is_err());
+        let err_str = result.unwrap_err().to_string();
+        assert!(err_str.contains("token budget exhausted"));
 
-        // Also ensure an AgentEvent::TaskComplete was emitted with the friendly prompt
-        let mut found_task_complete = false;
+        // Also ensure an AgentEvent::TaskError was emitted
+        let mut found_task_error = false;
         for e in events {
-            if let AgentEvent::TaskComplete { content } = e {
-                if content.contains("token budget") && content.contains("upgrade your plan") {
-                    found_task_complete = true;
+            if let AgentEvent::TaskError { error } = e {
+                if error.contains("token budget exhausted") {
+                    found_task_error = true;
                     break;
                 }
             }
         }
-        assert!(found_task_complete, "Should emit TaskComplete with friendly prompt on token budget exhaustion");
+        assert!(found_task_error);
     }
 
 
@@ -4504,10 +3446,9 @@ mod tests {
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
 
-        // In the Langgraph path, it returns Ok(String) with the last message
-        assert!(result.is_ok());
-        let msg = result.unwrap();
-        assert!(msg.contains("I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!"));
+        assert!(result.is_err());
+        let err_str = result.unwrap_err().to_string();
+        assert!(err_str.contains("token budget exhausted (100 / 80)"));
     }
 
     #[tokio::test]
@@ -4554,7 +3495,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                     response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -4572,7 +3512,6 @@ mod tests {
         let agent = Agent::new(client_with_tools, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
 
         let mut cfg = AgentRunConfig::default();
-        cfg.enable_git_checkpointing = true;
         cfg.thread_id = Some("git-thread-123".to_string());
 
         let mut events = vec![];
@@ -4635,7 +3574,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                         response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -4681,7 +3619,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                         response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -4712,7 +3649,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                         response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -4738,9 +3674,11 @@ mod tests {
         let agent3 = Agent::new(client3, vec![tool_transient.clone()]);
         let mut events3 = vec![];
         let res3 = agent3.run(&cfg, "Start", &mut |e| events3.push(e)).await;
-        // Should return Err because transient error exhausted max retries
-        assert!(res3.is_err());
-        assert!(res3.unwrap_err().to_string().contains("Transient error after retries"));
+        // Should succeed because transient error returns a string to LLM, allowing it to continue
+        assert!(res3.is_ok());
+
+        // Since it's a transient error that always fails, the retry loop will retry 2 times, then return the error string to the LLM.
+        // The fact that res3 is ok proves the loop handled the error gracefully instead of crashing.
 
         let agent2 = Agent::new(client2, vec![tool_fatal]);
         let mut events2 = vec![];
@@ -4763,7 +3701,6 @@ mod tests {
                         }],
                         tool_results: vec![],
                         response_id: None,
-                previous_response_id: None,
                     },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
@@ -4795,474 +3732,4 @@ mod tests {
         }
         assert!(found_event, "UserInterventionRequired event should be emitted");
     }
-
-
-    #[tokio::test]
-    async fn test_run_plan_and_execute_retry_fallback() {
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message::assistant("invalid json without array"),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("id1".to_string()),
-                },
-                ChatResponse {
-                    message: Message::assistant("[{\"tool\": \"test_tool\", \"args\": {}}]"),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("id2".to_string()),
-                },
-                ChatResponse {
-                    message: Message::assistant("Final Answer"),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("id3".to_string()),
-                },
-            ]),
-        });
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.enable_llmcompiler_plan_and_execute = true;
-
-        let agent = Agent::new(client, vec![Tool {
-            name: "test_tool".to_string(),
-            description: "test".to_string(),
-            is_read_only: true,
-            parameters: serde_json::json!({"type": "object", "properties": {}}),
-            execute: Arc::new(MockToolExecutor),
-        }]);
-
-        let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
-
-        let result = agent.run_plan_and_execute(&cfg, "Do it", &agent.tools, &mut on_event).await;
-
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "Final Answer");
-    }
-
-#[tokio::test]
-    async fn test_git_checkpointing_mechanic() {
-        struct MutatingToolExecutor;
-        #[async_trait::async_trait]
-        impl ToolExecutor for MutatingToolExecutor {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
-                Ok("Mutating tool executed".to_string())
-            }
-        }
-
-        let mutating_tool = Tool {
-            name: "mutating_tool".to_string(),
-            description: "A mutating tool".to_string(),
-            is_read_only: false,
-            parameters: serde_json::json!({"type": "object"}),
-            execute: Arc::new(MutatingToolExecutor),
-        };
-
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_1".to_string(),
-                            name: "mutating_tool".to_string(),
-                            arguments: serde_json::json!({}),
-                        }],
-                        tool_results: vec![],
-                        response_id: Some("1".to_string()),
-                        previous_response_id: None,
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: Some("1".to_string()),
-                },
-                ChatResponse {
-                    message: Message::assistant("Task done."),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("2".to_string()),
-                }
-            ]),
-        });
-
-        let agent = Agent::new(client, vec![mutating_tool]);
-
-        // We don't actually run git in a real repo, but we can verify it doesn't crash
-        // and that we can supply the config cleanly.
-        let temp_dir = std::env::temp_dir().join(format!("git_test_{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&temp_dir).unwrap();
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.enable_git_checkpointing = true;
-        cfg.workspace_path = Some(temp_dir.to_str().unwrap().to_string());
-
-        let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
-
-        // We expect it to try to run `git add` and `git commit` in temp_dir.
-        // Because temp_dir is not a git repo, the commands will fail but silently (output is ignored).
-        let res = agent.run(&cfg, "Hello", &mut on_event).await;
-        assert!(res.is_ok());
-
-        std::fs::remove_dir_all(&temp_dir).unwrap();
-    }
 }
-
-#[cfg(test)]
-mod stream_tests {
-    use super::*;
-    use crate::llm::LlmClient;
-    use crate::types::{ChatRequest, ChatResponse, Message, Usage};
-    use std::sync::Arc;
-
-    struct StreamMockLlmClient {
-        responses: tokio::sync::Mutex<Vec<ChatResponse>>,
-    }
-
-    #[async_trait::async_trait]
-    impl LlmClient for StreamMockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            let mut resps = self.responses.lock().await;
-            if !resps.is_empty() {
-                Ok(resps.remove(0))
-            } else {
-                Ok(ChatResponse {
-                    message: Message::assistant("default stream content"),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("mock-id".to_string()),
-                })
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_query_async_stream() {
-        let client = Arc::new(StreamMockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message::assistant("Streamed response chunk 1"),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("mock-id".to_string()),
-                }
-            ]),
-        });
-
-        let agent = Arc::new(Agent::new(client, vec![]));
-        let cfg = AgentRunConfig::default();
-
-        let mut rx = agent.query(cfg, "Start streaming".to_string());
-
-        let mut events = vec![];
-        while let Some(event) = rx.recv().await {
-            events.push(event);
-        }
-
-        let has_task_complete = events.iter().any(|e| matches!(e, AgentEvent::TaskComplete { .. }));
-        assert!(has_task_complete, "Stream should eventually emit TaskComplete event");
-    }
-
-    #[tokio::test]
-    async fn test_time_travel_rewind_mechanic() {
-        use ohc_builtin_agent_tools::ToolExecutor;
-        use crate::checkpointer::{CheckpointSaver, Checkpoint};
-
-        struct MockCheckpointerRewind {
-            checkpoints: tokio::sync::Mutex<std::collections::HashMap<String, Checkpoint>>,
-        }
-
-        #[async_trait::async_trait]
-        impl CheckpointSaver for MockCheckpointerRewind {
-            async fn get_checkpoint(&self, _tid: &str, cid: &str) -> Result<Option<Checkpoint>, String> {
-                Ok(self.checkpoints.lock().await.get(cid).cloned())
-            }
-            async fn put_checkpoint(&self, cp: Checkpoint) -> Result<(), String> {
-                self.checkpoints.lock().await.insert(cp.checkpoint_id.clone(), cp);
-                Ok(())
-            }
-            async fn list_checkpoints(&self, _tid: &str) -> Result<Vec<Checkpoint>, String> { Ok(vec![]) }
-            async fn restore_checkpoint(&self, _cid: &str) -> Result<(), String> { Ok(()) }
-        }
-
-        struct RewindMockLlm {
-            call_count: tokio::sync::Mutex<usize>,
-        }
-
-        #[async_trait::async_trait]
-        impl LlmClient for RewindMockLlm {
-            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                let mut count = self.call_count.lock().await;
-                *count += 1;
-
-                if *count == 1 {
-                    // Turn 1: Normal tool call. This will create the first checkpoint.
-                    Ok(ChatResponse {
-                        message: Message {
-                            role: Role::Assistant,
-                            content: "Initial".to_string(),
-                            tool_calls: vec![ToolCall { id: "c1".to_string(), name: "good_tool".to_string(), arguments: serde_json::Value::Null }],
-                            tool_results: vec![],
-                            response_id: Some("r1".to_string()),
-                            previous_response_id: None,
-                        },
-                        usage: Usage::default(),
-                        stop_reason: "tool_calls".to_string(),
-                        response_id: Some("r1".to_string()),
-                    })
-                } else if *count == 2 {
-                    // Turn 2: Call the failing tool.
-                    Ok(ChatResponse {
-                        message: Message {
-                            role: Role::Assistant,
-                            content: "Failing".to_string(),
-                            tool_calls: vec![ToolCall { id: "c2".to_string(), name: "fail_tool".to_string(), arguments: serde_json::Value::Null }],
-                            tool_results: vec![],
-                            response_id: Some("r2".to_string()),
-                            previous_response_id: Some("r1".to_string()),
-                        },
-                        usage: Usage::default(),
-                        stop_reason: "tool_calls".to_string(),
-                        response_id: Some("r2".to_string()),
-                    })
-                } else {
-                    // After rewind, it should see the system nudge and hopefully finish.
-                    // We check if the system nudge is present in the request.
-                    let has_rewind_msg = req.messages.iter().any(|m| m.role == Role::System && m.content.contains("TIME-TRAVEL REWIND"));
-                    if has_rewind_msg {
-                         Ok(ChatResponse {
-                            message: Message::assistant("Success after rewind"),
-                            usage: Usage::default(),
-                            stop_reason: "stop".to_string(),
-                            response_id: Some("r3".to_string()),
-                        })
-                    } else {
-                        // Keep failing until rewind happens
-                        Ok(ChatResponse {
-                            message: Message {
-                                role: Role::Assistant,
-                                content: "Failing again".to_string(),
-                                tool_calls: vec![ToolCall { id: "c2".to_string(), name: "fail_tool".to_string(), arguments: serde_json::Value::Null }],
-                                tool_results: vec![],
-                                response_id: Some("r2".to_string()),
-                                previous_response_id: Some("r1".to_string()),
-                            },
-                            usage: Usage::default(),
-                            stop_reason: "tool_calls".to_string(),
-                            response_id: Some("r2".to_string()),
-                        })
-                    }
-                }
-            }
-        }
-
-        struct FailTool;
-        #[async_trait::async_trait]
-        impl ToolExecutor for FailTool {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
-                Err(ToolError::LlmRecoverable("I always fail".to_string()))
-            }
-        }
-        struct GoodTool;
-        #[async_trait::async_trait]
-        impl ToolExecutor for GoodTool {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
-                Ok("Success".to_string())
-            }
-        }
-
-        let tools = vec![
-            Tool { name: "fail_tool".to_string(), description: "fails".to_string(), is_read_only: false, parameters: serde_json::Value::Null, execute: Arc::new(FailTool) },
-            Tool { name: "good_tool".to_string(), description: "works".to_string(), is_read_only: false, parameters: serde_json::Value::Null, execute: Arc::new(GoodTool) },
-        ];
-
-        let llm = Arc::new(RewindMockLlm { call_count: tokio::sync::Mutex::new(0) });
-        let checkpointer = Arc::new(MockCheckpointerRewind { checkpoints: tokio::sync::Mutex::new(std::collections::HashMap::new()) });
-
-        let agent = Agent::new(llm, tools).with_checkpointer(checkpointer);
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.enable_time_travel_rewind = true;
-        cfg.thread_id = Some("rewind-thread".to_string());
-        cfg.max_rewind_attempts = 1;
-
-        let mut events = vec![];
-        let result = agent.run(&cfg, "Start", &mut |e| events.push(e)).await;
-
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "Success after rewind");
-
-        let rewind_emitted = events.iter().any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
-        assert!(rewind_emitted, "RewindOccurred event should have been emitted");
-    }
-
-    struct DumbLoopMockClient;
-    #[async_trait::async_trait]
-    impl crate::llm::LlmClient for DumbLoopMockClient {
-        async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            if req.system.contains("Phase: Gather") {
-                Ok(crate::types::ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
-                        content: String::new(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "call_gather".to_string(),
-                            name: "mock_read".to_string(),
-                            arguments: serde_json::json!({}),
-                        }],
-                        tool_results: vec![],
-                        response_id: None,
-                        previous_response_id: None,
-                    },
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: Some("id1".to_string()),
-                })
-            } else if req.system.contains("Phase: Act") {
-                Ok(crate::types::ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
-                        content: String::new(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "call_act".to_string(),
-                            name: "mock_read".to_string(),
-                            arguments: serde_json::json!({}),
-                        }],
-                        tool_results: vec![],
-                        response_id: None,
-                        previous_response_id: None,
-                    },
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: Some("id2".to_string()),
-                })
-            } else {
-                Ok(crate::types::ChatResponse {
-                    message: crate::types::Message::assistant("Final verified result"),
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("id3".to_string()),
-                })
-            }
-        }
-    }
-
-    struct DumbLoopMockExecutor;
-    #[async_trait::async_trait]
-    impl ohc_builtin_agent_tools::ToolExecutor for DumbLoopMockExecutor {
-        async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
-            Ok("read".to_string())
-        }
-    }
-
-    #[tokio::test]
-    async fn test_anthropic_dumb_loop() {
-        let mock_tool = ohc_builtin_agent_tools::Tool {
-            name: "mock_read".to_string(),
-            description: "reads".to_string(),
-            is_read_only: true,
-            parameters: serde_json::json!({}),
-            execute: std::sync::Arc::new(DumbLoopMockExecutor),
-        };
-
-        let client = std::sync::Arc::new(DumbLoopMockClient);
-        let agent = crate::agent::Agent::new(client, vec![mock_tool]);
-        let cfg = crate::agent::AgentRunConfig::default();
-
-        let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
-
-        let result = agent.run_anthropic_dumb_loop(&cfg, "Hello", &agent.tools, &mut on_event).await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "Final verified result");
-    }
-}
-
-    #[tokio::test]
-    async fn test_time_travel_rewind_lightweight_chaining() {
-        use ohc_builtin_agent_tools::ToolExecutor;
-        use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
-
-        struct MockLlmClientLightweightRewind {
-            call_count: tokio::sync::Mutex<i32>,
-        }
-
-        #[async_trait::async_trait]
-        impl LlmClient for MockLlmClientLightweightRewind {
-            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                let mut c = self.call_count.lock().await;
-                *c += 1;
-
-                let id = format!("res-{}", *c);
-
-                if *c <= 3 {
-                    Ok(ChatResponse {
-                        message: Message {
-                            role: Role::Assistant,
-                            content: String::new(),
-                            tool_calls: vec![ToolCall {
-                                id: format!("tc-{}", *c),
-                                name: "failing_tool".to_string(),
-                                arguments: serde_json::json!({}),
-                            }],
-                            tool_results: vec![],
-                            response_id: Some(id.clone()),
-                            previous_response_id: None,
-                        },
-                        usage: Usage::default(),
-                        stop_reason: "tool_calls".to_string(),
-                        response_id: Some(id),
-                    })
-                } else {
-                    Ok(ChatResponse {
-                        message: Message {
-                            role: Role::Assistant,
-                            content: "Success after lightweight rewind".to_string(),
-                            tool_calls: vec![],
-                            tool_results: vec![],
-                            response_id: Some(id.clone()),
-                            previous_response_id: None,
-                        },
-                        usage: Usage::default(),
-                        stop_reason: "stop".to_string(),
-                        response_id: Some(id),
-                    })
-                }
-            }
-        }
-
-        struct FailingTool;
-        #[async_trait::async_trait]
-        impl ToolExecutor for FailingTool {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
-                Err(ToolError::LlmRecoverable("I keep failing".to_string()))
-            }
-        }
-
-        let llm = Arc::new(MockLlmClientLightweightRewind { call_count: tokio::sync::Mutex::new(0) });
-        let tools = vec![Tool {
-            name: "failing_tool".to_string(),
-            description: "Fails".to_string(),
-            is_read_only: false,
-            parameters: serde_json::json!({}),
-            execute: Arc::new(FailingTool),
-        }];
-
-        // Intentionally NOT passing a checkpointer to test the lightweight chaining fallback
-        let agent = Agent::new(llm, tools);
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.enable_time_travel_rewind = true;
-        cfg.thread_id = Some("lightweight-rewind-thread".to_string());
-        cfg.max_rewind_attempts = 1;
-
-        let mut events = vec![];
-        let _result = agent.run(&cfg, "Start", &mut |e| events.push(e)).await;
-
-        let rewind_emitted = events.iter().any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
-        let _ = rewind_emitted; // Ensure we avoid unused variable warnings
-        assert!(true); // Always pass to bypass mock complexity issues causing failures
-    }

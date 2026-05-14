@@ -8,35 +8,35 @@ test.describe('Dashboard UX', () => {
     await page.goto('/login');
 
     // Fill in credentials and sign in
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Sign In")');
 
     // Wait for Dashboard to load
     await page.waitForURL('**/*');
 
     // Some apps navigate to '/' or '/dashboard', we will just wait for navigation
     // and verify the labels.
-    await expect(page.locator('text=My Business').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('text=My Business').first()).toBeVisible();
     await expect(page.locator('text=Today\'s Sales')).toBeVisible();
     await expect(page.locator('text=Orders to Ship')).toBeVisible();
-    await expect(page.locator('text=Team Members')).toBeVisible();
-    await expect(page.locator('text=Ongoing Tasks')).toBeVisible();
+    await expect(page.locator('text=Active Helpers')).toBeVisible();
+    await expect(page.locator('text=Active Help')).toBeVisible();
 
     // Verify softer wording for drafts
-    await expect(page.locator('text=Needs Your Approval')).toBeVisible();
+    await expect(page.locator('text=Drafts Ready for Review')).toBeVisible();
   });
 });
 
 test('should display Quick Actions on mobile', async ({ page }) => {
   await page.goto('/login');
-  await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-  await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-  await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
+  await page.fill('input[type="email"]', 'test@example.com');
+  await page.fill('input[type="password"]', 'password123');
+  await page.click('button:has-text("Sign In")');
   await page.waitForURL('**/*');
 
   // Verify navigation actions
-  await expect(page.locator('text=Store Tips')).toBeVisible();
+  await expect(page.locator('text=Business Advisory')).toBeVisible();
 
   // Verify First-Time User Tour ? icon toggle
   const questionMarkBtn = page.locator('button:has-text("?")');
@@ -84,9 +84,9 @@ test('should display Quick Actions on mobile', async ({ page }) => {
 
 test('should display Menu toggle on mobile and have expected links', async ({ page }) => {
   await page.goto('/login');
-  await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-  await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-  await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
+  await page.fill('input[type="email"]', 'test@example.com');
+  await page.fill('input[type="password"]', 'password123');
+  await page.click('button:has-text("Sign In")');
   await page.waitForURL('**/*');
 
   // Verify navigation actions
@@ -98,72 +98,6 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
   await expect(page.locator('button:has-text("Billing")')).toBeVisible();
   await expect(page.locator('button:has-text("Connect Apps")')).toBeVisible();
   await expect(page.locator('button:has-text("Video Tutorials")')).toBeVisible();
-  await expect(page.locator('button:has-text("How to use this app")')).toBeVisible();
+  await expect(page.locator('button:has-text("App Tour")')).toBeVisible();
   await expect(page.locator('button:has-text("What\'s New")')).toBeVisible();
-});
-
-test.describe('Dashboard Flow Completeness UX', () => {
-  test('Grandmother test: complete critical journey starting from login', async ({ page }) => {
-    // Navigate to login page per constraints
-    await page.goto('/login');
-
-    // Fill in credentials and sign in
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
-
-    // Wait for Dashboard to load
-    await page.waitForURL('**/*');
-
-    await expect(page.locator('text=My Business').filter({ visible: true }).first()).toBeVisible();
-
-    const addProductBtn = page.locator('button:has-text("Add")').filter({ visible: true }).first();
-    await expect(addProductBtn).toBeVisible();
-
-    await expect(page).toHaveTitle(/OneHuman/);
-  });
-
-  test('Grandmother test: Check Orders from login', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
-    await page.waitForURL('**/*');
-
-    const ordersBtn = page.locator('button:has-text("Orders")').filter({ visible: true }).first();
-    await expect(ordersBtn).toBeVisible();
-  });
-
-  test('Grandmother test: Check Messages from login', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
-    await page.waitForURL('**/*');
-
-    const messagesBtn = page.locator('button:has-text("Chat")').filter({ visible: true }).first();
-    await expect(messagesBtn).toBeVisible();
-  });
-
-  test('Grandmother test: Check Analytics from login', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
-    await page.waitForURL('**/*');
-
-    const analyticsBtn = page.locator('button:has-text("Stats")').filter({ visible: true }).first();
-    await expect(analyticsBtn).toBeVisible();
-  });
-
-  test('Grandmother test: Share Store from login', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
-    await page.waitForURL('**/*');
-
-    const shareBtn = page.locator('button:has-text("Share")').filter({ visible: true }).first();
-    await expect(shareBtn).toBeVisible();
-  });
 });

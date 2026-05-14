@@ -10,7 +10,6 @@ async fn test_sqlite_task_queue() {
     sqlx::query(
         "CREATE TABLE sub_agent_jobs (
             id TEXT PRIMARY KEY,
-            organization_id TEXT,
             parent_task_id TEXT,
             agent_role TEXT NOT NULL,
             payload TEXT NOT NULL,
@@ -28,7 +27,6 @@ async fn test_sqlite_task_queue() {
 
     let job = Job {
         id: "job-1".to_string(),
-        tenant_id: "system".to_string(),
         parent_task_id: "parent-1".to_string(),
         agent_role: "test-role".to_string(),
         payload: "{}".to_string(),
@@ -46,7 +44,6 @@ async fn test_sqlite_task_queue() {
     let dequeued_opt = queue.dequeue(vec!["test-role".to_string()]).await.unwrap();
     let dequeued = dequeued_opt.unwrap();
     assert_eq!(dequeued.id, "job-1");
-    assert_eq!(dequeued.tenant_id, "system");
 
     queue.complete(&dequeued.id).await.unwrap();
 }
@@ -58,7 +55,6 @@ async fn test_sqlite_task_queue_empty_dequeue() {
     sqlx::query(
         "CREATE TABLE sub_agent_jobs (
             id TEXT PRIMARY KEY,
-            organization_id TEXT,
             parent_task_id TEXT,
             agent_role TEXT NOT NULL,
             payload TEXT NOT NULL,

@@ -1,19 +1,19 @@
 [package]
 name = "ohc-mono"
-version = "0.4.41"
+version = "0.4.28"
 edition = "2024"
 build = "src/server/build.rs"
-
-[lib]
-name = "server_lib"
-path = "src/server/lib.rs"
 
 [[bin]]
 name = "server"
 path = "src/server/main.rs"
 
+[[bin]]
+name = "ohc-builtin-agent"
+path = "src/agents/builtin/main.rs"
+
 [dependencies]
-tokio = { workspace = true, features = ["full"] }
+tokio = { workspace = true }
 tokio-stream = { version = "0.1", features = ["full"] }
 tonic = { workspace = true, features = ["transport"] }
 prost = { workspace = true }
@@ -21,13 +21,12 @@ serde_yaml = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 aes-gcm = "0.10"
 jsonwebtoken = "9"
 base64 = "0.22"
 hmac = "0.12"
 sha2 = "0.10"
-image = "0.25"
 bcrypt = "0.16.0"
 rand = "0.8"
 hex = "0.4"
@@ -61,14 +60,12 @@ protoc-gen-prost = { workspace = true }
 protoc-gen-tonic = { workspace = true }
 prost-types = { workspace = true }
 tempfile = "3.27.0"
-tree-sitter = "0.26.8"
-tree-sitter-bash = "0.25.1"
 
 [build-dependencies]
 tonic-build = "0.12"
 
 [workspace]
-members = ["src/ui/tauri"]
+members = ["src/app"]
 
 [workspace.dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -78,7 +75,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 chrono = { version = "0.4", features = ["serde"] }
 serde_yaml = "0.9"
-reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"], default-features = false }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 protoc-gen-prost = "0.4.0"
 protoc-gen-tonic = "0.4.0"
 prost-types = "0.13"

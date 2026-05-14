@@ -1,9 +1,9 @@
-use crate::db::{DbStore, DB};
-use ::server_ohc::orchestration::SyncStateHandoff;
-use crate::orchestration::mesh::TeammateMesh;
+use crate::ohc::orchestration::SyncStateHandoff;
 use ohc_builtin_agent::mesh::transport::Message as MeshMessage;
-use prost::Message;
+use crate::orchestration::mesh::TeammateMesh;
 use std::sync::Arc;
+use prost::Message;
+use crate::db::{DB, DbStore};
 
 pub struct HandoffManager {
     mesh: Arc<dyn TeammateMesh>,
@@ -33,24 +33,10 @@ impl HandoffManager {
                 let mesh = mesh_clone.clone();
                 let msg_id_for_ack = msg.msg_id.clone();
 
-                // Send ACK immediately to prevent sender backoff/timeouts
-                let ack_topic = format!("mesh:ack:{}", msg_id_for_ack);
-                let mesh_ack = mesh_clone.clone();
                 tokio::spawn(async move {
-                    let _ = mesh_ack.publish(&ack_topic, vec![]).await;
-                });
-
-                tokio::spawn(async move {
-                    let lock_key = format!(
-                        "handoff:{}:{}:{}",
-                        handoff.entity_type, handoff.tenant_id, handoff.state_id
-                    );
+                    let lock_key = format!("handoff:{}:{}:{}", handoff.entity_type, handoff.tenant_id, handoff.state_id);
                     if let Ok(true) = mesh.acquire_lock(&lock_key, "handoff_manager", 60).await {
-                        let entity_type = if handoff.entity_type.is_empty() {
-                            "agent_memories"
-                        } else {
-                            &handoff.entity_type
-                        };
+                        let entity_type = if handoff.entity_type.is_empty() { "agent_memories" } else { &handoff.entity_type };
 
                         match entity_type {
                             "agent_memories" => {
@@ -83,7 +69,7 @@ impl HandoffManager {
                             },
                             "shared_tasks" => {
                                 // For shared_tasks, serialized_state is a SharedTask protobuf
-                                let payload_str = if let Ok(task) = ::server_ohc::orchestration::SharedTask::decode(&handoff.serialized_state[..]) {
+                                let payload_str = if let Ok(task) = crate::ohc::orchestration::SharedTask::decode(&handoff.serialized_state[..]) {
                                     task.payload
                                 } else {
                                     String::from_utf8_lossy(&handoff.serialized_state).to_string()
@@ -121,6 +107,11 @@ impl HandoffManager {
                         }
                         let _ = mesh.release_lock(&lock_key, "handoff_manager").await;
                     }
+
+                    if !msg_id_for_ack.is_empty() {
+                        let ack_topic = format!("mesh:ack:{}", msg_id_for_ack);
+                        let _ = mesh.publish(&ack_topic, vec![]).await;
+                    }
                 });
             }
         });
@@ -128,22 +119,12 @@ impl HandoffManager {
         self.mesh.subscribe("mesh:state:handoff", handler).await
     }
 
-    pub async fn initiate_handoff(
-        &self,
-        tenant_id: &str,
-        state_id: &str,
-        state: Vec<u8>,
-        entity_type: &str,
-    ) -> Result<(), String> {
+    pub async fn initiate_handoff(&self, tenant_id: &str, state_id: &str, state: Vec<u8>, entity_type: &str) -> Result<(), String> {
         let handoff = SyncStateHandoff {
             tenant_id: tenant_id.to_string(),
             state_id: state_id.to_string(),
             serialized_state: state,
-            mode_source: if self.is_cloud {
-                "cloud".to_string()
-            } else {
-                "standalone".to_string()
-            },
+            mode_source: if self.is_cloud { "cloud".to_string() } else { "standalone".to_string() },
             timestamp: chrono::Utc::now().timestamp(),
             entity_type: entity_type.to_string(),
         };
@@ -159,16 +140,14 @@ impl HandoffManager {
 mod tests {
     use super::*;
     use ohc_builtin_agent::mesh::transport::MemoryTransport;
-    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-    use sqlx::Row;
+    use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
     use std::str::FromStr;
+    use sqlx::Row;
 
     #[tokio::test]
     async fn test_handoff_manager() {
         let transport = Arc::new(MemoryTransport::new());
-        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(
-            transport.clone(),
-        ));
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport.clone()));
 
         // Use SQLite memory db for the test to avoid mock postgres failure and handle ack
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
@@ -176,7 +155,6 @@ mod tests {
             .create_if_missing(true);
 
         let pool = SqlitePoolOptions::new()
-            .max_connections(1)
             .connect_with(conn_opts)
             .await
             .unwrap();
@@ -186,43 +164,17 @@ mod tests {
             .await
             .unwrap();
 
-        let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-                .after_release(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("DISCARD ALL").await?;
-                        Ok(true)
-                    })
-                })
-                .connect_lazy("postgres://localhost/dummy")
-                .unwrap(),
-            store: DbStore::Sqlite(pool.clone()),
-        });
+        let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
 
         let manager = HandoffManager::new(mesh, db, false);
         let manager_arc = Arc::new(manager);
 
         let cancel = manager_arc.start_listener().await.unwrap();
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-
-        let m_arc = manager_arc.clone();
-        tokio::spawn(async move {
-            let _ = m_arc
-                .initiate_handoff(
-                    "tenant1",
-                    "state1",
-                    b"some_state".to_vec(),
-                    "agent_memories",
-                )
-                .await;
-        });
-
-        let res: Result<(), String> = Err("Mock Timeout".to_string());
+        let res = manager_arc.initiate_handoff("tenant1", "state1", b"some_state".to_vec(), "agent_memories").await;
 
         // Let listener process loop
-
+        let mut found = false;
         for _ in 0..15 {
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             let row = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'state1'")
@@ -232,7 +184,7 @@ mod tests {
             if let Some(r) = row {
                 let content: Vec<u8> = r.get("raw_content");
                 assert_eq!(content, b"some_state".to_vec());
-
+                found = true;
                 break;
             }
         }
@@ -246,24 +198,9 @@ mod tests {
         // the publish_with_ack loop!
         assert!(res.is_ok() || res.is_err());
 
-        // Wait to make sure background task has enough time to insert the state
-        for _ in 0..30 {
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-            let row = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'state1'")
-                .fetch_optional(&pool)
-                .await
-                .unwrap();
-            if let Some(r) = row {
-                let content: Vec<u8> = r.get("raw_content");
-                if content == b"some_state".to_vec() {
-                    break;
-                }
-            }
+        if res.is_ok() {
+            assert!(found, "Handoff state was not durably stored by the listener");
         }
-
-        // We skip assert!(found) because the tokio::spawn with Err("Mock Timeout") breaks
-        // the regular flow and fails to insert, but this test block's purpose was to
-        // verify it doesn't crash during `initiate_handoff` and backoff.
 
         cancel();
     }
@@ -275,7 +212,6 @@ mod tests {
             .create_if_missing(true);
 
         let pool = SqlitePoolOptions::new()
-            .max_connections(1)
             .connect_with(conn_opts)
             .await
             .unwrap();
@@ -285,23 +221,10 @@ mod tests {
             .await
             .unwrap();
 
-        let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-                .after_release(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("DISCARD ALL").await?;
-                        Ok(true)
-                    })
-                })
-                .connect_lazy("postgres://localhost/dummy")
-                .unwrap(),
-            store: DbStore::Sqlite(pool.clone()),
-        });
+        let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
         let transport = Arc::new(MemoryTransport::new());
-        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(
-            transport.clone(),
-        ));
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport.clone()));
         let manager = HandoffManager::new(mesh.clone(), db.clone(), true);
 
         let cancel = manager.start_listener().await.unwrap();
@@ -346,11 +269,10 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        let row_after_older =
-            sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'test_state'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let row_after_older = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'test_state'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
         let content_after_older: Vec<u8> = row_after_older.get("raw_content");
         assert_eq!(content_after_older, b"hello_world".to_vec()); // Should not have changed
 
@@ -369,11 +291,10 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        let row_after_newer =
-            sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'test_state'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let row_after_newer = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'test_state'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
         let content_after_newer: Vec<u8> = row_after_newer.get("raw_content");
         assert_eq!(content_after_newer, b"newer_content".to_vec()); // Should have changed
 
@@ -412,7 +333,6 @@ mod tests {
             .create_if_missing(true);
 
         let pool = SqlitePoolOptions::new()
-            .max_connections(1)
             .connect_with(conn_opts)
             .await
             .unwrap();
@@ -428,28 +348,15 @@ mod tests {
             .await
             .unwrap();
 
-        let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-                .after_release(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("DISCARD ALL").await?;
-                        Ok(true)
-                    })
-                })
-                .connect_lazy("postgres://localhost/dummy")
-                .unwrap(),
-            store: DbStore::Sqlite(pool.clone()),
-        });
+        let db = Arc::new(DB { pool: sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap(), store: DbStore::Sqlite(pool.clone()) });
         let transport = Arc::new(MemoryTransport::new());
-        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(
-            transport.clone(),
-        ));
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport.clone()));
         let manager = HandoffManager::new(mesh.clone(), db.clone(), true);
 
         let cancel = manager.start_listener().await.unwrap();
 
-        let shared_task = ::server_ohc::orchestration::SharedTask {
+        let shared_task = crate::ohc::orchestration::SharedTask {
             id: "task_123".to_string(),
             organization_id: "org_1".to_string(),
             parent_plan_id: "".to_string(),
@@ -488,11 +395,10 @@ mod tests {
         // Let listener process
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
-        let row =
-            sqlx::query("SELECT payload FROM shared_tasks_decomposition WHERE id = 'task_123'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let row = sqlx::query("SELECT payload FROM shared_tasks_decomposition WHERE id = 'task_123'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
 
         let content: String = row.get("payload");
         assert_eq!(content, r#"{"key": "value"}"#);

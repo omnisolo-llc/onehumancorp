@@ -2,7 +2,7 @@ use super::provider::{LocalFSProvider, CloudFSProvider, FileSystemProvider};
 use super::server::HybridFSMcpServer;
 use std::sync::Arc;
 use tempfile::tempdir;
-use ::server_ohc::orchestration::McpInvokeRequest;
+use crate::ohc::orchestration::McpInvokeRequest;
 
 #[tokio::test]
 async fn test_local_fs_provider() {
@@ -51,7 +51,7 @@ async fn test_hybrid_fs_mcp_server() {
     let server = HybridFSMcpServer::new(provider);
 
     let tools = server.get_tools();
-    assert_eq!(tools.len(), 5);
+    assert_eq!(tools.len(), 4);
 
     // Test fs_write_file tool
     let req = McpInvokeRequest {
@@ -76,44 +76,4 @@ async fn test_hybrid_fs_mcp_server() {
     let resp = server.invoke_tool(&req, None).await.unwrap();
     let payload: serde_json::Value = serde_json::from_str(&resp.payload).unwrap();
     assert_eq!(payload["content"], "from server");
-}
-
-#[tokio::test]
-async fn test_server_search() {
-    let dir = tempdir().unwrap();
-    let provider = Arc::new(LocalFSProvider::new(dir.path().to_path_buf()));
-    let server = HybridFSMcpServer::new(provider);
-
-    let req = McpInvokeRequest {
-        tool_id: "fs_hybrid_write".to_string(),
-        action: "invoke".to_string(),
-        params: r#"{"path":"server_test.txt","content":"from server"}"#.to_string(),
-        agent_id: "agent-1".to_string(),
-        spiffe_id: "spiffe-1".to_string(),
-    };
-    server.invoke_tool(&req, None).await.unwrap();
-
-    let req2 = McpInvokeRequest {
-        tool_id: "fs_search_files".to_string(),
-        action: "invoke".to_string(),
-        params: r#"{"path":".","query":".txt"}"#.to_string(),
-        agent_id: "agent-1".to_string(),
-        spiffe_id: "spiffe-1".to_string(),
-    };
-    let res = server.invoke_tool(&req2, None).await.unwrap();
-    assert!(res.payload.contains("server_test.txt"));
-}
-
-#[tokio::test]
-async fn test_local_fs_provider_search() {
-    let dir = tempdir().unwrap();
-    let provider = LocalFSProvider::new(dir.path().to_path_buf());
-
-    tokio::fs::create_dir_all(dir.path().join("dir")).await.unwrap();
-
-    provider.write_file("dir/file1.txt", b"hello").await.unwrap();
-    provider.write_file("dir/file2.md", b"world").await.unwrap();
-
-    let entries = provider.search_files("dir", ".md").await.unwrap();
-    assert_eq!(entries, vec!["file2.md"]);
 }

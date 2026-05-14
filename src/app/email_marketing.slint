@@ -1,0 +1,109 @@
+import { Button, VerticalBox, HorizontalBox, TextEdit } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component EmailMarketing inherits Window {
+    width: 600px;
+    height: 700px;
+    title: "Email Marketing";
+
+    background: #f8fafc;
+
+    in property <int> total_subscribers: 150;
+    in property <string> selected_template: "";
+    in-out property <string> preview_text: "";
+    in property <int> emails_sent: 0;
+    in property <string> open_rate: "0%";
+    in-out property <string> status_message: "";
+
+    callback generate_template(string);
+    callback send_campaign();
+    callback close();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Email Marketing"; font-size: 24px; font-weight: 700; color: #1e293b; vertical-alignment: center; }
+            Rectangle {}
+            Button { text: "Close"; height: 44px; clicked => { close(); } }
+        }
+
+        GlassCard {
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                Text { text: "Audience"; font-weight: 700; color: #1e293b; font-size: 18px; }
+                Text { text: "Total Subscribers: " + total_subscribers; color: #64748b; font-size: 14px; }
+            }
+        }
+
+        GlassCard {
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                Text { text: "AI Templates"; font-weight: 700; color: #1e293b; font-size: 18px; }
+                Text { text: "Pick a template to let the AI draft your campaign."; color: #64748b; font-size: 14px; }
+
+                HorizontalBox {
+                    spacing: 12px;
+                    Button {
+                        text: "New arrivals";
+                        height: 44px;
+                        clicked => { generate_template("New arrivals"); }
+                    }
+                    Button {
+                        text: "Flash sale";
+                        height: 44px;
+                        clicked => { generate_template("Flash sale"); }
+                    }
+                    Button {
+                        text: "Thank you";
+                        height: 44px;
+                        clicked => { generate_template("Thank you"); }
+                    }
+                }
+            }
+        }
+
+        GlassCard {
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                Text { text: "Preview & Send"; font-weight: 700; color: #1e293b; font-size: 18px; }
+
+                TextEdit {
+                    text: preview_text;
+                    height: 150px;
+                }
+
+                HorizontalBox {
+                    Button {
+                        text: "Send Campaign";
+                        primary: true;
+                        height: 44px;
+                        clicked => { send_campaign(); }
+                    }
+                    if (status_message != "") : Text {
+                        text: status_message;
+                        color: #10b981;
+                        font-size: 14px;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        GlassCard {
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                Text { text: "Analytics"; font-weight: 700; color: #1e293b; font-size: 18px; }
+                HorizontalBox {
+                    Text { text: "Emails Sent: " + emails_sent; color: #64748b; font-size: 14px; }
+                    Text { text: "Open Rate: " + open_rate; color: #64748b; font-size: 14px; }
+                }
+            }
+        }
+    }
+}

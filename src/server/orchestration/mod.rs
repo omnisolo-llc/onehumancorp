@@ -10,4 +10,3 @@ pub mod state;
 pub mod mesh;
 pub mod health;
 pub mod hub;
-pub mod hierarchical;

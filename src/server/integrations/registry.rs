@@ -1,5 +1,5 @@
 use std::sync::RwLock;
-use ::server_ohc::orchestration::*;
+use crate::ohc::orchestration::*;
 use chrono::Utc;
 
 pub struct IntegrationCredentials {
@@ -297,7 +297,7 @@ mod tests {
     #[tokio::test]
     async fn test_twilio_integration() {
         let registry = IntegrationsRegistry::new();
-        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+        let creds = crate::ohc::orchestration::ConnectIntegrationRequest {
             integration_id: "twilio".to_string(),
             base_url: "https://api.twilio.com".to_string(),
             bot_token: "test_sid".to_string(),

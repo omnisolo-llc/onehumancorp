@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Job {
     pub id: String,
-    pub tenant_id: String,
     pub parent_task_id: String,
     pub agent_role: String,
     pub payload: String,
@@ -21,7 +20,6 @@ pub struct Job {
 #[async_trait]
 pub trait TaskQueue: Send + Sync {
     async fn enqueue(&self, job: Job) -> Result<(), String>;
-    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> { for job in jobs { self.enqueue(job).await?; } Ok(()) }
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String>;
     async fn complete(&self, job_id: &str) -> Result<(), String>;
     async fn fail(&self, job_id: &str, reason: &str) -> Result<(), String>;
