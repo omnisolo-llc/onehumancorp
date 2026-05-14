@@ -69,6 +69,7 @@ pkg_rpm(
     summary = "One Human Corp Desktop Application",
     description = "One Human Corp Desktop Application",
     srcs = [":app_files"],
+    release = "1",,
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
