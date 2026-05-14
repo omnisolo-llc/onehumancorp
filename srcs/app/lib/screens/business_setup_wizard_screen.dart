@@ -84,7 +84,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(wizardProvider);
 
-    if (state.currentStep == 11) {
+    if (state.currentStep >= 3) {
       return const DashboardScreen();
     }
 
@@ -119,30 +119,220 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget _buildCurrentStep(int step, WizardState state) {
     switch (step) {
       case 0:
-        return _buildWelcomeScreen();
+        return _buildBusinessNameScreen(state);
       case 1:
-        return _buildBusinessProfileScreen(state);
+        return _buildBusinessTypeScreen(state);
       case 2:
-        return _buildGoalSelectionScreen(state);
-      case 3:
-        return _buildExternalIntegrationsScreen();
-      case 4:
-        return _buildDeploymentPreferenceScreen(state);
-      case 5:
-        return _buildAdministratorAccountScreen();
-      case 6:
-        return _buildTemplateSelectionScreen(state);
-      case 7:
-        return _buildProductScreen(state);
-      case 8:
-        return _buildDomainScreen(state);
-      case 9:
-        return _buildReviewAndLaunchScreen(state);
-      case 10:
-        return _buildWelcomeChecklistScreen(state);
+        return _buildLoadingScreen(state);
       default:
         return const SizedBox.shrink();
     }
+  }
+
+
+
+  Widget _buildBusinessNameScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Give your business a name',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'What should we call your new venture?',
+          style: TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+        const SizedBox(height: 20),
+        GlassContainer(
+          child: TextFormField(
+            key: const Key('companyNameField'),
+            controller: _companyNameController,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: 'e.g. Maya\'s Cakes',
+              hintStyle: TextStyle(color: Colors.white30),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.all(15),
+            ),
+            onChanged: (value) {
+              ref.read(wizardProvider.notifier).updateBusinessProfile(companyName: value);
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _nextStep,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6B4EFF),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                ),
+                child: const Text('Next', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBusinessTypeScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'What kind of business are you building?',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildIndustryOption(state, 'Physical', '📦', 'Products you ship or hand to customers'),
+                const SizedBox(height: 10),
+                _buildIndustryOption(state, 'Digital', '💻', 'Files, templates, software'),
+                const SizedBox(height: 10),
+                _buildIndustryOption(state, 'Service', '⏱️', 'Bookings, consultations, your time'),
+                const SizedBox(height: 10),
+                _buildIndustryOption(state, 'Food', '🍔', 'Food cart, restaurant, catering'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _prevStep,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  side: const BorderSide(color: Colors.white54),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                ),
+                child: const Text('Back', style: TextStyle(fontSize: 18, color: Colors.white)),
+              ),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  ref.read(wizardProvider.notifier).nextStep();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6B4EFF),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                ),
+                child: const Text('Build My Business', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIndustryOption(WizardState state, String title, String emoji, String subtitle) {
+    final isSelected = state.industry == title;
+    return GestureDetector(
+      key: Key('industry_$title'),
+      onTap: () {
+        ref.read(wizardProvider.notifier).updateBusinessProfile(industry: title);
+      },
+      child: GlassContainer(
+        child: Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF6B4EFF).withOpacity(0.3) : Colors.transparent,
+            border: Border.all(
+              color: isSelected ? const Color(0xFF6B4EFF) : Colors.white24,
+              width: 2,
+            ),
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 24)),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                  ],
+                ),
+              ),
+              if (isSelected) const Icon(Icons.check_circle, color: Color(0xFF6B4EFF)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingScreen(WizardState state) {
+    Future.delayed(const Duration(seconds: 0), () {
+      if (mounted && ref.read(wizardProvider).currentStep == 2) {
+         ref.read(wizardProvider.notifier).submitWizard();
+         ref.read(wizardProvider.notifier).nextStep(); // This moves to step 3 which is dashboard now
+      }
+    });
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _pulseAnimation.value,
+              child: const Text(
+                'AI is building your storefront...',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 40),
+        const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6B4EFF)),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildWelcomeScreen() {
