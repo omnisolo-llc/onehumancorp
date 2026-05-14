@@ -90,19 +90,6 @@ impl Tracker {
         }
     }
 
-    pub async fn record_product_added(&self, tenant_id: &str) -> Result<(), String> {
-        if let Some(ref limiter) = self.rate_limiter {
-            match limiter.record_product_added(tenant_id).await {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
-                    Ok(())
-                }
-            }
-        } else {
-            Ok(())
-        }
-    }
 
     pub async fn check_rate_limit(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {
@@ -148,19 +135,6 @@ impl Tracker {
         }
     }
 
-    pub async fn record_agent_added(&self, tenant_id: &str) -> Result<(), String> {
-        if let Some(ref limiter) = self.rate_limiter {
-            match limiter.record_agent_added(tenant_id).await {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
-                    Ok(())
-                }
-            }
-        } else {
-            Ok(())
-        }
-    }
 
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<::server_pricing::rate_limit::PlanTier, String> {
         if let Some(ref limiter) = self.rate_limiter {

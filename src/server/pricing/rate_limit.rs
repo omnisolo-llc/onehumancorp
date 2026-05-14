@@ -215,12 +215,6 @@ impl RedisRateLimiter {
         })
     }
 
-    pub async fn record_product_added(&self, tenant_id: &str) -> Result<(), String> {
-        let mut conn = self.get_connection().await?;
-        let product_key = format!("tenant:{}:products", tenant_id);
-        let _ : usize = conn.incr(&product_key, 1).await.map_err(|e| e.to_string())?;
-        Ok(())
-    }
 
     pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
         let mut conn = self.get_connection().await?;
@@ -255,12 +249,6 @@ impl RedisRateLimiter {
         })
     }
 
-    pub async fn record_agent_added(&self, tenant_id: &str) -> Result<(), String> {
-        let mut conn = self.get_connection().await?;
-        let agent_key = format!("tenant:{}:agents", tenant_id);
-        let _ : usize = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
-        Ok(())
-    }
 
     pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
         let mut conn = self.get_connection().await?;
@@ -339,42 +327,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_check_product_quota_no_mutation() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-no-mutation";
-
-                // Clear any existing products
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
-                let product_key = format!("tenant:{}:products", tenant_id);
-                let _ : () = conn.del(&product_key).await.unwrap_or(());
-
-                // Set tier to free
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
-
-                // Check quota initially
-                let status = limiter.check_product_quota(tenant_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(!status.soft_limit_reached);
-
-                // Check again to ensure it didn't mutate (increment)
-                let status = limiter.check_product_quota(tenant_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(!status.soft_limit_reached);
-
-                // Add 10 products
-                for _ in 0..10 {
-                    limiter.record_product_added(tenant_id).await.unwrap();
-                }
-
-                // Check quota now
-                let status = limiter.check_product_quota(tenant_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(status.soft_limit_reached); // Should be reached since we have 10 products (limit is 10)
-            }
-        }
-    }
 
     #[tokio::test]
     async fn test_check_storage_quota() {
@@ -408,30 +360,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_record_agent_quota() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-agent-quota";
-
-                // Clear any existing agents
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
-                let agent_key = format!("tenant:{}:agents", tenant_id);
-                let _ : () = conn.del(&agent_key).await.unwrap_or(());
-
-                // Set tier to free
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
-
-                // Add 1 agent
-                limiter.record_agent_added(tenant_id).await.unwrap();
-
-                // Check quota now
-                let status = limiter.check_agent_quota(tenant_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(status.soft_limit_reached); // Limit is 1 for Free tier
-            }
-        }
-    }
 
     #[tokio::test]
     async fn test_record_action_monthly_reset() {
