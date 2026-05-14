@@ -520,7 +520,14 @@ impl DistributedLock for RedisBus {
 impl DistributedLock for IpcBus {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
-        let res = sqlx::query("INSERT INTO bus_locks (resource, owner, expires_at) VALUES (?, ?, ?) ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE bus_locks.owner = excluded.owner OR bus_locks.expires_at < cast(strftime('%s', 'now') as integer)")
+
+        let query = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
+            "INSERT INTO bus_locks (resource, owner, expires_at) VALUES (?, ?, ?) ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE bus_locks.owner = excluded.owner OR bus_locks.expires_at < cast(strftime('%s', 'now') as integer)"
+        } else {
+            "INSERT INTO bus_locks (resource, owner, expires_at) VALUES ($1, $2, $3) ON CONFLICT(resource) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at WHERE bus_locks.owner = EXCLUDED.owner OR bus_locks.expires_at < CAST(strftime('%s', 'now') AS integer)"
+        };
+
+        let res = sqlx::query(query)
             .bind(resource)
             .bind(owner)
             .bind(expires_at)
@@ -534,7 +541,12 @@ impl DistributedLock for IpcBus {
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM bus_locks WHERE resource = ? AND owner = ?")
+        let query = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
+            "DELETE FROM bus_locks WHERE resource = ? AND owner = ?"
+        } else {
+            "DELETE FROM bus_locks WHERE resource = $1 AND owner = $2"
+        };
+        sqlx::query(query)
             .bind(resource)
             .bind(owner)
             .execute(&self.pool)
