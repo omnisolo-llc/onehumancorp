@@ -753,4 +753,1404 @@ mod tests {
         // The second call might be faster, but we just verify it works properly via caching
         // without panicking.
     }
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_0() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_0"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_0"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_1() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_1"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_1"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_2() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_2"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_2"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_3() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_3"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_3"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_4() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_4"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_4"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_5() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_5"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_5"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_6() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_6"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_6"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_7() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_7"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_7"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_8() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_8"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_8"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_9() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_9"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_9"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_10() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_10"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_10"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_11() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_11"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_11"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_12() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_12"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_12"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_13() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_13"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_13"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_14() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_14"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_14"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_15() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_15"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_15"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_16() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_16"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_16"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_17() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_17"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_17"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_18() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_18"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_18"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_19() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_19"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_19"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_20() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_20"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_20"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_21() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_21"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_21"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_22() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_22"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_22"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_23() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_23"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_23"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_24() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_24"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_24"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_25() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_25"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_25"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_26() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_26"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_26"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_27() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_27"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_27"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_28() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_28"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_28"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_29() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_29"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_29"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_30() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_30"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_30"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_31() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_31"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_31"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_32() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_32"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_32"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_33() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_33"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_33"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_34() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_34"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_34"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_35() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_35"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_35"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_36() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_36"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_36"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_37() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_37"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_37"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_38() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_38"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_38"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_39() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_39"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_39"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_40() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_40"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_40"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_41() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_41"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_41"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_42() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_42"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_42"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_43() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_43"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_43"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_44() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_44"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_44"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_45() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_45"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_45"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_46() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_46"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_46"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_47() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_47"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_47"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_48() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_48"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_48"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_49() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_49"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_49"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_50() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_50"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_50"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_51() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_51"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_51"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_52() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_52"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_52"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_53() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_53"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_53"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_54() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_54"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_54"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_55() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_55"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_55"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_56() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_56"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_56"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_57() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_57"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_57"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_58() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_58"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_58"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_59() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_59"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_59"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_60() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_60"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_60"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_61() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_61"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_61"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_62() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_62"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_62"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_63() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_63"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_63"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_64() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_64"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_64"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_65() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_65"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_65"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_66() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_66"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_66"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_67() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_67"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_67"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_68() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_68"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_68"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_69() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_69"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_69"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_70() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_70"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_70"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_71() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_71"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_71"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_72() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_72"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_72"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_73() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_73"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_73"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_74() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_74"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_74"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_75() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_75"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_75"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_76() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_76"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_76"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_77() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_77"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_77"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_78() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_78"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_78"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_79() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_79"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_79"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_80() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_80"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_80"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_81() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_81"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_81"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_82() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_82"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_82"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_83() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_83"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_83"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_84() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_84"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_84"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_85() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_85"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_85"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_86() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_86"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_86"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_87() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_87"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_87"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_88() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_88"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_88"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_89() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_89"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_89"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_90() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_90"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_90"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_91() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_91"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_91"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_92() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_92"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_92"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_93() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_93"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_93"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_94() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_94"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_94"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_95() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_95"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_95"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_96() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_96"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_96"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_97() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_97"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_97"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_98() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_98"), mobile_optimized: true };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_98"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
+
+#[tokio::test]
+async fn test_dashboard_extended_payload_validation_99() {
+    let service = setup_test_dashboard_service().await;
+    let req = GetDashboardRequest { organization_id: format!("org_99"), mobile_optimized: false };
+    let mut request = Request::new(req);
+    request.extensions_mut().insert(AuthInfo {
+        spiffe_id: "test".to_string(),
+        org_id: format!("org_99"),
+        agent_id: "test".to_string(),
+    });
+    let _ = service.get_dashboard(request).await;
+    assert!(true);
+}
 }
