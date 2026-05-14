@@ -28,11 +28,20 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
             Ok(r) => r,
             Err(e) => return Err(ToolError::Transient(format!("LLM Error: {}", e))),
         };
+        // Output Parsing: Rely entirely on native tool_calls API objects.
+        // For structured text, use schema-constrained responses (like Pydantic models, mapped to Rust serde structs).
+        let tool_call_json = resp.message.tool_calls.first().map(|tc| tc.arguments.to_string());
+
         let completion = resp.message.content.clone();
 
-        // Output Parsing: JSON robust extraction mechanic.
+        let mut json_str = if let Some(tc_json) = &tool_call_json {
+            tc_json.as_str()
+        } else {
+            completion.trim()
+        };
+
+        // Output Parsing: JSON robust extraction mechanic (fallback for markdown wrappers if not using tool_calls directly).
         // Handles cases where LLM wraps response in markdown e.g. ```json ... ```
-        let mut json_str = completion.trim();
         let obj_start = json_str.find('{');
         let arr_start = json_str.find('[');
 
@@ -177,6 +186,52 @@ mod tests {
 
         let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
         assert_eq!(result.result, "success after retry");
+    }
+
+    #[tokio::test]
+    async fn test_parse_structured_output_native_tool_call() {
+        use crate::types::ToolCall;
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![]),
+        });
+
+        struct ToolCallMockLlmClient;
+        #[async_trait::async_trait]
+        impl LlmClientForParser for ToolCallMockLlmClient {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(ChatResponse {
+                    message: Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "1".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({"result": "success_native_tool_call"}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                })
+            }
+        }
+
+        let tool_call_client = Arc::new(ToolCallMockLlmClient);
+
+        let req = ChatRequest {
+            model: "test".to_string(),
+            system: "".to_string(),
+            messages: vec![],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        };
+
+        let result: TestOutput = parse_structured_output(&(tool_call_client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        assert_eq!(result.result, "success_native_tool_call");
     }
 
     #[tokio::test]
