@@ -298,6 +298,9 @@ message StartOnboardingRequest {
   string admin_name = 11;
   string admin_password = 12;
   string price_type = 13;
+  string theme_color = 14;
+  bool ai_generated = 15;
+  string first_product_photo_base64 = 16;
 }
 
 message StartOnboardingResponse {

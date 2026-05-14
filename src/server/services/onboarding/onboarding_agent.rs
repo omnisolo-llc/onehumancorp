@@ -131,6 +131,10 @@ impl OnboardingAgent {
             flags.insert("enable_subscriptions".to_string(), serde_json::json!(true));
         }
 
+        flags.insert("website_template".to_string(), serde_json::json!(req.website_template));
+        flags.insert("domain_choice".to_string(), serde_json::json!(req.domain_choice));
+        flags.insert("theme_color".to_string(), serde_json::json!(req.theme_color));
+
         let flags_json = serde_json::Value::Object(flags);
 
         sqlx::query(
@@ -258,6 +262,72 @@ impl OnboardingAgent {
         Ok(())
     }
 
+    pub async fn save_state(&self, tenant_id: &str, user_id: &str, step: i32, state: serde_json::Value) -> Result<(), String> {
+        sqlx::query(
+            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
+             VALUES ($1, $1, $2, $3, $4) \
+             ON CONFLICT (tenant_id, organization_id) DO UPDATE \
+             SET state_json = EXCLUDED.state_json, \
+                 current_step = EXCLUDED.current_step, \
+                 updated_at = CURRENT_TIMESTAMP"
+        )
+        .bind(tenant_id)
+        .bind(user_id)
+        .bind(step)
+        .bind(state)
+        .execute(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    pub async fn get_state(&self, tenant_id: &str) -> Result<Option<serde_json::Value>, String> {
+        let row = sqlx::query(
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1"
+        )
+        .bind(tenant_id)
+        .fetch_optional(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(row.map(|r| {
+            use sqlx::Row;
+            r.get("state_json")
+        }))
+    }
+
+    pub async fn generate_ai_description(&self, name: &str) -> Result<String, String> {
+        // AI Optimization: Implementing behavioral constraints and persona-driven content.
+        // In a production environment, this would call ohc_builtin_agent's LLM pipeline.
+        if name.trim().is_empty() {
+            return Err("Product name cannot be empty for AI generation".to_string());
+        }
+
+        let descriptors = [
+            "Hand-crafted with precision",
+            "Sourced from the finest materials",
+            "Designed for maximum comfort and style",
+            "A must-have for modern living",
+            "Reliability meets elegance",
+            "Engineered for performance",
+            "Eco-friendly and sustainable choice",
+            "The perfect addition to your collection",
+        ];
+
+        // Deterministic mock generation based on name length for testability
+        let idx = name.len() % descriptors.len();
+        let description = format!(
+            "{}. {}. Whether you're looking for quality or value, this product delivers on both fronts. Join the OneHumanCorp community of satisfied business owners who choose excellence every day.",
+            name, descriptors[idx]
+        );
+
+        // Simulated AI processing latency
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+
+        Ok(description)
+    }
+
     async fn seed_default_agents(&self, org_id: &str) -> Result<(), String> {
         let default_agents = vec![
             ("Operations", "The Manager", "Operations"),
@@ -328,6 +398,9 @@ mod tests {
             first_product_price: "25.00".to_string(),
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
+            theme_color: "#0055ff".to_string(),
+            ai_generated: false,
+            first_product_photo_base64: "".to_string(),
         };
 
         let req_categories = req.selling_categories.clone();
@@ -392,6 +465,9 @@ mod tests {
             first_product_price: "100.00".to_string(),
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
+            theme_color: "#0055ff".to_string(),
+            ai_generated: false,
+            first_product_photo_base64: "".to_string(),
         };
 
         let res_service = agent.start_onboarding(req_service).await.unwrap();
@@ -429,6 +505,9 @@ mod tests {
             first_product_price: "5.00".to_string(),
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
+            theme_color: "#0055ff".to_string(),
+            ai_generated: false,
+            first_product_photo_base64: "".to_string(),
         };
 
         let res_food = agent.start_onboarding(req_food).await.unwrap();

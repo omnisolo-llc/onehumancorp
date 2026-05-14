@@ -1614,25 +1614,28 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         :root {
                             --primary: #0055ff;
                             --primary-hover: #0044cc;
-                            --bg: #f4f7fa;
-                            --card-bg: #ffffff;
-                            --text: #1a1a1b;
-                            --text-secondary: #646d7b;
-                            --border: #e1e4e8;
-                            --sidebar-bg: #ffffff;
+                            --bg: #f8fafc;
+                            --card-bg: rgba(255, 255, 255, 0.8);
+                            --text: #0f172a;
+                            --text-secondary: #64748b;
+                            --border: rgba(226, 232, 240, 0.8);
+                            --sidebar-bg: rgba(255, 255, 255, 0.9);
                         }
                         body { 
                             font-family: 'Inter', 'Outfit', sans-serif; 
                             background: var(--bg); 
+                            background-image: radial-gradient(at 0% 0%, rgba(0, 85, 255, 0.05) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(0, 85, 255, 0.05) 0px, transparent 50%);
                             color: var(--text); 
                             margin: 0; 
                             line-height: 1.5;
+                            min-height: 100vh;
                         }
                         .glass { 
                             background: var(--card-bg); 
+                            backdrop-filter: blur(20px) saturate(200%);
                             border: 1px solid var(--border); 
-                            border-radius: 8px; 
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                            border-radius: 16px;
+                            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
                         }
                         nav { 
                             padding: 0 40px; 
@@ -2088,104 +2091,198 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                      <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
-                        </div>
-                        <div id="step-2" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
-                        </div>
-                        <div id="step-4" style="display: none;">
-                            <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
-                            <label><input type="checkbox"> Subscriptions</label>
-                            <br/><button onclick="nextStep(5)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">Back</button>
-                        </div>
-                        <div id="step-5" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(6)">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)">Back</button>
-                        </div>
-                        <div id="step-6" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
-                        </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                        </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
-                        </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                        </div>
+                    <div id="setup-screen" class="screen">
+                        <div id="setup-wizard-container" class="glass" style="max-width: 600px; margin: 40px auto; padding: 40px;">
+                            <div id="wizard-progress" style="height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 32px; overflow: hidden;">
+                                <div id="wizard-progress-bar" style="height: 100%; background: var(--primary); width: 14%; transition: width 0.3s ease;"></div>
+                            </div>
 
-                        <div id="checklist-screen" class="screen">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                            <div id="step-1">
+                                <h1 style="font-size: 32px; margin-bottom: 16px;">Your business, live in minutes.</h1>
+                                <p style="color: var(--text-secondary); margin-bottom: 32px;">Zero tech skills needed. We do the heavy lifting.</p>
+                                <button style="width: 100%; padding: 16px; font-size: 16px;" onclick="nextStep(2)">🚀 Start My Business</button>
+                                <button class="secondary" style="width: 100%; padding: 16px; font-size: 16px;" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                            </div>
+
+                            <div id="step-2" style="display: none;">
+                                <h1 style="font-size: 24px; margin-bottom: 24px;">What kind of business are you building?</h1>
+                                <div style="display: grid; gap: 12px;">
+                                    <button class="secondary" onclick="setBusinessType('Online Store'); nextStep(3)">🛒 Online Store</button>
+                                    <button class="secondary" onclick="setBusinessType('Service Business'); nextStep(3)">🛠️ Service Business</button>
+                                    <button class="secondary" onclick="setBusinessType('Restaurant / Food'); nextStep(3)">🍕 Restaurant / Food</button>
+                                    <button class="secondary" onclick="setBusinessType('Creative'); nextStep(3)">🎨 Creative</button>
+                                    <button class="secondary" onclick="setBusinessType('Local Business'); nextStep(3)">🏠 Local Business</button>
+                                </div>
+                                <button class="secondary" style="margin-top: 24px;" onclick="nextStep(1)">← Back</button>
+                            </div>
+
+                            <div id="step-3" style="display: none;">
+                                <h1 style="font-size: 24px; margin-bottom: 8px;">Give your business a name</h1>
+                                <p style="color: var(--text-secondary); margin-bottom: 24px;">You can always change this later.</p>
+                                <input id="biz-name" type="text" placeholder="What is your business called?" style="padding: 16px; font-size: 16px;" />
+                                <button style="width: 100%; padding: 16px;" onclick="nextStep(4)">Next →</button>
+                                <button class="secondary" style="width: 100%;" onclick="nextStep(2)">Back</button>
+                            </div>
+
+                            <div id="step-4" style="display: none;">
+                                <h1 style="font-size: 24px; margin-bottom: 24px;">What do you sell?</h1>
+                                <div style="display: grid; gap: 16px; margin-bottom: 32px;">
+                                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                                        <input type="checkbox" name="selling" value="physical" style="width: 20px; height: 20px; margin: 0;"> Physical Products
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                                        <input type="checkbox" name="selling" value="services" style="width: 20px; height: 20px; margin: 0;"> Services / Appointments
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                                        <input type="checkbox" name="selling" value="subscriptions" style="width: 20px; height: 20px; margin: 0;"> Subscriptions
+                                    </label>
+                                </div>
+                                <button style="width: 100%; padding: 16px;" onclick="nextStep(5)">Next →</button>
+                                <button class="secondary" style="width: 100%;" onclick="nextStep(3)">Back</button>
+                            </div>
+
+                            <div id="step-5" style="display: none;">
+                                <h1 style="font-size: 24px; margin-bottom: 8px;">Add your first product</h1>
+                                <p style="color: var(--text-secondary); margin-bottom: 24px;">Don't worry, you can edit this any time.</p>
+                                <input id="prod-name" type="text" placeholder="Product Name" style="padding: 12px;" />
+                                <div style="position: relative; margin-bottom: 16px;">
+                                    <span style="position: absolute; left: 12px; top: 12px; color: var(--text-secondary);">$</span>
+                                    <input id="prod-price" type="text" placeholder="0.00" style="padding: 12px 12px 12px 24px; margin-bottom: 0;" />
+                                </div>
+                                <div style="margin-bottom: 16px;">
+                                    <label style="display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">Product Photo</label>
+                                    <input type="file" id="prod-photo" accept="image/*" style="padding: 8px; font-size: 13px;" onchange="handlePhotoUpload(this)" />
+                                    <div id="crop-box"><img id="crop-img" src="" /></div>
+                                    <p id="crop-hint" style="display:none; font-size: 11px; color: var(--text-secondary); text-align: center;">Drag to crop (simulated)</p>
+                                </div>
+                                <div id="ai-description-container" style="display: none; margin-bottom: 16px; padding: 12px; background: rgba(0,85,255,0.05); border-radius: 8px; font-size: 14px;">
+                                    <strong>AI Generated:</strong> <span id="ai-desc-text"></span>
+                                </div>
+                                <button id="ai-gen-btn" class="secondary" style="width: 100%; margin-bottom: 12px;" onclick="generateAIDescription()">✨ AI Auto-Generate Description</button>
+                                <button style="width: 100%; padding: 16px;" onclick="nextStep(6)">Next →</button>
+                                <button class="secondary" style="width: 100%;" onclick="nextStep(4)">Back</button>
+                            </div>
+
+                            <div id="step-6" style="display: none;">
+                                <h1 style="font-size: 24px; margin-bottom: 24px;">Choose a Template</h1>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px;">
+                                    <div class="template-card" style="border: 2px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer;" onclick="selectTemplate('Modern', this)">
+                                        <div style="height: 100px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                                        <p style="padding: 12px; text-align: center; margin: 0; font-weight: 600;">Modern</p>
+                                    </div>
+                                    <div class="template-card" style="border: 2px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer;" onclick="selectTemplate('Bold', this)">
+                                        <div style="height: 100px; background: linear-gradient(135deg, #2af598 0%, #009efd 100%);"></div>
+                                        <p style="padding: 12px; text-align: center; margin: 0; font-weight: 600;">Bold</p>
+                                    </div>
+                                </div>
+                                <div id="template-preview" style="display: none; margin-bottom: 24px; padding: 16px; border: 1px dashed var(--primary); border-radius: 12px; text-align: center;">
+                                    <p style="font-size: 12px; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Live Preview</p>
+                                    <h3 id="preview-biz-name" style="margin: 0;"></h3>
+                                </div>
+                                <button style="width: 100%; padding: 16px;" onclick="nextStep(7)">Next →</button>
+                                <button class="secondary" style="width: 100%;" onclick="nextStep(5)">Back</button>
+                            </div>
+
+                            <div id="step-7" style="display: none;">
+                                <h1 style="font-size: 24px; margin-bottom: 24px;">Choose your domain</h1>
+                                <div style="display: grid; gap: 12px; margin-bottom: 32px;">
+                                    <button class="secondary" style="text-align: left; padding: 16px;" onclick="setDomain('subdomain', this)">
+                                        <strong>🌐 Free OHC Domain</strong><br/>
+                                        <span style="font-size: 12px; color: var(--text-secondary);">mybusiness.ohc.app</span>
+                                    </button>
+                                    <button class="secondary" style="text-align: left; padding: 16px;" onclick="setDomain('custom', this)">
+                                        <strong>🔗 Custom Domain</strong><br/>
+                                        <span style="font-size: 12px; color: var(--text-secondary);">Connect your own (e.g. .com)</span>
+                                    </button>
+                                </div>
+                                <button style="width: 100%; padding: 16px;" onclick="nextStep(8)">Next →</button>
+                                <button class="secondary" style="width: 100%;" onclick="nextStep(6)">Back</button>
+                            </div>
+
+                            <div id="step-8" style="display: none;">
+                                <h1 style="font-size: 24px; margin-bottom: 24px;">Create your account</h1>
+                                <input id="reg-name" type="text" placeholder="Full Name" style="padding: 12px;" />
+                                <input id="reg-email" type="email" placeholder="Email" style="padding: 12px;" />
+                                <input id="reg-pass" type="password" placeholder="Password" style="padding: 12px;" />
+                                <button style="width: 100%; padding: 16px; margin-top: 16px;" onclick="finishOnboarding()">Launch My Business →</button>
+                                <button class="secondary" style="width: 100%;" onclick="nextStep(7)">Back</button>
+                            </div>
+
+                            <div id="step-9" style="display: none; text-align: center;">
+                                <h1 style="font-size: 24px; margin-bottom: 24px;">Verify your email</h1>
+                                <p style="color: var(--text-secondary); margin-bottom: 32px;">We've sent a link to <strong id="verify-email-display"></strong>. Please check your inbox.</p>
+                                <button style="width: 100%; padding: 16px;" onclick="nextStep('success')">I've Verified My Email</button>
+                                <button class="secondary" style="width: 100%; margin-top: 12px;" onclick="resendVerification()">Resend Verification Link</button>
+                            </div>
+
+                            <div id="step-success" style="display: none; text-align: center;">
+                                <div id="confetti-container" style="font-size: 64px; margin-bottom: 24px;">🎉</div>
+                                <h1 style="font-size: 32px; margin-bottom: 16px;">You're live!</h1>
+                                <p style="color: var(--text-secondary); margin-bottom: 32px;">Congratulations! Your business is officially live on the internet.</p>
+                                <button style="width: 100%; padding: 16px;" onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
+                                <button class="secondary" style="width: 100%;" onclick="copyLiveLink()">📋 Copy Live Link</button>
+                            </div>
                         </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                    </div>
+
+                    <div id="checklist-screen" class="screen">
+                        <div class="glass" style="max-width: 800px; margin: 40px auto; padding: 40px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+                                <h1 style="font-size: 28px; margin: 0;">🚀 Mission Control</h1>
+                                <div style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">NEW BUSINESS</div>
+                            </div>
+
+                            <p style="color: var(--text-secondary); margin-bottom: 32px;">Human, your business is now orbiting the digital world. Complete these missions to achieve stable flight.</p>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="glass" style="padding: 20px; border-color: rgba(0,255,0,0.2);">
+                                    <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                                        <span style="font-size: 20px;">✅</span>
+                                        <strong style="font-size: 16px;">Ignition</strong>
+                                    </div>
+                                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Initial business setup and domain allocation.</p>
+                                    <button class="secondary" style="width: 100%; font-size: 12px;" onclick="copyLiveLink()">View Storefront</button>
+                                </div>
+
+                                <div class="glass" style="padding: 20px;">
+                                    <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                                        <span style="font-size: 20px;">⬜</span>
+                                        <strong style="font-size: 16px;">Scale Up</strong>
+                                    </div>
+                                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Add 3 more products or services to your catalog.</p>
+                                    <button style="width: 100%; font-size: 12px;" onclick="console.log('action_add_product')">Add Product</button>
+                                </div>
+
+                                <div class="glass" style="padding: 20px;">
+                                    <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                                        <span style="font-size: 20px;">⬜</span>
+                                        <strong style="font-size: 16px;">Social Link</strong>
+                                    </div>
+                                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Connect Instagram to automate your marketing.</p>
+                                    <button style="width: 100%; font-size: 12px;" onclick="document.getElementById('facebook-integration').style.display='block'; showScreen('dashboard-screen')">Connect IG</button>
+                                </div>
+
+                                <div class="glass" style="padding: 20px;">
+                                    <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                                        <span style="font-size: 20px;">⬜</span>
+                                        <strong style="font-size: 16px;">Viral Boost</strong>
+                                    </div>
+                                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Share your link with a friend and get 20% off Pro.</p>
+                                    <button style="width: 100%; font-size: 12px;" onclick="showScreen('referral-dashboard-screen')">Invite Friend</button>
+                                </div>
+                            </div>
+
+                            <div class="glass" style="margin-top: 32px; padding: 24px; background: rgba(0,85,255,0.03);">
+                                <h3 style="margin-top: 0; font-size: 16px;">Teammate Status</h3>
+                                <div style="display: flex; gap: 12px; align-items: center;">
+                                    <div style="width: 8px; height: 8px; background: #00ff55; border-radius: 50%; box-shadow: 0 0 10px #00ff55;"></div>
+                                    <span style="font-size: 14px;"><strong>The Manager</strong> is optimizing your store...</span>
+                                </div>
+                            </div>
+
+                            <button style="width: 100%; padding: 16px; margin-top: 40px;" onclick="showScreen('dashboard-screen')">Enter Dashboard →</button>
                         </div>
+                    </div>
 
                         <div id="step-ai" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
@@ -2219,6 +2316,185 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+                        let wizardData = {
+                            step: 1,
+                            businessType: '',
+                            businessName: '',
+                            sellingCategories: [],
+                            productName: '',
+                            productPrice: '',
+                            template: '',
+                            domain: '',
+                            name: '',
+                            email: '',
+                            password: ''
+                        };
+
+                        function nextStep(step) {
+                            if (step === 'generating') {
+                                document.getElementById('step-generating').style.display = 'block';
+                                setTimeout(() => {
+                                    document.getElementById('step-generating').style.display = 'none';
+                                    nextStep(wizardData.step + 1);
+                                }, 1500);
+                                return;
+                            }
+
+                            document.querySelectorAll('[id^="step-"]').forEach(s => s.style.display = 'none');
+
+                            if (typeof step === 'number') {
+                                wizardData.step = step;
+                            } else if (step === 'ai') {
+                                document.getElementById('step-ai').style.display = 'block';
+                                return;
+                            } else if (step === 'success') {
+                                document.getElementById('step-success').style.display = 'block';
+                                spawnConfetti();
+                                return;
+                            }
+
+                            const nextEl = document.getElementById('step-' + wizardData.step);
+                            if (nextEl) nextEl.style.display = 'block';
+
+                            const progress = (wizardData.step / 8) * 100;
+                            document.getElementById('wizard-progress-bar').style.width = progress + '%';
+
+                            if (wizardData.step === 6) {
+                                document.getElementById('preview-biz-name').textContent = wizardData.businessName || 'My Business';
+                                document.getElementById('template-preview').style.display = 'block';
+                            }
+
+                            saveWizardState();
+                        }
+
+                        function setBusinessType(type) {
+                            wizardData.businessType = type;
+                        }
+
+                        function selectTemplate(template, el) {
+                            wizardData.template = template;
+                            document.querySelectorAll('.template-card').forEach(c => c.style.borderColor = 'var(--border)');
+                            el.style.borderColor = 'var(--primary)';
+                        }
+
+                        function setDomain(choice, el) {
+                            wizardData.domain = choice;
+                            el.parentElement.querySelectorAll('button').forEach(b => b.style.borderColor = 'var(--border)');
+                            el.style.borderColor = 'var(--primary)';
+                        }
+
+                        function handlePhotoUpload(input) {
+                            const file = input.files[0];
+                            if (file) {
+                                const reader = new FileReader();
+                                reader.onload = e => {
+                                    document.getElementById('crop-img').src = e.target.result;
+                                    document.getElementById('crop-box').style.display = 'block';
+                                    document.getElementById('crop-hint').style.display = 'block';
+                                };
+                                reader.readAsDataURL(file);
+                            }
+                        }
+
+                        function resendVerification() {
+                            alert('Verification link resent to ' + wizardData.email);
+                        }
+
+                        function spawnConfetti() {
+                            for(let i=0; i<50; i++) {
+                                const c = document.createElement('div');
+                                c.className = 'confetti';
+                                c.style.left = Math.random() * 100 + 'vw';
+                                c.style.backgroundColor = ['#0055ff', '#ff0055', '#00ff55', '#ffff00'][Math.floor(Math.random()*4)];
+                                c.style.animationDelay = Math.random() * 2 + 's';
+                                document.body.appendChild(c);
+                                setTimeout(() => c.remove(), 5000);
+                            }
+                        }
+
+                        function copyLiveLink() {
+                            const link = wizardData.domain === 'custom' ? 'https://www.mybusiness.com' : 'https://mybusiness.ohc.app';
+                            navigator.clipboard.writeText(link);
+                            alert('Link copied to clipboard!');
+                        }
+
+                        async function generateAIDescription() {
+                            const prodName = document.getElementById('prod-name').value;
+                            if (!prodName) return alert('Enter a product name first');
+
+                            document.getElementById('ai-gen-btn').textContent = 'Generating...';
+                            try {
+                                const res = await fetch('/api/onboarding/generate-description', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ name: prodName })
+                                });
+                                const data = await res.json();
+                                document.getElementById('ai-desc-text').textContent = data.description;
+                                document.getElementById('ai-description-container').style.display = 'block';
+                            } catch (e) {
+                                document.getElementById('ai-desc-text').textContent = "A wonderful product carefully selected for your store.";
+                                document.getElementById('ai-description-container').style.display = 'block';
+                            }
+                            document.getElementById('ai-gen-btn').textContent = '✨ AI Auto-Generate Description';
+                        }
+
+                        async function saveWizardState() {
+                            // Collect current inputs
+                            wizardData.businessName = document.getElementById('biz-name')?.value || wizardData.businessName;
+                            wizardData.productName = document.getElementById('prod-name')?.value || wizardData.productName;
+                            wizardData.productPrice = document.getElementById('prod-price')?.value || wizardData.productPrice;
+
+                            const selling = [];
+                            document.querySelectorAll('input[name="selling"]:checked').forEach(i => selling.push(i.value));
+                            wizardData.sellingCategories = selling;
+
+                            try {
+                                await fetch('/api/onboarding/state', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(wizardData)
+                                });
+                            } catch (e) {}
+                        }
+
+                        async function finishOnboarding() {
+                            wizardData.name = document.getElementById('reg-name').value;
+                            wizardData.email = document.getElementById('reg-email').value;
+                            wizardData.password = document.getElementById('reg-pass').value;
+
+                            const emailDisplay = document.getElementById('verify-email-display');
+                            if(emailDisplay) emailDisplay.textContent = wizardData.email;
+
+                            try {
+                                const res = await fetch('/api/onboarding/start', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        business_type: wizardData.businessType,
+                                        company_name: wizardData.businessName,
+                                        selling_categories: wizardData.sellingCategories,
+                                        admin_email: wizardData.email,
+                                        admin_name: wizardData.name,
+                                        admin_password: wizardData.password,
+                                        website_template: wizardData.template,
+                                        first_product_name: wizardData.productName,
+                                        first_product_price: wizardData.productPrice,
+                                        domain_choice: wizardData.domain,
+                                        theme_color: wizardData.template === 'Modern' ? '#0055ff' : '#ff0055',
+                                        ai_generated: false,
+                                        first_product_photo_base64: document.getElementById('crop-img')?.src || ''
+                                    })
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                    nextStep(9);
+                                }
+                            } catch (e) {
+                                alert('Failed to finish onboarding. Please try again.');
+                            }
+                        }
+
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
@@ -2268,10 +2544,35 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        window.onload = () => {
+                        window.onload = async () => {
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
+
+                            if (screenId === 'setup-screen') {
+                                try {
+                                    const res = await fetch('/api/onboarding/state');
+                                    const data = await res.json();
+                                    if (data.state && data.state !== '{}') {
+                                        const saved = JSON.parse(data.state);
+                                        wizardData = { ...wizardData, ...saved };
+
+                                        // Restore inputs
+                                        if (document.getElementById('biz-name')) document.getElementById('biz-name').value = wizardData.businessName;
+                                        if (document.getElementById('prod-name')) document.getElementById('prod-name').value = wizardData.productName;
+                                        if (document.getElementById('prod-price')) document.getElementById('prod-price').value = wizardData.productPrice;
+                                        if (document.getElementById('reg-name')) document.getElementById('reg-name').value = wizardData.name;
+                                        if (document.getElementById('reg-email')) document.getElementById('reg-email').value = wizardData.email;
+
+                                        wizardData.sellingCategories.forEach(val => {
+                                            const cb = document.querySelector(`input[name="selling"][value="${val}"]`);
+                                            if (cb) cb.checked = true;
+                                        });
+
+                                        nextStep(wizardData.step);
+                                    }
+                                } catch (e) {}
+                            }
                         };
                     </script>
                 </body>
