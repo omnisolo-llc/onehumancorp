@@ -52,6 +52,7 @@ spec:
             cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+    - to:
         - ipBlock:
             cidr: 128.0.0.0/1
             except:
@@ -87,6 +88,7 @@ spec:
             cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+    - to:
         - ipBlock:
             cidr: 128.0.0.0/1
             except:
@@ -142,6 +144,7 @@ spec:
             cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+    - to:
         - ipBlock:
             cidr: 128.0.0.0/1
             except:
@@ -197,6 +200,7 @@ spec:
             cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+    - to:
         - ipBlock:
             cidr: 128.0.0.0/1
             except:
@@ -252,6 +256,7 @@ spec:
             cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+    - to:
         - ipBlock:
             cidr: 128.0.0.0/1
             except:
