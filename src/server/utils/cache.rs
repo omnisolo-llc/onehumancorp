@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock, OnceLock};
+use dashmap::DashMap;
+use std::sync::{Arc, OnceLock};
 use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
 
 pub struct HybridCache<T> {
-    local: OnceLock<RwLock<HashMap<String, (T, std::time::Instant)>>>,
+    local: OnceLock<Arc<DashMap<String, (T, std::time::Instant)>>>,
     redis_client: Option<redis::Client>,
 }
 
@@ -19,18 +19,16 @@ where
         }
     }
 
-    fn get_local(&self) -> &RwLock<HashMap<String, (T, std::time::Instant)>> {
-        self.local.get_or_init(|| RwLock::new(HashMap::new()))
+    fn get_local(&self) -> &Arc<DashMap<String, (T, std::time::Instant)>> {
+        self.local.get_or_init(|| Arc::new(DashMap::new()))
     }
 
     pub async fn get(&self, key: &str) -> Option<T> {
         // 1. Check local cache
-        {
-            let guard = self.get_local().read().ok()?;
-            if let Some((val, expiry)) = guard.get(key) {
-                if std::time::Instant::now() < *expiry {
-                    return Some(val.clone());
-                }
+        if let Some(entry) = self.get_local().get(key) {
+            let (val, expiry) = entry.value();
+            if std::time::Instant::now() < *expiry {
+                return Some(val.clone());
             }
         }
 
@@ -68,8 +66,6 @@ where
     }
 
     fn set_local(&self, key: &str, value: T, ttl: Duration) {
-        if let Ok(mut guard) = self.get_local().write() {
-            guard.insert(key.to_string(), (value, std::time::Instant::now() + ttl));
-        }
+        self.get_local().insert(key.to_string(), (value, std::time::Instant::now() + ttl));
     }
 }

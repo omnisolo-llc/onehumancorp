@@ -215,6 +215,39 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn test_bench_dashmap_cache_parallel_fetch() {
+        use std::sync::Arc;
+        use std::time::Instant;
+        use crate::utils::cache::HybridCache;
+        use std::time::Duration;
+
+        let cache = Arc::new(HybridCache::<String>::new(None));
+
+        for i in 0..100 {
+            cache.set(&format!("key_{}", i), format!("value_{}", i), Duration::from_secs(60)).await;
+        }
+
+        let start = Instant::now();
+        let mut handles = vec![];
+        for _ in 0..10 {
+            let cache_clone = cache.clone();
+            handles.push(tokio::spawn(async move {
+                for i in 0..100 {
+                    let _ = cache_clone.get(&format!("key_{}", i)).await;
+                }
+            }));
+        }
+
+        for handle in handles {
+            let _ = handle.await;
+        }
+
+        let duration = start.elapsed();
+        println!("DashMap Parallel Fetch (10 threads * 100 reads): {:?}", duration);
+        assert!(duration < Duration::from_millis(50), "DashMap parallel fetch was too slow!");
+    }
+
     use super::*;
 
     #[tokio::test]
@@ -224,7 +257,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+        let db_url = "sqlite::memory:".to_string();
         println!("DEBUG: db_url = {}", db_url);
         if db_url == "dummy" {
             println!("DEBUG: skipping because db_url is dummy");
