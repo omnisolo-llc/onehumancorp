@@ -118,7 +118,7 @@ mod tests {
         // guarantees the underlying bounded logic without network drift.
         let start = std::time::Instant::now();
         let slow_operation = async {
-            tokio::task::yield_now().await; sleep(Duration::from_millis(2050)).await;
+            tokio::task::yield_now().await; tokio::time::sleep(std::time::Duration::from_millis(2050)).await;
             "ok"
         };
 
