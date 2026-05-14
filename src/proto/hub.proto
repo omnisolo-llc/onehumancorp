@@ -318,6 +318,13 @@ message WizardResponse {
   string message = 2;
 }
 
+message OAuthLoginRequest {
+  string provider = 1;
+  string oauth_token = 2;
+  string organization_id = 3;
+}
+
+
 message LoginRequest {
   string username = 1;
   string password = 2;
@@ -393,6 +400,7 @@ message ListRolesResponse {
 
 service AuthService {
   rpc Login(LoginRequest) returns (LoginResponse);
+  rpc OAuthLogin(OAuthLoginRequest) returns (LoginResponse);
   rpc Register(CreateUserRequest) returns (LoginResponse);
   rpc Logout(EmptyRequest) returns (EmptyResponse);
   rpc GetMe(EmptyRequest) returns (UserProto);

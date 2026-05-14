@@ -12,7 +12,7 @@ pub async fn bench_queue_latency() {
 
     if database_url != "postgres://localhost/dummy" {
         let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
             .connect(&database_url).await;
 
         if let Ok(pg_pool) = pool_res {
@@ -37,7 +37,7 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
         .connect(&database_url).await;
 
     let pg_pool = match pool_res {

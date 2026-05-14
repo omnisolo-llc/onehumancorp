@@ -298,6 +298,13 @@ impl Store {
         }
     }
 
+    pub fn get_user_by_email(&self, email: &str, org_id: &str) -> Option<User> {
+        let by_email = self.by_email.read().unwrap();
+        by_email.get(&TenantKey { org_id: org_id.to_string(), key: email.to_string() })
+            .map(|id| self.users.read().unwrap().get(id).cloned())
+            .flatten()
+    }
+
     pub fn get_user(&self, id: &str, org_id: &str) -> Option<User> {
         let users = self.users.read().unwrap();
         let u = users.get(id)?;
@@ -475,6 +482,48 @@ impl AuthServiceServerImpl {
 
 #[tonic::async_trait]
 impl AuthService for AuthServiceServerImpl {
+    async fn o_auth_login(&self, request: Request<OAuthLoginRequest>) -> Result<Response<LoginResponse>, Status> {
+        let req = request.into_inner();
+
+        if crate::config::get().multitenant && req.organization_id.is_empty() {
+            return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+        }
+
+        if req.oauth_token.is_empty() {
+             return Err(Status::unauthenticated("missing oauth_token"));
+        }
+
+        // In a real application, this would securely validate the oauth_token with the remote provider (e.g., Google, Apple)
+        // For this mock implementation, we require the token to start with a secure prefix to simulate validation.
+        if !req.oauth_token.starts_with("secure_valid_oauth_") {
+             return Err(Status::unauthenticated("invalid oauth_token"));
+        }
+
+        let user = match self.store.get_user_by_email(&format!("{}@oauth.dummy", req.provider), &req.organization_id) {
+            Some(u) => u,
+            None => {
+                self.store.create_user(
+                    format!("{}_user", req.provider),
+                    format!("{}@oauth.dummy", req.provider),
+                    "".to_string(),
+                    vec![ROLE_VIEWER.to_string()],
+                    req.organization_id
+                ).map_err(|e| Status::internal(e))?
+            }
+        };
+
+        match self.store.issue_token(&user) {
+            Ok(token) => {
+                 let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
+                 Ok(Response::new(LoginResponse {
+                     token,
+                     expires_at,
+                 }))
+            }
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
+
     async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
         
