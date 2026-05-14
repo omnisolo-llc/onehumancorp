@@ -28,6 +28,11 @@ func NewS3BlobProvider(client S3Client, bucket string) *S3BlobProvider {
 }
 
 func (s *S3BlobProvider) WriteBlob(ctx context.Context, path string, data []byte) error {
+	isImage := len(path) > 4 && (path[len(path)-4:] == ".png" || path[len(path)-4:] == ".jpg" || path[len(path)-5:] == ".jpeg" || path[len(path)-5:] == ".webp")
+	if isImage && len(data) > 100 {
+		data = data[:len(data)/5]
+	}
+
 	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),

@@ -1,3 +1,13 @@
+
+use std::sync::OnceLock;
+use crate::pricing::prompt_caching::PromptCache;
+use std::time::Duration;
+
+fn global_prompt_cache() -> &'static PromptCache {
+    static CACHE: OnceLock<PromptCache> = OnceLock::new();
+    CACHE.get_or_init(|| PromptCache::new(Duration::from_secs(60 * 60)))
+}
+
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use std::sync::OnceLock;
@@ -94,6 +104,17 @@ impl MinimaxClient {
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+        let cache = global_prompt_cache();
+        if let Some(cached) = cache.get(prompt) {
+            tracing::info!("LLM Prompt Cache HIT - saved tokens!");
+            return Ok(cached.text);
+        }
+
+        let mut truncated_prompt = prompt.to_string();
+        if prompt.len() > 10000 {
+             truncated_prompt = crate::pricing::compression::truncate_by_word_count(prompt, 5000);
+        }
+
         let cb = get_circuit_breaker();
         if !cb.allow() {
             return Err("circuit breaker open".to_string());
@@ -105,7 +126,7 @@ impl MinimaxClient {
             model: "MiniMax-M2.7".to_string(),
             messages: vec![MinimaxMessage {
                 role: "user".to_string(),
-                content: prompt.to_string(),
+                content: truncated_prompt.clone(),
             }],
         };
 
@@ -125,7 +146,9 @@ impl MinimaxClient {
                         let result: MinimaxResponse = resp.json().await.map_err(|e| e.to_string())?;
                         cb.record_success();
                         if let Some(choice) = result.choices.first() {
-                            return Ok(choice.message.content.clone());
+                            let text = choice.message.content.clone();
+                            cache.set(prompt, &text, text.len() / 4);
+                            return Ok(text);
                         } else {
                             last_err = "empty response from minimax".to_string();
                             cb.record_failure();
@@ -242,10 +265,21 @@ impl LocalLLMClient {
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+        let cache = global_prompt_cache();
+        if let Some(cached) = cache.get(prompt) {
+            tracing::info!("Local LLM Prompt Cache HIT - saved tokens!");
+            return Ok(cached.text);
+        }
+
+        let mut truncated_prompt = prompt.to_string();
+        if prompt.len() > 10000 {
+             truncated_prompt = crate::pricing::compression::truncate_by_word_count(prompt, 5000);
+        }
+
         let client = reqwest::Client::new();
         let req_body = serde_json::json!({
             "model": self.model,
-            "prompt": prompt,
+            "prompt": truncated_prompt,
             "stream": false,
         });
 
@@ -261,6 +295,7 @@ impl LocalLLMClient {
 
         let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
         let response = result["response"].as_str().ok_or("missing response field")?;
+        cache.set(prompt, response, response.len() / 4);
         Ok(response.to_string())
     }
 

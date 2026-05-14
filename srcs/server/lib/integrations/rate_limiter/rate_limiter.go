@@ -120,12 +120,34 @@ func (m *RateLimiterManager) getRateLimitStatusCloud(ctx context.Context, bucket
 	val, err := m.redisClient.Get(ctx, key).Int()
 
 	if err == redis.Nil {
-		return RateLimitInfo{IsAllowed: true, SoftLimitReached: false}, nil
+		val = 0
 	} else if err != nil {
 		return RateLimitInfo{IsAllowed: true, SoftLimitReached: false}, err
 	}
 
-	limit := 100 // default fallback
+	limit := 100
+	tenantID := ""
+	if len(bucket) > 7 && bucket[:7] == "tenant:" {
+		for i := 7; i < len(bucket); i++ {
+			if bucket[i] == ':' {
+				tenantID = bucket[7:i]
+				break
+			}
+		}
+	}
+
+	if tenantID != "" {
+		tierKey := fmt.Sprintf("tenant:%s:tier", tenantID)
+		tier, err := m.redisClient.Get(ctx, tierKey).Result()
+		if err == nil {
+			if tier == "Starter" {
+				limit = 1000
+			} else if tier == "Pro" || tier == "Business" {
+				limit = 100000000
+			}
+		}
+	}
+
 	softLimit := val >= limit
 
 	return RateLimitInfo{
