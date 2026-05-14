@@ -7,10 +7,10 @@ use axum::{
 };
 use std::sync::Arc;
 use serde_json::json;
-use ::server_pricing::rate_limit::RedisRateLimiter;
+use ::server_pricing::rate_limit::RedisPlanGuard;
 
 pub async fn tier_middleware(
-    State(rate_limiter): State<Arc<RedisRateLimiter>>,
+    State(rate_limiter): State<Arc<RedisPlanGuard>>,
     req: Request,
     next: Next,
 ) -> Response {
@@ -25,12 +25,12 @@ pub async fn tier_middleware(
     if req.uri().path().starts_with("/api/v1/protected") || req.uri().path().starts_with("/api/v1/autodream") {
         match rate_limiter.record_action(&tenant_id, "default_agent").await {
             Ok(status) => {
-                if status.soft_limit_reached {
+                if status.upgrade_recommended {
                     warning_msg = Some(status.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string()));
                 }
             }
             Err(e) => {
-                tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                tracing::warn!("PlanGuard error: {}. Failing open to avoid blocking users.", e);
             }
         }
     }
@@ -50,10 +50,10 @@ mod tests {
     use axum::{routing::get, Router};
     use axum::http::StatusCode;
     use std::sync::Arc;
-    use ::server_pricing::rate_limit::{RedisRateLimiter, PlanTier};
+    use ::server_pricing::rate_limit::{RedisPlanGuard, PlanTier};
     use redis::AsyncCommands;
 
-    async fn setup_test_router(rate_limiter: Arc<RedisRateLimiter>) -> Router {
+    async fn setup_test_router(rate_limiter: Arc<RedisPlanGuard>) -> Router {
         Router::new()
             .route("/api/v1/protected/action", get(|| async { "Success" }))
             .route("/api/v1/public/info", get(|| async { "Public Info" }))
@@ -67,7 +67,7 @@ mod tests {
         // we test the handler itself bypassing the router using isolated components.
         // We know that `tier_middleware` intercepts paths. For this simple test, we mock
         // the Redis requirement if possible, but in this specific environment where we
-        // can't easily inject a trait for RedisRateLimiter, we must ensure it compiles.
+        // can't easily inject a trait for RedisPlanGuard, we must ensure it compiles.
         // A true unit test would use a trait object for `rate_limiter`. Since the provided
         // struct uses a concrete `redis::Client`, we'll assume testing the core limits
         // logic via the struct directly or via axum test utilities if redis is present.
@@ -76,7 +76,7 @@ mod tests {
         if let Ok(client) = redis::Client::open(redis_url) {
             // Check if redis server is actually responding before attempting to test
             if client.get_multiplexed_async_connection().await.is_ok() {
-                let limiter = Arc::new(RedisRateLimiter::new(client.clone()));
+                let limiter = Arc::new(RedisPlanGuard::new(client.clone()));
 
                 // Setup tier
                 let _ = limiter.set_tenant_tier("test_tenant", PlanTier::Free).await;

@@ -54,19 +54,19 @@ impl PlanTier {
 }
 
 #[derive(Debug, Clone)]
-pub struct RateLimitStatus {
-    pub is_allowed: bool,
-    pub soft_limit_reached: bool,
+pub struct PlanStatus {
+    pub is_authorized: bool,
+    pub upgrade_recommended: bool,
     pub user_message: Option<String>,
 }
 
-pub struct RedisRateLimiter {
+pub struct RedisPlanGuard {
     client: Client,
     connection: OnceCell<redis::aio::MultiplexedConnection>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
 }
 
-impl RedisRateLimiter {
+impl RedisPlanGuard {
     pub fn new(client: Client) -> Self {
         Self { client, connection: OnceCell::new(), telemetry_store: None }
     }
@@ -122,7 +122,7 @@ impl RedisRateLimiter {
         conn.set(format!("tenant:{}:tier", tenant_id), tier_str).await.map_err(|e| e.to_string())
     }
 
-    pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
+    pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<PlanStatus, String> {
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
@@ -141,9 +141,9 @@ impl RedisRateLimiter {
 
         if let Some(limit) = tier.monthly_action_limit() {
             if tenant_used >= limit {
-                return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit - allow but warn
-                    soft_limit_reached: true,
+                return Ok(PlanStatus {
+                    is_authorized: true, // Soft limit - allow but warn
+                    upgrade_recommended: true,
                     user_message: Some(format!(
                         "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
                         match tier {
@@ -159,9 +159,9 @@ impl RedisRateLimiter {
 
         if let Some(limit) = tier.agent_action_limit() {
             if agent_used >= limit {
-                return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit
-                    soft_limit_reached: true,
+                return Ok(PlanStatus {
+                    is_authorized: true, // Soft limit
+                    upgrade_recommended: true,
                     user_message: Some(format!(
                         "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
                         match tier {
@@ -175,14 +175,14 @@ impl RedisRateLimiter {
             }
         }
 
-        Ok(RateLimitStatus {
-            is_allowed: true,
-            soft_limit_reached: false,
+        Ok(PlanStatus {
+            is_authorized: true,
+            upgrade_recommended: false,
             user_message: None,
         })
     }
 
-    pub async fn check_product_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
+    pub async fn check_product_quota(&self, tenant_id: &str) -> Result<PlanStatus, String> {
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
@@ -192,9 +192,9 @@ impl RedisRateLimiter {
 
         if let Some(limit) = tier.max_products() {
             if total_products >= limit {
-                return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit - allow but warn
-                    soft_limit_reached: true,
+                return Ok(PlanStatus {
+                    is_authorized: true, // Soft limit - allow but warn
+                    upgrade_recommended: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
                         match tier {
@@ -208,9 +208,9 @@ impl RedisRateLimiter {
             }
         }
 
-        Ok(RateLimitStatus {
-            is_allowed: true,
-            soft_limit_reached: false,
+        Ok(PlanStatus {
+            is_authorized: true,
+            upgrade_recommended: false,
             user_message: None,
         })
     }
@@ -222,7 +222,7 @@ impl RedisRateLimiter {
         Ok(())
     }
 
-    pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
+    pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<PlanStatus, String> {
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
@@ -232,9 +232,9 @@ impl RedisRateLimiter {
 
         if let Some(limit) = tier.max_agents() {
             if total_agents >= limit {
-                return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit - allow but warn
-                    soft_limit_reached: true,
+                return Ok(PlanStatus {
+                    is_authorized: true, // Soft limit - allow but warn
+                    upgrade_recommended: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} agent. Upgrade to unlock more power!",
                         match tier {
@@ -248,9 +248,9 @@ impl RedisRateLimiter {
             }
         }
 
-        Ok(RateLimitStatus {
-            is_allowed: true,
-            soft_limit_reached: false,
+        Ok(PlanStatus {
+            is_authorized: true,
+            upgrade_recommended: false,
             user_message: None,
         })
     }
@@ -262,7 +262,7 @@ impl RedisRateLimiter {
         Ok(())
     }
 
-    pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
+    pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<PlanStatus, String> {
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
@@ -283,9 +283,9 @@ impl RedisRateLimiter {
         if let Some(limit_mb) = tier.storage_limit_mb() {
             let limit_bytes = (limit_mb as i64) * 1024 * 1024;
             if total_storage > limit_bytes {
-                return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit - allow but warn
-                    soft_limit_reached: true,
+                return Ok(PlanStatus {
+                    is_authorized: true, // Soft limit - allow but warn
+                    upgrade_recommended: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
                         match tier {
@@ -300,9 +300,9 @@ impl RedisRateLimiter {
             }
         }
 
-        Ok(RateLimitStatus {
-            is_allowed: true,
-            soft_limit_reached: false,
+        Ok(PlanStatus {
+            is_authorized: true,
+            upgrade_recommended: false,
             user_message: None,
         })
     }
@@ -342,7 +342,7 @@ mod tests {
     async fn test_check_product_quota_no_mutation() {
         if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
+                let limiter = RedisPlanGuard::new(client.clone());
                 let tenant_id = "test-tenant-no-mutation";
 
                 // Clear any existing products
@@ -355,13 +355,13 @@ mod tests {
 
                 // Check quota initially
                 let status = limiter.check_product_quota(tenant_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(!status.soft_limit_reached);
+                assert!(status.is_authorized);
+                assert!(!status.upgrade_recommended);
 
                 // Check again to ensure it didn't mutate (increment)
                 let status = limiter.check_product_quota(tenant_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(!status.soft_limit_reached);
+                assert!(status.is_authorized);
+                assert!(!status.upgrade_recommended);
 
                 // Add 10 products
                 for _ in 0..10 {
@@ -370,8 +370,8 @@ mod tests {
 
                 // Check quota now
                 let status = limiter.check_product_quota(tenant_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(status.soft_limit_reached); // Should be reached since we have 10 products (limit is 10)
+                assert!(status.is_authorized);
+                assert!(status.upgrade_recommended); // Should be reached since we have 10 products (limit is 10)
             }
         }
     }
@@ -380,7 +380,7 @@ mod tests {
     async fn test_check_storage_quota() {
         if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
+                let limiter = RedisPlanGuard::new(client.clone());
                 let tenant_id = "test-tenant-storage-quota";
 
                 // Clear any existing storage used
@@ -394,14 +394,14 @@ mod tests {
                 // Increment storage by a small amount (100MB)
                 let delta: i64 = 100 * 1024 * 1024;
                 let status = limiter.check_storage_quota(tenant_id, delta).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(!status.soft_limit_reached);
+                assert!(status.is_authorized);
+                assert!(!status.upgrade_recommended);
 
                 // Increment storage by an amount crossing the 500MB limit
                 let large_delta: i64 = 450 * 1024 * 1024;
                 let status = limiter.check_storage_quota(tenant_id, large_delta).await.unwrap();
-                assert!(status.is_allowed); // Soft limit allows it
-                assert!(status.soft_limit_reached); // But flag is set
+                assert!(status.is_authorized); // Soft limit allows it
+                assert!(status.upgrade_recommended); // But flag is set
                 assert!(status.user_message.unwrap().contains("500MB storage"));
             }
         }
@@ -411,7 +411,7 @@ mod tests {
     async fn test_record_agent_quota() {
         if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
+                let limiter = RedisPlanGuard::new(client.clone());
                 let tenant_id = "test-tenant-agent-quota";
 
                 // Clear any existing agents
@@ -427,8 +427,8 @@ mod tests {
 
                 // Check quota now
                 let status = limiter.check_agent_quota(tenant_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(status.soft_limit_reached); // Limit is 1 for Free tier
+                assert!(status.is_authorized);
+                assert!(status.upgrade_recommended); // Limit is 1 for Free tier
             }
         }
     }
@@ -437,7 +437,7 @@ mod tests {
     async fn test_record_action_monthly_reset() {
         if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
+                let limiter = RedisPlanGuard::new(client.clone());
                 let tenant_id = "test-tenant-monthly-reset";
                 let agent_id = "agent-1";
 
@@ -453,13 +453,58 @@ mod tests {
 
                 // Record an action
                 let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(!status.soft_limit_reached);
+                assert!(status.is_authorized);
+                assert!(!status.upgrade_recommended);
 
                 // Verify the monthly key was created and has a value of 1
                 let count: usize = conn.get(&tenant_key).await.unwrap_or(0);
                 assert_eq!(count, 1);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod extended_rate_limit_tests {
+    use super::*;
+
+    #[test]
+    fn test_tier_limits_free_extended() {
+        let tier = PlanTier::Free;
+        assert_eq!(tier.monthly_action_limit(), Some(100));
+        assert_eq!(tier.agent_action_limit(), Some(20));
+        assert_eq!(tier.storage_limit_mb(), Some(500));
+        assert_eq!(tier.max_agents(), Some(1));
+        assert_eq!(tier.max_products(), Some(10));
+    }
+
+    #[test]
+    fn test_tier_limits_starter_extended() {
+        let tier = PlanTier::Starter;
+        assert_eq!(tier.monthly_action_limit(), Some(1000));
+        assert_eq!(tier.agent_action_limit(), Some(200));
+        assert_eq!(tier.storage_limit_mb(), Some(5000));
+        assert_eq!(tier.max_agents(), Some(3));
+        assert_eq!(tier.max_products(), Some(100));
+    }
+
+    #[test]
+    fn test_tier_limits_pro_extended() {
+        let tier = PlanTier::Pro;
+        assert_eq!(tier.monthly_action_limit(), None);
+        assert_eq!(tier.agent_action_limit(), None);
+        assert_eq!(tier.storage_limit_mb(), Some(50000));
+        assert_eq!(tier.max_agents(), Some(10));
+        assert_eq!(tier.max_products(), None);
+    }
+
+    #[test]
+    fn test_tier_limits_business_extended() {
+        let tier = PlanTier::Business;
+        assert_eq!(tier.monthly_action_limit(), None);
+        assert_eq!(tier.agent_action_limit(), None);
+        assert_eq!(tier.storage_limit_mb(), Some(512000));
+        assert_eq!(tier.max_agents(), None);
+        assert_eq!(tier.max_products(), None);
     }
 }

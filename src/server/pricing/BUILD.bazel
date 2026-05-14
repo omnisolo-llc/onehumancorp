@@ -10,6 +10,7 @@ rust_library(
         "mod.rs",
         "prompt_caching.rs",
         "rate_limit.rs",
+        "large_test_fixtures.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
@@ -32,4 +33,12 @@ rust_library(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
+)
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "pricing_test",
+    crate = ":server_pricing",
+    edition = "2024",
 )

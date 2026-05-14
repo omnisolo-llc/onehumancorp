@@ -210,3 +210,33 @@ mod tests {
         assert_eq!(efficiency, 25.0); // 250 / 10
     }
 }
+
+#[cfg(test)]
+mod extended_calculator_tests {
+    use super::*;
+
+    #[test]
+    fn test_calculator_claude_family() {
+        let cost1 = calculate_cost("claude-3-opus", 1000, 1000, 1000);
+        let cost2 = calculate_cost("claude-3-sonnet", 1000, 1000, 1000);
+        let cost3 = calculate_cost("claude-3-haiku", 1000, 1000, 1000);
+        assert!(cost1 > cost2);
+        assert!(cost2 > cost3);
+    }
+
+    #[test]
+    fn test_calculator_gpt_family() {
+        let cost1 = calculate_cost("gpt-4", 1000, 1000, 1000);
+        let cost2 = calculate_cost("gpt-4-turbo", 1000, 1000, 1000);
+        let cost3 = calculate_cost("gpt-4o", 1000, 1000, 1000);
+        assert!(cost1 > cost2);
+        assert!(cost2 > cost3);
+    }
+
+    #[test]
+    fn test_calculator_gemini_family() {
+        let cost1 = calculate_cost("gemini-1.5-pro", 1000, 1000, 1000);
+        let cost2 = calculate_cost("gemini-1.5-flash", 1000, 1000, 1000);
+        assert!(cost1 > cost2);
+    }
+}

@@ -131,3 +131,17 @@ mod tests {
         assert_eq!(minify_json_prompt(invalid), invalid);
     }
 }
+
+#[cfg(test)]
+mod extended_compression_tests {
+    use super::*;
+
+    #[test]
+    fn test_truncate_edge_cases() {
+        assert_eq!(truncate_by_word_count("hello world", 1), "hello");
+        assert_eq!(truncate_by_word_count("hello world", 2), "hello world");
+        assert_eq!(truncate_by_word_count("hello world", 10), "hello world");
+        assert_eq!(truncate_by_word_count("", 5), "");
+        assert_eq!(truncate_by_word_count("    ", 5), "    ");
+    }
+}

@@ -121,9 +121,9 @@ impl OrgService for MyOrgService {
             0.0
         };
         
-        let status = self.hub.tracker().check_agent_quota(&org_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
-            is_allowed: true,
-            soft_limit_reached: false,
+        let status = self.hub.tracker().check_agent_quota(&org_id).await.unwrap_or(::server_pricing::rate_limit::PlanStatus {
+            is_authorized: true,
+            upgrade_recommended: false,
             user_message: None,
         });
 
@@ -136,9 +136,9 @@ impl OrgService for MyOrgService {
             pending_approvals: 2,
             active_handoffs: 1,
             token_velocity: summary.total_tokens,
-            soft_limit_reached: status.soft_limit_reached,
+            soft_limit_reached: status.upgrade_recommended,
             upgrade_message: status.user_message.unwrap_or_default(),
-            is_allowed: status.is_allowed,
+            is_allowed: status.is_authorized,
         };
 
         self.analytics_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;

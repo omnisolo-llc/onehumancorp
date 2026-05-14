@@ -7,12 +7,12 @@ use serde::Deserialize;
 use std::sync::Arc;
 use serde_json::Value;
 
-use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
+use ::server_pricing::rate_limit::{PlanTier, RedisPlanGuard};
 use crate::db::DbStore;
 
 #[derive(Clone)]
 pub struct WebhookState {
-    pub rate_limiter: Arc<RedisRateLimiter>,
+    pub rate_limiter: Arc<RedisPlanGuard>,
     pub db_pool: sqlx::Pool<sqlx::Postgres>,
     pub db: std::sync::Arc<crate::db::DB>,
 }

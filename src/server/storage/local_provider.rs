@@ -150,7 +150,7 @@ impl Provider for LocalProvider {
         let t_id = key.split('/').next().unwrap_or("default");
         let agent_id = key.split('/').nth(1);
         if let Ok(status) = self.tracker.track_storage_usage(t_id, reported_size as i64, agent_id).await {
-            if status.soft_limit_reached {
+            if status.upgrade_recommended {
                 if let Some(msg) = status.user_message {
                     tracing::warn!(tid = %t_id, "Storage quota warning: {}", msg);
                 }

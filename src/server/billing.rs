@@ -1,13 +1,13 @@
 use crate::integrations::mercadopago::client::MercadoPagoClient;
 // Billing module stub - provides Tracker struct used by hub.rs
-use ::server_pricing::rate_limit::{RedisRateLimiter, RateLimitStatus};
+use ::server_pricing::rate_limit::{RedisPlanGuard, PlanStatus};
 use crate::integrations::stripe::client::StripeClient;
 use redis::Client;
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct Tracker {
-    rate_limiter: Option<Arc<RedisRateLimiter>>,
+    rate_limiter: Option<Arc<RedisPlanGuard>>,
     pub stripe_client: Option<Arc<StripeClient>>,
     pub mercadopago_client: Option<Arc<MercadoPagoClient>>,
     pub auditor: Option<Arc<crate::services::billing::auditor::CostAuditor>>,
@@ -25,7 +25,7 @@ impl Tracker {
             .map(|key| Arc::new(StripeClient::new(key)));
         if let Ok(client) = Client::open(redis_url) {
             Tracker {
-                rate_limiter: Some(Arc::new(RedisRateLimiter::new(client))),
+                rate_limiter: Some(Arc::new(RedisPlanGuard::new(client))),
                 stripe_client,
                 mercadopago_client: mercadopago_client.clone(),
                 auditor: None,
@@ -41,7 +41,7 @@ impl Tracker {
         self.auditor = Some(auditor);
     }
 
-    pub async fn track_storage_usage(&self, tenant_id: &str, delta_bytes: i64, agent_id: Option<&str>) -> Result<RateLimitStatus, String> {
+    pub async fn track_storage_usage(&self, tenant_id: &str, delta_bytes: i64, agent_id: Option<&str>) -> Result<PlanStatus, String> {
         if let Some(auditor) = &self.auditor {
             if let Some(aid) = agent_id {
                 auditor.record_agent_storage(aid, delta_bytes);
@@ -51,40 +51,40 @@ impl Tracker {
             match limiter.check_storage_quota(tenant_id, delta_bytes).await {
                 Ok(status) => Ok(status),
                 Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
-                    Ok(RateLimitStatus {
-                        is_allowed: true,
-                        soft_limit_reached: false,
+                    tracing::warn!("PlanGuard error: {}. Failing open to avoid blocking users.", e);
+                    Ok(PlanStatus {
+                        is_authorized: true,
+                        upgrade_recommended: false,
                         user_message: None,
                     })
                 }
             }
         } else {
-            Ok(RateLimitStatus {
-                is_allowed: true,
-                soft_limit_reached: false,
+            Ok(PlanStatus {
+                is_authorized: true,
+                upgrade_recommended: false,
                 user_message: None,
             })
         }
     }
 
-    pub async fn check_product_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
+    pub async fn check_product_quota(&self, tenant_id: &str) -> Result<PlanStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.check_product_quota(tenant_id).await {
                 Ok(status) => Ok(status),
                 Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
-                    Ok(RateLimitStatus {
-                        is_allowed: true,
-                        soft_limit_reached: false,
+                    tracing::warn!("PlanGuard error: {}. Failing open to avoid blocking users.", e);
+                    Ok(PlanStatus {
+                        is_authorized: true,
+                        upgrade_recommended: false,
                         user_message: None,
                     })
                 }
             }
         } else {
-            Ok(RateLimitStatus {
-                is_allowed: true,
-                soft_limit_reached: false,
+            Ok(PlanStatus {
+                is_authorized: true,
+                upgrade_recommended: false,
                 user_message: None,
             })
         }
@@ -95,7 +95,7 @@ impl Tracker {
             match limiter.record_product_added(tenant_id).await {
                 Ok(_) => Ok(()),
                 Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    tracing::warn!("PlanGuard error: {}. Failing open to avoid blocking users.", e);
                     Ok(())
                 }
             }
@@ -104,45 +104,45 @@ impl Tracker {
         }
     }
 
-    pub async fn check_rate_limit(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
+    pub async fn check_rate_limit(&self, tenant_id: &str, agent_id: &str) -> Result<PlanStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.record_action(tenant_id, agent_id).await {
                 Ok(status) => Ok(status),
                 Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
-                    Ok(RateLimitStatus {
-                        is_allowed: true,
-                        soft_limit_reached: false,
+                    tracing::warn!("PlanGuard error: {}. Failing open to avoid blocking users.", e);
+                    Ok(PlanStatus {
+                        is_authorized: true,
+                        upgrade_recommended: false,
                         user_message: None,
                     })
                 }
             }
         } else {
-            Ok(RateLimitStatus {
-                is_allowed: true,
-                soft_limit_reached: false,
+            Ok(PlanStatus {
+                is_authorized: true,
+                upgrade_recommended: false,
                 user_message: None,
             })
         }
     }
 
-    pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
+    pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<PlanStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.check_agent_quota(tenant_id).await {
                 Ok(status) => Ok(status),
                 Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
-                    Ok(RateLimitStatus {
-                        is_allowed: true,
-                        soft_limit_reached: false,
+                    tracing::warn!("PlanGuard error: {}. Failing open to avoid blocking users.", e);
+                    Ok(PlanStatus {
+                        is_authorized: true,
+                        upgrade_recommended: false,
                         user_message: None,
                     })
                 }
             }
         } else {
-            Ok(RateLimitStatus {
-                is_allowed: true,
-                soft_limit_reached: false,
+            Ok(PlanStatus {
+                is_authorized: true,
+                upgrade_recommended: false,
                 user_message: None,
             })
         }
@@ -153,7 +153,7 @@ impl Tracker {
             match limiter.record_agent_added(tenant_id).await {
                 Ok(_) => Ok(()),
                 Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                    tracing::warn!("PlanGuard error: {}. Failing open to avoid blocking users.", e);
                     Ok(())
                 }
             }

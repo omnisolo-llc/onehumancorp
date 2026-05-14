@@ -1435,9 +1435,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
     let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
-        std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client))
+        std::sync::Arc::new(::server_pricing::rate_limit::RedisPlanGuard::new(client))
     } else {
-        panic!("Failed to initialize Redis client for RateLimiter at {}", redis_url);
+        panic!("Failed to initialize Redis client for PlanGuard at {}", redis_url);
     };
 
     let webhook_state = crate::api::billing_webhook::WebhookState {

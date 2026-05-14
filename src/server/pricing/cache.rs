@@ -173,3 +173,22 @@ mod tests {
         assert_eq!(cache.get("prompt1"), None);
     }
 }
+
+#[cfg(test)]
+mod extended_cache_tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn test_cache_multiple_entries() {
+        let cache = LocalEmbeddingCache::new(Duration::from_secs(10));
+        cache.set("p1", "r1");
+        cache.set("p2", "r2");
+        cache.set("p3", "r3");
+
+        assert_eq!(cache.get("p1"), Some("r1".to_string()));
+        assert_eq!(cache.get("p2"), Some("r2".to_string()));
+        assert_eq!(cache.get("p3"), Some("r3".to_string()));
+        assert_eq!(cache.get("p4"), None);
+    }
+}

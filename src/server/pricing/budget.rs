@@ -95,3 +95,25 @@ mod tests {
         assert_eq!(manager.get_remaining_cents(), 4000);
     }
 }
+
+#[cfg(test)]
+mod extended_budget_tests {
+    use super::*;
+
+    #[test]
+    fn test_budget_spend_multiple() {
+        let manager = BudgetManager::new(100.0);
+        assert!(manager.record_spend(10.0).is_ok());
+        assert!(manager.record_spend(20.0).is_ok());
+        assert!(manager.record_spend(30.0).is_ok());
+        assert_eq!(manager.get_remaining(), 40.0);
+    }
+
+    #[test]
+    fn test_budget_spend_exact() {
+        let manager = BudgetManager::new(100.0);
+        assert!(manager.record_spend(100.0).is_ok());
+        assert_eq!(manager.get_remaining(), 0.0);
+        assert!(manager.record_spend(0.01).is_err());
+    }
+}

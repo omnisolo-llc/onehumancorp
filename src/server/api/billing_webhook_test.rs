@@ -4,7 +4,7 @@ use axum::{
 };
 use serde_json::json;
 
-use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
+use ::server_pricing::rate_limit::{PlanTier, RedisPlanGuard};
 use crate::api::billing_webhook::{stripe_webhook_handler, WebhookState};
 use crate::db::DB;
 
@@ -22,7 +22,7 @@ async fn test_stripe_webhook_handler_completed() {
         return;
     }
 
-    let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
+    let rate_limiter = std::sync::Arc::new(RedisPlanGuard::new(client.clone()));
     let db = match DB::new().await {
         Ok(d) => d,
         Err(_) => return,
@@ -94,7 +94,7 @@ async fn test_stripe_webhook_handler_deleted() {
         return;
     }
 
-    let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
+    let rate_limiter = std::sync::Arc::new(RedisPlanGuard::new(client.clone()));
     let db = match DB::new().await {
         Ok(d) => d,
         Err(_) => return,
@@ -170,7 +170,7 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         return;
     }
 
-    let rate_limiter = Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client));
+    let rate_limiter = Arc::new(::server_pricing::rate_limit::RedisPlanGuard::new(client));
     let db = match crate::db::DB::new().await {
         Ok(d) => d,
         Err(_) => return,

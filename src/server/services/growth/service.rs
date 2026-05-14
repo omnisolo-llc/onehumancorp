@@ -510,13 +510,13 @@ impl GrowthService for MyGrowthService {
         let total_conversions: i64 = row.try_get(0).unwrap_or(0);
         let max_quota = 50 + (total_conversions as i32) * 10;
         
-        let status = self.hub.tracker().check_product_quota(&org_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
-            is_allowed: true,
-            soft_limit_reached: false,
+        let status = self.hub.tracker().check_product_quota(&org_id).await.unwrap_or(::server_pricing::rate_limit::PlanStatus {
+            is_authorized: true,
+            upgrade_recommended: false,
             user_message: None,
         });
 
-        Ok(Response::new(QuotaMetrics { used: 10, max: max_quota, soft_limit_reached: status.soft_limit_reached, upgrade_message: status.user_message.unwrap_or_default(), is_allowed: status.is_allowed }))
+        Ok(Response::new(QuotaMetrics { used: 10, max: max_quota, soft_limit_reached: status.upgrade_recommended, upgrade_message: status.user_message.unwrap_or_default(), is_allowed: status.is_authorized }))
     }
 
     async fn get_waitlist(
