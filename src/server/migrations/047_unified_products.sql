@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS products (
     updated_at           TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX idx_products_org ON products (organization_id);
 CREATE INDEX idx_products_fulfillment ON products (fulfillment_strategy);
 

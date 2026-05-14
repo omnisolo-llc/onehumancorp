@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
     PRIMARY KEY (task_id, depends_on_task_id)
 );
 
+ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE shared_tasks ADD COLUMN IF NOT EXISTS mission_id TEXT;
 
 -- +goose Down

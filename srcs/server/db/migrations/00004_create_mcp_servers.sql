@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS mcp_servers (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE mcp_servers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_mcp_servers ON mcp_servers;
+
 CREATE INDEX IF NOT EXISTS idx_mcp_servers_tenant ON mcp_servers(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_mcp_servers_user ON mcp_servers(user_id);
 

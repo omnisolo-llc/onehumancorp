@@ -7,12 +7,17 @@ CREATE TABLE IF NOT EXISTS swarm_memory (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE swarm_memory ENABLE ROW LEVEL SECURITY;
+
 CREATE TABLE IF NOT EXISTS agent_missions (
     id         TEXT PRIMARY KEY,
     status     TEXT NOT NULL,
     payload    TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE agent_missions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_agent_missions ON agent_missions;
 
 CREATE INDEX idx_missions_status ON agent_missions (status);
 
@@ -23,6 +28,8 @@ CREATE TABLE IF NOT EXISTS agent_status (
     last_heartbeat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE agent_status ENABLE ROW LEVEL SECURITY;
+
 CREATE TABLE IF NOT EXISTS capability_plugins (
     plugin_id     TEXT PRIMARY KEY,
     name          TEXT NOT NULL,
@@ -32,6 +39,8 @@ CREATE TABLE IF NOT EXISTS capability_plugins (
     registered_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE capability_plugins ENABLE ROW LEVEL SECURITY;
+
 CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (
     memory_id        TEXT PRIMARY KEY,
     context          TEXT NOT NULL,
@@ -39,3 +48,5 @@ CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (
     source_plugin    TEXT,
     created_at       TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE swarm_memory_embeddings ENABLE ROW LEVEL SECURITY;

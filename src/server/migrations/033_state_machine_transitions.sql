@@ -11,4 +11,6 @@ CREATE TABLE IF NOT EXISTS state_machine_transitions (
     occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE state_machine_transitions ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX idx_sm_entity ON state_machine_transitions(entity_id, entity_type);

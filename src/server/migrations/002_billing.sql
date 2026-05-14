@@ -13,5 +13,7 @@ CREATE TABLE IF NOT EXISTS usage_events (
     occurred_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE usage_events ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX idx_usage_events_org ON usage_events (organization_id);
 CREATE INDEX idx_usage_events_agent ON usage_events (agent_id);

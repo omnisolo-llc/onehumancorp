@@ -12,4 +12,6 @@ CREATE TABLE IF NOT EXISTS department_tasks (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE department_tasks ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX idx_department_tasks_polling ON department_tasks (department, status, created_at) WHERE status = 'PENDING';

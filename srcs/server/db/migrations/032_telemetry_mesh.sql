@@ -6,3 +6,5 @@ CREATE TABLE IF NOT EXISTS telemetry_buffer (
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     sync_status TEXT DEFAULT 'pending'
 );
+
+ALTER TABLE telemetry_buffer ENABLE ROW LEVEL SECURITY;

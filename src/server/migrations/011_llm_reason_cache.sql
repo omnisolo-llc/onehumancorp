@@ -5,3 +5,5 @@ CREATE TABLE IF NOT EXISTS llm_reason_cache (
     response TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE llm_reason_cache ENABLE ROW LEVEL SECURITY;

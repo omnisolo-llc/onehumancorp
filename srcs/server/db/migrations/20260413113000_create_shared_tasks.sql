@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
 
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX IF NOT EXISTS idx_tasks_organization_id ON tasks(organization_id);
 
 CREATE TABLE IF NOT EXISTS task_dependencies (
@@ -23,6 +25,8 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
     FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
     FOREIGN KEY (depends_on_task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
+
+ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
 -- +goose StatementEnd
 
 -- +goose postgres
@@ -39,6 +43,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX IF NOT EXISTS idx_tasks_organization_id ON tasks(organization_id);
 
 CREATE TABLE IF NOT EXISTS task_dependencies (
@@ -46,6 +52,8 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
     depends_on_task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
     PRIMARY KEY (task_id, depends_on_task_id)
 );
+
+ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
 -- +goose StatementEnd
 
 -- +goose Down

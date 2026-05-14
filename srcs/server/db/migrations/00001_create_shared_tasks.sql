@@ -15,5 +15,8 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_shared_tasks ON shared_tasks;
+
 -- +goose Down
 DROP TABLE IF EXISTS shared_tasks;

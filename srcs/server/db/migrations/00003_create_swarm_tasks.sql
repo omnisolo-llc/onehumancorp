@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS swarm_tasks (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE swarm_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_swarm_tasks ON swarm_tasks;
+
 CREATE TABLE IF NOT EXISTS state_machine_transitions (
     id TEXT PRIMARY KEY,
     entity_id TEXT NOT NULL,
@@ -22,6 +25,8 @@ CREATE TABLE IF NOT EXISTS state_machine_transitions (
     reason TEXT,
     occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE state_machine_transitions ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_sm_entity ON state_machine_transitions(entity_id, entity_type);
 
 -- +goose Down

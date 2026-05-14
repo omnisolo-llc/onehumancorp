@@ -10,5 +10,7 @@ CREATE TABLE IF NOT EXISTS sub_agent_queue (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE sub_agent_queue ENABLE ROW LEVEL SECURITY;
+
 -- +goose Down
 DROP TABLE IF EXISTS sub_agent_queue;

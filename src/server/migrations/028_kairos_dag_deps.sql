@@ -12,5 +12,7 @@ CREATE TABLE IF NOT EXISTS swarm_task_dependencies (
     PRIMARY KEY (task_id, depends_on_task_id)
 );
 
+ALTER TABLE swarm_task_dependencies ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX IF NOT EXISTS idx_swarm_task_deps_task ON swarm_task_dependencies(task_id);
 CREATE INDEX IF NOT EXISTS idx_swarm_task_deps_depends ON swarm_task_dependencies(depends_on_task_id);

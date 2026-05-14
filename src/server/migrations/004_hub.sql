@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS agents (
     registered_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
+
 CREATE TABLE IF NOT EXISTS agent_inbox (
     seq         BIGSERIAL PRIMARY KEY,   -- ordering guarantee
     agent_id    TEXT NOT NULL,
@@ -24,6 +26,9 @@ CREATE TABLE IF NOT EXISTS agent_inbox (
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE agent_inbox ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_agent_inbox ON agent_inbox;
+
 CREATE INDEX idx_inbox_agent ON agent_inbox (agent_id);
 
 CREATE TABLE IF NOT EXISTS meeting_rooms (
@@ -31,6 +36,9 @@ CREATE TABLE IF NOT EXISTS meeting_rooms (
     agenda       TEXT NOT NULL DEFAULT '',
     participants TEXT[] NOT NULL DEFAULT '{}'
 );
+
+ALTER TABLE meeting_rooms ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_meeting_rooms ON meeting_rooms;
 
 CREATE TABLE IF NOT EXISTS meeting_transcripts (
     seq         BIGSERIAL PRIMARY KEY,
@@ -42,5 +50,7 @@ CREATE TABLE IF NOT EXISTS meeting_transcripts (
     content     TEXT NOT NULL DEFAULT '',
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE meeting_transcripts ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX idx_transcript_meeting ON meeting_transcripts (meeting_id);

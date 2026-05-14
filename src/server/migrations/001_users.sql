@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX idx_users_username ON users (username);
 CREATE INDEX idx_users_email ON users (email);
 CREATE INDEX idx_users_oidc ON users (oidc_subject) WHERE oidc_subject IS NOT NULL;
@@ -24,6 +26,8 @@ CREATE TABLE IF NOT EXISTS roles (
     permissions TEXT[] NOT NULL DEFAULT '{}',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
 
 -- Seed built-in roles.
 INSERT INTO roles (id, name, permissions) VALUES
@@ -36,6 +40,8 @@ CREATE TABLE IF NOT EXISTS revoked_tokens (
     jti        TEXT PRIMARY KEY,
     expires_at TIMESTAMPTZ NOT NULL
 );
+
+ALTER TABLE revoked_tokens ENABLE ROW LEVEL SECURITY;
 
 -- GC index for periodic cleanup of expired revocations.
 CREATE INDEX IF NOT EXISTS idx_revoked_tokens_exp ON revoked_tokens (expires_at);

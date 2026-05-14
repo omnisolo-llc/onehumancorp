@@ -8,5 +8,7 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
     UNIQUE(task_id, depends_on_task_id)
 );
 
+ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
+
 -- +goose Down
 DROP TABLE IF EXISTS task_dependencies;

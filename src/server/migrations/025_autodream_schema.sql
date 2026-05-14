@@ -7,3 +7,6 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
     source_mission_id TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE autodream_memories ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_autodream_memories ON autodream_memories;

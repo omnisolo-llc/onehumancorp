@@ -14,4 +14,6 @@ CREATE TABLE IF NOT EXISTS sub_agent_jobs (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE sub_agent_jobs ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX idx_jobs_runnable ON sub_agent_jobs (status, run_after) WHERE status = 'QUEUED';

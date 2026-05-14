@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS referrals (
 );
 
 ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS referrals_isolation_policy ON referrals;
+
+ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
 
 -- Note: Using 'app.current_tenant' as seen in db.rs or 'ohc.current_organization_id' from memory.
 -- Checking db.rs again: conn.execute("SET app.current_tenant = 'system'")

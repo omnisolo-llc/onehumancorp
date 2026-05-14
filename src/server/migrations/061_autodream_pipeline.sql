@@ -18,5 +18,8 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
     topic TEXT NOT NULL DEFAULT ''
 );
 
+ALTER TABLE autodream_memories ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_autodream_memories ON autodream_memories;
+
 CREATE INDEX IF NOT EXISTS idx_autodream_org ON autodream_memories(organization_id);
 CREATE INDEX IF NOT EXISTS idx_autodream_memories_embedding_cosine ON autodream_memories USING ivfflat (embedding vector_cosine_ops);

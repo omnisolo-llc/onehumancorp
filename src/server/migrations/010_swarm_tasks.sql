@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS swarm_tasks (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE swarm_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_swarm_tasks ON swarm_tasks;
+
 -- For autoDream Memory Embeddings
 CREATE TABLE IF NOT EXISTS swarm_long_term_memory (
     id UUID PRIMARY KEY,
@@ -24,3 +27,5 @@ CREATE TABLE IF NOT EXISTS swarm_long_term_memory (
     embedding VECTOR(1536),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE swarm_long_term_memory ENABLE ROW LEVEL SECURITY;

@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS ohc_tasks (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE ohc_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_ohc_tasks ON ohc_tasks;
+
 ALTER TABLE ohc_tasks ADD COLUMN IF NOT EXISTS parent_task_id TEXT;
 ALTER TABLE ohc_tasks ADD COLUMN IF NOT EXISTS workflow_state TEXT;
 

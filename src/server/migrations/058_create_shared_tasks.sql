@@ -14,6 +14,8 @@ CREATE TABLE tasks (
     FOREIGN KEY (parent_task_id) REFERENCES tasks(id)
 );
 
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX IF NOT EXISTS idx_tasks_organization_id ON tasks(organization_id);
 
 CREATE TABLE task_dependencies (
@@ -23,3 +25,5 @@ CREATE TABLE task_dependencies (
     FOREIGN KEY (task_id) REFERENCES tasks(id),
     FOREIGN KEY (depends_on_task_id) REFERENCES tasks(id)
 );
+
+ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;

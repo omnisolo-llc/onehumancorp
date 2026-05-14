@@ -9,3 +9,5 @@ CREATE TABLE IF NOT EXISTS hybrid_fs_sync_queue (
 );
 
 ALTER TABLE hybrid_fs_sync_queue ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE hybrid_fs_sync_queue ENABLE ROW LEVEL SECURITY;

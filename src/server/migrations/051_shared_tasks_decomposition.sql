@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
     proposed_content TEXT
 );
 
+ALTER TABLE shared_tasks_decomposition ENABLE ROW LEVEL SECURITY;
+
 CREATE TABLE IF NOT EXISTS state_machine_transitions (
     id TEXT PRIMARY KEY,
     task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
@@ -29,3 +31,5 @@ CREATE TABLE IF NOT EXISTS state_machine_transitions (
     agent_id TEXT,
     transitioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE state_machine_transitions ENABLE ROW LEVEL SECURITY;
