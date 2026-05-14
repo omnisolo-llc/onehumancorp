@@ -1,3 +1,4 @@
+pub mod compliance;
 pub use ::server_config as config;
 use serde_json::{Value, Map};
 use sqlx::{PgPool, query};
