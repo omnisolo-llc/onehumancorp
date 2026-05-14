@@ -11,8 +11,6 @@ pub struct QueuedJob {
     pub priority: i32,
     pub job_id: String,
     pub timestamp_ms: i64,
-    pub job_id: String,
-    pub timestamp_ms: i64,
     pub job: proto::JobDispatch,
     pub retries: u32,
 }
@@ -114,11 +112,3 @@ mod tests {
         assert_eq!(dq.dlq.read().await.len(), 1);
     }
 }
-
-impl PartialEq for QueuedJob {
-    fn eq(&self, other: &Self) -> bool {
-        self.job_id == other.job_id
-    }
-}
-
-impl Eq for QueuedJob {}
