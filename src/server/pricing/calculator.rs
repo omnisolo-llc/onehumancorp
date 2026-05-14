@@ -210,3 +210,100 @@ mod tests {
         assert_eq!(efficiency, 25.0); // 250 / 10
     }
 }
+
+// Transaction Fee Optimization Module
+// Goal: Analyze payment volume to recommend cheapest routing (e.g. ACH vs Stripe CC vs PayPal)
+pub struct PaymentRouter {
+    pub average_ticket_size: f64,
+    pub monthly_volume: f64,
+}
+
+impl PaymentRouter {
+    pub fn new(average_ticket_size: f64, monthly_volume: f64) -> Self {
+        Self { average_ticket_size, monthly_volume }
+    }
+
+    // Calculates theoretical Stripe CC fee (2.9% + 30c)
+    pub fn stripe_cc_fee(&self) -> f64 {
+        let transactions = self.monthly_volume / self.average_ticket_size;
+        let percentage_fee = self.monthly_volume * 0.029;
+        let fixed_fee = transactions * 0.30;
+        percentage_fee + fixed_fee
+    }
+
+    // Calculates theoretical ACH fee (0.8%, capped at $5)
+    pub fn ach_fee(&self) -> f64 {
+        let transactions = self.monthly_volume / self.average_ticket_size;
+        let mut total_fee = 0.0;
+
+        let tx_fee = self.average_ticket_size * 0.008;
+        let final_tx_fee = if tx_fee > 5.0 { 5.0 } else { tx_fee };
+
+        total_fee += final_tx_fee * transactions;
+        total_fee
+    }
+
+    pub fn get_recommended_routing(&self) -> &'static str {
+        let cc = self.stripe_cc_fee();
+        let ach = self.ach_fee();
+
+        // If CC fee is greater than ACH fee by more than 10%, heavily recommend ACH
+        if cc > ach * 1.10 {
+            "ACH/Bank Transfer"
+        } else {
+            "Credit Card" // Fallback to better UX for small differences
+        }
+    }
+
+    pub fn calculate_potential_savings(&self) -> f64 {
+        let cc = self.stripe_cc_fee();
+        let ach = self.ach_fee();
+
+        if cc > ach {
+            cc - ach
+        } else {
+            0.0
+        }
+    }
+}
+
+pub fn analyze_tier_upgrade_roi(current_cost: f64, new_tier_cost: f64, features_unlocked: usize) -> f64 {
+    let cost_diff = new_tier_cost - current_cost;
+    if cost_diff <= 0.0 {
+        return 100.0; // Infinite/immediate ROI if it's cheaper or same
+    }
+
+    // Heuristic: each feature unlocked brings ~$5 of value
+    let estimated_value_increase = features_unlocked as f64 * 5.0;
+
+    ((estimated_value_increase - cost_diff) / cost_diff) * 100.0
+}
+
+#[cfg(test)]
+mod payment_router_tests {
+    use super::*;
+
+    #[test]
+    fn test_high_ticket_prefers_ach() {
+        // High ticket ($1000) makes ACH (capped at $5) much better than CC ($29 + $0.30)
+        let router = PaymentRouter::new(1000.0, 100_000.0);
+        assert_eq!(router.get_recommended_routing(), "ACH/Bank Transfer");
+        assert!(router.calculate_potential_savings() > 2000.0);
+    }
+
+    #[test]
+    fn test_low_ticket_prefers_cc_for_ux() {
+        // Small ticket ($10) makes fees comparable, prefer CC for UX
+        let router = PaymentRouter::new(10.0, 1000.0);
+        assert_eq!(router.get_recommended_routing(), "Credit Card");
+    }
+
+    #[test]
+    fn test_analyze_tier_upgrade() {
+        let roi = analyze_tier_upgrade_roi(10.0, 20.0, 3);
+        // diff = 10
+        // value = 15
+        // roi = (15 - 10) / 10 * 100 = 50%
+        assert_eq!(roi, 50.0);
+    }
+}
