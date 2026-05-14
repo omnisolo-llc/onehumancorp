@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ResourceQuota
 metadata:
-  name: {{ include "ohc.fullname" . }}-resource-quota
+  name: {{ include "ohc.fullname" . }}-quota
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
