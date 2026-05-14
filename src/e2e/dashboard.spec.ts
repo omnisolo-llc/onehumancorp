@@ -18,7 +18,7 @@ test.describe('Dashboard Core', () => {
 
   test('should show welcome message', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Welcome back')).toBeVisible();
+    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
   });
 
   test('should show agents working message', async ({ page }) => {

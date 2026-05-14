@@ -14,7 +14,7 @@ test.describe('Dashboard UX Friction Fix Verification', () => {
 
   test('should show welcome message', async ({ page }) => {
     await page.goto('/?dashboard=1');
-    await expect(page.locator('text=Welcome back')).toBeVisible();
+    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
   });
 });
 

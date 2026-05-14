@@ -145,8 +145,7 @@ test.describe('Onboarding Wizard', () => {
     const viewChecklistBtn = page.locator('text="View Welcome Checklist →"');
     await viewChecklistBtn.click();
 
-    await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text="You\'re set up! Here\'s what to do next:"')).toBeVisible();
+    await expect(page.locator('text="You\'re set up! Here\'s what to do next:"')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text="✅ Business live"')).toBeVisible();
     await expect(page.locator('text="⬜ Add 3 more products"')).toBeVisible();
     await expect(page.locator('text="⬜ Connect Instagram"')).toBeVisible();

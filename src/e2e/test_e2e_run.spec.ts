@@ -323,7 +323,7 @@ test('verify checklist flow and integration', async ({ page }) => {
     }
 
     // Verify Welcome Checklist shows up
-    await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="You\'re set up! Here\'s what to do next:"')).toBeVisible({ timeout: 5000 });
 
     // Should route to WebsiteBuilder
     await page.click('text="Add 3 more products"');
@@ -378,7 +378,7 @@ test('verify checklist connects instagram routing', async ({ page }) => {
         await page.click('button:has-text("Go to Dashboard")');
     }
 
-    await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="You\'re set up! Here\'s what to do next:"')).toBeVisible({ timeout: 5000 });
 
     // Check routing
     await page.click('text="Connect Instagram"');
@@ -433,7 +433,7 @@ test('verify checklist share link routing', async ({ page }) => {
         await page.click('button:has-text("Go to Dashboard")');
     }
 
-    await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="You\'re set up! Here\'s what to do next:"')).toBeVisible({ timeout: 5000 });
 
     // Check routing
     await page.click('text="Share your link"');
@@ -488,7 +488,7 @@ test('verify checklist fully completed state', async ({ page }) => {
         await page.click('button:has-text("Go to Dashboard")');
     }
 
-    await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="You\'re set up! Here\'s what to do next:"')).toBeVisible({ timeout: 5000 });
 
     const checkboxes = page.locator('input[type="checkbox"]');
     const count = await checkboxes.count();
@@ -547,7 +547,7 @@ test('verify checklist completion progress', async ({ page }) => {
         await page.click('button:has-text("Go to Dashboard")');
     }
 
-    await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="You\'re set up! Here\'s what to do next:"')).toBeVisible({ timeout: 5000 });
 
     // Verify checklist items
     const checkboxes = page.locator('input[type="checkbox"]');

@@ -19,7 +19,7 @@ test.describe('Grow Business Flow', () => {
 
   test('should show welcome message on dashboard', async ({ page }) => {
     await page.goto('/?dashboard=1');
-    await expect(page.locator('text=Welcome back')).toBeVisible();
+    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
     await expect(page.locator('text=Your agents are working on your behalf')).toBeVisible();
   });
 });

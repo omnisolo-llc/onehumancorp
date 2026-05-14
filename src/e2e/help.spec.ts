@@ -26,7 +26,7 @@ test.describe('Help Center', () => {
   });
 
   test('should display welcome message', async ({ page }) => {
-    await expect(page.locator('text=Welcome back')).toBeVisible();
+    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
   });
 
   test('should display agents working message', async ({ page }) => {
