@@ -54,6 +54,19 @@ impl PromptCache {
         });
     }
 
+    pub fn truncate_context(&self, prompt: &str, max_tokens: usize) -> String {
+        let words: Vec<&str> = prompt.split_whitespace().collect();
+        if words.len() <= max_tokens {
+            return prompt.to_string();
+        }
+        let first_part = max_tokens / 5;
+        let last_part = max_tokens - first_part;
+        let mut truncated = words[..first_part].join(" ");
+        truncated.push_str(" ... ");
+        truncated.push_str(&words[(words.len() - last_part)..].join(" "));
+        truncated
+    }
+
     pub fn clear_expired(&self) {
         let mut cache = self.cache.lock().unwrap();
         let now = Instant::now();
