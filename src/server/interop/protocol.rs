@@ -59,7 +59,7 @@ impl InteropProtocol {
         }
 
         let handoff_msg = proto::StateHandoff {
-            source_mode: self.current_mode,
+            source_mode: 0,
             target_mode: 0,
             mission_id: mission_id.to_string(),
             tenant_id: tenant_id.to_string(),
@@ -184,7 +184,7 @@ impl InteropProtocol {
         let cancel = self.bus.subscribe(format!("system:health_ack:{}", self.node_id), handler).await?;
 
         let ping = proto::HealthPing {
-            current_mode: self.current_mode,
+            current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             source_node_id: self.node_id.clone(),
         };
