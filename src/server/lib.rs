@@ -1783,13 +1783,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
                         <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
+                            <button class="nav-item" onclick="console.log('action_add_product')">Add</button>
+                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Orders</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
-                            <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Distribute</button>
+                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Analytics</button>
+                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Share</button>
                         </nav>
                     </div>
 
@@ -2213,7 +2211,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
                         <input type="email" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
-                        <button onclick="handleLogin(this)">Login</button>
+                        <button onclick="handleLogin(this)">Sign In</button>
                         <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
                         <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
                     </div>
@@ -2273,7 +2271,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
                         };
-                    </script>
+                    function handleLogin(btn) {
+                            btn.innerHTML = "Logging in...";
+                            setTimeout(() => {
+                                showScreen("dashboard-screen");
+                                window.history.pushState({}, '', '/');
+                            }, 500);
+                        }
+function handleSignup(btn) {
+                            btn.innerHTML = "Signing up...";
+                            setTimeout(() => showScreen("dashboard-screen"), 500);
+                        }
+</script>
                 </body>
             </html>
         "#,

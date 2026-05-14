@@ -10,7 +10,7 @@ test.describe('Login Page', () => {
 
   test('should display login button', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.locator('button:has-text("Login")')).toBeVisible();
+    await expect(page.locator('button:has-text("Sign In")')).toBeVisible();
   });
 
   test('should have working show button', async ({ page }) => {

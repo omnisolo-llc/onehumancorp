@@ -24,7 +24,7 @@ test('lens audit: fully verify login error states', async ({ page }) => {
     await expect(page.locator('button:has-text("Use Google or Apple")').filter({ visible: true }).first()).toBeVisible();
 
     // Verify start business
-    await expect(page.locator('button:has-text("🚀 Start Business Setup")').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('button:has-text("Start Business Setup")').filter({ visible: true }).first()).toBeVisible();
 });
 
 test('lens audit: fully verify login mode toggling', async ({ page }) => {
@@ -76,7 +76,7 @@ test('lens audit: fully verify login sso flow', async ({ page }) => {
 test('lens audit: fully verify start business routing', async ({ page }) => {
     await page.goto('/');
 
-    await page.click('button:has-text("🚀 Start Business Setup")');
+    await page.click('button:has-text("Start Business Setup")');
 
     // Wait for the setup wizard modal/screen to open by checking for its contents
     await expect(page.locator('text="Your business, live in minutes."').filter({ visible: true }).first()).toBeVisible({ timeout: 5000 });
