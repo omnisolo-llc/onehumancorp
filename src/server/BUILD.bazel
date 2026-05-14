@@ -28,6 +28,7 @@ rust_library(
         "store.rs",
         "tasks.rs",
         "telemetry_test.rs",
+        "ui_assets.rs",
         "ultraplan.rs",
         "//src/server/api:srcs",
         "//src/server/autodream:srcs",

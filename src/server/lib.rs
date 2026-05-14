@@ -1599,57 +1599,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {
     let path = req.uri().path();
     let content = match path {
-        "/business-setup" => r#"
-            <!DOCTYPE html>
-            <html>
-                <head><title>OneHuman - Business Setup</title></head>
-                <body style="font-family: 'Outfit', sans-serif; background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0;">
-                    <nav style="position: absolute; top: 0; width: 100%; padding: 20px; display: flex; gap: 20px; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.05);">
-                        <a href="/" style="color: white; text-decoration: none;">Dashboard</a>
-                        <a href="/agents" style="color: white; text-decoration: none;">Agents</a>
-                    </nav>
-                    <div id="root" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border-radius: 20px; padding: 40px; border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);">
-                        <h1 style="margin-top: 0;">OneHuman</h1>
-                        <p id="wizard-text">Your business, live in minutes.</p>
-                        <input type="text" placeholder="Online Store" style="display: none; padding: 10px; border-radius: 5px; border: none; margin-bottom: 20px; width: 100%; background: rgba(255,255,255,0.1); color: white;" />
-                        <button id="next-btn" style="background: #4ecca3; border: none; padding: 10px 20px; border-radius: 5px; color: #1a1a2e; font-weight: bold; cursor: pointer;">Next</button>
-                    </div>
-                    <script>
-                        let step = 0;
-                        document.getElementById('next-btn').addEventListener('click', () => {
-                            step++;
-                            const text = document.getElementById('wizard-text');
-                            const input = document.querySelector('input[type="text"]');
-                            if (step === 1) {
-                                text.innerText = 'What is your business type?';
-                                input.style.display = 'block';
-                            } else if (step === 2) {
-                                text.innerText = 'What is your company name?';
-                                input.value = '';
-                            } else if (step === 3) {
-                                text.innerText = 'What do you sell';
-                                input.style.display = 'none';
-                            }
-                        });
-                    </script>
-                </body>
-            </html>
-        "#,
-        "/login" => r#"
-            <!DOCTYPE html>
-            <html>
-                <head><title>OneHuman - Login</title></head>
-                <body style="font-family: 'Outfit', sans-serif; background: #1a1a2e; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
-                    <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); padding: 40px; border-radius: 10px; width: 300px;">
-                        <h1 style="margin-top: 0;">Login</h1>
-                        <input type="email" placeholder="Email" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: none;" />
-                        <input type="password" placeholder="Password" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: none;" />
-                        <button style="width: 100%; padding: 10px; background: #4ecca3; border: none; border-radius: 5px; color: #1a1a2e; font-weight: bold;">Login</button>
-                        <button style="margin-top: 10px; background: none; border: none; color: #4ecca3; cursor: pointer;">Show</button>
-                    </div>
-                </body>
-            </html>
-        "#,
+        "/business-setup" => ui_assets::SETUP_HTML,
+        "/login" => ui_assets::LOGIN_HTML,
         "/agents" => r#"
             <!DOCTYPE html>
             <html>
@@ -1670,41 +1621,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 </body>
             </html>
         "#,
-        _ => r#"
-            <!DOCTYPE html>
-            <html>
-                <head>
-                    <title>OneHuman Dashboard</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
-                    <style>
-                        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
-                        nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
-                        main { padding: 40px; }
-                        .card { padding: 24px; margin-bottom: 20px; }
-                        h1 { font-weight: 600; color: #4ecca3; }
-                    </style>
-                </head>
-                <body>
-                    <nav class="glass">
-                        <a href="/" style="color: #4ecca3; text-decoration: none;">Dashboard</a>
-                        <a href="/agents" style="color: white; text-decoration: none;">Agents</a>
-                        <a href="/business-setup" style="color: white; text-decoration: none;">Setup</a>
-                    </nav>
-                    <main>
-                        <h1>OneHuman Dashboard</h1>
-                        <div class="card glass">
-                            <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
-                        </div>
-                    </main>
-                </body>
-            </html>
-        "#,
+        _ => ui_assets::DASHBOARD_HTML,
     };
     axum::response::Html(content)
 }
 
+pub mod ui_assets;
 pub mod tools;
 pub mod workers;
 // Validation dummy comment
