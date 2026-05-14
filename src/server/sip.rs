@@ -266,7 +266,54 @@ impl SipDB {
 
         Ok(())
     }
+
+    pub async fn handoff_mission_batch(&self, ids: Vec<&str>, blockers: &str) -> Result<usize, sqlx::Error> {
+        let mut processed = 0;
+        let mut tx = self.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
+
+        for id in ids {
+            let res = sqlx::query(
+                "UPDATE agent_missions
+                 SET status = 'blocked',
+                     mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '
+' || $1 END,
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE id = $2 AND tenant_id = $3"
+            )
+            .bind(blockers)
+            .bind(id)
+            .bind(&self.org_id)
+            .execute(&mut *tx)
+            .await?;
+            processed += res.rows_affected() as usize;
+        }
+
+        tx.commit().await?;
+        Ok(processed)
+    }
+
+    pub async fn revert_stuck_missions(&self, threshold_minutes: i64) -> Result<usize, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
+
+        let res = sqlx::query(
+            "UPDATE agent_missions
+             SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP
+             WHERE status = 'RUNNING' AND updated_at < (CURRENT_TIMESTAMP - interval '1 minute' * $1) AND tenant_id = $2"
+        )
+        .bind(threshold_minutes as f64)
+        .bind(&self.org_id)
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(res.rows_affected() as usize)
+    }
 }
+
+
+
 
 #[cfg(test)]
 mod tests {
@@ -512,5 +559,137 @@ mod tests {
         // Should error out gracefully with our dummy pool timeout instead of panicking
         assert!(res.is_err());
     }
-}
 
+    #[tokio::test]
+    async fn test_handoff_mission_batch_logic_success() {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(val) => val,
+            Err(_) => return,
+        };
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .max_connections(1)
+            .connect(&database_url)
+            .await;
+
+        if let Ok(pool) = pool {
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_missions (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    tenant_id TEXT,
+                    mission_log TEXT
+                )"
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            // Insert initial records
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                .bind("test_mission_batch_1")
+                .bind("PENDING")
+                .bind("{}")
+                .bind("test_org")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                .bind("test_mission_batch_2")
+                .bind("PENDING")
+                .bind("{}")
+                .bind("test_org")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            // Call handoff_mission_batch
+            let res = sip_db.handoff_mission_batch(vec!["test_mission_batch_1", "test_mission_batch_2"], "Missing dependencies").await;
+            assert!(res.is_ok());
+            assert_eq!(res.unwrap(), 2);
+
+            // Verify
+            let row = sqlx::query("SELECT status, mission_log FROM agent_missions WHERE id = 'test_mission_batch_1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+            let status: String = row.get("status");
+            let log: String = row.get("mission_log");
+
+            assert_eq!(status, "blocked");
+            assert!(log.contains("Missing dependencies"));
+
+            // Clean up
+            sqlx::query("DELETE FROM agent_missions WHERE id IN ('test_mission_batch_1', 'test_mission_batch_2')").execute(&pool).await.unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_revert_stuck_missions_success() {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(val) => val,
+            Err(_) => return,
+        };
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .max_connections(1)
+            .connect(&database_url)
+            .await;
+
+        if let Ok(pool) = pool {
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_missions (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    tenant_id TEXT,
+                    mission_log TEXT
+                )"
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            // Insert initial record with older updated_at
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP - interval '10 minutes') ON CONFLICT DO NOTHING")
+                .bind("test_mission_stuck")
+                .bind("RUNNING")
+                .bind("{}")
+                .bind("test_org")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            // Call revert_stuck_missions
+            let res = sip_db.revert_stuck_missions(5).await;
+            assert!(res.is_ok());
+            assert_eq!(res.unwrap(), 1);
+
+            // Verify
+            let row = sqlx::query("SELECT status FROM agent_missions WHERE id = 'test_mission_stuck'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+            let status: String = row.get("status");
+            assert_eq!(status, "FAILED");
+
+            // Clean up
+            sqlx::query("DELETE FROM agent_missions WHERE id = 'test_mission_stuck'").execute(&pool).await.unwrap();
+        }
+    }
+
+}
