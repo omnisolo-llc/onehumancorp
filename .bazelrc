@@ -1,4 +1,5 @@
 # Bazel configuration for MCP Any
+startup --output_user_root=/tmp/.bazel-cache
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
 # Provides remote cache, remote execution, and build event streaming.
