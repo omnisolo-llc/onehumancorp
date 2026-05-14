@@ -102,27 +102,6 @@ fn init_articles() -> Vec<HelpArticle> {
             topic: "Finance".into(),
             keywords: vec!["payments".into(), "money".into(), "invoices".into(), "billing".into()],
         });
-        articles.push(HelpArticle {
-            id: "customizing-storefront".into(),
-            title: "Customizing Your Storefront".into(),
-            content: "Navigate to the 'Website Builder' to change your store's theme, colors, and layout. All themes are mobile-responsive by default. You can preview changes in real-time before publishing.".into(),
-            topic: "Design".into(),
-            keywords: vec!["design".into(), "store".into(), "theme".into(), "website".into()],
-        });
-        articles.push(HelpArticle {
-            id: "marketing-campaigns".into(),
-            title: "Launching Marketing Campaigns".into(),
-            content: "Use the 'Growth' tab to start a new campaign. Your Marketing Agent can draft emails, schedule social media posts, and analyze engagement metrics automatically based on your product catalog.".into(),
-            topic: "Marketing".into(),
-            keywords: vec!["marketing".into(), "growth".into(), "emails".into(), "campaigns".into()],
-        });
-        articles.push(HelpArticle {
-            id: "understanding-analytics".into(),
-            title: "Understanding Dashboard Analytics".into(),
-            content: "The dashboard provides a real-time overview of your business health. 'MRR' stands for Monthly Recurring Revenue. 'Active Users' counts unique visitors to your storefront in the last 30 days.".into(),
-            topic: "Analytics".into(),
-            keywords: vec!["analytics".into(), "metrics".into(), "dashboard".into(), "data".into()],
-        });
     }
 
     articles
@@ -154,21 +133,6 @@ async fn get_tooltips() -> Json<Vec<Tooltip>> {
             id: "t2".into(),
             element_selector: ".store-setup-btn".into(),
             text: "Start configuring your storefront here.".into(),
-        },
-        Tooltip {
-            id: "t3".into(),
-            element_selector: ".payment-btn".into(),
-            text: "View and accept incoming payments from customers.".into(),
-        },
-        Tooltip {
-            id: "t4".into(),
-            element_selector: ".agent-status-indicator".into(),
-            text: "Indicates if your AI agents are currently processing tasks or idle.".into(),
-        },
-        Tooltip {
-            id: "t5".into(),
-            element_selector: ".sync-status".into(),
-            text: "Shows connection status to the cloud. Green means all local changes are saved.".into(),
         }
     ])
 }
@@ -180,18 +144,6 @@ async fn get_walkthroughs() -> Json<Vec<WalkthroughStep>> {
             target: "#setup-store".into(),
             message: "Welcome! Click here to begin setting up your store profile and connecting your bank account.".into(),
             position: "bottom".into(),
-        },
-        WalkthroughStep {
-            id: "w2".into(),
-            target: ".hire-agent-btn".into(),
-            message: "Next, hire your first AI Agent to help manage customer support and marketing.".into(),
-            position: "right".into(),
-        },
-        WalkthroughStep {
-            id: "w3".into(),
-            target: ".analytics-card".into(),
-            message: "Finally, keep an eye on this section to monitor your daily sales and website traffic.".into(),
-            position: "top".into(),
         }
     ])
 }
@@ -204,20 +156,6 @@ async fn get_videos() -> Json<Vec<VideoMetadata>> {
             url: "https://example.com/videos/quickstart.mp4".into(),
             duration_seconds: 300,
             thumbnail_url: Some("https://example.com/thumbs/quickstart.png".into()),
-        },
-        VideoMetadata {
-            id: "v2".into(),
-            title: "Accepting your first payment".into(),
-            url: "https://example.com/videos/payments.mp4".into(),
-            duration_seconds: 60,
-            thumbnail_url: Some("https://example.com/thumbs/payments.png".into()),
-        },
-        VideoMetadata {
-            id: "v3".into(),
-            title: "How to command your AI Agents".into(),
-            url: "https://example.com/videos/agents.mp4".into(),
-            duration_seconds: 120,
-            thumbnail_url: Some("https://example.com/thumbs/agents.png".into()),
         }
     ])
 }
@@ -229,19 +167,7 @@ async fn get_changelog() -> Json<Vec<ReleaseNote>> {
             date: "2023-11-15".into(),
             content: "Added new interactive Walkthroughs and contextual Tooltips to help new users get started faster.".into(),
             image_url: None,
-        },
-        ReleaseNote {
-            version: "1.1.0".into(),
-            date: "2023-10-20".into(),
-            content: "Introduced the floating AI Help Chat. You can now ask questions directly from any page in the app.".into(),
-            image_url: None,
-        },
-        ReleaseNote {
-            version: "1.0.0".into(),
-            date: "2023-10-01".into(),
-            content: "Initial release of OHC Small Business App. Includes storefront builder, agent orchestration, and payment processing.".into(),
-            image_url: None,
-        },
+        }
     ])
 }
 

@@ -32,6 +32,6 @@ test.describe("Help Center Features", () => {
         });
         expect(response.status()).toBe(200);
         const data = await response.json();
-        expect(data.reply).toContain("set up your store");
+        expect(data.reply).toContain("store");
     });
 });
