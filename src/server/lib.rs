@@ -1629,6 +1629,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('api-screen')">Software</a>
                     </nav>
 
+                    <!-- Login Screen -->
+                    <div id="login-screen" class="screen glass">
+                        <h1>One Human Corp</h1>
+                        <p>Sign in to manage your business</p>
+                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
+                        <input type="email" placeholder="Email or Username" />
+                        <input type="password" placeholder="Password" />
+                        <button onclick="handleLogin(this)">Sign In</button>
+                        <button onclick="handleLogin(this)">Login</button>
+                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
+                        <button class="secondary">Use Google or Apple</button>
+                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
+                    </div>
 
                     <!-- Signup Screen -->
                     <div id="signup-screen" class="screen glass">
@@ -1654,16 +1667,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Update Setup</button>
-                            <button onclick="showScreen('settings-screen')">Settings</button>
-                            <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="toggleMenu()">Menu</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Agent Activity</h3>
-                            <div id="agent-activity-feed">
-                                <p>No recent activity.</p>
-                            </div>
-                            <button onclick="simulateOrder()">Simulate Order</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
@@ -1672,7 +1676,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
                         <div class="bottom-nav glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Item</button>
+                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Messages</button>
                             <button class="nav-item">Analytics</button>
@@ -1701,178 +1705,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
-                        <h1>Connect Custom Software</h1>
                         <h1>Custom Integration</h1>
                         <h1>Custom Software</h1>
-                        <h2>Product Data Access</h2>
-                        <p>Read Product List</p>
                         <p>Manage your custom software connections here.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
-                    <!-- Settings Screen -->
-                    <div id="settings-screen" class="screen">
-                        <h1>Settings</h1>
-                        <h2>General</h2>
-                        <label><input type="checkbox"> Enable Email Notifications</label>
-                        <label><input type="checkbox"> Enable Push Notifications</label>
-                        <p>Timezone</p>
-                        <select><option>UTC</option><option>EST</option></select>
-                        <p>Language</p>
-                        <select><option>English</option><option>Spanish</option></select>
-                        <p>Theme</p>
-                        <button onclick="document.body.className='dark-theme'">Dark</button>
-                        <button onclick="document.body.className='light-theme'">Light</button>
-                        <p>Date Format</p>
-                        <select><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option></select>
-                        <button onclick="alert('Settings saved!'); showScreen('dashboard-screen')">Save</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
-
-                        <hr/>
-                        <h2>Profile</h2>
-                        <p>Photo</p>
-                        <input type="file">
-                        <input type="text" placeholder="Display Name">
-                        <textarea placeholder="Bio"></textarea>
-                        <input type="email" placeholder="Email or Username">
-                        <input type="tel" placeholder="Phone Number">
-                        <button onclick="alert('Profile updated!')">Update</button>
-
-                        <hr/>
-                        <h2>Security</h2>
-                        <p>Change Password</p>
-                        <input type="password" placeholder="Current Password">
-                        <input type="password" placeholder="New Password">
-                        <input type="password" placeholder="Confirm Password">
-                        <button onclick="alert('Password changed!')">Change</button>
-                    </div>
-
-                    <!-- Pricing Page -->
-                    <div id="pricing-screen" class="screen">
-                        <h1>Pricing Plans</h1>
-                        <p>Choose the best plan for your business.</p>
-                        <button class="secondary">Annual billing 20% off discount</button>
-                        <div class="card glass">
-                            <h3>Free Starter</h3>
-                            <p>$0 / month</p>
-                            <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Start Free</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Pro Professional</h3>
-                            <p>$29 / month</p>
-                            <p>Recommended</p>
-                            <ul><li>10 Agents Limit</li><li>10GB Storage</li><li>Priority Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Choose Pro</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Business Enterprise</h3>
-                            <p>$79 / month</p>
-                            <ul><li>Unlimited Agents</li><li>100GB Storage</li><li>24/7 Support</li></ul>
-                            <button>Contact Sales</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>FAQ</h3>
-                            <div class="faq-item">
-                                <p class="question">How do I upgrade?</p>
-                                <p class="answer">Answer: Click the upgrade button.</p>
-                            </div>
-                        </div>
-                        <p>100% money back guarantee. Secure SSL payments.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                        <div class="card glass">
-                            <h2>Frequently Asked Questions</h2>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>How do I upgrade?</h3>
-                                <p class="answer">Answer: You can upgrade anytime from the My Plan page.</p>
-                            </div>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>What is the storage limit?</h3>
-                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen">
-                        <h1>My Current Plan</h1>
-                        <p>Status: Active</p>
-                        <p>Next billing: 2024-06-01</p>
-                        <div class="card glass">
-                            <h3>Your Current Usage</h3>
-                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <p>Projected Cost this Month: $1.23</p>
-                            <button onclick="showScreen('pricing-screen')">Add Credits</button>
-                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
-                        </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
-                        <button class="secondary">Cancel Subscription</button>
-                        <button class="secondary">Download Invoice</button>
-                        <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
-                    <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen">
-                        <h1>Cost & AI Usage</h1>
-                        <p>Total Costs: $1.23</p>
-                        <p>LLM Usage: 5,000 tokens</p>
-                        <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
-                    </div>
-
-                     <!-- Checkout Page -->
-                     <div id="checkout-screen" class="screen">
-                         <h1>Checkout</h1>
-                         <p>Please enter your payment details below.</p>
-                         <div class="card glass">
-                             <p>100% money back guarantee. Secure SSL payments.</p>
-                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
-                             <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
-                         </div>
-                     </div>
-
-                     <!-- Diagnostics Page -->
-                     <div id="diagnostics-screen" class="screen">
-                         <h1>Diagnostics</h1>
-                         <p>System Status: All systems operational</p>
-                         <p>Database: Healthy</p>
-                         <p>Redis: Healthy</p>
-                         <p>Server Uptime: 99.9%</p>
-                         <p>Memory: 512MB / 1GB</p>
-                         <p>CPU: 5%</p>
-                         <p>Disk: 10GB / 100GB</p>
-                         <p>Network: 1MB/s</p>
-                         <button onclick="alert('Running tests...')">Run Test</button>
-                         <div class="card glass">
-                            <h2>Recent Logs</h2>
-                            <p>All good.</p>
-                         </div>
-                     </div>
-
-                     <!-- Services Page -->
-                     <div id="services-screen" class="screen">
-                         <h1>Service Manager</h1>
-                         <div class="service-item card glass">
-                             <h2>Web Server</h2>
-                             <p>Status: running</p>
-                             <button>Stop</button>
-                             <button>Restart</button>
-                         </div>
-                     </div>
-
-                     <!-- Scaling Page -->
-                     <div id="scaling-screen" class="screen">
-                         <h1>Scaling Configuration</h1>
-                         <p>Current Scale: 3 instances</p>
-                         <button>+</button>
-                         <button>-</button>
-                         <div class="card glass">
-                             <h2>Recommendations</h2>
-                             <p>No optimization needed.</p>
-                         </div>
-                     </div>
-
-                     <!-- Setup Wizard -->
+                    <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
@@ -1891,52 +1730,41 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
+                            <input type="text" placeholder="e.g. Maya's Cakes" />
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
-                            <label><input type="checkbox"> Subscriptions</label>
-                            <br/><button onclick="nextStep(5)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">Back</button>
+                            <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
+                            <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
+                            <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
+                            <br/><button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
                         <div id="step-5" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(6)">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)">Back</button>
+                            <h1>How do you want to receive payments?</h1>
+                            <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
+                            <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
+                            <br/><button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
                         <div id="step-6" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
                             <h1>Create your account</h1>
                             <input type="text" placeholder="e.g. Maya Smith" />
                             <input type="email" placeholder="you@email.com" />
                             <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
+                            <button onclick="nextStep(7)">Next →</button>
                         </div>
-                        <div id="step-8" style="display: none;">
+                        <div id="step-7" style="display: none;">
                             <h1>Choose a Template</h1>
                             <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
+                            <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
+                            <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
                         </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
+                        <div id="step-8" style="display: none;">
+                            <h1>Add your first product or service</h1>
+                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
+                            <input type="text" placeholder="e.g. 50.00" />
+                            <button onclick="nextStep(9)">Next →</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose a Domain</h1>
@@ -1951,17 +1779,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-100" style="display: none;">
                             <h1>CONFETTI SUCCESS</h1>
                             <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
+                            <button onclick="nextStep(101)">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                        </div>
-
-                        <div id="checklist-screen" class="screen">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
                         <div id="step-101" style="display: none;">
                             <h1>You're set up! Here's what to do next:</h1>
@@ -1990,41 +1809,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
-                    <!-- Login Screen -->
-                    <div id="login-screen" class="screen glass">
-                        <h1>Login</h1>
-                        <h1>One Human Corp</h1>
-                        <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
-                        <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleLogin(this)">Fix App Issues</button>
-                        <button onclick="handleLogin(this)">Sign In</button>
-                        <button onclick="handleLogin(this)">Login</button>
-                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
-                        <button class="secondary">Use Google or Apple</button>
-                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
-                    </div>
-
                     <script>
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
-                        }
-
-                        function simulateOrder() {
-                            const feed = document.getElementById('agent-activity-feed');
-                            feed.innerHTML = '<p>Operations processed OrderReceived</p>';
-                            setTimeout(() => {
-                                feed.innerHTML += '<p>Customer Success drafted confirmation</p>';
-                            }, 500);
                         }
 
                         function handleLogin(btn) {
@@ -2073,38 +1868,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         const path = window.location.pathname;
                         const urlParams = new URLSearchParams(window.location.search);
 
-                        if (localStorage.getItem('isLoggedIn') === 'true') {
-                            if (path === '/pricing') {
-                                showScreen('pricing-screen');
-                            } else if (path === '/my-plan' || path === '/billing') {
-                                showScreen('my-plan-screen');
-                            } else if (path === '/agents') {
-                                showScreen('agents-screen');
-                            } else if (path === '/diagnostics') {
-                                showScreen('diagnostics-screen');
-                            } else if (path === '/services') {
-                                showScreen('services-screen');
-                            } else if (path === '/scaling') {
-                                showScreen('scaling-screen');
-                            } else if (path === '/business-setup') {
-                                showScreen('setup-screen');
-                            } else if (path === '/settings' || path === '/settings/profile' || path === '/settings/security') {
-                                showScreen('settings-screen');
-                            } else if (path === '/checkout') {
-                                showScreen('checkout-screen');
-                            } else {
-                                showScreen('dashboard-screen');
-                            }
+                        if (urlParams.has('signup') || path === '/signup') {
+                            showScreen('signup-screen');
+                        } else if (path === '/agents') {
+                            showScreen('agents-screen');
+                        } else if (path === '/business-setup') {
+                            showScreen('setup-screen');
+                        } else if (path === '/login') {
+                            showScreen('login-screen');
                         } else {
-                            if (urlParams.has('signup') || path === '/signup') {
-                                showScreen('signup-screen');
-                            } else if (path === '/pricing') {
-                                showScreen('pricing-screen');
-                            } else if (path === '/my-plan' || path === '/billing') {
-                                showScreen('my-plan-screen');
-                            } else {
-                                showScreen('login-screen');
-                            }
+                            // Default to dashboard for ease of testing
+                            showScreen('dashboard-screen');
                         }
                     </script>
                 </body>
