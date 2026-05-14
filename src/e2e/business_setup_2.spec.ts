@@ -171,7 +171,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     // Account
     await page.fill('input[placeholder="e.g. Maya Smith"]', "Maya");
     await page.fill('input[placeholder="you@email.com"]', "maya@example.com");
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( "securepassword");
+    await page.locator('input[type="password"]').first().fill( "securepassword");
     await page.click('text=Next');
 
     // Template
@@ -213,7 +213,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
 
     await page.fill('input[placeholder="e.g. Maya Smith"]', "Carlos");
     await page.fill('input[placeholder="you@email.com"]', "carlos@example.com");
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( "securepassword");
+    await page.locator('input[type="password"]').first().fill( "securepassword");
     await page.click('text=Next');
 
     await page.click('text=🔥 Bold');
@@ -245,7 +245,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
 
     await page.fill('input[placeholder="e.g. Maya Smith"]', "Priya");
     await page.fill('input[placeholder="you@email.com"]', "priya@example.com");
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( "securepassword");
+    await page.locator('input[type="password"]').first().fill( "securepassword");
     await page.click('text=Next');
 
     await page.click('text=✨ Modern');
@@ -280,7 +280,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
 
     await page.fill('input[placeholder="e.g. Maya Smith"]', "Leo");
     await page.fill('input[placeholder="you@email.com"]', "leo@example.com");
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( "securepassword");
+    await page.locator('input[type="password"]').first().fill( "securepassword");
     await page.click('text=Next');
 
     await page.click('text=🔥 Bold');
@@ -313,7 +313,7 @@ test.describe('E2E Onboarding Persona Journeys', () => {
 
     await page.fill('input[placeholder="e.g. Maya Smith"]', "Fatima");
     await page.fill('input[placeholder="you@email.com"]', "fatima@example.com");
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( "securepassword");
+    await page.locator('input[type="password"]').first().fill( "securepassword");
     await page.click('text=Next');
 
     await page.click('text=✨ Modern');
@@ -348,7 +348,7 @@ test.describe('E2E Onboarding Persona Journeys - Portfolio', () => {
 
     await page.fill('input[placeholder="e.g. Maya Smith"]', "Alex");
     await page.fill('input[placeholder="you@email.com"]', "alex@example.com");
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( "securepassword");
+    await page.locator('input[type="password"]').first().fill( "securepassword");
     await page.click('text=Next');
 
     await page.click('text=✨ Modern');
