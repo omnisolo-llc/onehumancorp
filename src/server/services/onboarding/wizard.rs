@@ -92,4 +92,13 @@ mod tests {
 
         fs::remove_dir_all(".ohc-local-data").unwrap();
     }
+
+    #[test]
+    fn test_save_and_get_onboarding_state() {
+        let w = InteractiveWizard::new();
+        let state = r#"{"step": 1}"#;
+        assert!(w.save_onboarding_state("org1", "user1", 1, state).is_ok());
+        let fetched_state = w.get_onboarding_state("org1").unwrap();
+        assert!(fetched_state.contains("step"));
+    }
 }

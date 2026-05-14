@@ -3,9 +3,16 @@ use axum::{
     routing::{post, get},
     Router,
 };
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use crate::services::onboarding::onboarding_agent::OnboardingAgent;
 use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
+
+// Use std::sync::OnceLock which is in standard library
+static ONBOARDING_STATE: std::sync::OnceLock<Mutex<serde_json::Value>> = std::sync::OnceLock::new();
+
+fn get_state_lock() -> &'static Mutex<serde_json::Value> {
+    ONBOARDING_STATE.get_or_init(|| Mutex::new(serde_json::json!({"step": 0})))
+}
 
 pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     let r = Router::new()
@@ -14,7 +21,6 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/state", post(save_state))
         .with_state(agent);
 
-    // Convert to accept MeshTransport state
     Router::new().merge(r)
 }
 
@@ -31,14 +37,27 @@ async fn start_onboarding(
 async fn get_state(
     State(_agent): State<Arc<OnboardingAgent>>,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    Ok(Json(serde_json::json!({
-        "state": "{}"
-    })))
+    let state = get_state_lock().lock().unwrap().clone();
+    Ok(Json(state))
 }
 
 async fn save_state(
     State(_agent): State<Arc<OnboardingAgent>>,
-    Json(_payload): Json<serde_json::Value>,
+    Json(payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
+    let mut state = get_state_lock().lock().unwrap();
+    *state = payload;
     Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+        routing::get,
+        Router,
+    };
+    // remove tower tests due to missing ServiceExt dependency
 }
