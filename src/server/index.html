@@ -686,15 +686,17 @@
 
                             if (typeof step === "number") {
 
-                                document.querySelectorAll("#setup-screen > div").forEach(el => { if (el.id) el.style.display = "none"; });
+                                document.querySelectorAll("#setup-screen > div").forEach(el => { if (el.id && el.id.startsWith("step-")) el.style.display = "none"; });
 
                                 document.getElementById("step-" + step).style.display = "block";
+                                console.log("Showing step", step);
 
                             } else {
 
-                                document.querySelectorAll("#setup-screen > div").forEach(el => { if (el.id) el.style.display = "none"; });
+                                document.querySelectorAll("#setup-screen > div").forEach(el => { if (el.id && el.id.startsWith("step-")) el.style.display = "none"; });
 
                                 document.getElementById("step-" + step).style.display = "block";
+                                console.log("Showing step", step);
 
                             }
 
@@ -740,7 +742,9 @@
 
                             if (pathMap[id]) {
                                 if (window.location.protocol !== "file:") {
+                                if (window.location.protocol !== "file:") {
                                 window.history.pushState({}, '', pathMap[id]);
+                            }
                             }
                             }
 
