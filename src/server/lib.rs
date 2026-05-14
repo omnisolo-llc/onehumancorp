@@ -20,6 +20,8 @@ pub mod queue;
 pub mod domain;
 pub use ::server_pricing as pricing;
 pub mod analytics;
+#[cfg(test)]
+pub mod compliance_test;
 pub use ::server_telemetry as telemetry;
 #[cfg(test)]
 pub mod telemetry_test;

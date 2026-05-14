@@ -214,6 +214,12 @@ pub fn redact_interface_pii(val: Value) -> Value {
 
 pub fn is_sensitive_key(key: &str) -> bool {
     let k = key.to_lowercase();
+
+    // Explicitly preserve infrastructure IDs for multi-tenant attribution
+    if k == "tenant_id" || k == "organization_id" {
+        return false;
+    }
+
     k.contains("password") ||
     k.contains("secret") ||
     k.contains("key") ||
@@ -227,13 +233,12 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("address") ||
     k.contains("name") ||
     k.contains("pii") ||
-    k.contains("tenant_id") ||
-    k.contains("organization_id") ||
     k.contains("session_id") ||
     k.contains("payload") ||
     k.contains("credit") ||
     k.contains("card") ||
     k.contains("cvv") ||
+    k.contains("cvc") ||
     k.contains("dob") ||
     k.contains("birth") ||
     k.contains("passport") ||
@@ -243,7 +248,11 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("billing") ||
     k.contains("ip_address") ||
     k.contains("mac_address") ||
-    k.contains("geolocation")
+    k.contains("geolocation") ||
+    k.contains("iban") ||
+    k.contains("swift") ||
+    k.contains("tax_id") ||
+    k.contains("social_security")
 }
 
 pub fn is_email(s: &str) -> bool {
