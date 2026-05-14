@@ -119,7 +119,6 @@ impl DB {
             if let Some(path_str) = path_str_opt {
                 let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
                 if !db_path.exists() {
-                    let _ = std::fs::File::create(&db_path);
                     #[cfg(unix)]
                     {
                         use std::os::unix::fs::OpenOptionsExt;
@@ -128,6 +127,10 @@ impl DB {
                             .create(true)
                             .mode(0o600)
                             .open(&db_path);
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        let _ = std::fs::File::create(&db_path);
                     }
                 }
             }
