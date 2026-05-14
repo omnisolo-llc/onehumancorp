@@ -1,3 +1,11 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- ✍️ Scribe: Deployed Comprehensive In-App Help Center and Contextual Tooltip Registry for non-technical users
+
+### Privacy/Offline Improvements
+- ✍️ Scribe: Shipped Local-First Interactive Walkthroughs and AI Proxy Documentation
+
 # release_notes.md
 
 ## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)

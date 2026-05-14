@@ -1,0 +1,22 @@
+{
+  "global_nav": {
+    "help_button": "Need help? Click here to search our guides or talk to our support agent.",
+    "dashboard_link": "Return to your main overview to see sales, tasks, and alerts.",
+    "settings": "Manage your account, billing, and advanced features."
+  },
+  "store_setup": {
+    "add_product_btn": "Click here to add a new item or service you want to sell.",
+    "product_name": "What is the name of this product? Keep it short and clear.",
+    "product_price": "How much does this cost? You can change this later.",
+    "product_image": "Upload a photo. Clear, well-lit photos help sell your products better."
+  },
+  "ai_agents": {
+    "activate_support": "Turn this on to have our AI answer basic customer questions automatically.",
+    "activate_sales": "Turn this on to have our AI suggest products to visitors.",
+    "upload_knowledge": "Upload menus, policies, or guides here so the AI learns how to run your business."
+  },
+  "payments": {
+    "connect_bank": "Link your bank account to receive money from your sales.",
+    "accept_cards": "Turn this on to allow customers to pay with credit or debit cards online."
+  }
+}
