@@ -47,7 +47,7 @@ fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
     }
     ip.is_loopback() || ip.is_unspecified() || ip.is_multicast() ||
     match ip {
-        std::net::IpAddr::V4(ipv4) => ipv4.is_private() || ipv4.is_link_local(),
+        std::net::IpAddr::V4(ipv4) => ipv4.is_private() || ipv4.is_link_local() || ipv4.is_broadcast() || ipv4.octets()[0] == 0,
         std::net::IpAddr::V6(ipv6) => ipv6.is_loopback() || ipv6.is_unspecified(),
     }
 }
@@ -90,6 +90,7 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
     
     let (host, ip) = validate_url_and_get_ip(&disc_url).await?;
     let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
         .resolve(&host, std::net::SocketAddr::new(ip, if disc_url.starts_with("https") { 443 } else { 80 }))
         .build()
         .map_err(|e| e.to_string())?;
@@ -104,6 +105,7 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
         
     let (jwks_host, jwks_ip) = validate_url_and_get_ip(&disc.jwks_uri).await?;
     let jwks_client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
         .resolve(&jwks_host, std::net::SocketAddr::new(jwks_ip, if disc.jwks_uri.starts_with("https") { 443 } else { 80 }))
         .build()
         .map_err(|e| e.to_string())?;
