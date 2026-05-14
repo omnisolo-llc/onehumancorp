@@ -30,6 +30,9 @@ echo -e "${DIM}[3/4] Launching cloud backend...${RESET}"
 export OHC_MULTITENANT=true
 export OHC_HEADLESS=true
 export OHC_SOURCE_MODE=cloud
+export LOG_FORMAT="json"
+export LOG_LEVEL="info"
+export RUST_LOG="info"
 
 echo -e "${DIM}[4/4] Setting up local Kubernetes context...${RESET}"
 bash deploy/setup_k8s.sh || true
