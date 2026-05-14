@@ -12,16 +12,9 @@ async fn setup_db() -> Option<(PgPool, Uuid)> {
     let tenant_id_clone = tenant_id.clone();
 
     let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-        .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
         .acquire_timeout(Duration::from_millis(50))
-        .before_acquire(move |conn, _meta| {
-            let t_id = tenant_id_clone.clone();
-            Box::pin(async move {
-                use sqlx::Executor;
-                conn.execute(format!("SET app.current_tenant_id = '{}'", t_id).as_str()).await?;
-                Ok(true)
-            })
-        })
+
         .connect_lazy(&database_url)
         .ok()?;
 
@@ -75,7 +68,10 @@ async fn test_builder_db_crud() {
     assert_eq!(reordered_blocks[1].id, block1.id);
 
     // Clean up
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
+    let mut tx = pool.begin().await.unwrap();
+    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await.unwrap();
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&mut *tx).await;
+    tx.commit().await.unwrap();
 }
 
 #[tokio::test]
@@ -97,7 +93,10 @@ async fn test_builder_jobs() {
 
     let _sites = db::list_sites(&pool, tenant_id).await.expect("Failed to list sites");
     // Ensure cleanup
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
+    let mut tx = pool.begin().await.unwrap();
+    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await.unwrap();
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&mut *tx).await;
+    tx.commit().await.unwrap();
 }
 
 #[tokio::test]
@@ -193,7 +192,10 @@ async fn test_builder_api() {
     assert_eq!(res.status(), 202); // ACCEPTED
 
     // Clean up
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
+    let mut tx = pool.begin().await.unwrap();
+    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await.unwrap();
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&mut *tx).await;
+    tx.commit().await.unwrap();
 }
 
 
@@ -269,5 +271,8 @@ async fn test_builder_generate_and_publish_draft() {
     assert_eq!(site.domain.as_deref(), Some("handyman-draft.com"));
 
     // Clean up
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
+    let mut tx = pool.begin().await.unwrap();
+    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await.unwrap();
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&mut *tx).await;
+    tx.commit().await.unwrap();
 }

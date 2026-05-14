@@ -38,9 +38,12 @@ impl AgentMemoryPipeline {
     }
 
     pub async fn process_session_data(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let mut tx = self.db.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
         let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
-            .fetch_all(&self.db.pool)
+            .fetch_all(&mut *tx)
             .await?;
+        tx.commit().await?;
 
         for row in rows {
             use sqlx::Row;
@@ -71,6 +74,8 @@ impl AgentMemoryPipeline {
                         .await?;
                 }
                 DbStore::Postgres => {
+                    let mut tx = self.db.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
                     sqlx::query("INSERT INTO agent_memory_embeddings (id, organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
                         .bind(mem_id)
                         .bind("system")
@@ -78,15 +83,19 @@ impl AgentMemoryPipeline {
                         .bind("SESSION_DATA")
                         .bind(&context_data)
                         .bind(&emb_str)
-                        .execute(&self.db.pool)
+                        .execute(&mut *tx)
                         .await?;
+                    tx.commit().await?;
                 }
             }
 
+            let mut tx = self.db.pool.begin().await?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
             sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
                 .bind(&session_id)
-                .execute(&self.db.pool)
+                .execute(&mut *tx)
                 .await?;
+            tx.commit().await?;
         }
 
         Ok(())
@@ -124,6 +133,8 @@ impl AgentMemoryPipeline {
                                     .await?;
                             }
                             DbStore::Postgres => {
+                                let mut tx = self.db.pool.begin().await?;
+                                ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
                                 sqlx::query("INSERT INTO agent_memory_embeddings (id, organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
                                     .bind(mem_id)
                                     .bind("system")
@@ -131,8 +142,9 @@ impl AgentMemoryPipeline {
                                     .bind("FS_MEMORY")
                                     .bind(&content)
                                     .bind(&emb_str)
-                                    .execute(&self.db.pool)
+                                    .execute(&mut *tx)
                                     .await?;
+                                tx.commit().await?;
                             }
                         }
 
@@ -176,7 +188,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_memory_pipeline_sqlite() {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://dummy").unwrap();
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://dummy").unwrap();
         let db_mock = Arc::new(DB { pool: pg_pool, store: DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect_lazy("sqlite::memory:").unwrap()) });
         let _pipe = AgentMemoryPipeline::new(db_mock, Arc::new(MockEmbeddingApi { succeeds: true }));
         assert!(true);
@@ -191,9 +203,9 @@ mod tests {
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
             .acquire_timeout(std::time::Duration::from_millis(50))
-            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) })
+
             .connect(database_url)
             .await;
 
@@ -204,25 +216,46 @@ mod tests {
 
         let db = Arc::new(DB { pool: pool.clone(), store: DbStore::Postgres });
 
-        sqlx::query("DELETE FROM agent_session_data").execute(&pool).await.unwrap();
+        let mut tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.unwrap();
+        sqlx::query("DELETE FROM agent_session_data").execute(&mut *tx).await.unwrap();
+        tx.commit().await.unwrap();
 
         // Ensure table exists for testing since it uses new schema
-        sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;").execute(&pool).await.unwrap_or(sqlx::postgres::PgQueryResult::default());
-        sqlx::query("CREATE TABLE IF NOT EXISTS agent_memory_embeddings (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), organization_id VARCHAR NOT NULL, agent_id VARCHAR NOT NULL, memory_type VARCHAR NOT NULL, content TEXT NOT NULL, embedding vector(1536), created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);").execute(&pool).await.unwrap_or(sqlx::postgres::PgQueryResult::default());
-        sqlx::query("DELETE FROM agent_memory_embeddings").execute(&pool).await.unwrap();
+        let mut tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.unwrap();
+        sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;").execute(&mut *tx).await.unwrap_or(sqlx::postgres::PgQueryResult::default());
+        tx.commit().await.unwrap();
+        let mut tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_memory_embeddings (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), organization_id VARCHAR NOT NULL, agent_id VARCHAR NOT NULL, memory_type VARCHAR NOT NULL, content TEXT NOT NULL, embedding vector(1536), created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);").execute(&mut *tx).await.unwrap_or(sqlx::postgres::PgQueryResult::default());
+        tx.commit().await.unwrap();
+        let mut tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.unwrap();
+        sqlx::query("DELETE FROM agent_memory_embeddings").execute(&mut *tx).await.unwrap();
+        tx.commit().await.unwrap();
 
+        let mut tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.unwrap();
         sqlx::query("INSERT INTO agent_session_data (session_id, agent_id, context_data) VALUES ('sess_pg_mem', 'agent1', 'some context pg mem');")
-            .execute(&pool)
+            .execute(&mut *tx)
             .await
             .unwrap();
+        tx.commit().await.unwrap();
 
         let pipeline = AgentMemoryPipeline::new(db.clone(), Arc::new(MockEmbeddingApi { succeeds: true }));
         pipeline.run().await.unwrap();
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM agent_session_data WHERE session_id = 'sess_pg_mem'").fetch_one(&pool).await.unwrap();
+        let mut tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.unwrap();
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM agent_session_data WHERE session_id = 'sess_pg_mem'").fetch_one(&mut *tx).await.unwrap();
+        tx.commit().await.unwrap();
         assert_eq!(count.0, 0);
 
-        let mem_count: (i64,) = sqlx::query_as("SELECT count(*) FROM agent_memory_embeddings WHERE content = 'some context pg mem'").fetch_one(&pool).await.unwrap();
+        let mut tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.unwrap();
+        let mem_count: (i64,) = sqlx::query_as("SELECT count(*) FROM agent_memory_embeddings WHERE content = 'some context pg mem'").fetch_one(&mut *tx).await.unwrap();
+        tx.commit().await.unwrap();
         assert_eq!(mem_count.0, 1);
     }
 }

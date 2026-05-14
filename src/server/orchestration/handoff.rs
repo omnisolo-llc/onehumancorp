@@ -188,13 +188,7 @@ mod tests {
 
         let db = Arc::new(DB {
             pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-                .after_release(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("DISCARD ALL").await?;
-                        Ok(true)
-                    })
-                })
+
                 .connect_lazy("postgres://localhost/dummy")
                 .unwrap(),
             store: DbStore::Sqlite(pool.clone()),
@@ -287,13 +281,7 @@ mod tests {
 
         let db = Arc::new(DB {
             pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-                .after_release(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("DISCARD ALL").await?;
-                        Ok(true)
-                    })
-                })
+
                 .connect_lazy("postgres://localhost/dummy")
                 .unwrap(),
             store: DbStore::Sqlite(pool.clone()),
@@ -430,13 +418,7 @@ mod tests {
 
         let db = Arc::new(DB {
             pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-                .after_release(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("DISCARD ALL").await?;
-                        Ok(true)
-                    })
-                })
+
                 .connect_lazy("postgres://localhost/dummy")
                 .unwrap(),
             store: DbStore::Sqlite(pool.clone()),

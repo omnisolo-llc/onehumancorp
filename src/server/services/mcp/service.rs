@@ -81,12 +81,13 @@ impl McpService for MyMcpService {
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
 
         let mut req = request.into_inner();
+
         // OVERRIDE the request body's spiffe_id with the one from the authenticated session
         // to prevent multi-tenant safety issue where tenant_id is read from request body
         if !spiffe_id_str.is_empty() {
             req.spiffe_id = spiffe_id_str.to_string();
         }
-        
+
         if req.tool_id.is_empty() {
             return Err(Status::invalid_argument("toolId is required"));
         }
@@ -320,7 +321,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_missions_unauthenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
@@ -338,7 +339,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_context_unauthenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
@@ -361,7 +362,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_missions_authenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
@@ -381,7 +382,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_context_authenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
