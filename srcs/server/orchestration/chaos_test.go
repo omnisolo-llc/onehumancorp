@@ -22,7 +22,7 @@ func (f *faultInjectingCloudDB) CreateTask(ctx context.Context, task *SharedTask
 	return nil
 }
 
-func (f *faultInjectingCloudDB) GetTask(ctx context.Context, id string) (*SharedTask, error) {
+func (f *faultInjectingCloudDB) GetTask(ctx context.Context, id string, tenantID string) (*SharedTask, error) {
 	if f.fails {
 		return nil, errors.New("simulated network failure")
 	}

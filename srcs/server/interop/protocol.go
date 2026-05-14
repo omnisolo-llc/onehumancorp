@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	interoppb "onehumancorp/srcs/server/pb/interop"
+	interoppb "onehumancorp/srcs/server/pb"
 )
 
 type InteropProtocol struct {
