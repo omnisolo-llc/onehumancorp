@@ -864,6 +864,178 @@ mod tests {
         assert!(!received.load(Ordering::SeqCst));
     }
 
+
+    #[tokio::test]
+    async fn test_interop_listen_for_job_status_success() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+
+        let protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let handler = Box::new(move |update: proto::JobStatusUpdate| {
+            if update.status == "completed" && update.tenant_id == "tenant_1" {
+                rx.store(true, Ordering::SeqCst);
+            }
+        });
+
+        let _cancel = protocol_server.listen_for_job_status("job_status_123", handler).await.unwrap();
+
+        // Send a job status update
+        let update = proto::JobStatusUpdate {
+            job_id: "job_status_123".to_string(),
+            tenant_id: "tenant_1".to_string(),
+            status: "completed".to_string(),
+            details_payload: vec![],
+            timestamp_ms: 1000,
+        };
+
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        update.encode(&mut buf).unwrap();
+
+        let msg = Message {
+            topic: "system:job_status:job_status_123".to_string(),
+            payload: buf,
+        };
+        bus.publish(msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        // Handler should have been called
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+
+    #[tokio::test]
+    async fn test_interop_listen_for_pings_success() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+
+        let protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let _cancel = protocol_server.listen_for_pings().await.unwrap();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "system:health_ack:node_ping" {
+                use prost::Message as ProstMessage;
+                if let Ok(ack) = proto::HealthAck::decode(&msg.payload[..]) {
+                    if ack.source_node_id == "server" && ack.target_node_id == "node_ping" {
+                        rx.store(true, Ordering::SeqCst);
+                    }
+                }
+            }
+        });
+
+        let _cancel_ack = bus.subscribe("system:health_ack:node_ping".to_string(), handler).await.unwrap();
+
+        let ping = proto::HealthPing {
+            source_node_id: "node_ping".to_string(),
+            current_mode: 0,
+            timestamp_ms: 1000,
+        };
+
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        ping.encode(&mut buf).unwrap();
+
+        let msg = Message {
+            topic: "system:health_ping".to_string(),
+            payload: buf,
+        };
+        bus.publish(msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+
+    #[tokio::test]
+    async fn test_interop_report_job_status_success() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+
+        let protocol_server = InteropProtocol::new(bus.clone(), lock.clone(), "server".to_string());
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "system:job_status:job_status_123" {
+                use prost::Message as ProstMessage;
+                if let Ok(update) = proto::JobStatusUpdate::decode(&msg.payload[..]) {
+                    if update.status == "in_progress" && update.tenant_id == "tenant_1" {
+                        rx.store(true, Ordering::SeqCst);
+                    }
+                }
+            }
+        });
+
+        let _cancel = bus.subscribe("system:job_status:job_status_123".to_string(), handler).await.unwrap();
+
+        protocol_server.report_job_status("job_status_123", "tenant_1", "in_progress", vec![]).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+
+    #[tokio::test]
+    async fn test_interop_listen_for_jobs_success() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+
+        let protocol_listener = InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string());
+        let _cancel = protocol_listener.listen_for_jobs("tenant_x").await.unwrap();
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let ack_topic = format!("system:job_ack:job_123");
+        let ack_topic_clone = ack_topic.clone();
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == ack_topic_clone {
+                use prost::Message as ProstMessage;
+                if let Ok(ack) = proto::JobAck::decode(&msg.payload[..]) {
+                    if ack.job_id == "job_123" && ack.node_id == "listener_node" {
+                        rx.store(true, Ordering::SeqCst);
+                    }
+                }
+            }
+        });
+        let _cancel_ack = bus.subscribe(ack_topic.clone(), handler).await.unwrap();
+
+        // Send a job dispatch
+        let dispatch = proto::JobDispatch {
+            job_id: "job_123".to_string(),
+            tenant_id: "tenant_x".to_string(),
+            action_name: "test_action".to_string(),
+            payload: vec![],
+            timestamp_ms: 1000,
+        };
+
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        dispatch.encode(&mut buf).unwrap();
+
+        let msg = Message {
+            topic: "system:job_dispatch:tenant_x".to_string(),
+            payload: buf,
+        };
+        bus.publish(msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        assert!(received.load(Ordering::SeqCst));
+    }
+
     #[tokio::test]
     async fn test_interop_listen_for_job_status_malformed() {
         let bus = Arc::new(MemoryBus::new());
