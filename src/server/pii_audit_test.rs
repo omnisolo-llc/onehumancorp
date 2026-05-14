@@ -20,31 +20,14 @@ mod tests {
         assert_eq!(redacted["user_email"], "[REDACTED]");
     }
 
-    // A drop guard to ensure env var is always cleaned up even if tests panic
-    struct EnvGuard {
-        key: &'static str,
-    }
-    impl EnvGuard {
-        fn new(key: &'static str, val: &str) -> Self {
-            unsafe { std::env::set_var(key, val) };
-            Self { key }
-        }
-    }
-    impl Drop for EnvGuard {
-        fn drop(&mut self) {
-            unsafe { std::env::remove_var(self.key) };
-        }
-    }
-
     #[test]
     fn test_standalone_telemetry_audit() {
-        // Enforce standalone mode explicitly before querying state
-        let _guard = EnvGuard::new("OHC_MULTITENANT", "false");
-
         let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
         assert!(!is_telemetry_enabled, "Standalone telemetry must be off by default for privacy");
 
-        let mode = ::server_telemetry::get_deployment_mode();
-        assert_eq!(mode, "Standalone", "System must report Standalone mode when multitenant is off");
+        temp_env::with_vars(vec![("OHC_MULTITENANT", Some("false"))], || {
+            let mode = ::server_telemetry::get_deployment_mode();
+            assert_eq!(mode, "Standalone", "System must report Standalone mode when multitenant is off");
+        });
     }
 }
