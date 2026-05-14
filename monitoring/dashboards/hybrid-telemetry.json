@@ -1894,7 +1894,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_ohc_autodream_memories_ingested_total[5m]))",
+          "expr": "sum(rate(ohc_autodream_memories_ingested_total[5m]))",
           "legendFormat": "Ingested",
           "range": true,
           "refId": "A"
@@ -1905,7 +1905,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_ohc_autodream_memories_compressed_total[5m]))",
+          "expr": "sum(rate(ohc_autodream_memories_compressed_total[5m]))",
           "legendFormat": "Compressed",
           "range": true,
           "refId": "B"
