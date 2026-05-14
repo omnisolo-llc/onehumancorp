@@ -1,5 +1,7 @@
 use super::sandbox::{SandboxManager, SandboxAdapter};
 use sqlx::PgPool;
+use std::time::Instant;
+use crate::telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency};
 
 pub struct LocalShellTask {
     manager: SandboxManager,
@@ -22,11 +24,21 @@ impl LocalShellTask {
             Err(e) => return Err(self.manager.annotate_error(e, String::new())),
         };
 
+        record_bubblewrap_spawn();
+        let start = Instant::now();
+
         // In a real execution, we would run `wrapped_cmd` using `tokio::process::Command`
         // For the scope of this harness executor logic, we just return the wrapped command
         // or execute it if needed. Let's return the wrapped command as a success placeholder
         // to show interception logic.
-        Ok(format!("Executing: {}", wrapped_cmd))
+
+        // Simulating an actual execution blocking call:
+        let out = format!("Executing: {}", wrapped_cmd);
+
+        let latency = start.elapsed().as_secs_f64();
+        record_bubblewrap_execution_latency(latency);
+
+        Ok(out)
     }
 }
 

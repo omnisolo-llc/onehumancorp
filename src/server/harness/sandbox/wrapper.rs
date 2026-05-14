@@ -1,6 +1,4 @@
 use super::manager::SandboxPolicy;
-use std::time::Instant;
-use crate::telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency};
 
 pub struct BashWrapper {
     read_only_paths: Vec<String>,
@@ -21,9 +19,6 @@ impl BashWrapper {
     }
 
     pub fn wrap(&self, cmd: &str) -> String {
-        record_bubblewrap_spawn();
-        let start = Instant::now();
-
         // Enforce state management / I/O instrumenting based on config
         let mut preamble = String::from("set -e; ");
         // simple representation of instrumentation
@@ -35,12 +30,7 @@ impl BashWrapper {
             preamble.push_str(&format!("export BLOCKED_DOMAINS='{}'; ", self.blocked_domains.join(",")));
         }
 
-        let wrapped = format!("bash -c \"{}{}\"", preamble, cmd.replace("\"", "\\\""));
-
-        let latency = start.elapsed().as_secs_f64();
-        record_bubblewrap_execution_latency(latency);
-
-        wrapped
+        format!("bash -c \"{}{}\"", preamble, cmd.replace("\"", "\\\""))
     }
 }
 
