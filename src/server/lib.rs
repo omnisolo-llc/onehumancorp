@@ -186,9 +186,10 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::MyPlanResponse>, tonic::Status> {
-        let tenant_id = request.metadata().get("x-tenant-id")
-            .map(|v| v.to_str().unwrap_or("default"))
-            .unwrap_or("default");
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| tonic::Status::unauthenticated(e))?;
+        let (tenant_id_parsed, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| tonic::Status::unauthenticated(e.to_string()))?;
+        let tenant_id_str = if tenant_id_parsed.is_empty() { "default".to_string() } else { tenant_id_parsed };
+        let tenant_id = tenant_id_str.as_str();
 
         let tier = self.hub.tracker().get_tenant_tier(tenant_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
         let ai_used = self.hub.tracker().get_tenant_actions_used(tenant_id).await.unwrap_or(0);
@@ -225,9 +226,10 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::CostDashboardResponse>, tonic::Status> {
-        let tenant_id = request.metadata().get("x-tenant-id")
-            .map(|v| v.to_str().unwrap_or("default"))
-            .unwrap_or("default");
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| tonic::Status::unauthenticated(e))?;
+        let (tenant_id_parsed, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| tonic::Status::unauthenticated(e.to_string()))?;
+        let tenant_id_str = if tenant_id_parsed.is_empty() { "default".to_string() } else { tenant_id_parsed };
+        let tenant_id = tenant_id_str.as_str();
 
         let auditor = self.hub.get_cost_auditor();
         let llm_cost_f64 = auditor.get_total_cost();
@@ -256,9 +258,10 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<::server_ohc::orchestration::SelectPlanRequest>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::SelectPlanResponse>, tonic::Status> {
-        let tenant_id = request.metadata().get("x-tenant-id")
-            .map(|v| v.to_str().unwrap_or("default"))
-            .unwrap_or("default").to_string();
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| tonic::Status::unauthenticated(e))?;
+        let (tenant_id_parsed, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| tonic::Status::unauthenticated(e.to_string()))?;
+        let tenant_id_str = if tenant_id_parsed.is_empty() { "default".to_string() } else { tenant_id_parsed };
+        let tenant_id = tenant_id_str.to_string();
         let req = request.into_inner();
 
         let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());

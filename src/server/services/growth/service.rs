@@ -34,12 +34,9 @@ impl MyGrowthService {
     }
 
     async fn get_org_id(&self, metadata: &tonic::metadata::MetadataMap) -> Result<String, Status> {
-        let spiffe_id_str = metadata.get("x-spiffe-id")
-            .ok_or_else(|| Status::unauthenticated("missing x-spiffe-id header"))?
-            .to_str()
-            .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(metadata).map_err(|e| Status::unauthenticated(e))?;
 
-        let (org_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str)?;
+        let (org_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
 
         Ok(org_id)
     }
