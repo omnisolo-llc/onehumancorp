@@ -5,6 +5,15 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Upgraded orchestration layers to handle high concurrency with dynamic thread allocation.
+
+### Privacy/Offline Improvements
+- Hardened local agent fallback for disconnected environments and improved isolated execution caching.
+
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
