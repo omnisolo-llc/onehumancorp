@@ -24,6 +24,199 @@ pub trait CheckpointSaver: Send + Sync {
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> { Ok(()) }
 }
 
+pub struct NamespaceJsonStoreCheckpointer {
+    pub base_dir: PathBuf,
+    pub namespace: String,
+}
+
+impl NamespaceJsonStoreCheckpointer {
+    pub fn new(base_dir: PathBuf, namespace: String) -> Self {
+        Self { base_dir, namespace }
+    }
+}
+
+#[async_trait]
+impl CheckpointSaver for NamespaceJsonStoreCheckpointer {
+async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
+        let safe_thread_id = std::path::Path::new(thread_id).file_name().and_then(|n| n.to_str()).unwrap_or("default_thread");
+        let safe_checkpoint_id = std::path::Path::new(checkpoint_id).file_name().and_then(|n| n.to_str()).unwrap_or("default_cp");
+
+        let dir_path = self.base_dir.join(&self.namespace).join(safe_thread_id);
+        let file_path = dir_path.join(format!("{}.json", safe_checkpoint_id));
+
+        if !file_path.exists() {
+            return Ok(None);
+        }
+
+        let content = tokio::fs::read_to_string(&file_path)
+            .await
+            .map_err(|e| format!("Failed to read checkpoint: {}", e))?;
+
+        let cp: Checkpoint = serde_json::from_str(&content)
+            .map_err(|e| format!("Failed to parse checkpoint: {}", e))?;
+
+        Ok(Some(cp))
+    }
+
+async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String> {
+        let safe_thread_id = std::path::Path::new(&checkpoint.thread_id).file_name().and_then(|n| n.to_str()).unwrap_or("default_thread");
+        let safe_checkpoint_id = std::path::Path::new(&checkpoint.checkpoint_id).file_name().and_then(|n| n.to_str()).unwrap_or("default_cp");
+
+        let dir_path = self.base_dir.join(&self.namespace).join(safe_thread_id);
+        tokio::fs::create_dir_all(&dir_path)
+            .await
+            .map_err(|e| format!("Failed to create namespace directory: {}", e))?;
+
+        let file_path = dir_path.join(format!("{}.json", safe_checkpoint_id));
+
+        let content = serde_json::to_string_pretty(&checkpoint)
+            .map_err(|e| format!("Failed to serialize checkpoint: {}", e))?;
+
+        tokio::fs::write(&file_path, content)
+            .await
+            .map_err(|e| format!("Failed to write checkpoint file: {}", e))?;
+
+        Ok(())
+    }
+
+async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
+        let safe_thread_id = std::path::Path::new(thread_id).file_name().and_then(|n| n.to_str()).unwrap_or("default_thread");
+        let dir_path = self.base_dir.join(&self.namespace).join(safe_thread_id);
+        if !dir_path.exists() {
+            return Ok(vec![]);
+        }
+
+        let mut entries = tokio::fs::read_dir(&dir_path)
+            .await
+            .map_err(|e| format!("Failed to read directory: {}", e))?;
+
+        let mut checkpoints = Vec::new();
+        while let Some(entry) = entries.next_entry().await.map_err(|e| e.to_string())? {
+            if entry.path().extension().and_then(|e| e.to_str()) == Some("json") {
+                let content = tokio::fs::read_to_string(entry.path())
+                    .await
+                    .map_err(|e| format!("Failed to read checkpoint: {}", e))?;
+                if let Ok(cp) = serde_json::from_str::<Checkpoint>(&content) {
+                    checkpoints.push(cp);
+                }
+            }
+        }
+
+        // Sort by created_at DESC
+        checkpoints.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        Ok(checkpoints)
+    }
+}
+
+pub struct SqliteCheckpointer {
+    pool: sqlx::SqlitePool,
+}
+
+impl SqliteCheckpointer {
+    pub fn new(pool: sqlx::SqlitePool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl CheckpointSaver for SqliteCheckpointer {
+    async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
+        let row = sqlx::query(
+            "SELECT thread_id, checkpoint_id, parent_id, checkpoint, metadata, created_at FROM swarm_checkpoints WHERE thread_id = $1 AND checkpoint_id = $2"
+        )
+        .bind(thread_id)
+        .bind(checkpoint_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        if let Some(row) = row {
+            let thread_id: String = row.get("thread_id");
+            let checkpoint_id: String = row.get("checkpoint_id");
+            let parent_id: Option<String> = row.get("parent_id");
+            let checkpoint_raw: Vec<u8> = row.get("checkpoint");
+            let metadata_raw: Vec<u8> = row.get("metadata");
+            let created_at_str: String = row.get("created_at"); // sqlite often stores datetime as string
+            let created_at: DateTime<Utc> = created_at_str.parse().map_err(|e| format!("DateTime parse error: {}", e))?;
+
+            let decompressed_data = decompress_data(&checkpoint_raw)?;
+            let data: serde_json::Value = serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
+            let metadata: serde_json::Value = serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
+
+            Ok(Some(Checkpoint {
+                thread_id,
+                checkpoint_id,
+                parent_id,
+                data,
+                metadata,
+                created_at,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String> {
+        let data_raw = serde_json::to_vec(&checkpoint.data).map_err(|e| e.to_string())?;
+        let compressed_data = compress_data(&data_raw)?;
+        let metadata_raw = serde_json::to_vec(&checkpoint.metadata).map_err(|e| e.to_string())?;
+
+        // created_at needs to be a string or integer depending on sqlite type mapping. Using string for UTC datetime.
+        let created_at_str = checkpoint.created_at.to_rfc3339();
+
+        sqlx::query(
+            "INSERT INTO swarm_checkpoints (thread_id, checkpoint_id, parent_id, checkpoint, metadata, created_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (thread_id, checkpoint_id) DO UPDATE SET parent_id = EXCLUDED.parent_id, checkpoint = EXCLUDED.checkpoint, metadata = EXCLUDED.metadata, created_at = EXCLUDED.created_at"
+        )
+        .bind(&checkpoint.thread_id)
+        .bind(&checkpoint.checkpoint_id)
+        .bind(&checkpoint.parent_id)
+        .bind(compressed_data)
+        .bind(metadata_raw)
+        .bind(created_at_str)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
+        let rows = sqlx::query(
+            "SELECT thread_id, checkpoint_id, parent_id, checkpoint, metadata, created_at FROM swarm_checkpoints WHERE thread_id = $1 ORDER BY created_at DESC"
+        )
+        .bind(thread_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let mut checkpoints = Vec::new();
+        for row in rows {
+            let thread_id: String = row.get("thread_id");
+            let checkpoint_id: String = row.get("checkpoint_id");
+            let parent_id: Option<String> = row.get("parent_id");
+            let checkpoint_raw: Vec<u8> = row.get("checkpoint");
+            let metadata_raw: Vec<u8> = row.get("metadata");
+            let created_at_str: String = row.get("created_at");
+            let created_at: DateTime<Utc> = created_at_str.parse().map_err(|e| format!("DateTime parse error: {}", e))?;
+
+            let decompressed_data = decompress_data(&checkpoint_raw)?;
+            let data: serde_json::Value = serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
+            let metadata: serde_json::Value = serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
+
+            checkpoints.push(Checkpoint {
+                thread_id,
+                checkpoint_id,
+                parent_id,
+                data,
+                metadata,
+                created_at,
+            });
+        }
+
+        Ok(checkpoints)
+    }
+}
+
 pub struct PgCheckpointer {
     pool: sqlx::PgPool,
 }
@@ -371,6 +564,95 @@ mod tests {
         let decompressed_json = decompress_data(raw_json).unwrap();
         assert_eq!(raw_json, decompressed_json.as_slice());
     }
+    #[tokio::test]
+    async fn test_namespace_json_store_checkpointer() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = NamespaceJsonStoreCheckpointer::new(temp_dir.path().to_path_buf(), "test_namespace".to_string());
+
+        let cp1 = Checkpoint {
+            thread_id: "thread-json-1".to_string(),
+            checkpoint_id: "cp-json-1a".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"state": "1"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        let cp2 = Checkpoint {
+            thread_id: "thread-json-1".to_string(),
+            checkpoint_id: "cp-json-1b".to_string(),
+            parent_id: Some("cp-json-1a".to_string()),
+            data: serde_json::json!({"state": "2"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+        saver.put_checkpoint(cp2.clone()).await.unwrap();
+
+        let retrieved = saver.get_checkpoint("thread-json-1", "cp-json-1b").await.unwrap();
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().checkpoint_id, "cp-json-1b");
+
+        let list = saver.list_checkpoints("thread-json-1").await.unwrap();
+        assert_eq!(list.len(), 2);
+        // Sorted by created_at DESC (b before a)
+        assert_eq!(list[0].checkpoint_id, "cp-json-1b");
+        assert_eq!(list[1].checkpoint_id, "cp-json-1a");
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_checkpointer() {
+        use sqlx::Executor;
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        pool.execute("CREATE TABLE swarm_checkpoints (
+            thread_id TEXT NOT NULL,
+            checkpoint_id TEXT NOT NULL,
+            parent_id TEXT,
+            checkpoint BLOB NOT NULL,
+            metadata BLOB NOT NULL,
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (thread_id, checkpoint_id)
+        )").await.unwrap();
+
+        let saver = SqliteCheckpointer::new(pool);
+
+        let cp1 = Checkpoint {
+            thread_id: "thread-sql-1".to_string(),
+            checkpoint_id: "cp-sql-1a".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"state": "1"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        let cp2 = Checkpoint {
+            thread_id: "thread-sql-1".to_string(),
+            checkpoint_id: "cp-sql-1b".to_string(),
+            parent_id: Some("cp-sql-1a".to_string()),
+            data: serde_json::json!({"state": "2"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+        saver.put_checkpoint(cp2.clone()).await.unwrap();
+
+        let retrieved = saver.get_checkpoint("thread-sql-1", "cp-sql-1b").await.unwrap();
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().checkpoint_id, "cp-sql-1b");
+
+        let list = saver.list_checkpoints("thread-sql-1").await.unwrap();
+        assert_eq!(list.len(), 2);
+        assert_eq!(list[0].checkpoint_id, "cp-sql-1b");
+        assert_eq!(list[1].checkpoint_id, "cp-sql-1a");
+    }
+
     #[tokio::test]
     async fn test_pg_checkpointer_save_and_load() {
         let pool = sqlx::postgres::PgPoolOptions::new()
