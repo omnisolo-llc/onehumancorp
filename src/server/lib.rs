@@ -1629,7 +1629,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             line-height: 1.5;
                         }
                         .glass { 
-                            background: var(--card-bg); 
+                            background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px) saturate(200%);
                             border: 1px solid var(--border); 
                             border-radius: 8px; 
                             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
@@ -1660,7 +1660,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         main { padding: 40px; }
                         .screen { display: none; padding: 40px; max-width: 1000px; margin: 0 auto; }
                         .card { 
-                            background: var(--card-bg); 
+                            background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px) saturate(200%);
                             padding: 24px; 
                             border-radius: 8px; 
                             margin-bottom: 24px; 
@@ -1720,7 +1720,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </style>
                 </head>
                 <body>
-                    <nav id="main-nav" style="display: none;">
+                    <nav id="main-nav" style="display: flex;">
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
                         <a onclick="showScreen('agents-screen')">Agents</a>
                         <a onclick="showScreen('setup-screen')">Setup Wizard</a>
