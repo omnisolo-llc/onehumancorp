@@ -1,5 +1,5 @@
 filegroup(
     name = "srcs",
-    srcs = ["mod.rs"],
+    srcs = ["mod.rs", "wizard.rs", "wizard_test.rs"],
     visibility = ["//src/server/api:__pkg__"],
 )
