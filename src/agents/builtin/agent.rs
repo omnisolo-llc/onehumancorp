@@ -1,3 +1,10 @@
+
+pub enum ExecutionOutcome {
+    Success(Vec<crate::types::ToolResult>),
+    StructuredOutput(String),
+    Handoff(String),
+}
+
 use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
@@ -296,6 +303,7 @@ impl Agent {
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
         let mut messages = vec![crate::types::Message::user(initial_message)];
+        let mut error_counts: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
         let phases = ["Gather", "Act", "Verify"];
 
         for (i, phase) in phases.iter().enumerate() {
@@ -334,76 +342,13 @@ impl Agent {
             }
 
             // Component: Tools (Read-only concurrent, mutating serial)
-            let mut read_only_calls = vec![];
-            let mut mutating_calls = vec![];
-
-            for tc in &msg.tool_calls {
-                if let Some(tool) = session_tools.iter().find(|t| t.name == tc.name) {
-                    if tool.is_read_only {
-                        read_only_calls.push(tc.clone());
-                    } else {
-                        mutating_calls.push(tc.clone());
-                    }
-                } else {
-                    // Default to mutating if not found
-                    mutating_calls.push(tc.clone());
-                }
-            }
-
-            let mut tool_results = vec![crate::types::ToolResult { tool_call_id: String::new(), content: String::new(), error: String::new() }; msg.tool_calls.len()];
-
-            let mut read_only_futures = Vec::new();
-            for tc in &read_only_calls {
-                let tc_clone = tc.clone();
-                let session_tools_clone = session_tools.to_vec();
-                let messages_clone = messages.clone();
-                read_only_futures.push(async move {
-                    let r = match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
-                        Ok(res) => res,
-                        Err(e) => format!("Error: {:?}", e),
-                    };
-                    (tc_clone, r)
-                });
-            }
-            let ro_results = futures::future::join_all(read_only_futures).await;
-            for (tc, r) in ro_results {
-                let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
-
-                on_event(AgentEvent::ToolCall {
-                    name: tc.name.clone(),
-                    args_json: tc.arguments.to_string(),
-                    result: r.clone(),
-                    iteration: i as i32,
-                });
-
-                tool_results[idx] = crate::types::ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content: r,
-                    error: String::new(),
-                };
-            }
-
-            for tc in &mutating_calls {
-                let r = match self.execute_tool(tc, session_tools, &messages).await {
-                    Ok(res) => res,
-                    Err(e) => format!("Error: {:?}", e),
-                };
-
-                let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
-
-                on_event(AgentEvent::ToolCall {
-                    name: tc.name.clone(),
-                    args_json: tc.arguments.to_string(),
-                    result: r.clone(),
-                    iteration: i as i32,
-                });
-
-                tool_results[idx] = crate::types::ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content: r,
-                    error: String::new(),
-                };
-            }
+            let mut error_counts: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
+            let execution_outcome = self.execute_tool_calls_concurrently(&msg.tool_calls, session_tools, &messages, &cfg, on_event, i as i32, &mut error_counts).await?;
+            let mut tool_results = match execution_outcome {
+                ExecutionOutcome::Success(results) => results,
+                ExecutionOutcome::StructuredOutput(content) => return Ok(content),
+                ExecutionOutcome::Handoff(target) => return Ok(format!("Handoff requested to {}", target)),
+            };
 
             messages.push(crate::types::Message {
                 role: crate::types::Role::Tool,
@@ -2322,6 +2267,270 @@ impl Agent {
         }
 
         Ok(())
+    }
+
+
+    pub async fn execute_tool_calls_concurrently<F>(
+        &self,
+        tool_calls: &[crate::types::ToolCall],
+        session_tools: &[crate::tools::Tool],
+        messages: &[crate::types::Message],
+        final_cfg: &AgentRunConfig,
+        on_event: &mut F,
+        iteration: i32,
+        tool_error_counts: &mut std::collections::HashMap<String, u64>,
+    ) -> Result<ExecutionOutcome, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        let mut read_only_calls = Vec::new();
+        let mut mutating_calls = Vec::new();
+
+        for tc in tool_calls {
+            let is_read_only = session_tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
+            if is_read_only {
+                read_only_calls.push(tc.clone());
+            } else {
+                mutating_calls.push(tc.clone());
+            }
+        }
+
+        let mut tool_results: Vec<crate::types::ToolResult> = vec![crate::types::ToolResult { tool_call_id: String::new(), content: String::new(), error: String::new() }; tool_calls.len()];
+
+        // Intercept special output formatting tool natively
+        if let Some(tc) = mutating_calls.iter().chain(read_only_calls.iter()).find(|t| t.name == "return_structured_output") {
+            on_event(AgentEvent::ToolCall {
+                name: tc.name.clone(),
+                args_json: tc.arguments.to_string(),
+                result: "Returning structured output".to_string(),
+                iteration,
+            });
+            // Early return with special payload to trigger termination
+            return Ok(ExecutionOutcome::StructuredOutput(tc.arguments.to_string()));
+        }
+
+        let mut read_only_futures = Vec::new();
+        for tc in &read_only_calls {
+            if let Some(guard_cfg) = &final_cfg.guardrails {
+                if let Err(e) = crate::guardrails::check_tool(tc, guard_cfg) {
+                    on_event(AgentEvent::TaskError { error: e.clone() });
+                    return Err(e.into());
+                }
+            }
+            let gating_res = Self::check_tool_gating(tc, true, &final_cfg);
+            let tc_clone = tc.clone();
+            let session_tools_clone = session_tools.to_vec();
+            let messages_clone = messages.to_vec();
+            let cfg_max_retries = final_cfg.max_retries;
+
+            read_only_futures.push(async move {
+                if let Err(e) = gating_res {
+                    return (tc_clone, Err(e));
+                }
+                let mut retry_count = 0;
+                let max_retries = cfg_max_retries;
+                loop {
+                    match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
+                        Ok(r) => {
+                            return (tc_clone, Ok(r));
+                        }
+                        Err(crate::types::ToolError::Transient(msg)) => {
+                            if retry_count < max_retries {
+                                retry_count += 1;
+                                let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                tokio::time::sleep(backoff).await;
+                                continue;
+                            } else {
+                                return (tc_clone, Err(crate::types::ToolError::Transient(format!("Transient error after retries: {}", msg))));
+                            }
+                        }
+                        Err(e) => {
+                            return (tc_clone, Err(e));
+                        }
+                    }
+                }
+            });
+        }
+
+        let ro_results = futures::future::join_all(read_only_futures).await;
+
+        for (tc, res) in ro_results {
+            let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+            match res {
+                Ok(r) => {
+                    tool_error_counts.remove(&tc.name);
+                    self.progress.record_tool_use();
+                    self.observation_store.insert(tc.id.clone(), r.clone());
+                    on_event(AgentEvent::ToolCall {
+                        name: tc.name.clone(),
+                        args_json: tc.arguments.to_string(),
+                        result: r.clone(),
+                        iteration,
+                    });
+                    tool_results[idx] = crate::types::ToolResult {
+                        tool_call_id: tc.id.clone(),
+                        content: r,
+                        error: String::new(),
+                    };
+                }
+                Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                    let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
+                    *count += 1;
+                    if *count as usize > final_cfg.max_retries {
+                        return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors.", tc.name).into());
+                    }
+                    on_event(AgentEvent::ToolCall {
+                        name: tc.name.clone(),
+                        args_json: tc.arguments.to_string(),
+                        result: format!("Error: {}", msg),
+                        iteration,
+                    });
+                    tool_results[idx] = crate::types::ToolResult {
+                        tool_call_id: tc.id.clone(),
+                        content: String::new(),
+                        error: msg,
+                    };
+                }
+                Err(crate::types::ToolError::UserFixable(msg)) => {
+                    let err = format!("USER_FIXABLE: {}", msg);
+                    on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                    return Err(err.into());
+                }
+                Err(crate::types::ToolError::Fatal(msg)) => {
+                    let err = format!("Fatal tool error: {}", msg);
+                    on_event(AgentEvent::TaskError { error: err.clone() });
+                    return Err(err.into());
+                }
+                Err(crate::types::ToolError::Unexpected(msg)) => {
+                    let err = format!("Unexpected tool error: {}", msg);
+                    on_event(AgentEvent::TaskError { error: err.clone() });
+                    return Err(err.into());
+                }
+                Err(crate::types::ToolError::HandoffRequested(target)) => {
+                    on_event(AgentEvent::Handoff { target_agent: target.clone() });
+                    return Ok(ExecutionOutcome::Handoff(target));
+                }
+                Err(crate::types::ToolError::Transient(msg)) => {
+                    return Err(msg.into());
+                }
+            }
+        }
+
+        for tc in &mutating_calls {
+            if let Some(guard_cfg) = &final_cfg.guardrails {
+                if let Err(e) = crate::guardrails::check_tool(&tc, guard_cfg) {
+                    on_event(AgentEvent::TaskError { error: e.clone() });
+                    return Err(e.into());
+                }
+            }
+
+            if let Err(e) = Self::check_tool_gating(&tc, false, &final_cfg) {
+                match e {
+                    crate::types::ToolError::UserFixable(msg) => {
+                        let err = format!("USER_FIXABLE: {}", msg);
+                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                        return Err(err.into());
+                    }
+                    crate::types::ToolError::Fatal(msg) => {
+                        let err = format!("Fatal tool error: {}", msg);
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(err.into());
+                    }
+                    crate::types::ToolError::Unexpected(msg) => {
+                        let err = format!("Unexpected tool error: {}", msg);
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(err.into());
+                    }
+                    crate::types::ToolError::HandoffRequested(target) => {
+                        on_event(AgentEvent::Handoff { target_agent: target.clone() });
+                        return Ok(ExecutionOutcome::Handoff(target));
+                    }
+                    _ => {
+                        let err = format!("Fatal tool error: {:?}", e);
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(err.into());
+                    }
+                }
+            }
+
+            let mut retry_count = 0;
+            let max_retries = final_cfg.max_retries;
+            let mut content = String::new();
+            let mut error = String::new();
+
+            loop {
+                match self.execute_tool(&tc, &session_tools, &messages).await {
+                    Ok(r) => {
+                        tool_error_counts.remove(&tc.name);
+                        self.progress.record_tool_use();
+                        self.observation_store.insert(tc.id.clone(), r.clone());
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: r.clone(),
+                            iteration,
+                        });
+                        content = r;
+                        break;
+                    }
+                    Err(crate::types::ToolError::Transient(msg)) => {
+                        if retry_count < max_retries {
+                            retry_count += 1;
+                            let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                            tokio::time::sleep(backoff).await;
+                            continue;
+                        } else {
+                            let err = format!("Transient error after retries: {}", msg);
+                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            return Err(err.into());
+                        }
+                    }
+                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                        let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
+                        *count += 1;
+                        if *count as usize > final_cfg.max_retries {
+                            return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors.", tc.name).into());
+                        }
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", msg),
+                            iteration,
+                        });
+                        error = msg;
+                        break;
+                    }
+                    Err(crate::types::ToolError::UserFixable(msg)) => {
+                        let err = format!("USER_FIXABLE: {}", msg);
+                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                        return Err(err.into());
+                    }
+                    Err(crate::types::ToolError::Fatal(msg)) => {
+                        let err = format!("Fatal tool error: {}", msg);
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(err.into());
+                    }
+                    Err(crate::types::ToolError::Unexpected(msg)) => {
+                        let err = format!("Unexpected tool error: {}", msg);
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(err.into());
+                    }
+                    Err(crate::types::ToolError::HandoffRequested(target)) => {
+                        on_event(AgentEvent::Handoff { target_agent: target.clone() });
+                        return Ok(ExecutionOutcome::Handoff(target));
+                    }
+                }
+            }
+
+            let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+            tool_results[idx] = crate::types::ToolResult {
+                tool_call_id: tc.id.clone(),
+                content,
+                error,
+            };
+        }
+
+        Ok(ExecutionOutcome::Success(tool_results))
     }
 
     async fn execute_tool(
