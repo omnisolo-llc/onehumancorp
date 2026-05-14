@@ -4,6 +4,7 @@ load("//bazel/rules:proto_rust_library.bzl", "proto_rust_library")
 
 exports_files([
     "agent.proto",
+    "help.proto",
     "agent_service.proto",
     "app.proto",
     "billing.proto",
@@ -197,5 +198,21 @@ proto_library(
 proto_rust_library(
     name = "interop",
     proto = ":interop_proto",
+    visibility = ["//visibility:public"],
+)
+
+
+# ── Help ───────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "help_proto",
+    srcs = ["help.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "help",
+    proto = ":help_proto",
+    use_grpc = True,
     visibility = ["//visibility:public"],
 )
