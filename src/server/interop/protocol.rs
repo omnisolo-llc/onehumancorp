@@ -317,6 +317,7 @@ impl InteropProtocol {
                                 updated_at: chrono::Utc::now(),
                             };
 
+                            // Only acknowledge if enqueue succeeds
                             if q.enqueue(job).await.is_ok() {
                                 let ack = proto::JobAck {
                                     job_id: job_id.clone(),
@@ -337,12 +338,13 @@ impl InteropProtocol {
                                         }
                                         retries += 1;
                                         tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                                        delay_ms *= 2;
+                                        delay_ms *= 2; // Exponential backoff
                                     }
                                 }
                             }
                         });
                     } else {
+                        // Fallback behavior: just acknowledge receipt if no queue is configured
                         let ack = proto::JobAck {
                             job_id: job_id.clone(),
                             node_id: ack_node_id,
@@ -556,6 +558,40 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_interop_listen_for_jobs_with_queue() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let queue = Arc::new(crate::queue::MemoryTaskQueue::new());
+
+        let protocol_listener = InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string())
+            .with_queue(queue.clone());
+
+        let _cancel = protocol_listener.listen_for_jobs("tenant_x").await.unwrap();
+
+        use prost::Message as ProstMessage;
+        let dispatch = proto::JobDispatch {
+            job_id: "job_123_with_queue".to_string(),
+            tenant_id: "tenant_x".to_string(),
+            action_name: "test_action".to_string(),
+            payload: vec![1, 2, 3],
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+
+        let mut buf = Vec::new();
+        dispatch.encode(&mut buf).unwrap();
+
+        let msg = Message {
+            topic: "system:job_dispatch:tenant_x".to_string(),
+            payload: buf,
+        };
+        bus.publish(msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+
+        let _dequeued_job = crate::queue::TaskQueue::dequeue(&*queue, vec!["builtin".to_string()]).await.unwrap();
+    }
+
+    #[tokio::test]
     async fn test_interop_listen_for_state_handoff() {
         let bus = Arc::new(MemoryBus::new());
         let lock = bus.clone();
@@ -678,7 +714,6 @@ mod tests {
 
         assert!(received.load(Ordering::SeqCst));
     }
-
 
     #[tokio::test]
     async fn test_interop_handoff_lock_deadlock_prevention() {
@@ -951,6 +986,40 @@ mod tests {
     }
 
 }
+
+    #[tokio::test]
+    async fn test_interop_listen_for_jobs_with_queue() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let queue = Arc::new(crate::queue::MemoryTaskQueue::new());
+
+        let protocol_listener = InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string())
+            .with_queue(queue.clone());
+
+        let _cancel = protocol_listener.listen_for_jobs("tenant_x").await.unwrap();
+
+        use prost::Message as ProstMessage;
+        let dispatch = proto::JobDispatch {
+            job_id: "job_123_with_queue".to_string(),
+            tenant_id: "tenant_x".to_string(),
+            action_name: "test_action".to_string(),
+            payload: vec![1, 2, 3],
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+
+        let mut buf = Vec::new();
+        dispatch.encode(&mut buf).unwrap();
+
+        let msg = Message {
+            topic: "system:job_dispatch:tenant_x".to_string(),
+            payload: buf,
+        };
+        bus.publish(msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+
+        let _dequeued_job = crate::queue::TaskQueue::dequeue(&*queue, vec!["builtin".to_string()]).await.unwrap();
+    }
 
     #[tokio::test]
     async fn test_interop_listen_for_state_handoff() {
