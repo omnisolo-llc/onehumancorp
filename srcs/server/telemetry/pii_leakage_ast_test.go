@@ -54,36 +54,23 @@ func isLoggingCall(sel *ast.SelectorExpr) bool {
 // isViolation determines if a logging string contains a sensitive key in an unsafe way
 // e.g. "tenant_id: %s" is unsafe, but "failed to fetch tenant usage" is safe if we don't ban valid english words.
 func isViolation(val, key string) bool {
-	// Simple substrings can be too aggressive (e.g. "token" in "broken").
-	// We want to avoid naive regex that bans standard terms or explicitly safe strings like "[REDACTED]".
-
 	if strings.Contains(val, "[redacted]") {
 		return false
 	}
 
-	// Create a word boundary check for the key
 	pattern := fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta(key))
 	matched, _ := regexp.MatchString(pattern, val)
 	if !matched {
 		return false
 	}
 
-	// We also consider it unsafe if it's logging the key directly using verbs.
-	// We can use a simpler heuristic for now: word boundary + format string
 	hasFormat := strings.Contains(val, "%")
 	if matched && hasFormat {
-		// Just to be on the safe side for the test, we'll flag it if it matches the key and has format strings,
-		// UNLESS it's an explicitly safe string like "[REDACTED]" which we checked above.
-		// Wait, the instructions say:
-		// "avoid naive regex that bans standard terms (e.g., `tenant`, `payload`) or explicitly safe strings (`[REDACTED]`). Fix the regex rather than arbitrarily modifying valid application code to bypass the broken rule."
-
-		// Let's refine the unsafe pattern to specifically look for cases where the variable's value is being injected.
-		valueInjectionPattern := fmt.Sprintf(`\b%s\b[^a-z0-9]*(%%)`, regexp.QuoteMeta(key))
+		valueInjectionPattern := fmt.Sprintf(`\b%s\b\s*[:=]\s*%%`, regexp.QuoteMeta(key))
 		valueInjectionMatched, _ := regexp.MatchString(valueInjectionPattern, val)
 		return valueInjectionMatched
 	}
 
-	// If it doesn't have format strings, it's just a static log, so it's not leaking a variable's value.
 	return false
 }
 
