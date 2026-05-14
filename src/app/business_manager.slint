@@ -57,8 +57,8 @@ export component BusinessManager inherits Window {
         HorizontalBox {
             Text { text: current_view == "list" ? "My Offerings" : "Add Offering"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             GlassCard {}
-            if (current_view == "add") : Button { text: "Back to List"; clicked => { current_view = "list"; } }
-            if (current_view == "list") : Button { text: "Close"; clicked => { close(); } }
+            if (current_view == "add") : Button { text: "Back to List"; height: 44px; clicked => { current_view = "list"; } }
+            if (current_view == "list") : Button { text: "Close"; height: 44px; clicked => { close(); } }
         }
 
         if (current_view == "list") : VerticalBox {
@@ -114,7 +114,7 @@ export component BusinessManager inherits Window {
             }
 
             GlassCard {
-                height: 52px;
+                height: 44px;
                 background: rgba(168, 85, 247, 0.8);
                 VerticalBox { alignment: center; Text { text: "+ Add New Offering"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => { action_add_new(); } }

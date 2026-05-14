@@ -78,3 +78,136 @@ fn test_echo_grandmother_e2e_flow() {
     );
     assert!(*submit_invoked.borrow(), "Submit action not triggered");
 }
+
+#[test]
+fn test_echo_dashboard_navigation_reachability() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    // 1. Start from Login
+    let login_ui = app::Login::new().unwrap();
+    let login_invoked = Rc::new(RefCell::new(false));
+    let login_clone = login_invoked.clone();
+
+    login_ui.on_login(move |_username, _password| {
+        *login_clone.borrow_mut() = true;
+    });
+
+    login_ui.set_username("ceo@store.com".into());
+    login_ui.set_password("123".into());
+    login_ui.invoke_login(login_ui.get_username(), login_ui.get_password());
+    assert!(*login_invoked.borrow());
+
+    let dashboard_ui = app::Dashboard::new().unwrap();
+    let action_invoked = Rc::new(RefCell::new(false));
+
+    let action_clone = action_invoked.clone();
+    dashboard_ui.on_action_view_orders(move || { *action_clone.borrow_mut() = true; });
+    dashboard_ui.invoke_action_view_orders();
+    assert!(*action_invoked.borrow(), "View Orders action not triggered");
+
+    let action_clone = action_invoked.clone();
+    *action_clone.borrow_mut() = false;
+    dashboard_ui.on_action_check_messages(move || { *action_clone.borrow_mut() = true; });
+    dashboard_ui.invoke_action_check_messages();
+    assert!(*action_invoked.borrow(), "Check Messages action not triggered");
+
+    let action_clone = action_invoked.clone();
+    *action_clone.borrow_mut() = false;
+    dashboard_ui.on_action_see_analytics(move || { *action_clone.borrow_mut() = true; });
+    dashboard_ui.invoke_action_see_analytics();
+    assert!(*action_invoked.borrow(), "See Analytics action not triggered");
+}
+
+#[test]
+fn test_echo_business_share_copy_link() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    // 1. Start from Login
+    let login_ui = app::Login::new().unwrap();
+    let login_invoked = Rc::new(RefCell::new(false));
+    let login_clone = login_invoked.clone();
+
+    login_ui.on_login(move |_username, _password| {
+        *login_clone.borrow_mut() = true;
+    });
+
+    login_ui.set_username("ceo@store.com".into());
+    login_ui.set_password("123".into());
+    login_ui.invoke_login(login_ui.get_username(), login_ui.get_password());
+    assert!(*login_invoked.borrow());
+
+    let share_ui = app::BusinessShare::new().unwrap();
+    let copy_invoked = Rc::new(RefCell::new(false));
+    let copy_clone = copy_invoked.clone();
+
+    share_ui.on_copy_link(move || {
+        *copy_clone.borrow_mut() = true;
+    });
+
+    share_ui.invoke_copy_link();
+    assert!(*copy_invoked.borrow(), "Copy link action not triggered");
+}
+
+#[test]
+fn test_echo_business_manager_close() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    // 1. Start from Login
+    let login_ui = app::Login::new().unwrap();
+    let login_invoked = Rc::new(RefCell::new(false));
+    let login_clone = login_invoked.clone();
+
+    login_ui.on_login(move |_username, _password| {
+        *login_clone.borrow_mut() = true;
+    });
+
+    login_ui.set_username("ceo@store.com".into());
+    login_ui.set_password("123".into());
+    login_ui.invoke_login(login_ui.get_username(), login_ui.get_password());
+    assert!(*login_invoked.borrow());
+
+    let manager_ui = app::BusinessManager::new().unwrap();
+    let close_invoked = Rc::new(RefCell::new(false));
+    let close_clone = close_invoked.clone();
+
+    manager_ui.on_close(move || {
+        *close_clone.borrow_mut() = true;
+    });
+
+    manager_ui.invoke_close();
+    assert!(*close_invoked.borrow(), "Close action not triggered");
+}
+
+#[test]
+fn test_echo_dashboard_team_management() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    // 1. Start from Login
+    let login_ui = app::Login::new().unwrap();
+    let login_invoked = Rc::new(RefCell::new(false));
+    let login_clone = login_invoked.clone();
+
+    login_ui.on_login(move |_username, _password| {
+        *login_clone.borrow_mut() = true;
+    });
+
+    login_ui.set_username("ceo@store.com".into());
+    login_ui.set_password("123".into());
+    login_ui.invoke_login(login_ui.get_username(), login_ui.get_password());
+    assert!(*login_invoked.borrow());
+
+    let dashboard_ui = app::Dashboard::new().unwrap();
+    let team_invoked = Rc::new(RefCell::new(false));
+    let team_clone = team_invoked.clone();
+
+    dashboard_ui.on_action_manage_my_ai_team(move || {
+        *team_clone.borrow_mut() = true;
+    });
+
+    dashboard_ui.invoke_action_manage_my_ai_team();
+    assert!(*team_invoked.borrow(), "Manage Team action not triggered");
+}
