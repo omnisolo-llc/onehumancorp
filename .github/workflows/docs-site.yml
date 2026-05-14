@@ -57,7 +57,7 @@ jobs:
             build --show_timestamps
 
       - name: Build docs site
-        run: bazelisk run //:docs_build
+        run: ~/go/bin/bazelisk run //:docs_build
 
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3
