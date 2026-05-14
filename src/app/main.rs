@@ -4313,6 +4313,7 @@ mod growth_e2e_tests {
 
         // Step 3: What do you sell -> Step 4
         ui.invoke_toggle_sell_physical();
+        ui.invoke_toggle_sell_portfolios();
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 4);
 
@@ -4879,6 +4880,7 @@ mod e2e_tests {
 
         // Step 3: What do you sell -> Step 4
         ui.invoke_toggle_sell_physical();
+        ui.invoke_toggle_sell_portfolios();
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 4);
 
@@ -5570,6 +5572,7 @@ mod docs_tests {
 
         // Step 3: What do you sell -> Step 4
         ui.invoke_toggle_sell_physical();
+        ui.invoke_toggle_sell_portfolios();
         ui.invoke_next_step();
 
         // Step 4: Payments -> Step 5
@@ -8238,6 +8241,7 @@ mod e2e_hybrid_blob_tests {
 
         // Step 3: What do you sell
         ui.invoke_toggle_sell_physical();
+        ui.invoke_toggle_sell_portfolios();
         ui.invoke_next_step();
         assert_eq!(ui.get_step(), 4);
 
