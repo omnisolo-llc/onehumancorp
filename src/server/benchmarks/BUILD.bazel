@@ -21,7 +21,7 @@ rust_test(
     crate_root = "mod.rs",
     edition = "2024",
     deps = [
-        "//src/server:server_lib",
+                "//src/server:server_lib",
         "@crates//:tokio",
         "@crates//:sqlx",
         "@crates//:uuid",
@@ -30,9 +30,5 @@ rust_test(
         "@crates//:tonic",
         "@crates//:serde",
         "@crates//:serde_json",
-        "//src/proto:app_prost",
-        "//src/proto:app_tonic",
-        "//src/proto:auth_prost",
-        "//src/proto:auth_tonic",
     ],
 )
