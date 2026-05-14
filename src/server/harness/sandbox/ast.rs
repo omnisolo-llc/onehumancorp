@@ -45,8 +45,6 @@ impl ASTParser {
         }
 
         // legacy expansions $[] (not strictly supported in all bash, often handled as expansion)
-        // Check for node type "expansion" or similar, and check text.
-        // In tree-sitter-bash it might be `expansion` or `arithmetic_expansion`
         if node_kind == "expansion" || node_kind == "arithmetic_expansion" {
             let text = &source[node.start_byte()..node.end_byte()];
             if text.starts_with("$[") && text.ends_with("]") {
@@ -54,8 +52,6 @@ impl ASTParser {
             }
         }
 
-        // Just in case it's not parsed properly, check string content for $[] as fallback, but only if it's text.
-        // But doing it robustly:
         if node_kind == "word" || node_kind == "raw_string" {
              let text = &source[node.start_byte()..node.end_byte()];
              if text.starts_with("$[") && text.ends_with("]") {
@@ -63,6 +59,22 @@ impl ASTParser {
              }
         }
 
+        // Check for =command zsh dangerous expansions ONLY if it matches exactly `=command` form
+        // without quotes or spaces, typically identified as a word.
+        if node_kind == "word" {
+             let text = &source[node.start_byte()..node.end_byte()];
+             if text.starts_with("=") && text.len() > 1 && !text.contains(" ") {
+                  return Err("Dangerous pattern detected: = zsh expansion".to_string());
+             }
+        }
+
+        // Check for carriage return \r\n
+        if node_kind == "word" || node_kind == "raw_string" {
+             let text = &source[node.start_byte()..node.end_byte()];
+             if text.contains("\r\n") {
+                  return Err("Dangerous pattern detected: \\r\\n carriage return".to_string());
+             }
+        }
 
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
@@ -83,6 +95,8 @@ mod tests {
         assert!(parser.parse_for_security("echo 'hello world'").is_ok());
         assert!(parser.parse_for_security("ls -l /tmp").is_ok());
         assert!(parser.parse_for_security("cat file.txt | grep foo").is_ok());
+        // allow "=" inside quotes or as a standalone arg
+        assert!(parser.parse_for_security("echo \"=\"").is_ok());
     }
 
     #[test]
@@ -112,9 +126,16 @@ mod tests {
     #[test]
     fn test_block_legacy_expansion() {
         let mut parser = ASTParser::new();
-        // $[] might be parsed as word or expansion depending on tree-sitter-bash grammar rules
         let res = parser.parse_for_security("echo $[1+1]");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: $[] legacy expansion");
+    }
+
+    #[test]
+    fn test_block_zsh_expansion() {
+        let mut parser = ASTParser::new();
+        let res = parser.parse_for_security("=curl");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: = zsh expansion");
     }
 }

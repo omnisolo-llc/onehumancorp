@@ -54,6 +54,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_ast_denied_command_execution() {
+        let task = LocalShellTask::new(None);
+        let result = task.execute("cat < <(echo 'test')").await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("SANDBOX_FAILURE"));
+        assert!(err.contains("Dangerous pattern detected: <() process substitution"));
+    }
+
+    #[tokio::test]
+    async fn test_ast_denied_zsh_expansion() {
+        let task = LocalShellTask::new(None);
+        let result = task.execute("=curl").await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("SANDBOX_FAILURE"));
+        assert!(err.contains("Dangerous pattern detected: = zsh expansion"));
+    }
+
+    #[tokio::test]
+    async fn test_ast_denied_carriage_return() {
+        let task = LocalShellTask::new(None);
+        let result = task.execute("echo 'hello\r\nworld'").await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("SANDBOX_FAILURE"));
+        assert!(err.contains("Dangerous pattern detected: \\r\\n carriage return"));
+    }
+
+    #[tokio::test]
     async fn test_dynamic_config_update() {
         let mut task = LocalShellTask::new(None);
 
@@ -89,5 +119,11 @@ mod tests {
         let msg = result.unwrap();
         assert!(msg.contains("export READ_ONLY_PATHS='/etc:/var'"));
         assert!(msg.contains("export BLOCKED_DOMAINS='evil.com'"));
+    }
+
+    #[tokio::test]
+    async fn test_sandbox_determination() {
+        let task = LocalShellTask::new(None);
+        assert!(task.manager.should_use_sandbox("echo test").await);
     }
 }
