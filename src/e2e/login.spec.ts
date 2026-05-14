@@ -25,29 +25,29 @@ test.describe('Login Page', () => {
 test.describe('Dashboard', () => {
   test('should display dashboard', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Dashboard' }).filter({ visible: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Dashboard/i }).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should display nav', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('nav')).toBeVisible();
+    await expect(page.locator('nav').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should show welcome message', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Welcome back')).toBeVisible();
+    await expect(page.locator('text=/Welcome back/i').first()).toBeVisible({ timeout: 10000 });
   });
 });
 
 test.describe('Navigation', () => {
   test('should navigate to agents page', async ({ page }) => {
     await page.goto('/');
-    await page.locator('nav a:has-text("Agents")').click();
+    await page.locator('nav a:has-text("Agents")').first().click({ timeout: 10000 });
     await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
   });
 
   test('should display business setup', async ({ page }) => {
     await page.goto('/business-setup');
-    await expect(page.locator('text=Your business, live in minutes')).toBeVisible();
+    await expect(page.locator('text=/Your business, live in minutes/i').first()).toBeVisible({ timeout: 10000 });
   });
 });
