@@ -1,1 +1,1 @@
-Maintainer: Zero WIP exit
+🔍 Scout: Tool Integration Research [quarter]
