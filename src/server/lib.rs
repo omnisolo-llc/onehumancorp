@@ -1588,6 +1588,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
+    let integration_service = crate::services::integration::service::MyIntegrationService::new(hub.registry());
+    let chat_service = crate::services::chat::service::MyChatService::new(hub.registry());
+    let mcp_service = crate::services::mcp::service::MyMcpService::new(hub.registry(), hub.clone());
+
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
@@ -1595,6 +1599,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
+        .add_service(::server_ohc::orchestration::integration_service_server::IntegrationServiceServer::with_interceptor(integration_service, spiffe_interceptor))
+        .add_service(::server_ohc::orchestration::chat_service_server::ChatServiceServer::with_interceptor(chat_service, spiffe_interceptor))
+        .add_service(::server_ohc::orchestration::mcp_service_server::McpServiceServer::with_interceptor(mcp_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 

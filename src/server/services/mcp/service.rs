@@ -25,6 +25,13 @@ impl MyMcpService {
             local_proxy_server: Arc::new(LocalProxyServer::new()),
         }
     }
+
+    fn get_tenant_id<T>(&self, request: &Request<T>) -> String {
+        request.metadata().get("x-tenant-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("default")
+            .to_string()
+    }
 }
 
 #[tonic::async_trait]
@@ -77,6 +84,7 @@ impl McpService for MyMcpService {
         &self,
         request: Request<McpInvokeRequest>,
     ) -> Result<Response<McpInvokeResponse>, Status> {
+        let tenant_id = self.get_tenant_id(&request);
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
 
@@ -101,7 +109,7 @@ impl McpService for MyMcpService {
                 let content = params["content"].as_str().ok_or_else(|| Status::invalid_argument("content is required"))?;
                 let thread_id = params["thread_id"].as_str().unwrap_or_default();
 
-                let msg = self.registry.send_chat_message(&req.tool_id, channel, from_agent, content, thread_id)
+                let msg = self.registry.send_chat_message(&tenant_id, &req.tool_id, channel, from_agent, content, thread_id)
                     .map_err(|e| Status::internal(e))?;
 
                 let resp_payload = serde_json::to_string(&msg).unwrap();
@@ -118,7 +126,7 @@ impl McpService for MyMcpService {
                 let target = params["target_branch"].as_str().unwrap_or("main");
                 let created_by = params["created_by"].as_str().unwrap_or_default();
 
-                let pr = self.registry.create_pull_request(&req.tool_id, repo, title, body, source, target, created_by)
+                let pr = self.registry.create_pull_request(&tenant_id, &req.tool_id, repo, title, body, source, target, created_by)
                     .map_err(|e| Status::internal(e))?;
 
                 let resp_payload = serde_json::to_string(&pr).unwrap();
@@ -143,7 +151,7 @@ impl McpService for MyMcpService {
                     }
                 }
 
-                let issue = self.registry.create_issue(&req.tool_id, project, title, description, created_by, priority, labels)
+                let issue = self.registry.create_issue(&tenant_id, &req.tool_id, project, title, description, created_by, priority, labels)
                     .map_err(|e| Status::internal(e))?;
 
                 let resp_payload = serde_json::to_string(&issue).unwrap();

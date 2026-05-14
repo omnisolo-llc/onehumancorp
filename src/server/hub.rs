@@ -34,6 +34,7 @@ pub struct Hub {
     tracker: Tracker,
     task_manager: TaskManager,
     scheduler: Scheduler,
+    registry: Arc<crate::integrations::registry::IntegrationsRegistry>,
     cost_auditor: Arc<CostAuditor>,
     recent_events: RwLock<Vec<HubEvent>>,
     token_usage_history: RwLock<HashMap<String, Vec<i64>>>,
@@ -113,6 +114,7 @@ impl Hub {
             },
             task_manager: TaskManager::new(),
             scheduler: Scheduler::new(),
+            registry: Arc::new(crate::integrations::registry::IntegrationsRegistry::new()),
             cost_auditor,
             recent_events: RwLock::new(Vec::new()),
             token_usage_history: RwLock::new(HashMap::new()),
@@ -536,6 +538,10 @@ impl Hub {
 
     pub fn scheduler(&self) -> &Scheduler {
         &self.scheduler
+    }
+
+    pub fn registry(&self) -> Arc<crate::integrations::registry::IntegrationsRegistry> {
+        self.registry.clone()
     }
 
     pub fn log_event(&self, event: serde_json::Value) {

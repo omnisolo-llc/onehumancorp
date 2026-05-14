@@ -11,6 +11,13 @@ impl MyChatService {
     pub fn new(registry: std::sync::Arc<IntegrationsRegistry>) -> Self {
         MyChatService { registry }
     }
+
+    fn get_tenant_id<T>(&self, request: &Request<T>) -> String {
+        request.metadata().get("x-tenant-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("default")
+            .to_string()
+    }
 }
 
 #[tonic::async_trait]
@@ -19,9 +26,10 @@ impl ChatService for MyChatService {
         &self,
         request: Request<ChatTestRequest>,
     ) -> Result<Response<ChatTestResponse>, Status> {
+        let tenant_id = self.get_tenant_id(&request);
         let req = request.into_inner();
         
-        match self.registry.test_connection(&req.integration_id, req.clone()) {
+        match self.registry.test_connection(&tenant_id, &req.integration_id, req.clone()) {
             Ok(_) => Ok(Response::new(ChatTestResponse { success: true })),
             Err(e) => Err(Status::invalid_argument(e)),
         }
@@ -31,8 +39,9 @@ impl ChatService for MyChatService {
         &self,
         request: Request<GetChatMessagesRequest>,
     ) -> Result<Response<GetChatMessagesResponse>, Status> {
+        let tenant_id = self.get_tenant_id(&request);
         let req = request.into_inner();
-        let messages = self.registry.chat_messages(&req.integration_id);
+        let messages = self.registry.chat_messages(&tenant_id, &req.integration_id);
         Ok(Response::new(GetChatMessagesResponse { messages }))
     }
 
@@ -40,9 +49,10 @@ impl ChatService for MyChatService {
         &self,
         request: Request<ChatSendRequest>,
     ) -> Result<Response<ChatMessage>, Status> {
+        let tenant_id = self.get_tenant_id(&request);
         let req = request.into_inner();
         
-        match self.registry.send_chat_message(&req.integration_id, &req.channel, &req.from_agent, &req.content, &req.thread_id) {
+        match self.registry.send_chat_message(&tenant_id, &req.integration_id, &req.channel, &req.from_agent, &req.content, &req.thread_id) {
             Ok(msg) => Ok(Response::new(msg)),
             Err(e) => Err(Status::internal(e)),
         }

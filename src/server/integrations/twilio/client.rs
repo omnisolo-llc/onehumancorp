@@ -25,6 +25,11 @@ impl RealTwilioClient {
 #[async_trait]
 impl TwilioClientWrapper for RealTwilioClient {
     async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
+        // Validate phone number format (simple check for E.164-ish)
+        if !to.starts_with('+') || to.len() < 8 {
+            return Err("Invalid recipient phone number format. Must be E.164 (+1234567890)".to_string());
+        }
+
         let url = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", self.account_sid);
         let res = self.http_client.post(&url)
             .basic_auth(&self.account_sid, Some(&self.auth_token))
@@ -47,10 +52,12 @@ impl TwilioClientWrapper for RealTwilioClient {
                     ).await;
                     Ok(())
                 } else {
-                    Err(format!("Twilio API error: {}", resp.status()))
+                    let status = resp.status();
+                    let error_body = resp.text().await.unwrap_or_default();
+                    Err(format!("Twilio API error ({}): {}", status, error_body))
                 }
             }
-            Err(e) => Err(format!("Network error: {}", e)),
+            Err(e) => Err(format!("Network error while contacting Twilio: {}", e)),
         }
     }
 }
@@ -67,13 +74,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_send_sms_error_handling() {
-        // This test verifies the error handling without making real HTTP calls
-        // by supplying a malformed URL that reqwest will fail to parse/execute
+    async fn test_send_sms_invalid_number() {
         let client = RealTwilioClient::new("sid".to_string(), "token".to_string());
-
-        // Because we cannot easily mock the reqwest::Client without bringing in external dependencies
-        // like wiremock or httpmock, we'll verify the structural error path for now
-        let _ = client.send_sms("+1", "+2", "test").await;
+        let res = client.send_sms("123", "+1234", "test").await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Invalid recipient phone number format"));
     }
 }

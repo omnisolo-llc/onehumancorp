@@ -1,7 +1,3 @@
-// Stub module - functionality was removed or moved
-// This file exists to satisfy module references that weren't cleaned up
-
-
 pub struct IntegrationProvider {
     pub metadata: ProviderMetadata,
 }
@@ -16,29 +12,87 @@ pub struct ProviderMetadata {
 pub fn get_catalog() -> Vec<IntegrationProvider> {
     let mut catalog = vec![];
 
-    // We instantiate nats as a placeholder, without making actual network connection
-    // since this is used in synchronous `new()` of registry
-    let nats_provider = crate::integrations::catalog::IntegrationProvider {
-        metadata: crate::integrations::catalog::ProviderMetadata {
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
             id: "nats".to_string(),
             name: "NATS Event Mesh".to_string(),
             category: "event_mesh".to_string(),
             base_url: "nats://localhost:4222".to_string(),
         }
-    };
-    catalog.push(nats_provider);
+    });
 
-    // We avoid initializing a real TwilioProvider client here just for metadata
-    // to prevent unwanted HTTP client instantiation during registry initialization
-    let twilio_provider = crate::integrations::catalog::IntegrationProvider {
-        metadata: crate::integrations::catalog::ProviderMetadata {
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
             id: "twilio".to_string(),
             name: "Twilio SMS".to_string(),
             category: "sms".to_string(),
             base_url: "https://api.twilio.com".to_string(),
         }
-    };
-    catalog.push(twilio_provider);
+    });
+
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: "meta".to_string(),
+            name: "Meta (Instagram & Facebook)".to_string(),
+            category: "social_media".to_string(),
+            base_url: "https://graph.facebook.com".to_string(),
+        }
+    });
+
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: "google_calendar".to_string(),
+            name: "Google Calendar".to_string(),
+            category: "calendar".to_string(),
+            base_url: "https://www.googleapis.com/calendar".to_string(),
+        }
+    });
+
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: "sendgrid".to_string(),
+            name: "SendGrid Email".to_string(),
+            category: "email".to_string(),
+            base_url: "https://api.sendgrid.com".to_string(),
+        }
+    });
+
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: "shippo".to_string(),
+            name: "Shippo Logistics".to_string(),
+            category: "shipping".to_string(),
+            base_url: "https://api.goshippo.com".to_string(),
+        }
+    });
+
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: "zoom".to_string(),
+            name: "Zoom Conferencing".to_string(),
+            category: "video".to_string(),
+            base_url: "https://api.zoom.us".to_string(),
+        }
+    });
+
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: "mercadopago".to_string(),
+            name: "Mercado Pago".to_string(),
+            category: "payment".to_string(),
+            base_url: "https://api.mercadopago.com".to_string(),
+        }
+    });
+
+    catalog.push(IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: "stripe".to_string(),
+            name: "Stripe Payments".to_string(),
+            category: "payment".to_string(),
+            base_url: "https://api.stripe.com".to_string(),
+        }
+    });
+
     let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
     catalog.push(chromadb_provider.to_integration_provider());
 
