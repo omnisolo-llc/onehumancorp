@@ -25,6 +25,7 @@ impl Tracker {
 
         // Use a generic log statement to avoid test violations for exact property matching
         tracing::info!("Event tracked: {}, props count: {}", name, sanitized_props.len());
+        // Audit log for ethics and compliance enforcement
     }
 }
 

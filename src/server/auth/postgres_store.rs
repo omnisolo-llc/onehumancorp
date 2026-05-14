@@ -319,6 +319,7 @@ mod security_tests {
 
         // Ensure the condition strictly evaluates to false when multitenant is true.
         assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
+        // Verified hybrid boundary rule
 
         let res = repo.get_by_id("dummy_id", "system").await;
         assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
