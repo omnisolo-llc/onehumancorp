@@ -26,7 +26,7 @@ pub async fn run_health_monitor(
         let mut to_fire_now: Vec<String> = Vec::new();
         match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.get_active_agents()).await {
             Ok(Ok(agents)) => {
-                let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
+                let is_cloud = _is_cloud;
 
                 if agents.is_empty() {
                     tracing::debug!("HEALTH MONITOR: No active agents found."); // Reduced noise
@@ -47,7 +47,7 @@ pub async fn run_health_monitor(
                 for agent_id in to_fire {
                     let count = pending_fires.entry(agent_id.clone()).or_insert(0);
                     *count += 1;
-                    let threshold = if is_cloud { 3 } else { 1 };
+                    let threshold = if is_cloud { 2 } else { 1 };
                     if *count >= threshold {
                         to_fire_now.push(agent_id.clone());
                     } else {
