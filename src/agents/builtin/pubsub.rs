@@ -154,38 +154,6 @@ impl SubagentRegistry {
     }
 }
 
-/// Build a task notification message.
-pub fn build_task_notification(
-    task_id: &str,
-    tool_use_id: &str,
-    output_file: &str,
-    status: &str,
-    summary: &str,
-    result: &str,
-    token_count: i64,
-    tool_uses: i64,
-    duration_ms: i64,
-) -> TaskNotification {
-    TaskNotification {
-        task_id: task_id.to_string(),
-        tool_use_id: tool_use_id.to_string(),
-        output_file: output_file.to_string(),
-        status: status.to_string(),
-        summary: truncate_notif(summary, 1000),
-        result: truncate_notif(result, 2000),
-        token_count,
-        tool_uses,
-        duration_ms,
-    }
-}
-
-fn truncate_notif(s: &str, max_len: usize) -> String {
-    if s.len() <= max_len {
-        s.to_string()
-    } else {
-        format!("{}…", &s[..max_len])
-    }
-}
 
 #[cfg(test)]
 mod tests {

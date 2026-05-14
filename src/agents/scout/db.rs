@@ -21,10 +21,6 @@ pub enum ScoutDb {
 }
 
 impl ScoutDb {
-    pub fn new_pg(pool: Pool<Postgres>) -> Self {
-        Self::Postgres(pool)
-    }
-
     pub fn new_sqlite(pool: Pool<Sqlite>) -> Self {
         Self::Sqlite(pool)
     }
