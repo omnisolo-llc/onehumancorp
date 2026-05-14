@@ -209,3 +209,70 @@ impl Default for Tracker {
         Tracker::new()
     }
 }
+
+#[derive(serde::Serialize)]
+pub struct PricingPlan {
+    pub id: String,
+    pub name: String,
+    pub monthly_price_usd: f64,
+    pub max_products: i32,
+    pub max_ai_actions: i32,
+    pub features: Vec<String>,
+}
+
+pub async fn get_pricing_plans(db: &Arc<crate::db::DB>) -> Result<Vec<PricingPlan>, String> {
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let rows = sqlx::query("SELECT id, name, monthly_price_usd::text, max_products, max_ai_actions, features FROM pricing_plans ORDER BY monthly_price_usd ASC")
+                .fetch_all(&db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let mut plans = Vec::new();
+            for r in rows {
+                use sqlx::Row;
+                let features_json: serde_json::Value = r.try_get("features").unwrap_or(serde_json::json!([]));
+                let features = features_json.as_array().unwrap_or(&vec![]).iter().map(|v| v.as_str().unwrap_or("").to_string()).collect();
+
+                let price_str: String = r.try_get("monthly_price_usd").unwrap_or("0".to_string());
+                let price: f64 = price_str.parse().unwrap_or(0.0);
+
+                plans.push(PricingPlan {
+                    id: r.get("id"),
+                    name: r.get("name"),
+                    monthly_price_usd: price,
+                    max_products: r.try_get("max_products").unwrap_or(-1),
+                    max_ai_actions: r.try_get("max_ai_actions").unwrap_or(-1),
+                    features,
+                });
+            }
+            Ok(plans)
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            let rows = sqlx::query("SELECT id, name, monthly_price_usd, max_products, max_ai_actions, features FROM pricing_plans ORDER BY monthly_price_usd ASC")
+                .fetch_all(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let mut plans = Vec::new();
+            for r in rows {
+                use sqlx::Row;
+                let features_str: String = r.try_get("features").unwrap_or("[]".to_string());
+                let features_json: serde_json::Value = serde_json::from_str(&features_str).unwrap_or(serde_json::json!([]));
+                let features = features_json.as_array().unwrap_or(&vec![]).iter().map(|v| v.as_str().unwrap_or("").to_string()).collect();
+
+                let price: f64 = r.try_get("monthly_price_usd").unwrap_or(0.0);
+
+                plans.push(PricingPlan {
+                    id: r.get("id"),
+                    name: r.get("name"),
+                    monthly_price_usd: price,
+                    max_products: r.try_get("max_products").unwrap_or(-1),
+                    max_ai_actions: r.try_get("max_ai_actions").unwrap_or(-1),
+                    features,
+                });
+            }
+            Ok(plans)
+        }
+    }
+}

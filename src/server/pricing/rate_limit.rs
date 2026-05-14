@@ -142,7 +142,7 @@ impl RedisRateLimiter {
         if let Some(limit) = tier.monthly_action_limit() {
             if tenant_used >= limit {
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit - allow but warn
+                    is_allowed: false, // Hard limit!
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
@@ -160,7 +160,7 @@ impl RedisRateLimiter {
         if let Some(limit) = tier.agent_action_limit() {
             if agent_used >= limit {
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit
+                    is_allowed: false, // Hard limit!
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",

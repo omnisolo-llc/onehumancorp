@@ -107,6 +107,61 @@ impl OperationsWorker {
 
         let processed = task.is_some();
         if let Some((id, tenant_id, payload)) = task {
+            // Check Rate Limit
+            let is_allowed = if let Ok(redis_url) = std::env::var("REDIS_URL") {
+                if let Ok(client) = redis::Client::open(redis_url.clone()) {
+                    let limiter = ::server_pricing::rate_limit::RedisRateLimiter::new(client);
+                    let status = limiter.record_action(&tenant_id, "operations").await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+                        is_allowed: true,
+                        soft_limit_reached: false,
+                        user_message: None,
+                    });
+                    status.is_allowed
+                } else { true }
+            } else { true };
+
+            if !is_allowed {
+                // Draft human readable notification
+                let task_id = Uuid::new_v4().to_string();
+                let title = "Action Required: AI Quota Exceeded";
+                let description = "Your background AI task was paused because you have exhausted your monthly AI actions.";
+                let msg = "We've paused an operations background task because you've reached your plan's AI action limit. Please upgrade your plan to continue automated processing.";
+
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query(
+                            "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content) VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)"
+                        )
+                        .bind(&task_id).bind(&tenant_id).bind(&title).bind(&description).bind(&msg)
+                        .execute(&db.pool).await;
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query(
+                            "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content) VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)"
+                        )
+                        .bind(&task_id).bind(&tenant_id).bind(&title).bind(&description).bind(&msg)
+                        .execute(pool).await;
+                    }
+                };
+
+                // Mark original task as FAILED with 402
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query("UPDATE department_tasks SET status = 'FAILED', payload = $1::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                        .bind(json!({"error": "402 Payment Required", "message": "AI action limit reached"}).to_string())
+                        .bind(&id)
+                        .execute(&db.pool).await;
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query("UPDATE department_tasks SET status = 'FAILED', payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                        .bind(json!({"error": "402 Payment Required", "message": "AI action limit reached"}).to_string())
+                        .bind(&id)
+                        .execute(pool).await;
+                    }
+                };
+
+                return Ok(processed);
+            }
             // Check inventory levels
             let items = payload.get("items").and_then(|v| v.as_array());
             if let Some(items) = items {
@@ -657,6 +712,58 @@ impl CustomerSuccessWorker {
 
         let processed = task.is_some();
         if let Some((id, tenant_id, payload, event_type)) = task {
+            // Check Rate Limit
+            let is_allowed = if let Ok(redis_url) = std::env::var("REDIS_URL") {
+                if let Ok(client) = redis::Client::open(redis_url.clone()) {
+                    let limiter = ::server_pricing::rate_limit::RedisRateLimiter::new(client);
+                    let status = limiter.record_action(&tenant_id, "customer_success").await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+                        is_allowed: true,
+                        soft_limit_reached: false,
+                        user_message: None,
+                    });
+                    status.is_allowed
+                } else { true }
+            } else { true };
+
+            if !is_allowed {
+                let task_id = Uuid::new_v4().to_string();
+                let title = "Action Required: AI Quota Exceeded";
+                let description = "Your background AI task was paused because you have exhausted your monthly AI actions.";
+                let msg = "We've paused a customer success background task because you've reached your plan's AI action limit. Please upgrade your plan to continue automated processing.";
+
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query(
+                            "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content) VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)"
+                        )
+                        .bind(&task_id).bind(&tenant_id).bind(&title).bind(&description).bind(&msg)
+                        .execute(&db.pool).await;
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query(
+                            "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content) VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)"
+                        )
+                        .bind(&task_id).bind(&tenant_id).bind(&title).bind(&description).bind(&msg)
+                        .execute(pool).await;
+                    }
+                };
+
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query("UPDATE department_tasks SET status = 'FAILED', payload = $1::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                        .bind(json!({"error": "402 Payment Required", "message": "AI action limit reached"}).to_string())
+                        .bind(&id)
+                        .execute(&db.pool).await;
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query("UPDATE department_tasks SET status = 'FAILED', payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                        .bind(json!({"error": "402 Payment Required", "message": "AI action limit reached"}).to_string())
+                        .bind(&id)
+                        .execute(pool).await;
+                    }
+                };
+                return Ok(processed);
+            }
             // Draft confirmation message
             let (title, drafted_msg) = if event_type == "OrderProcessed" {
                 ("Draft Confirmation".to_string(), format!("Hi! Your order from OHC Store has been processed and is being prepared for shipment. Thank you!"))
