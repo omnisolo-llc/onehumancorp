@@ -22,3 +22,32 @@ sh_binary(
 # Run all:   bazel test //src/e2e:playwright
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests()
+
+# Playwright E2E targets for Dashboard Canvas
+load("@rules_playwright//playwright:defs.bzl", "playwright_test")
+
+playwright_test(
+    name = "canvas_dashboard_test",
+    srcs = ["Canvas_Dashboard.spec.ts"],
+    config = "//:playwright.config.ts",
+    deps = [],
+)
+
+# Playwright E2E targets for Dashboard Canvas
+load("@rules_playwright//playwright:defs.bzl", "playwright_test")
+
+playwright_test(
+    name = "canvas_dashboard_test",
+    srcs = ["Canvas_Dashboard.spec.ts"],
+    config = "//:playwright.config.ts",
+    deps = [],
+)
+
+load("@rules_playwright//playwright:defs.bzl", "playwright_test")
+
+playwright_test(
+    name = "canvas_dashboard_test",
+    srcs = ["Canvas_Dashboard.spec.ts"],
+    config = "//:playwright.config.ts",
+    deps = [],
+)
