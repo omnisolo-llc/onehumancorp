@@ -39,7 +39,7 @@ async function main() {
   const server = spawn(serverBin, [], {
     cwd: ROOT,
     stdio: 'inherit',
-    env: { ...process.env, DATABASE_URL: 'postgres://ohc:ohc@localhost:5432/ohc' },
+    env: { ...process.env, DATABASE_URL: 'sqlite::memory:' },
   });
 
   await setTimeout(2000); // Give server time to start

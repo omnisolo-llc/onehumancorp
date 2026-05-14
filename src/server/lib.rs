@@ -1650,11 +1650,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('inbox-screen')">Check Messages</button>
                         </div>
                         <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
+
+                        <div class="card glass" id="soft-paywall" style="display: none;">
+                            <h2>Upgrade your business</h2>
+                            <p>You've hit your Free Tier limit (1 AI agent, 10 products). Upgrade to Pro to grow faster!</p>
+                            <button onclick="showScreen('pricing-screen')">View Plans</button>
+                        </div>
+<h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Update Setup</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
+                            <button onclick="showScreen(\'users-screen\')">Users</button>
+                            <button onclick="showScreen(\'referrals-dashboard-screen\')">Referrals</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
@@ -1699,7 +1707,44 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
-                    <!-- API Screen -->
+
+                    <!-- Users Screen -->
+                    <div id="users-screen" class="screen">
+                        <h1>User Management</h1>
+                        <div class="card glass referral-widget">
+                            <h2>Referral Program</h2>
+                            <p>Share OHC with a friend, both get 1 month free Pro.</p>
+                            <button onclick="console.log('Invite User clicked'); showScreen('referrals-dashboard-screen')">Invite User</button>
+                        </div>
+                    </div>
+
+
+                    <!-- Business Share -->
+                    <div id="business-share-screen" class="screen">
+                        <h1>Business Share & Embed</h1>
+                        <div class="card glass">
+                            <h2>Share My Business</h2>
+                            <p>Get a beautifully designed shareable link card.</p>
+                            <button onclick="alert('Copied to clipboard!')">Copy Link</button>
+                            <button onclick="alert('Posted to Instagram!')">Share to Instagram</button>
+                            <button onclick="alert('Posted to WhatsApp!')">Share to WhatsApp</button>
+                            <button onclick="alert('Posted to X!')">Share to X</button>
+                        </div>
+                    </div>
+                    <!-- Referrals Dashboard -->
+
+                    <div id="referrals-dashboard-screen" class="screen">
+                        <h1>Referral Dashboard</h1>
+                        <p>Your referral link: <span id="ref-link">ohc://join?ref=DEFAULT</span></p>
+                        <button onclick="alert('Copied!')">Copy</button>
+                        <button onclick="alert('Refreshed!')">Refresh</button>
+                        <button onclick="alert('Shared to Instagram!')">📷 Share to Instagram</button>
+                        <button onclick="document.body.insertAdjacentHTML('beforeend', '<div class=\'toast\'>Invite message copied!</div>')">💬 Copy Invite Message</button>
+                        <button onclick="alert('Viewing history!')">📜 View History</button>
+                        <button onclick="alert('Exporting data!')">📤 Export Data</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+<!-- API Screen -->
                     <div id="api-screen" class="screen">
                         <h1>Connect Custom Software</h1>
                         <h1>Custom Integration</h1>
@@ -1710,7 +1755,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
+
+                    <!-- Social Media Auto-Posting -->
+                    <div id="social-auto-posting-screen" class="screen">
+                        <h1>Social Media Auto-Posting</h1>
+                        <div class="card glass">
+                            <h2>AI Auto-Poster Agent</h2>
+                            <p>Connect Instagram, Facebook, or X. Our agent auto-generates and schedules posts for new products, sales, or milestones.</p>
+                            <button onclick="alert('Instagram Connected')">Connect Instagram</button>
+                            <button onclick="alert('Facebook Connected')">Connect Facebook</button>
+                            <button onclick="alert('X Connected')">Connect X</button>
+                            <div class="card">
+                                <h3>Pending Approvals</h3>
+                                <p>New Post: "Flash sale today! Check out our new arrivals."</p>
+                                <button onclick="alert('Post Approved!')">Approve (One-Tap)</button>
+                            </div>
+                        </div>
+                    </div>
                     <!-- Settings Screen -->
+
                     <div id="settings-screen" class="screen">
                         <h1>Settings</h1>
                         <h2>General</h2>
@@ -1849,7 +1912,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          </div>
                      </div>
 
-                     <!-- Services Page -->
+
+                    <!-- Email Marketing -->
+                    <div id="email-marketing-screen" class="screen">
+                        <h1>Email Marketing</h1>
+                        <div class="card glass">
+                            <h2>Simple Email Campaigns</h2>
+                            <p>Select contacts and pick an AI-generated template.</p>
+                            <select><option>All Contacts</option><option>VIPs</option></select>
+                            <select><option>New arrivals</option><option>Flash sale</option><option>Thank you</option></select>
+                            <button onclick="alert('Previewing email...')">Preview</button>
+                            <button onclick="alert('Email Sent!')">Send</button>
+                            <p>Open Rate: 42%</p>
+                        </div>
+                    </div>
+                    <!-- Services Page -->
+
                      <div id="services-screen" class="screen">
                          <h1>Service Manager</h1>
                          <div class="service-item card glass">
@@ -2007,7 +2085,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
-                        function showScreen(id) {
+
+                        function triggerMilestone(type) {
+                            const toaster = document.createElement('div');
+                            toaster.className = 'glass';
+                            toaster.style.cssText = 'position: fixed; top: 20px; right: 20px; padding: 15px; border-radius: 8px; z-index: 1000; animation: fadein 0.5s;';
+                            if (type === 'orders') toaster.innerHTML = '🎉 You just got your 10th order!';
+                            if (type === 'visitors') toaster.innerHTML = '🚀 Your store has 100 visitors today!';
+                            document.body.appendChild(toaster);
+                            setTimeout(() => toaster.remove(), 5000);
+                        }
+function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
@@ -2107,7 +2195,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
                     </script>
-                </body>
+
+                    <footer class="viral-storefront-footer" style="text-align: center; padding: 20px; font-size: 12px; opacity: 0.7;">
+                        <a href="/setup" style="color: inherit; text-decoration: none;">Built with OHC — Start your free business →</a>
+                    </footer>
+</body>
             </html>
         "#,
     };
