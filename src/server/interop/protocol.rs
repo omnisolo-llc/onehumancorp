@@ -744,7 +744,7 @@ mod tests {
         let bus = Arc::new(MockFailingBus {
             failures_left: std::sync::atomic::AtomicUsize::new(3),
         });
-        let lock = Arc::new(MemoryBus::new()); // dummy lock
+        let lock = Arc::new(MemoryBus::new()); // in-memory lock
         let protocol = InteropProtocol::new(bus, lock, "agent".to_string());
 
         let result = protocol.report_job_status("job_retry_1", "tenant_a", "FAILED", vec![]).await;
