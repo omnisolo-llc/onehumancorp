@@ -24,6 +24,15 @@
   "panels": [
     {
       "type": "text",
+      "title": "OHC Premium CSS",
+      "options": {
+        "content": "<style>\n/* OHC premium CSS tokens */\n:root {\n  --ohc-glass-bg: rgba(255, 255, 255, 0.1);\n  --ohc-glass-border: rgba(255, 255, 255, 0.2);\n  --ohc-glass-blur: blur(10px);\n}\n.panel-container {\n  background: var(--ohc-glass-bg) !important;\n  backdrop-filter: var(--ohc-glass-blur) !important;\n  border: 1px solid var(--ohc-glass-border) !important;\n  border-radius: 12px !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "gridPos": { "h": 2, "w": 2, "x": 0, "y": 0 }
+    },
+    {
+      "type": "text",
       "title": "OHC Aesthetic Injector",
       "gridPos": {
         "h": 2,
@@ -80,7 +89,16 @@
         "y": 3
       },
       "collapsed": false,
-      "panels": []
+      "panels": [
+    {
+      "type": "text",
+      "title": "OHC Premium CSS",
+      "options": {
+        "content": "<style>\n/* OHC premium CSS tokens */\n:root {\n  --ohc-glass-bg: rgba(255, 255, 255, 0.1);\n  --ohc-glass-border: rgba(255, 255, 255, 0.2);\n  --ohc-glass-blur: blur(10px);\n}\n.panel-container {\n  background: var(--ohc-glass-bg) !important;\n  backdrop-filter: var(--ohc-glass-blur) !important;\n  border: 1px solid var(--ohc-glass-border) !important;\n  border-radius: 12px !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "gridPos": { "h": 2, "w": 2, "x": 0, "y": 0 }
+    },]
     },
     {
       "datasource": {
@@ -269,7 +287,16 @@
         "y": 12
       },
       "collapsed": false,
-      "panels": []
+      "panels": [
+    {
+      "type": "text",
+      "title": "OHC Premium CSS",
+      "options": {
+        "content": "<style>\n/* OHC premium CSS tokens */\n:root {\n  --ohc-glass-bg: rgba(255, 255, 255, 0.1);\n  --ohc-glass-border: rgba(255, 255, 255, 0.2);\n  --ohc-glass-blur: blur(10px);\n}\n.panel-container {\n  background: var(--ohc-glass-bg) !important;\n  backdrop-filter: var(--ohc-glass-blur) !important;\n  border: 1px solid var(--ohc-glass-border) !important;\n  border-radius: 12px !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "gridPos": { "h": 2, "w": 2, "x": 0, "y": 0 }
+    },]
     },
     {
       "datasource": {
@@ -603,7 +630,16 @@
         "y": 29
       },
       "collapsed": false,
-      "panels": []
+      "panels": [
+    {
+      "type": "text",
+      "title": "OHC Premium CSS",
+      "options": {
+        "content": "<style>\n/* OHC premium CSS tokens */\n:root {\n  --ohc-glass-bg: rgba(255, 255, 255, 0.1);\n  --ohc-glass-border: rgba(255, 255, 255, 0.2);\n  --ohc-glass-blur: blur(10px);\n}\n.panel-container {\n  background: var(--ohc-glass-bg) !important;\n  backdrop-filter: var(--ohc-glass-blur) !important;\n  border: 1px solid var(--ohc-glass-border) !important;\n  border-radius: 12px !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "gridPos": { "h": 2, "w": 2, "x": 0, "y": 0 }
+    },]
     },
     {
       "datasource": {
@@ -1311,7 +1347,16 @@
         "y": 62
       },
       "collapsed": false,
-      "panels": []
+      "panels": [
+    {
+      "type": "text",
+      "title": "OHC Premium CSS",
+      "options": {
+        "content": "<style>\n/* OHC premium CSS tokens */\n:root {\n  --ohc-glass-bg: rgba(255, 255, 255, 0.1);\n  --ohc-glass-border: rgba(255, 255, 255, 0.2);\n  --ohc-glass-blur: blur(10px);\n}\n.panel-container {\n  background: var(--ohc-glass-bg) !important;\n  backdrop-filter: var(--ohc-glass-blur) !important;\n  border: 1px solid var(--ohc-glass-border) !important;\n  border-radius: 12px !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "gridPos": { "h": 2, "w": 2, "x": 0, "y": 0 }
+    },]
     },
     {
       "title": "Teammate Mesh Broadcasts",
@@ -1658,7 +1703,16 @@
         "y": 79
       },
       "collapsed": false,
-      "panels": []
+      "panels": [
+    {
+      "type": "text",
+      "title": "OHC Premium CSS",
+      "options": {
+        "content": "<style>\n/* OHC premium CSS tokens */\n:root {\n  --ohc-glass-bg: rgba(255, 255, 255, 0.1);\n  --ohc-glass-border: rgba(255, 255, 255, 0.2);\n  --ohc-glass-blur: blur(10px);\n}\n.panel-container {\n  background: var(--ohc-glass-bg) !important;\n  backdrop-filter: var(--ohc-glass-blur) !important;\n  border: 1px solid var(--ohc-glass-border) !important;\n  border-radius: 12px !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "gridPos": { "h": 2, "w": 2, "x": 0, "y": 0 }
+    },]
     },
     {
       "id": 24,
@@ -2099,7 +2153,16 @@
         "y": 104
       },
       "collapsed": false,
-      "panels": []
+      "panels": [
+    {
+      "type": "text",
+      "title": "OHC Premium CSS",
+      "options": {
+        "content": "<style>\n/* OHC premium CSS tokens */\n:root {\n  --ohc-glass-bg: rgba(255, 255, 255, 0.1);\n  --ohc-glass-border: rgba(255, 255, 255, 0.2);\n  --ohc-glass-blur: blur(10px);\n}\n.panel-container {\n  background: var(--ohc-glass-bg) !important;\n  backdrop-filter: var(--ohc-glass-blur) !important;\n  border: 1px solid var(--ohc-glass-border) !important;\n  border-radius: 12px !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "gridPos": { "h": 2, "w": 2, "x": 0, "y": 0 }
+    },]
     },
     {
       "datasource": {
@@ -2562,7 +2625,16 @@
         "y": 129
       },
       "collapsed": false,
-      "panels": []
+      "panels": [
+    {
+      "type": "text",
+      "title": "OHC Premium CSS",
+      "options": {
+        "content": "<style>\n/* OHC premium CSS tokens */\n:root {\n  --ohc-glass-bg: rgba(255, 255, 255, 0.1);\n  --ohc-glass-border: rgba(255, 255, 255, 0.2);\n  --ohc-glass-blur: blur(10px);\n}\n.panel-container {\n  background: var(--ohc-glass-bg) !important;\n  backdrop-filter: var(--ohc-glass-blur) !important;\n  border: 1px solid var(--ohc-glass-border) !important;\n  border-radius: 12px !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "gridPos": { "h": 2, "w": 2, "x": 0, "y": 0 }
+    },]
     },
     {
       "id": 27,
@@ -2883,7 +2955,16 @@
         "y": 146
       },
       "collapsed": false,
-      "panels": []
+      "panels": [
+    {
+      "type": "text",
+      "title": "OHC Premium CSS",
+      "options": {
+        "content": "<style>\n/* OHC premium CSS tokens */\n:root {\n  --ohc-glass-bg: rgba(255, 255, 255, 0.1);\n  --ohc-glass-border: rgba(255, 255, 255, 0.2);\n  --ohc-glass-blur: blur(10px);\n}\n.panel-container {\n  background: var(--ohc-glass-bg) !important;\n  backdrop-filter: var(--ohc-glass-blur) !important;\n  border: 1px solid var(--ohc-glass-border) !important;\n  border-radius: 12px !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "gridPos": { "h": 2, "w": 2, "x": 0, "y": 0 }
+    },]
     },
     {
       "id": 34,
@@ -3434,7 +3515,16 @@
         "y": 171
       },
       "collapsed": false,
-      "panels": []
+      "panels": [
+    {
+      "type": "text",
+      "title": "OHC Premium CSS",
+      "options": {
+        "content": "<style>\n/* OHC premium CSS tokens */\n:root {\n  --ohc-glass-bg: rgba(255, 255, 255, 0.1);\n  --ohc-glass-border: rgba(255, 255, 255, 0.2);\n  --ohc-glass-blur: blur(10px);\n}\n.panel-container {\n  background: var(--ohc-glass-bg) !important;\n  backdrop-filter: var(--ohc-glass-blur) !important;\n  border: 1px solid var(--ohc-glass-border) !important;\n  border-radius: 12px !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "gridPos": { "h": 2, "w": 2, "x": 0, "y": 0 }
+    },]
     },
     {
       "datasource": {

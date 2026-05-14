@@ -20,6 +20,15 @@
   "liveNow": false,
   "panels": [
     {
+      "type": "text",
+      "title": "OHC Premium CSS",
+      "options": {
+        "content": "<style>\n/* OHC premium CSS tokens */\n:root {\n  --ohc-glass-bg: rgba(255, 255, 255, 0.1);\n  --ohc-glass-border: rgba(255, 255, 255, 0.2);\n  --ohc-glass-blur: blur(10px);\n}\n.panel-container {\n  background: var(--ohc-glass-bg) !important;\n  backdrop-filter: var(--ohc-glass-blur) !important;\n  border: 1px solid var(--ohc-glass-border) !important;\n  border-radius: 12px !important;\n}\n</style>",
+        "mode": "html"
+      },
+      "gridPos": { "h": 2, "w": 2, "x": 0, "y": 0 }
+    },
+    {
       "title": "Swarm Throughput",
       "type": "timeseries",
       "datasource": "Prometheus",
