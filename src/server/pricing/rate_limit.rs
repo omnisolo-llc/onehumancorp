@@ -5602,7201 +5602,7201 @@ impl AdvancedRateLimiter {
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_1 {
+mod tests_advanced_rate_limiter_variation_1 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_1() {
+    fn test_soft_limit_variation_1() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (1 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_1() {
+    fn test_hard_limit_fallback_variation_1() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (1 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_1() {
+    fn test_under_limit_variation_1() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (1 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_1() {
+    fn test_zero_cost_edge_case_variation_1() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (1 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_2 {
+mod tests_advanced_rate_limiter_variation_2 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_2() {
+    fn test_soft_limit_variation_2() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (2 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_2() {
+    fn test_hard_limit_fallback_variation_2() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (2 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_2() {
+    fn test_under_limit_variation_2() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (2 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_2() {
+    fn test_zero_cost_edge_case_variation_2() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (2 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_3 {
+mod tests_advanced_rate_limiter_variation_3 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_3() {
+    fn test_soft_limit_variation_3() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (3 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_3() {
+    fn test_hard_limit_fallback_variation_3() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (3 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_3() {
+    fn test_under_limit_variation_3() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (3 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_3() {
+    fn test_zero_cost_edge_case_variation_3() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (3 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_4 {
+mod tests_advanced_rate_limiter_variation_4 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_4() {
+    fn test_soft_limit_variation_4() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (4 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_4() {
+    fn test_hard_limit_fallback_variation_4() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (4 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_4() {
+    fn test_under_limit_variation_4() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (4 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_4() {
+    fn test_zero_cost_edge_case_variation_4() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (4 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_5 {
+mod tests_advanced_rate_limiter_variation_5 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_5() {
+    fn test_soft_limit_variation_5() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (5 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_5() {
+    fn test_hard_limit_fallback_variation_5() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (5 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_5() {
+    fn test_under_limit_variation_5() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (5 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_5() {
+    fn test_zero_cost_edge_case_variation_5() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (5 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_6 {
+mod tests_advanced_rate_limiter_variation_6 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_6() {
+    fn test_soft_limit_variation_6() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (6 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_6() {
+    fn test_hard_limit_fallback_variation_6() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (6 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_6() {
+    fn test_under_limit_variation_6() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (6 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_6() {
+    fn test_zero_cost_edge_case_variation_6() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (6 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_7 {
+mod tests_advanced_rate_limiter_variation_7 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_7() {
+    fn test_soft_limit_variation_7() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (7 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_7() {
+    fn test_hard_limit_fallback_variation_7() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (7 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_7() {
+    fn test_under_limit_variation_7() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (7 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_7() {
+    fn test_zero_cost_edge_case_variation_7() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (7 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_8 {
+mod tests_advanced_rate_limiter_variation_8 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_8() {
+    fn test_soft_limit_variation_8() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (8 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_8() {
+    fn test_hard_limit_fallback_variation_8() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (8 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_8() {
+    fn test_under_limit_variation_8() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (8 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_8() {
+    fn test_zero_cost_edge_case_variation_8() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (8 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_9 {
+mod tests_advanced_rate_limiter_variation_9 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_9() {
+    fn test_soft_limit_variation_9() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (9 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_9() {
+    fn test_hard_limit_fallback_variation_9() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (9 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_9() {
+    fn test_under_limit_variation_9() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (9 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_9() {
+    fn test_zero_cost_edge_case_variation_9() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (9 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_10 {
+mod tests_advanced_rate_limiter_variation_10 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_10() {
+    fn test_soft_limit_variation_10() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (10 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_10() {
+    fn test_hard_limit_fallback_variation_10() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (10 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_10() {
+    fn test_under_limit_variation_10() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (10 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_10() {
+    fn test_zero_cost_edge_case_variation_10() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (10 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_11 {
+mod tests_advanced_rate_limiter_variation_11 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_11() {
+    fn test_soft_limit_variation_11() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (11 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_11() {
+    fn test_hard_limit_fallback_variation_11() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (11 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_11() {
+    fn test_under_limit_variation_11() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (11 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_11() {
+    fn test_zero_cost_edge_case_variation_11() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (11 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_12 {
+mod tests_advanced_rate_limiter_variation_12 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_12() {
+    fn test_soft_limit_variation_12() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (12 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_12() {
+    fn test_hard_limit_fallback_variation_12() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (12 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_12() {
+    fn test_under_limit_variation_12() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (12 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_12() {
+    fn test_zero_cost_edge_case_variation_12() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (12 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_13 {
+mod tests_advanced_rate_limiter_variation_13 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_13() {
+    fn test_soft_limit_variation_13() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (13 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_13() {
+    fn test_hard_limit_fallback_variation_13() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (13 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_13() {
+    fn test_under_limit_variation_13() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (13 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_13() {
+    fn test_zero_cost_edge_case_variation_13() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (13 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_14 {
+mod tests_advanced_rate_limiter_variation_14 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_14() {
+    fn test_soft_limit_variation_14() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (14 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_14() {
+    fn test_hard_limit_fallback_variation_14() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (14 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_14() {
+    fn test_under_limit_variation_14() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (14 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_14() {
+    fn test_zero_cost_edge_case_variation_14() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (14 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_15 {
+mod tests_advanced_rate_limiter_variation_15 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_15() {
+    fn test_soft_limit_variation_15() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (15 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_15() {
+    fn test_hard_limit_fallback_variation_15() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (15 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_15() {
+    fn test_under_limit_variation_15() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (15 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_15() {
+    fn test_zero_cost_edge_case_variation_15() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (15 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_16 {
+mod tests_advanced_rate_limiter_variation_16 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_16() {
+    fn test_soft_limit_variation_16() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (16 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_16() {
+    fn test_hard_limit_fallback_variation_16() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (16 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_16() {
+    fn test_under_limit_variation_16() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (16 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_16() {
+    fn test_zero_cost_edge_case_variation_16() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (16 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_17 {
+mod tests_advanced_rate_limiter_variation_17 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_17() {
+    fn test_soft_limit_variation_17() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (17 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_17() {
+    fn test_hard_limit_fallback_variation_17() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (17 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_17() {
+    fn test_under_limit_variation_17() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (17 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_17() {
+    fn test_zero_cost_edge_case_variation_17() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (17 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_18 {
+mod tests_advanced_rate_limiter_variation_18 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_18() {
+    fn test_soft_limit_variation_18() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (18 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_18() {
+    fn test_hard_limit_fallback_variation_18() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (18 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_18() {
+    fn test_under_limit_variation_18() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (18 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_18() {
+    fn test_zero_cost_edge_case_variation_18() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (18 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_19 {
+mod tests_advanced_rate_limiter_variation_19 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_19() {
+    fn test_soft_limit_variation_19() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (19 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_19() {
+    fn test_hard_limit_fallback_variation_19() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (19 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_19() {
+    fn test_under_limit_variation_19() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (19 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_19() {
+    fn test_zero_cost_edge_case_variation_19() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (19 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_20 {
+mod tests_advanced_rate_limiter_variation_20 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_20() {
+    fn test_soft_limit_variation_20() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (20 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_20() {
+    fn test_hard_limit_fallback_variation_20() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (20 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_20() {
+    fn test_under_limit_variation_20() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (20 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_20() {
+    fn test_zero_cost_edge_case_variation_20() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (20 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_21 {
+mod tests_advanced_rate_limiter_variation_21 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_21() {
+    fn test_soft_limit_variation_21() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (21 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_21() {
+    fn test_hard_limit_fallback_variation_21() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (21 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_21() {
+    fn test_under_limit_variation_21() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (21 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_21() {
+    fn test_zero_cost_edge_case_variation_21() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (21 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_22 {
+mod tests_advanced_rate_limiter_variation_22 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_22() {
+    fn test_soft_limit_variation_22() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (22 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_22() {
+    fn test_hard_limit_fallback_variation_22() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (22 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_22() {
+    fn test_under_limit_variation_22() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (22 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_22() {
+    fn test_zero_cost_edge_case_variation_22() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (22 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_23 {
+mod tests_advanced_rate_limiter_variation_23 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_23() {
+    fn test_soft_limit_variation_23() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (23 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_23() {
+    fn test_hard_limit_fallback_variation_23() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (23 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_23() {
+    fn test_under_limit_variation_23() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (23 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_23() {
+    fn test_zero_cost_edge_case_variation_23() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (23 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_24 {
+mod tests_advanced_rate_limiter_variation_24 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_24() {
+    fn test_soft_limit_variation_24() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (24 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_24() {
+    fn test_hard_limit_fallback_variation_24() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (24 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_24() {
+    fn test_under_limit_variation_24() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (24 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_24() {
+    fn test_zero_cost_edge_case_variation_24() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (24 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_25 {
+mod tests_advanced_rate_limiter_variation_25 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_25() {
+    fn test_soft_limit_variation_25() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (25 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_25() {
+    fn test_hard_limit_fallback_variation_25() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (25 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_25() {
+    fn test_under_limit_variation_25() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (25 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_25() {
+    fn test_zero_cost_edge_case_variation_25() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (25 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_26 {
+mod tests_advanced_rate_limiter_variation_26 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_26() {
+    fn test_soft_limit_variation_26() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (26 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_26() {
+    fn test_hard_limit_fallback_variation_26() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (26 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_26() {
+    fn test_under_limit_variation_26() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (26 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_26() {
+    fn test_zero_cost_edge_case_variation_26() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (26 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_27 {
+mod tests_advanced_rate_limiter_variation_27 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_27() {
+    fn test_soft_limit_variation_27() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (27 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_27() {
+    fn test_hard_limit_fallback_variation_27() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (27 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_27() {
+    fn test_under_limit_variation_27() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (27 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_27() {
+    fn test_zero_cost_edge_case_variation_27() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (27 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_28 {
+mod tests_advanced_rate_limiter_variation_28 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_28() {
+    fn test_soft_limit_variation_28() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (28 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_28() {
+    fn test_hard_limit_fallback_variation_28() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (28 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_28() {
+    fn test_under_limit_variation_28() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (28 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_28() {
+    fn test_zero_cost_edge_case_variation_28() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (28 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_29 {
+mod tests_advanced_rate_limiter_variation_29 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_29() {
+    fn test_soft_limit_variation_29() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (29 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_29() {
+    fn test_hard_limit_fallback_variation_29() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (29 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_29() {
+    fn test_under_limit_variation_29() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (29 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_29() {
+    fn test_zero_cost_edge_case_variation_29() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (29 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_30 {
+mod tests_advanced_rate_limiter_variation_30 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_30() {
+    fn test_soft_limit_variation_30() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (30 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_30() {
+    fn test_hard_limit_fallback_variation_30() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (30 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_30() {
+    fn test_under_limit_variation_30() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (30 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_30() {
+    fn test_zero_cost_edge_case_variation_30() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (30 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_31 {
+mod tests_advanced_rate_limiter_variation_31 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_31() {
+    fn test_soft_limit_variation_31() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (31 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_31() {
+    fn test_hard_limit_fallback_variation_31() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (31 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_31() {
+    fn test_under_limit_variation_31() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (31 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_31() {
+    fn test_zero_cost_edge_case_variation_31() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (31 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_32 {
+mod tests_advanced_rate_limiter_variation_32 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_32() {
+    fn test_soft_limit_variation_32() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (32 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_32() {
+    fn test_hard_limit_fallback_variation_32() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (32 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_32() {
+    fn test_under_limit_variation_32() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (32 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_32() {
+    fn test_zero_cost_edge_case_variation_32() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (32 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_33 {
+mod tests_advanced_rate_limiter_variation_33 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_33() {
+    fn test_soft_limit_variation_33() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (33 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_33() {
+    fn test_hard_limit_fallback_variation_33() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (33 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_33() {
+    fn test_under_limit_variation_33() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (33 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_33() {
+    fn test_zero_cost_edge_case_variation_33() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (33 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_34 {
+mod tests_advanced_rate_limiter_variation_34 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_34() {
+    fn test_soft_limit_variation_34() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (34 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_34() {
+    fn test_hard_limit_fallback_variation_34() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (34 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_34() {
+    fn test_under_limit_variation_34() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (34 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_34() {
+    fn test_zero_cost_edge_case_variation_34() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (34 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_35 {
+mod tests_advanced_rate_limiter_variation_35 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_35() {
+    fn test_soft_limit_variation_35() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (35 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_35() {
+    fn test_hard_limit_fallback_variation_35() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (35 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_35() {
+    fn test_under_limit_variation_35() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (35 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_35() {
+    fn test_zero_cost_edge_case_variation_35() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (35 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_36 {
+mod tests_advanced_rate_limiter_variation_36 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_36() {
+    fn test_soft_limit_variation_36() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (36 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_36() {
+    fn test_hard_limit_fallback_variation_36() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (36 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_36() {
+    fn test_under_limit_variation_36() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (36 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_36() {
+    fn test_zero_cost_edge_case_variation_36() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (36 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_37 {
+mod tests_advanced_rate_limiter_variation_37 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_37() {
+    fn test_soft_limit_variation_37() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (37 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_37() {
+    fn test_hard_limit_fallback_variation_37() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (37 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_37() {
+    fn test_under_limit_variation_37() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (37 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_37() {
+    fn test_zero_cost_edge_case_variation_37() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (37 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_38 {
+mod tests_advanced_rate_limiter_variation_38 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_38() {
+    fn test_soft_limit_variation_38() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (38 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_38() {
+    fn test_hard_limit_fallback_variation_38() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (38 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_38() {
+    fn test_under_limit_variation_38() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (38 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_38() {
+    fn test_zero_cost_edge_case_variation_38() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (38 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_39 {
+mod tests_advanced_rate_limiter_variation_39 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_39() {
+    fn test_soft_limit_variation_39() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (39 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_39() {
+    fn test_hard_limit_fallback_variation_39() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (39 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_39() {
+    fn test_under_limit_variation_39() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (39 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_39() {
+    fn test_zero_cost_edge_case_variation_39() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (39 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_40 {
+mod tests_advanced_rate_limiter_variation_40 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_40() {
+    fn test_soft_limit_variation_40() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (40 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_40() {
+    fn test_hard_limit_fallback_variation_40() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (40 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_40() {
+    fn test_under_limit_variation_40() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (40 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_40() {
+    fn test_zero_cost_edge_case_variation_40() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (40 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_41 {
+mod tests_advanced_rate_limiter_variation_41 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_41() {
+    fn test_soft_limit_variation_41() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (41 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_41() {
+    fn test_hard_limit_fallback_variation_41() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (41 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_41() {
+    fn test_under_limit_variation_41() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (41 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_41() {
+    fn test_zero_cost_edge_case_variation_41() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (41 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_42 {
+mod tests_advanced_rate_limiter_variation_42 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_42() {
+    fn test_soft_limit_variation_42() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (42 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_42() {
+    fn test_hard_limit_fallback_variation_42() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (42 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_42() {
+    fn test_under_limit_variation_42() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (42 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_42() {
+    fn test_zero_cost_edge_case_variation_42() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (42 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_43 {
+mod tests_advanced_rate_limiter_variation_43 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_43() {
+    fn test_soft_limit_variation_43() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (43 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_43() {
+    fn test_hard_limit_fallback_variation_43() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (43 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_43() {
+    fn test_under_limit_variation_43() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (43 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_43() {
+    fn test_zero_cost_edge_case_variation_43() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (43 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_44 {
+mod tests_advanced_rate_limiter_variation_44 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_44() {
+    fn test_soft_limit_variation_44() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (44 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_44() {
+    fn test_hard_limit_fallback_variation_44() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (44 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_44() {
+    fn test_under_limit_variation_44() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (44 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_44() {
+    fn test_zero_cost_edge_case_variation_44() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (44 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_45 {
+mod tests_advanced_rate_limiter_variation_45 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_45() {
+    fn test_soft_limit_variation_45() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (45 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_45() {
+    fn test_hard_limit_fallback_variation_45() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (45 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_45() {
+    fn test_under_limit_variation_45() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (45 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_45() {
+    fn test_zero_cost_edge_case_variation_45() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (45 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_46 {
+mod tests_advanced_rate_limiter_variation_46 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_46() {
+    fn test_soft_limit_variation_46() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (46 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_46() {
+    fn test_hard_limit_fallback_variation_46() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (46 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_46() {
+    fn test_under_limit_variation_46() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (46 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_46() {
+    fn test_zero_cost_edge_case_variation_46() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (46 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_47 {
+mod tests_advanced_rate_limiter_variation_47 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_47() {
+    fn test_soft_limit_variation_47() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (47 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_47() {
+    fn test_hard_limit_fallback_variation_47() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (47 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_47() {
+    fn test_under_limit_variation_47() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (47 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_47() {
+    fn test_zero_cost_edge_case_variation_47() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (47 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_48 {
+mod tests_advanced_rate_limiter_variation_48 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_48() {
+    fn test_soft_limit_variation_48() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (48 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_48() {
+    fn test_hard_limit_fallback_variation_48() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (48 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_48() {
+    fn test_under_limit_variation_48() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (48 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_48() {
+    fn test_zero_cost_edge_case_variation_48() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (48 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_49 {
+mod tests_advanced_rate_limiter_variation_49 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_49() {
+    fn test_soft_limit_variation_49() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (49 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_49() {
+    fn test_hard_limit_fallback_variation_49() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (49 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_49() {
+    fn test_under_limit_variation_49() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (49 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_49() {
+    fn test_zero_cost_edge_case_variation_49() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (49 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_50 {
+mod tests_advanced_rate_limiter_variation_50 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_50() {
+    fn test_soft_limit_variation_50() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (50 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_50() {
+    fn test_hard_limit_fallback_variation_50() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (50 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_50() {
+    fn test_under_limit_variation_50() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (50 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_50() {
+    fn test_zero_cost_edge_case_variation_50() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (50 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_51 {
+mod tests_advanced_rate_limiter_variation_51 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_51() {
+    fn test_soft_limit_variation_51() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (51 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_51() {
+    fn test_hard_limit_fallback_variation_51() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (51 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_51() {
+    fn test_under_limit_variation_51() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (51 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_51() {
+    fn test_zero_cost_edge_case_variation_51() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (51 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_52 {
+mod tests_advanced_rate_limiter_variation_52 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_52() {
+    fn test_soft_limit_variation_52() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (52 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_52() {
+    fn test_hard_limit_fallback_variation_52() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (52 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_52() {
+    fn test_under_limit_variation_52() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (52 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_52() {
+    fn test_zero_cost_edge_case_variation_52() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (52 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_53 {
+mod tests_advanced_rate_limiter_variation_53 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_53() {
+    fn test_soft_limit_variation_53() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (53 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_53() {
+    fn test_hard_limit_fallback_variation_53() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (53 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_53() {
+    fn test_under_limit_variation_53() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (53 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_53() {
+    fn test_zero_cost_edge_case_variation_53() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (53 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_54 {
+mod tests_advanced_rate_limiter_variation_54 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_54() {
+    fn test_soft_limit_variation_54() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (54 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_54() {
+    fn test_hard_limit_fallback_variation_54() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (54 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_54() {
+    fn test_under_limit_variation_54() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (54 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_54() {
+    fn test_zero_cost_edge_case_variation_54() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (54 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_55 {
+mod tests_advanced_rate_limiter_variation_55 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_55() {
+    fn test_soft_limit_variation_55() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (55 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_55() {
+    fn test_hard_limit_fallback_variation_55() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (55 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_55() {
+    fn test_under_limit_variation_55() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (55 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_55() {
+    fn test_zero_cost_edge_case_variation_55() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (55 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_56 {
+mod tests_advanced_rate_limiter_variation_56 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_56() {
+    fn test_soft_limit_variation_56() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (56 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_56() {
+    fn test_hard_limit_fallback_variation_56() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (56 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_56() {
+    fn test_under_limit_variation_56() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (56 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_56() {
+    fn test_zero_cost_edge_case_variation_56() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (56 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_57 {
+mod tests_advanced_rate_limiter_variation_57 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_57() {
+    fn test_soft_limit_variation_57() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (57 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_57() {
+    fn test_hard_limit_fallback_variation_57() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (57 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_57() {
+    fn test_under_limit_variation_57() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (57 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_57() {
+    fn test_zero_cost_edge_case_variation_57() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (57 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_58 {
+mod tests_advanced_rate_limiter_variation_58 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_58() {
+    fn test_soft_limit_variation_58() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (58 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_58() {
+    fn test_hard_limit_fallback_variation_58() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (58 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_58() {
+    fn test_under_limit_variation_58() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (58 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_58() {
+    fn test_zero_cost_edge_case_variation_58() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (58 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_59 {
+mod tests_advanced_rate_limiter_variation_59 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_59() {
+    fn test_soft_limit_variation_59() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (59 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_59() {
+    fn test_hard_limit_fallback_variation_59() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (59 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_59() {
+    fn test_under_limit_variation_59() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (59 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_59() {
+    fn test_zero_cost_edge_case_variation_59() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (59 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_60 {
+mod tests_advanced_rate_limiter_variation_60 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_60() {
+    fn test_soft_limit_variation_60() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (60 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_60() {
+    fn test_hard_limit_fallback_variation_60() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (60 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_60() {
+    fn test_under_limit_variation_60() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (60 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_60() {
+    fn test_zero_cost_edge_case_variation_60() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (60 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_61 {
+mod tests_advanced_rate_limiter_variation_61 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_61() {
+    fn test_soft_limit_variation_61() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (61 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_61() {
+    fn test_hard_limit_fallback_variation_61() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (61 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_61() {
+    fn test_under_limit_variation_61() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (61 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_61() {
+    fn test_zero_cost_edge_case_variation_61() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (61 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_62 {
+mod tests_advanced_rate_limiter_variation_62 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_62() {
+    fn test_soft_limit_variation_62() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (62 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_62() {
+    fn test_hard_limit_fallback_variation_62() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (62 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_62() {
+    fn test_under_limit_variation_62() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (62 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_62() {
+    fn test_zero_cost_edge_case_variation_62() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (62 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_63 {
+mod tests_advanced_rate_limiter_variation_63 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_63() {
+    fn test_soft_limit_variation_63() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (63 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_63() {
+    fn test_hard_limit_fallback_variation_63() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (63 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_63() {
+    fn test_under_limit_variation_63() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (63 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_63() {
+    fn test_zero_cost_edge_case_variation_63() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (63 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_64 {
+mod tests_advanced_rate_limiter_variation_64 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_64() {
+    fn test_soft_limit_variation_64() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (64 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_64() {
+    fn test_hard_limit_fallback_variation_64() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (64 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_64() {
+    fn test_under_limit_variation_64() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (64 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_64() {
+    fn test_zero_cost_edge_case_variation_64() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (64 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_65 {
+mod tests_advanced_rate_limiter_variation_65 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_65() {
+    fn test_soft_limit_variation_65() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (65 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_65() {
+    fn test_hard_limit_fallback_variation_65() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (65 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_65() {
+    fn test_under_limit_variation_65() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (65 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_65() {
+    fn test_zero_cost_edge_case_variation_65() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (65 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_66 {
+mod tests_advanced_rate_limiter_variation_66 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_66() {
+    fn test_soft_limit_variation_66() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (66 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_66() {
+    fn test_hard_limit_fallback_variation_66() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (66 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_66() {
+    fn test_under_limit_variation_66() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (66 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_66() {
+    fn test_zero_cost_edge_case_variation_66() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (66 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_67 {
+mod tests_advanced_rate_limiter_variation_67 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_67() {
+    fn test_soft_limit_variation_67() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (67 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_67() {
+    fn test_hard_limit_fallback_variation_67() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (67 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_67() {
+    fn test_under_limit_variation_67() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (67 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_67() {
+    fn test_zero_cost_edge_case_variation_67() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (67 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_68 {
+mod tests_advanced_rate_limiter_variation_68 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_68() {
+    fn test_soft_limit_variation_68() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (68 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_68() {
+    fn test_hard_limit_fallback_variation_68() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (68 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_68() {
+    fn test_under_limit_variation_68() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (68 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_68() {
+    fn test_zero_cost_edge_case_variation_68() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (68 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_69 {
+mod tests_advanced_rate_limiter_variation_69 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_69() {
+    fn test_soft_limit_variation_69() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (69 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_69() {
+    fn test_hard_limit_fallback_variation_69() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (69 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_69() {
+    fn test_under_limit_variation_69() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (69 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_69() {
+    fn test_zero_cost_edge_case_variation_69() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (69 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_70 {
+mod tests_advanced_rate_limiter_variation_70 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_70() {
+    fn test_soft_limit_variation_70() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (70 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_70() {
+    fn test_hard_limit_fallback_variation_70() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (70 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_70() {
+    fn test_under_limit_variation_70() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (70 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_70() {
+    fn test_zero_cost_edge_case_variation_70() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (70 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_71 {
+mod tests_advanced_rate_limiter_variation_71 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_71() {
+    fn test_soft_limit_variation_71() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (71 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_71() {
+    fn test_hard_limit_fallback_variation_71() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (71 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_71() {
+    fn test_under_limit_variation_71() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (71 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_71() {
+    fn test_zero_cost_edge_case_variation_71() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (71 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_72 {
+mod tests_advanced_rate_limiter_variation_72 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_72() {
+    fn test_soft_limit_variation_72() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (72 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_72() {
+    fn test_hard_limit_fallback_variation_72() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (72 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_72() {
+    fn test_under_limit_variation_72() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (72 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_72() {
+    fn test_zero_cost_edge_case_variation_72() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (72 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_73 {
+mod tests_advanced_rate_limiter_variation_73 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_73() {
+    fn test_soft_limit_variation_73() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (73 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_73() {
+    fn test_hard_limit_fallback_variation_73() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (73 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_73() {
+    fn test_under_limit_variation_73() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (73 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_73() {
+    fn test_zero_cost_edge_case_variation_73() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (73 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_74 {
+mod tests_advanced_rate_limiter_variation_74 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_74() {
+    fn test_soft_limit_variation_74() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (74 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_74() {
+    fn test_hard_limit_fallback_variation_74() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (74 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_74() {
+    fn test_under_limit_variation_74() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (74 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_74() {
+    fn test_zero_cost_edge_case_variation_74() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (74 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_75 {
+mod tests_advanced_rate_limiter_variation_75 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_75() {
+    fn test_soft_limit_variation_75() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (75 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_75() {
+    fn test_hard_limit_fallback_variation_75() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (75 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_75() {
+    fn test_under_limit_variation_75() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (75 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_75() {
+    fn test_zero_cost_edge_case_variation_75() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (75 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_76 {
+mod tests_advanced_rate_limiter_variation_76 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_76() {
+    fn test_soft_limit_variation_76() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (76 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_76() {
+    fn test_hard_limit_fallback_variation_76() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (76 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_76() {
+    fn test_under_limit_variation_76() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (76 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_76() {
+    fn test_zero_cost_edge_case_variation_76() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (76 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_77 {
+mod tests_advanced_rate_limiter_variation_77 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_77() {
+    fn test_soft_limit_variation_77() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (77 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_77() {
+    fn test_hard_limit_fallback_variation_77() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (77 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_77() {
+    fn test_under_limit_variation_77() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (77 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_77() {
+    fn test_zero_cost_edge_case_variation_77() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (77 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_78 {
+mod tests_advanced_rate_limiter_variation_78 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_78() {
+    fn test_soft_limit_variation_78() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (78 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_78() {
+    fn test_hard_limit_fallback_variation_78() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (78 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_78() {
+    fn test_under_limit_variation_78() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (78 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_78() {
+    fn test_zero_cost_edge_case_variation_78() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (78 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_79 {
+mod tests_advanced_rate_limiter_variation_79 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_79() {
+    fn test_soft_limit_variation_79() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (79 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_79() {
+    fn test_hard_limit_fallback_variation_79() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (79 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_79() {
+    fn test_under_limit_variation_79() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (79 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_79() {
+    fn test_zero_cost_edge_case_variation_79() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (79 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_80 {
+mod tests_advanced_rate_limiter_variation_80 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_80() {
+    fn test_soft_limit_variation_80() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (80 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_80() {
+    fn test_hard_limit_fallback_variation_80() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (80 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_80() {
+    fn test_under_limit_variation_80() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (80 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_80() {
+    fn test_zero_cost_edge_case_variation_80() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (80 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_81 {
+mod tests_advanced_rate_limiter_variation_81 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_81() {
+    fn test_soft_limit_variation_81() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (81 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_81() {
+    fn test_hard_limit_fallback_variation_81() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (81 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_81() {
+    fn test_under_limit_variation_81() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (81 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_81() {
+    fn test_zero_cost_edge_case_variation_81() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (81 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_82 {
+mod tests_advanced_rate_limiter_variation_82 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_82() {
+    fn test_soft_limit_variation_82() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (82 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_82() {
+    fn test_hard_limit_fallback_variation_82() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (82 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_82() {
+    fn test_under_limit_variation_82() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (82 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_82() {
+    fn test_zero_cost_edge_case_variation_82() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (82 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_83 {
+mod tests_advanced_rate_limiter_variation_83 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_83() {
+    fn test_soft_limit_variation_83() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (83 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_83() {
+    fn test_hard_limit_fallback_variation_83() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (83 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_83() {
+    fn test_under_limit_variation_83() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (83 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_83() {
+    fn test_zero_cost_edge_case_variation_83() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (83 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_84 {
+mod tests_advanced_rate_limiter_variation_84 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_84() {
+    fn test_soft_limit_variation_84() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (84 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_84() {
+    fn test_hard_limit_fallback_variation_84() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (84 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_84() {
+    fn test_under_limit_variation_84() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (84 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_84() {
+    fn test_zero_cost_edge_case_variation_84() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (84 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_85 {
+mod tests_advanced_rate_limiter_variation_85 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_85() {
+    fn test_soft_limit_variation_85() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (85 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_85() {
+    fn test_hard_limit_fallback_variation_85() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (85 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_85() {
+    fn test_under_limit_variation_85() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (85 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_85() {
+    fn test_zero_cost_edge_case_variation_85() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (85 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_86 {
+mod tests_advanced_rate_limiter_variation_86 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_86() {
+    fn test_soft_limit_variation_86() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (86 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_86() {
+    fn test_hard_limit_fallback_variation_86() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (86 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_86() {
+    fn test_under_limit_variation_86() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (86 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_86() {
+    fn test_zero_cost_edge_case_variation_86() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (86 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_87 {
+mod tests_advanced_rate_limiter_variation_87 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_87() {
+    fn test_soft_limit_variation_87() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (87 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_87() {
+    fn test_hard_limit_fallback_variation_87() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (87 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_87() {
+    fn test_under_limit_variation_87() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (87 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_87() {
+    fn test_zero_cost_edge_case_variation_87() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (87 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_88 {
+mod tests_advanced_rate_limiter_variation_88 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_88() {
+    fn test_soft_limit_variation_88() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (88 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_88() {
+    fn test_hard_limit_fallback_variation_88() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (88 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_88() {
+    fn test_under_limit_variation_88() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (88 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_88() {
+    fn test_zero_cost_edge_case_variation_88() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (88 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_89 {
+mod tests_advanced_rate_limiter_variation_89 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_89() {
+    fn test_soft_limit_variation_89() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (89 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_89() {
+    fn test_hard_limit_fallback_variation_89() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (89 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_89() {
+    fn test_under_limit_variation_89() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (89 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_89() {
+    fn test_zero_cost_edge_case_variation_89() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (89 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_90 {
+mod tests_advanced_rate_limiter_variation_90 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_90() {
+    fn test_soft_limit_variation_90() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (90 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_90() {
+    fn test_hard_limit_fallback_variation_90() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (90 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_90() {
+    fn test_under_limit_variation_90() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (90 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_90() {
+    fn test_zero_cost_edge_case_variation_90() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (90 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_91 {
+mod tests_advanced_rate_limiter_variation_91 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_91() {
+    fn test_soft_limit_variation_91() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (91 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_91() {
+    fn test_hard_limit_fallback_variation_91() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (91 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_91() {
+    fn test_under_limit_variation_91() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (91 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_91() {
+    fn test_zero_cost_edge_case_variation_91() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (91 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_92 {
+mod tests_advanced_rate_limiter_variation_92 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_92() {
+    fn test_soft_limit_variation_92() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (92 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_92() {
+    fn test_hard_limit_fallback_variation_92() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (92 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_92() {
+    fn test_under_limit_variation_92() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (92 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_92() {
+    fn test_zero_cost_edge_case_variation_92() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (92 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_93 {
+mod tests_advanced_rate_limiter_variation_93 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_93() {
+    fn test_soft_limit_variation_93() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (93 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_93() {
+    fn test_hard_limit_fallback_variation_93() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (93 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_93() {
+    fn test_under_limit_variation_93() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (93 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_93() {
+    fn test_zero_cost_edge_case_variation_93() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (93 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_94 {
+mod tests_advanced_rate_limiter_variation_94 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_94() {
+    fn test_soft_limit_variation_94() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (94 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_94() {
+    fn test_hard_limit_fallback_variation_94() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (94 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_94() {
+    fn test_under_limit_variation_94() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (94 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_94() {
+    fn test_zero_cost_edge_case_variation_94() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (94 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_95 {
+mod tests_advanced_rate_limiter_variation_95 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_95() {
+    fn test_soft_limit_variation_95() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (95 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_95() {
+    fn test_hard_limit_fallback_variation_95() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (95 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_95() {
+    fn test_under_limit_variation_95() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (95 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_95() {
+    fn test_zero_cost_edge_case_variation_95() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (95 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_96 {
+mod tests_advanced_rate_limiter_variation_96 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_96() {
+    fn test_soft_limit_variation_96() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (96 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_96() {
+    fn test_hard_limit_fallback_variation_96() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (96 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_96() {
+    fn test_under_limit_variation_96() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (96 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_96() {
+    fn test_zero_cost_edge_case_variation_96() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (96 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_97 {
+mod tests_advanced_rate_limiter_variation_97 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_97() {
+    fn test_soft_limit_variation_97() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (97 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_97() {
+    fn test_hard_limit_fallback_variation_97() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (97 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_97() {
+    fn test_under_limit_variation_97() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (97 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_97() {
+    fn test_zero_cost_edge_case_variation_97() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (97 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_98 {
+mod tests_advanced_rate_limiter_variation_98 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_98() {
+    fn test_soft_limit_variation_98() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (98 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_98() {
+    fn test_hard_limit_fallback_variation_98() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (98 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_98() {
+    fn test_under_limit_variation_98() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (98 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_98() {
+    fn test_zero_cost_edge_case_variation_98() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (98 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_99 {
+mod tests_advanced_rate_limiter_variation_99 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_99() {
+    fn test_soft_limit_variation_99() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (99 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_99() {
+    fn test_hard_limit_fallback_variation_99() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (99 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_99() {
+    fn test_under_limit_variation_99() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (99 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_99() {
+    fn test_zero_cost_edge_case_variation_99() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (99 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_100 {
+mod tests_advanced_rate_limiter_variation_100 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_100() {
+    fn test_soft_limit_variation_100() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (100 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_100() {
+    fn test_hard_limit_fallback_variation_100() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (100 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_100() {
+    fn test_under_limit_variation_100() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (100 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_100() {
+    fn test_zero_cost_edge_case_variation_100() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (100 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_101 {
+mod tests_advanced_rate_limiter_variation_101 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_101() {
+    fn test_soft_limit_variation_101() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (101 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_101() {
+    fn test_hard_limit_fallback_variation_101() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (101 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_101() {
+    fn test_under_limit_variation_101() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (101 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_101() {
+    fn test_zero_cost_edge_case_variation_101() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (101 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_102 {
+mod tests_advanced_rate_limiter_variation_102 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_102() {
+    fn test_soft_limit_variation_102() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (102 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_102() {
+    fn test_hard_limit_fallback_variation_102() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (102 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_102() {
+    fn test_under_limit_variation_102() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (102 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_102() {
+    fn test_zero_cost_edge_case_variation_102() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (102 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_103 {
+mod tests_advanced_rate_limiter_variation_103 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_103() {
+    fn test_soft_limit_variation_103() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (103 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_103() {
+    fn test_hard_limit_fallback_variation_103() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (103 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_103() {
+    fn test_under_limit_variation_103() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (103 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_103() {
+    fn test_zero_cost_edge_case_variation_103() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (103 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_104 {
+mod tests_advanced_rate_limiter_variation_104 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_104() {
+    fn test_soft_limit_variation_104() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (104 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_104() {
+    fn test_hard_limit_fallback_variation_104() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (104 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_104() {
+    fn test_under_limit_variation_104() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (104 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_104() {
+    fn test_zero_cost_edge_case_variation_104() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (104 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_105 {
+mod tests_advanced_rate_limiter_variation_105 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_105() {
+    fn test_soft_limit_variation_105() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (105 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_105() {
+    fn test_hard_limit_fallback_variation_105() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (105 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_105() {
+    fn test_under_limit_variation_105() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (105 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_105() {
+    fn test_zero_cost_edge_case_variation_105() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (105 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_106 {
+mod tests_advanced_rate_limiter_variation_106 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_106() {
+    fn test_soft_limit_variation_106() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (106 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_106() {
+    fn test_hard_limit_fallback_variation_106() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (106 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_106() {
+    fn test_under_limit_variation_106() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (106 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_106() {
+    fn test_zero_cost_edge_case_variation_106() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (106 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_107 {
+mod tests_advanced_rate_limiter_variation_107 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_107() {
+    fn test_soft_limit_variation_107() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (107 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_107() {
+    fn test_hard_limit_fallback_variation_107() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (107 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_107() {
+    fn test_under_limit_variation_107() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (107 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_107() {
+    fn test_zero_cost_edge_case_variation_107() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (107 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_108 {
+mod tests_advanced_rate_limiter_variation_108 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_108() {
+    fn test_soft_limit_variation_108() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (108 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_108() {
+    fn test_hard_limit_fallback_variation_108() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (108 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_108() {
+    fn test_under_limit_variation_108() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (108 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_108() {
+    fn test_zero_cost_edge_case_variation_108() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (108 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_109 {
+mod tests_advanced_rate_limiter_variation_109 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_109() {
+    fn test_soft_limit_variation_109() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (109 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_109() {
+    fn test_hard_limit_fallback_variation_109() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (109 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_109() {
+    fn test_under_limit_variation_109() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (109 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_109() {
+    fn test_zero_cost_edge_case_variation_109() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (109 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_110 {
+mod tests_advanced_rate_limiter_variation_110 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_110() {
+    fn test_soft_limit_variation_110() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (110 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_110() {
+    fn test_hard_limit_fallback_variation_110() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (110 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_110() {
+    fn test_under_limit_variation_110() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (110 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_110() {
+    fn test_zero_cost_edge_case_variation_110() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (110 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_111 {
+mod tests_advanced_rate_limiter_variation_111 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_111() {
+    fn test_soft_limit_variation_111() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (111 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_111() {
+    fn test_hard_limit_fallback_variation_111() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (111 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_111() {
+    fn test_under_limit_variation_111() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (111 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_111() {
+    fn test_zero_cost_edge_case_variation_111() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (111 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_112 {
+mod tests_advanced_rate_limiter_variation_112 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_112() {
+    fn test_soft_limit_variation_112() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (112 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_112() {
+    fn test_hard_limit_fallback_variation_112() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (112 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_112() {
+    fn test_under_limit_variation_112() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (112 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_112() {
+    fn test_zero_cost_edge_case_variation_112() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (112 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_113 {
+mod tests_advanced_rate_limiter_variation_113 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_113() {
+    fn test_soft_limit_variation_113() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (113 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_113() {
+    fn test_hard_limit_fallback_variation_113() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (113 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_113() {
+    fn test_under_limit_variation_113() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (113 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_113() {
+    fn test_zero_cost_edge_case_variation_113() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (113 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_114 {
+mod tests_advanced_rate_limiter_variation_114 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_114() {
+    fn test_soft_limit_variation_114() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (114 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_114() {
+    fn test_hard_limit_fallback_variation_114() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (114 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_114() {
+    fn test_under_limit_variation_114() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (114 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_114() {
+    fn test_zero_cost_edge_case_variation_114() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (114 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_115 {
+mod tests_advanced_rate_limiter_variation_115 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_115() {
+    fn test_soft_limit_variation_115() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (115 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_115() {
+    fn test_hard_limit_fallback_variation_115() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (115 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_115() {
+    fn test_under_limit_variation_115() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (115 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_115() {
+    fn test_zero_cost_edge_case_variation_115() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (115 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_116 {
+mod tests_advanced_rate_limiter_variation_116 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_116() {
+    fn test_soft_limit_variation_116() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (116 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_116() {
+    fn test_hard_limit_fallback_variation_116() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (116 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_116() {
+    fn test_under_limit_variation_116() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (116 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_116() {
+    fn test_zero_cost_edge_case_variation_116() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (116 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_117 {
+mod tests_advanced_rate_limiter_variation_117 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_117() {
+    fn test_soft_limit_variation_117() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (117 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_117() {
+    fn test_hard_limit_fallback_variation_117() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (117 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_117() {
+    fn test_under_limit_variation_117() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (117 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_117() {
+    fn test_zero_cost_edge_case_variation_117() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (117 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_118 {
+mod tests_advanced_rate_limiter_variation_118 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_118() {
+    fn test_soft_limit_variation_118() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (118 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_118() {
+    fn test_hard_limit_fallback_variation_118() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (118 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_118() {
+    fn test_under_limit_variation_118() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (118 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_118() {
+    fn test_zero_cost_edge_case_variation_118() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (118 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_119 {
+mod tests_advanced_rate_limiter_variation_119 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_119() {
+    fn test_soft_limit_variation_119() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (119 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_119() {
+    fn test_hard_limit_fallback_variation_119() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (119 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_119() {
+    fn test_under_limit_variation_119() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (119 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_119() {
+    fn test_zero_cost_edge_case_variation_119() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (119 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_120 {
+mod tests_advanced_rate_limiter_variation_120 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_120() {
+    fn test_soft_limit_variation_120() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (120 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_120() {
+    fn test_hard_limit_fallback_variation_120() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (120 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_120() {
+    fn test_under_limit_variation_120() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (120 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_120() {
+    fn test_zero_cost_edge_case_variation_120() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (120 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_121 {
+mod tests_advanced_rate_limiter_variation_121 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_121() {
+    fn test_soft_limit_variation_121() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (121 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_121() {
+    fn test_hard_limit_fallback_variation_121() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (121 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_121() {
+    fn test_under_limit_variation_121() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (121 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_121() {
+    fn test_zero_cost_edge_case_variation_121() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (121 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_122 {
+mod tests_advanced_rate_limiter_variation_122 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_122() {
+    fn test_soft_limit_variation_122() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (122 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_122() {
+    fn test_hard_limit_fallback_variation_122() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (122 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_122() {
+    fn test_under_limit_variation_122() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (122 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_122() {
+    fn test_zero_cost_edge_case_variation_122() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (122 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_123 {
+mod tests_advanced_rate_limiter_variation_123 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_123() {
+    fn test_soft_limit_variation_123() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (123 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_123() {
+    fn test_hard_limit_fallback_variation_123() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (123 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_123() {
+    fn test_under_limit_variation_123() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (123 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_123() {
+    fn test_zero_cost_edge_case_variation_123() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (123 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_124 {
+mod tests_advanced_rate_limiter_variation_124 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_124() {
+    fn test_soft_limit_variation_124() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (124 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_124() {
+    fn test_hard_limit_fallback_variation_124() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (124 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_124() {
+    fn test_under_limit_variation_124() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (124 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_124() {
+    fn test_zero_cost_edge_case_variation_124() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (124 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_125 {
+mod tests_advanced_rate_limiter_variation_125 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_125() {
+    fn test_soft_limit_variation_125() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (125 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_125() {
+    fn test_hard_limit_fallback_variation_125() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (125 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_125() {
+    fn test_under_limit_variation_125() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (125 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_125() {
+    fn test_zero_cost_edge_case_variation_125() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (125 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_126 {
+mod tests_advanced_rate_limiter_variation_126 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_126() {
+    fn test_soft_limit_variation_126() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (126 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_126() {
+    fn test_hard_limit_fallback_variation_126() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (126 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_126() {
+    fn test_under_limit_variation_126() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (126 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_126() {
+    fn test_zero_cost_edge_case_variation_126() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (126 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_127 {
+mod tests_advanced_rate_limiter_variation_127 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_127() {
+    fn test_soft_limit_variation_127() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (127 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_127() {
+    fn test_hard_limit_fallback_variation_127() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (127 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_127() {
+    fn test_under_limit_variation_127() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (127 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_127() {
+    fn test_zero_cost_edge_case_variation_127() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (127 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_128 {
+mod tests_advanced_rate_limiter_variation_128 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_128() {
+    fn test_soft_limit_variation_128() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (128 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_128() {
+    fn test_hard_limit_fallback_variation_128() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (128 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_128() {
+    fn test_under_limit_variation_128() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (128 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_128() {
+    fn test_zero_cost_edge_case_variation_128() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (128 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_129 {
+mod tests_advanced_rate_limiter_variation_129 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_129() {
+    fn test_soft_limit_variation_129() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (129 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_129() {
+    fn test_hard_limit_fallback_variation_129() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (129 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_129() {
+    fn test_under_limit_variation_129() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (129 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_129() {
+    fn test_zero_cost_edge_case_variation_129() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (129 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_130 {
+mod tests_advanced_rate_limiter_variation_130 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_130() {
+    fn test_soft_limit_variation_130() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (130 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_130() {
+    fn test_hard_limit_fallback_variation_130() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (130 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_130() {
+    fn test_under_limit_variation_130() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (130 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_130() {
+    fn test_zero_cost_edge_case_variation_130() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (130 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_131 {
+mod tests_advanced_rate_limiter_variation_131 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_131() {
+    fn test_soft_limit_variation_131() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (131 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_131() {
+    fn test_hard_limit_fallback_variation_131() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (131 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_131() {
+    fn test_under_limit_variation_131() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (131 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_131() {
+    fn test_zero_cost_edge_case_variation_131() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (131 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_132 {
+mod tests_advanced_rate_limiter_variation_132 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_132() {
+    fn test_soft_limit_variation_132() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (132 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_132() {
+    fn test_hard_limit_fallback_variation_132() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (132 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_132() {
+    fn test_under_limit_variation_132() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (132 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_132() {
+    fn test_zero_cost_edge_case_variation_132() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (132 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_133 {
+mod tests_advanced_rate_limiter_variation_133 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_133() {
+    fn test_soft_limit_variation_133() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (133 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_133() {
+    fn test_hard_limit_fallback_variation_133() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (133 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_133() {
+    fn test_under_limit_variation_133() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (133 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_133() {
+    fn test_zero_cost_edge_case_variation_133() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (133 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_134 {
+mod tests_advanced_rate_limiter_variation_134 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_134() {
+    fn test_soft_limit_variation_134() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (134 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_134() {
+    fn test_hard_limit_fallback_variation_134() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (134 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_134() {
+    fn test_under_limit_variation_134() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (134 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_134() {
+    fn test_zero_cost_edge_case_variation_134() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (134 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_135 {
+mod tests_advanced_rate_limiter_variation_135 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_135() {
+    fn test_soft_limit_variation_135() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (135 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_135() {
+    fn test_hard_limit_fallback_variation_135() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (135 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_135() {
+    fn test_under_limit_variation_135() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (135 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_135() {
+    fn test_zero_cost_edge_case_variation_135() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (135 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_136 {
+mod tests_advanced_rate_limiter_variation_136 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_136() {
+    fn test_soft_limit_variation_136() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (136 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_136() {
+    fn test_hard_limit_fallback_variation_136() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (136 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_136() {
+    fn test_under_limit_variation_136() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (136 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_136() {
+    fn test_zero_cost_edge_case_variation_136() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (136 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_137 {
+mod tests_advanced_rate_limiter_variation_137 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_137() {
+    fn test_soft_limit_variation_137() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (137 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_137() {
+    fn test_hard_limit_fallback_variation_137() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (137 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_137() {
+    fn test_under_limit_variation_137() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (137 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_137() {
+    fn test_zero_cost_edge_case_variation_137() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (137 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_138 {
+mod tests_advanced_rate_limiter_variation_138 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_138() {
+    fn test_soft_limit_variation_138() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (138 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_138() {
+    fn test_hard_limit_fallback_variation_138() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (138 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_138() {
+    fn test_under_limit_variation_138() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (138 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_138() {
+    fn test_zero_cost_edge_case_variation_138() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (138 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_139 {
+mod tests_advanced_rate_limiter_variation_139 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_139() {
+    fn test_soft_limit_variation_139() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (139 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_139() {
+    fn test_hard_limit_fallback_variation_139() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (139 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_139() {
+    fn test_under_limit_variation_139() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (139 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_139() {
+    fn test_zero_cost_edge_case_variation_139() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (139 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_140 {
+mod tests_advanced_rate_limiter_variation_140 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_140() {
+    fn test_soft_limit_variation_140() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (140 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_140() {
+    fn test_hard_limit_fallback_variation_140() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (140 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_140() {
+    fn test_under_limit_variation_140() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (140 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_140() {
+    fn test_zero_cost_edge_case_variation_140() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (140 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_141 {
+mod tests_advanced_rate_limiter_variation_141 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_141() {
+    fn test_soft_limit_variation_141() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (141 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_141() {
+    fn test_hard_limit_fallback_variation_141() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (141 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_141() {
+    fn test_under_limit_variation_141() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (141 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_141() {
+    fn test_zero_cost_edge_case_variation_141() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (141 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_142 {
+mod tests_advanced_rate_limiter_variation_142 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_142() {
+    fn test_soft_limit_variation_142() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (142 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_142() {
+    fn test_hard_limit_fallback_variation_142() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (142 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_142() {
+    fn test_under_limit_variation_142() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (142 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_142() {
+    fn test_zero_cost_edge_case_variation_142() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (142 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_143 {
+mod tests_advanced_rate_limiter_variation_143 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_143() {
+    fn test_soft_limit_variation_143() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (143 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_143() {
+    fn test_hard_limit_fallback_variation_143() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (143 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_143() {
+    fn test_under_limit_variation_143() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (143 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_143() {
+    fn test_zero_cost_edge_case_variation_143() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (143 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_144 {
+mod tests_advanced_rate_limiter_variation_144 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_144() {
+    fn test_soft_limit_variation_144() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (144 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_144() {
+    fn test_hard_limit_fallback_variation_144() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (144 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_144() {
+    fn test_under_limit_variation_144() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (144 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_144() {
+    fn test_zero_cost_edge_case_variation_144() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (144 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_145 {
+mod tests_advanced_rate_limiter_variation_145 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_145() {
+    fn test_soft_limit_variation_145() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (145 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_145() {
+    fn test_hard_limit_fallback_variation_145() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (145 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_145() {
+    fn test_under_limit_variation_145() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (145 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_145() {
+    fn test_zero_cost_edge_case_variation_145() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (145 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_146 {
+mod tests_advanced_rate_limiter_variation_146 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_146() {
+    fn test_soft_limit_variation_146() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (146 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_146() {
+    fn test_hard_limit_fallback_variation_146() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (146 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_146() {
+    fn test_under_limit_variation_146() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (146 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_146() {
+    fn test_zero_cost_edge_case_variation_146() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (146 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_147 {
+mod tests_advanced_rate_limiter_variation_147 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_147() {
+    fn test_soft_limit_variation_147() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (147 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_147() {
+    fn test_hard_limit_fallback_variation_147() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (147 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_147() {
+    fn test_under_limit_variation_147() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (147 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_147() {
+    fn test_zero_cost_edge_case_variation_147() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (147 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_148 {
+mod tests_advanced_rate_limiter_variation_148 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_148() {
+    fn test_soft_limit_variation_148() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (148 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_148() {
+    fn test_hard_limit_fallback_variation_148() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (148 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_148() {
+    fn test_under_limit_variation_148() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (148 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_148() {
+    fn test_zero_cost_edge_case_variation_148() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (148 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_149 {
+mod tests_advanced_rate_limiter_variation_149 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_149() {
+    fn test_soft_limit_variation_149() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (149 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_149() {
+    fn test_hard_limit_fallback_variation_149() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (149 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_149() {
+    fn test_under_limit_variation_149() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (149 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_149() {
+    fn test_zero_cost_edge_case_variation_149() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (149 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_150 {
+mod tests_advanced_rate_limiter_variation_150 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_150() {
+    fn test_soft_limit_variation_150() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (150 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_150() {
+    fn test_hard_limit_fallback_variation_150() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (150 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_150() {
+    fn test_under_limit_variation_150() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (150 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_150() {
+    fn test_zero_cost_edge_case_variation_150() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (150 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_151 {
+mod tests_advanced_rate_limiter_variation_151 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_151() {
+    fn test_soft_limit_variation_151() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (151 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_151() {
+    fn test_hard_limit_fallback_variation_151() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (151 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_151() {
+    fn test_under_limit_variation_151() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (151 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_151() {
+    fn test_zero_cost_edge_case_variation_151() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (151 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_152 {
+mod tests_advanced_rate_limiter_variation_152 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_152() {
+    fn test_soft_limit_variation_152() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (152 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_152() {
+    fn test_hard_limit_fallback_variation_152() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (152 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_152() {
+    fn test_under_limit_variation_152() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (152 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_152() {
+    fn test_zero_cost_edge_case_variation_152() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (152 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_153 {
+mod tests_advanced_rate_limiter_variation_153 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_153() {
+    fn test_soft_limit_variation_153() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (153 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_153() {
+    fn test_hard_limit_fallback_variation_153() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (153 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_153() {
+    fn test_under_limit_variation_153() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (153 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_153() {
+    fn test_zero_cost_edge_case_variation_153() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (153 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_154 {
+mod tests_advanced_rate_limiter_variation_154 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_154() {
+    fn test_soft_limit_variation_154() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (154 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_154() {
+    fn test_hard_limit_fallback_variation_154() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (154 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_154() {
+    fn test_under_limit_variation_154() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (154 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_154() {
+    fn test_zero_cost_edge_case_variation_154() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (154 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_155 {
+mod tests_advanced_rate_limiter_variation_155 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_155() {
+    fn test_soft_limit_variation_155() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (155 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_155() {
+    fn test_hard_limit_fallback_variation_155() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (155 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_155() {
+    fn test_under_limit_variation_155() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (155 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_155() {
+    fn test_zero_cost_edge_case_variation_155() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (155 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_156 {
+mod tests_advanced_rate_limiter_variation_156 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_156() {
+    fn test_soft_limit_variation_156() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (156 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_156() {
+    fn test_hard_limit_fallback_variation_156() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (156 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_156() {
+    fn test_under_limit_variation_156() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (156 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_156() {
+    fn test_zero_cost_edge_case_variation_156() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (156 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_157 {
+mod tests_advanced_rate_limiter_variation_157 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_157() {
+    fn test_soft_limit_variation_157() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (157 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_157() {
+    fn test_hard_limit_fallback_variation_157() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (157 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_157() {
+    fn test_under_limit_variation_157() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (157 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_157() {
+    fn test_zero_cost_edge_case_variation_157() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (157 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_158 {
+mod tests_advanced_rate_limiter_variation_158 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_158() {
+    fn test_soft_limit_variation_158() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (158 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_158() {
+    fn test_hard_limit_fallback_variation_158() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (158 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_158() {
+    fn test_under_limit_variation_158() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (158 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_158() {
+    fn test_zero_cost_edge_case_variation_158() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (158 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_159 {
+mod tests_advanced_rate_limiter_variation_159 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_159() {
+    fn test_soft_limit_variation_159() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (159 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_159() {
+    fn test_hard_limit_fallback_variation_159() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (159 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_159() {
+    fn test_under_limit_variation_159() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (159 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_159() {
+    fn test_zero_cost_edge_case_variation_159() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (159 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_160 {
+mod tests_advanced_rate_limiter_variation_160 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_160() {
+    fn test_soft_limit_variation_160() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (160 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_160() {
+    fn test_hard_limit_fallback_variation_160() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (160 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_160() {
+    fn test_under_limit_variation_160() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (160 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_160() {
+    fn test_zero_cost_edge_case_variation_160() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (160 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_161 {
+mod tests_advanced_rate_limiter_variation_161 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_161() {
+    fn test_soft_limit_variation_161() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (161 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_161() {
+    fn test_hard_limit_fallback_variation_161() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (161 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_161() {
+    fn test_under_limit_variation_161() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (161 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_161() {
+    fn test_zero_cost_edge_case_variation_161() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (161 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_162 {
+mod tests_advanced_rate_limiter_variation_162 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_162() {
+    fn test_soft_limit_variation_162() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (162 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_162() {
+    fn test_hard_limit_fallback_variation_162() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (162 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_162() {
+    fn test_under_limit_variation_162() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (162 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_162() {
+    fn test_zero_cost_edge_case_variation_162() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (162 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_163 {
+mod tests_advanced_rate_limiter_variation_163 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_163() {
+    fn test_soft_limit_variation_163() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (163 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_163() {
+    fn test_hard_limit_fallback_variation_163() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (163 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_163() {
+    fn test_under_limit_variation_163() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (163 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_163() {
+    fn test_zero_cost_edge_case_variation_163() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (163 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_164 {
+mod tests_advanced_rate_limiter_variation_164 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_164() {
+    fn test_soft_limit_variation_164() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (164 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_164() {
+    fn test_hard_limit_fallback_variation_164() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (164 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_164() {
+    fn test_under_limit_variation_164() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (164 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_164() {
+    fn test_zero_cost_edge_case_variation_164() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (164 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_165 {
+mod tests_advanced_rate_limiter_variation_165 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_165() {
+    fn test_soft_limit_variation_165() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (165 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_165() {
+    fn test_hard_limit_fallback_variation_165() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (165 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_165() {
+    fn test_under_limit_variation_165() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (165 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_165() {
+    fn test_zero_cost_edge_case_variation_165() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (165 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_166 {
+mod tests_advanced_rate_limiter_variation_166 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_166() {
+    fn test_soft_limit_variation_166() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (166 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_166() {
+    fn test_hard_limit_fallback_variation_166() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (166 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_166() {
+    fn test_under_limit_variation_166() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (166 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_166() {
+    fn test_zero_cost_edge_case_variation_166() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (166 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_167 {
+mod tests_advanced_rate_limiter_variation_167 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_167() {
+    fn test_soft_limit_variation_167() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (167 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_167() {
+    fn test_hard_limit_fallback_variation_167() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (167 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_167() {
+    fn test_under_limit_variation_167() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (167 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_167() {
+    fn test_zero_cost_edge_case_variation_167() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (167 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_168 {
+mod tests_advanced_rate_limiter_variation_168 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_168() {
+    fn test_soft_limit_variation_168() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (168 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_168() {
+    fn test_hard_limit_fallback_variation_168() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (168 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_168() {
+    fn test_under_limit_variation_168() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (168 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_168() {
+    fn test_zero_cost_edge_case_variation_168() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (168 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_169 {
+mod tests_advanced_rate_limiter_variation_169 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_169() {
+    fn test_soft_limit_variation_169() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (169 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_169() {
+    fn test_hard_limit_fallback_variation_169() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (169 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_169() {
+    fn test_under_limit_variation_169() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (169 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_169() {
+    fn test_zero_cost_edge_case_variation_169() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (169 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_170 {
+mod tests_advanced_rate_limiter_variation_170 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_170() {
+    fn test_soft_limit_variation_170() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (170 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_170() {
+    fn test_hard_limit_fallback_variation_170() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (170 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_170() {
+    fn test_under_limit_variation_170() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (170 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_170() {
+    fn test_zero_cost_edge_case_variation_170() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (170 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_171 {
+mod tests_advanced_rate_limiter_variation_171 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_171() {
+    fn test_soft_limit_variation_171() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (171 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_171() {
+    fn test_hard_limit_fallback_variation_171() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (171 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_171() {
+    fn test_under_limit_variation_171() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (171 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_171() {
+    fn test_zero_cost_edge_case_variation_171() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (171 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_172 {
+mod tests_advanced_rate_limiter_variation_172 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_172() {
+    fn test_soft_limit_variation_172() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (172 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_172() {
+    fn test_hard_limit_fallback_variation_172() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (172 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_172() {
+    fn test_under_limit_variation_172() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (172 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_172() {
+    fn test_zero_cost_edge_case_variation_172() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (172 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_173 {
+mod tests_advanced_rate_limiter_variation_173 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_173() {
+    fn test_soft_limit_variation_173() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (173 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_173() {
+    fn test_hard_limit_fallback_variation_173() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (173 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_173() {
+    fn test_under_limit_variation_173() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (173 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_173() {
+    fn test_zero_cost_edge_case_variation_173() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (173 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_174 {
+mod tests_advanced_rate_limiter_variation_174 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_174() {
+    fn test_soft_limit_variation_174() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (174 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_174() {
+    fn test_hard_limit_fallback_variation_174() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (174 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_174() {
+    fn test_under_limit_variation_174() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (174 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_174() {
+    fn test_zero_cost_edge_case_variation_174() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (174 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_175 {
+mod tests_advanced_rate_limiter_variation_175 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_175() {
+    fn test_soft_limit_variation_175() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (175 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_175() {
+    fn test_hard_limit_fallback_variation_175() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (175 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_175() {
+    fn test_under_limit_variation_175() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (175 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_175() {
+    fn test_zero_cost_edge_case_variation_175() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (175 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_176 {
+mod tests_advanced_rate_limiter_variation_176 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_176() {
+    fn test_soft_limit_variation_176() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (176 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_176() {
+    fn test_hard_limit_fallback_variation_176() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (176 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_176() {
+    fn test_under_limit_variation_176() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (176 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_176() {
+    fn test_zero_cost_edge_case_variation_176() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (176 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_177 {
+mod tests_advanced_rate_limiter_variation_177 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_177() {
+    fn test_soft_limit_variation_177() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (177 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_177() {
+    fn test_hard_limit_fallback_variation_177() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (177 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_177() {
+    fn test_under_limit_variation_177() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (177 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_177() {
+    fn test_zero_cost_edge_case_variation_177() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (177 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_178 {
+mod tests_advanced_rate_limiter_variation_178 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_178() {
+    fn test_soft_limit_variation_178() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (178 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_178() {
+    fn test_hard_limit_fallback_variation_178() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (178 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_178() {
+    fn test_under_limit_variation_178() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (178 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_178() {
+    fn test_zero_cost_edge_case_variation_178() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (178 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_179 {
+mod tests_advanced_rate_limiter_variation_179 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_179() {
+    fn test_soft_limit_variation_179() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (179 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_179() {
+    fn test_hard_limit_fallback_variation_179() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (179 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_179() {
+    fn test_under_limit_variation_179() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (179 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_179() {
+    fn test_zero_cost_edge_case_variation_179() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (179 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_180 {
+mod tests_advanced_rate_limiter_variation_180 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_180() {
+    fn test_soft_limit_variation_180() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (180 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_180() {
+    fn test_hard_limit_fallback_variation_180() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (180 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_180() {
+    fn test_under_limit_variation_180() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (180 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_180() {
+    fn test_zero_cost_edge_case_variation_180() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (180 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_181 {
+mod tests_advanced_rate_limiter_variation_181 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_181() {
+    fn test_soft_limit_variation_181() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (181 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_181() {
+    fn test_hard_limit_fallback_variation_181() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (181 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_181() {
+    fn test_under_limit_variation_181() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (181 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_181() {
+    fn test_zero_cost_edge_case_variation_181() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (181 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_182 {
+mod tests_advanced_rate_limiter_variation_182 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_182() {
+    fn test_soft_limit_variation_182() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (182 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_182() {
+    fn test_hard_limit_fallback_variation_182() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (182 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_182() {
+    fn test_under_limit_variation_182() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (182 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_182() {
+    fn test_zero_cost_edge_case_variation_182() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (182 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_183 {
+mod tests_advanced_rate_limiter_variation_183 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_183() {
+    fn test_soft_limit_variation_183() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (183 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_183() {
+    fn test_hard_limit_fallback_variation_183() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (183 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_183() {
+    fn test_under_limit_variation_183() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (183 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_183() {
+    fn test_zero_cost_edge_case_variation_183() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (183 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_184 {
+mod tests_advanced_rate_limiter_variation_184 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_184() {
+    fn test_soft_limit_variation_184() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (184 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_184() {
+    fn test_hard_limit_fallback_variation_184() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (184 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_184() {
+    fn test_under_limit_variation_184() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (184 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_184() {
+    fn test_zero_cost_edge_case_variation_184() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (184 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_185 {
+mod tests_advanced_rate_limiter_variation_185 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_185() {
+    fn test_soft_limit_variation_185() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (185 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_185() {
+    fn test_hard_limit_fallback_variation_185() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (185 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_185() {
+    fn test_under_limit_variation_185() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (185 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_185() {
+    fn test_zero_cost_edge_case_variation_185() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (185 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_186 {
+mod tests_advanced_rate_limiter_variation_186 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_186() {
+    fn test_soft_limit_variation_186() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (186 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_186() {
+    fn test_hard_limit_fallback_variation_186() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (186 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_186() {
+    fn test_under_limit_variation_186() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (186 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_186() {
+    fn test_zero_cost_edge_case_variation_186() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (186 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_187 {
+mod tests_advanced_rate_limiter_variation_187 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_187() {
+    fn test_soft_limit_variation_187() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (187 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_187() {
+    fn test_hard_limit_fallback_variation_187() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (187 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_187() {
+    fn test_under_limit_variation_187() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (187 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_187() {
+    fn test_zero_cost_edge_case_variation_187() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (187 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_188 {
+mod tests_advanced_rate_limiter_variation_188 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_188() {
+    fn test_soft_limit_variation_188() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (188 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_188() {
+    fn test_hard_limit_fallback_variation_188() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (188 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_188() {
+    fn test_under_limit_variation_188() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (188 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_188() {
+    fn test_zero_cost_edge_case_variation_188() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (188 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_189 {
+mod tests_advanced_rate_limiter_variation_189 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_189() {
+    fn test_soft_limit_variation_189() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (189 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_189() {
+    fn test_hard_limit_fallback_variation_189() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (189 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_189() {
+    fn test_under_limit_variation_189() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (189 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_189() {
+    fn test_zero_cost_edge_case_variation_189() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (189 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_190 {
+mod tests_advanced_rate_limiter_variation_190 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_190() {
+    fn test_soft_limit_variation_190() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (190 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_190() {
+    fn test_hard_limit_fallback_variation_190() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (190 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_190() {
+    fn test_under_limit_variation_190() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (190 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_190() {
+    fn test_zero_cost_edge_case_variation_190() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (190 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_191 {
+mod tests_advanced_rate_limiter_variation_191 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_191() {
+    fn test_soft_limit_variation_191() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (191 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_191() {
+    fn test_hard_limit_fallback_variation_191() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (191 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_191() {
+    fn test_under_limit_variation_191() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (191 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_191() {
+    fn test_zero_cost_edge_case_variation_191() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (191 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_192 {
+mod tests_advanced_rate_limiter_variation_192 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_192() {
+    fn test_soft_limit_variation_192() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (192 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_192() {
+    fn test_hard_limit_fallback_variation_192() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (192 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_192() {
+    fn test_under_limit_variation_192() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (192 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_192() {
+    fn test_zero_cost_edge_case_variation_192() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (192 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_193 {
+mod tests_advanced_rate_limiter_variation_193 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_193() {
+    fn test_soft_limit_variation_193() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (193 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_193() {
+    fn test_hard_limit_fallback_variation_193() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (193 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_193() {
+    fn test_under_limit_variation_193() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (193 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_193() {
+    fn test_zero_cost_edge_case_variation_193() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (193 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_194 {
+mod tests_advanced_rate_limiter_variation_194 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_194() {
+    fn test_soft_limit_variation_194() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (194 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_194() {
+    fn test_hard_limit_fallback_variation_194() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (194 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_194() {
+    fn test_under_limit_variation_194() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (194 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_194() {
+    fn test_zero_cost_edge_case_variation_194() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (194 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_195 {
+mod tests_advanced_rate_limiter_variation_195 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_195() {
+    fn test_soft_limit_variation_195() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (195 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_195() {
+    fn test_hard_limit_fallback_variation_195() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (195 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_195() {
+    fn test_under_limit_variation_195() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (195 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_195() {
+    fn test_zero_cost_edge_case_variation_195() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (195 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_196 {
+mod tests_advanced_rate_limiter_variation_196 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_196() {
+    fn test_soft_limit_variation_196() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (196 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_196() {
+    fn test_hard_limit_fallback_variation_196() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (196 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_196() {
+    fn test_under_limit_variation_196() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (196 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_196() {
+    fn test_zero_cost_edge_case_variation_196() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (196 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_197 {
+mod tests_advanced_rate_limiter_variation_197 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_197() {
+    fn test_soft_limit_variation_197() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (197 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_197() {
+    fn test_hard_limit_fallback_variation_197() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (197 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_197() {
+    fn test_under_limit_variation_197() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (197 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_197() {
+    fn test_zero_cost_edge_case_variation_197() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (197 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_198 {
+mod tests_advanced_rate_limiter_variation_198 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_198() {
+    fn test_soft_limit_variation_198() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (198 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_198() {
+    fn test_hard_limit_fallback_variation_198() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (198 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_198() {
+    fn test_under_limit_variation_198() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (198 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_198() {
+    fn test_zero_cost_edge_case_variation_198() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (198 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_199 {
+mod tests_advanced_rate_limiter_variation_199 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_199() {
+    fn test_soft_limit_variation_199() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (199 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_199() {
+    fn test_hard_limit_fallback_variation_199() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (199 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_199() {
+    fn test_under_limit_variation_199() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (199 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_199() {
+    fn test_zero_cost_edge_case_variation_199() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (199 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 }
 #[cfg(test)]
-mod tests_advanced_rate_limiter_200 {
+mod tests_advanced_rate_limiter_variation_200 {
     use super::*;
 
     #[test]
-    fn test_soft_limit_200() {
+    fn test_soft_limit_variation_200() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(85.0, 100.0);
+        let status = limiter.check_limit(85.0 + (200 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_hard_limit_fallback_200() {
+    fn test_hard_limit_fallback_variation_200() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(105.0, 100.0);
+        let status = limiter.check_limit(105.0 + (200 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(status.soft_limit_reached);
     }
 
     #[test]
-    fn test_under_limit_200() {
+    fn test_under_limit_variation_200() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 100.0);
+        let status = limiter.check_limit(50.0 - (200 as f64 * 0.01), 100.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
 
     #[test]
-    fn test_zero_cost_edge_case_200() {
+    fn test_zero_cost_edge_case_variation_200() {
         let limiter = AdvancedRateLimiter::default();
-        let status = limiter.check_limit(50.0, 0.0);
+        let status = limiter.check_limit(50.0 + (200 as f64 * 0.01), 0.0);
         assert!(status.is_allowed);
         assert!(!status.soft_limit_reached);
     }
