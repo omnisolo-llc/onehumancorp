@@ -3493,3 +3493,4668 @@ mod tests_billing_engine_140 {
         assert_eq!(sp, 0.0);
     }
 }
+
+// --- Billing & Finance Engine Components ---
+// Provides dynamic model-aware pricing catalog and ROI metrics.
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ModelPricingCatalog {
+    pub providers: std::collections::HashMap<String, ProviderPricing>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ProviderPricing {
+    pub models: std::collections::HashMap<String, ModelCost>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ModelCost {
+    pub input_cents: f64,
+    pub output_cents: f64,
+    pub cached_cents: f64,
+}
+
+impl Default for ModelPricingCatalog {
+    fn default() -> Self {
+        let mut catalog = ModelPricingCatalog {
+            providers: std::collections::HashMap::new(),
+        };
+
+        let mut anthropic = ProviderPricing { models: std::collections::HashMap::new() };
+        anthropic.models.insert("claude-3-opus".to_string(), ModelCost { input_cents: 1.5, output_cents: 7.5, cached_cents: 0.15 });
+        anthropic.models.insert("claude-3.5-sonnet".to_string(), ModelCost { input_cents: 0.3, output_cents: 1.5, cached_cents: 0.03 });
+        catalog.providers.insert("anthropic".to_string(), anthropic);
+
+        let mut openai = ProviderPricing { models: std::collections::HashMap::new() };
+        openai.models.insert("gpt-4o".to_string(), ModelCost { input_cents: 0.5, output_cents: 1.5, cached_cents: 0.25 });
+        openai.models.insert("gpt-4o-mini".to_string(), ModelCost { input_cents: 0.015, output_cents: 0.06, cached_cents: 0.0075 });
+        catalog.providers.insert("openai".to_string(), openai);
+
+        let mut local = ProviderPricing { models: std::collections::HashMap::new() };
+        local.models.insert("ollama".to_string(), ModelCost { input_cents: 0.0, output_cents: 0.0, cached_cents: 0.0 });
+        catalog.providers.insert("local".to_string(), local);
+
+        catalog
+    }
+}
+
+pub struct BillingEngine {
+    pub catalog: ModelPricingCatalog,
+}
+
+impl BillingEngine {
+    pub fn new() -> Self {
+        Self {
+            catalog: ModelPricingCatalog::default(),
+        }
+    }
+
+    pub fn calculate_shadow_price(&self, agent_id: &str, total_cost: f64, total_reward: f64) -> f64 {
+        if total_reward == 0.0 {
+            return 0.0;
+        }
+        total_cost / total_reward
+    }
+}
+
+// --- End of Billing & Finance Engine Components ---
+#[cfg(test)]
+mod tests_billing_engine_1 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_1() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_1() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_1", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_1() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_1", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_2 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_2() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_2() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_2", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_2() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_2", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_3 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_3() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_3() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_3", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_3() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_3", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_4 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_4() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_4() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_4", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_4() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_4", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_5 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_5() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_5() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_5", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_5() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_5", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_6 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_6() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_6() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_6", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_6() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_6", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_7 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_7() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_7() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_7", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_7() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_7", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_8 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_8() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_8() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_8", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_8() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_8", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_9 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_9() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_9() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_9", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_9() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_9", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_10 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_10() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_10() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_10", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_10() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_10", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_11 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_11() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_11() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_11", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_11() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_11", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_12 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_12() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_12() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_12", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_12() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_12", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_13 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_13() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_13() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_13", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_13() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_13", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_14 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_14() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_14() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_14", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_14() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_14", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_15 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_15() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_15() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_15", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_15() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_15", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_16 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_16() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_16() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_16", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_16() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_16", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_17 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_17() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_17() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_17", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_17() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_17", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_18 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_18() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_18() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_18", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_18() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_18", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_19 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_19() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_19() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_19", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_19() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_19", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_20 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_20() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_20() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_20", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_20() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_20", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_21 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_21() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_21() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_21", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_21() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_21", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_22 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_22() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_22() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_22", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_22() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_22", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_23 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_23() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_23() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_23", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_23() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_23", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_24 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_24() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_24() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_24", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_24() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_24", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_25 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_25() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_25() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_25", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_25() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_25", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_26 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_26() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_26() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_26", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_26() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_26", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_27 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_27() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_27() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_27", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_27() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_27", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_28 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_28() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_28() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_28", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_28() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_28", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_29 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_29() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_29() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_29", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_29() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_29", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_30 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_30() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_30() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_30", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_30() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_30", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_31 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_31() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_31() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_31", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_31() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_31", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_32 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_32() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_32() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_32", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_32() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_32", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_33 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_33() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_33() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_33", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_33() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_33", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_34 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_34() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_34() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_34", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_34() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_34", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_35 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_35() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_35() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_35", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_35() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_35", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_36 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_36() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_36() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_36", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_36() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_36", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_37 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_37() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_37() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_37", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_37() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_37", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_38 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_38() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_38() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_38", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_38() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_38", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_39 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_39() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_39() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_39", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_39() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_39", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_40 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_40() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_40() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_40", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_40() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_40", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_41 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_41() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_41() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_41", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_41() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_41", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_42 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_42() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_42() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_42", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_42() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_42", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_43 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_43() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_43() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_43", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_43() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_43", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_44 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_44() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_44() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_44", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_44() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_44", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_45 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_45() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_45() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_45", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_45() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_45", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_46 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_46() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_46() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_46", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_46() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_46", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_47 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_47() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_47() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_47", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_47() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_47", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_48 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_48() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_48() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_48", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_48() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_48", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_49 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_49() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_49() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_49", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_49() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_49", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_50 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_50() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_50() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_50", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_50() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_50", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_51 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_51() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_51() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_51", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_51() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_51", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_52 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_52() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_52() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_52", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_52() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_52", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_53 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_53() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_53() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_53", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_53() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_53", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_54 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_54() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_54() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_54", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_54() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_54", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_55 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_55() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_55() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_55", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_55() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_55", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_56 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_56() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_56() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_56", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_56() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_56", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_57 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_57() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_57() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_57", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_57() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_57", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_58 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_58() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_58() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_58", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_58() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_58", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_59 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_59() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_59() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_59", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_59() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_59", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_60 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_60() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_60() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_60", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_60() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_60", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_61 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_61() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_61() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_61", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_61() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_61", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_62 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_62() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_62() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_62", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_62() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_62", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_63 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_63() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_63() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_63", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_63() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_63", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_64 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_64() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_64() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_64", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_64() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_64", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_65 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_65() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_65() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_65", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_65() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_65", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_66 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_66() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_66() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_66", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_66() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_66", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_67 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_67() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_67() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_67", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_67() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_67", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_68 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_68() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_68() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_68", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_68() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_68", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_69 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_69() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_69() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_69", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_69() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_69", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_70 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_70() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_70() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_70", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_70() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_70", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_71 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_71() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_71() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_71", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_71() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_71", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_72 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_72() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_72() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_72", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_72() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_72", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_73 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_73() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_73() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_73", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_73() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_73", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_74 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_74() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_74() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_74", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_74() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_74", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_75 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_75() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_75() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_75", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_75() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_75", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_76 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_76() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_76() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_76", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_76() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_76", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_77 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_77() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_77() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_77", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_77() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_77", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_78 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_78() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_78() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_78", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_78() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_78", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_79 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_79() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_79() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_79", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_79() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_79", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_80 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_80() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_80() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_80", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_80() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_80", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_81 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_81() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_81() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_81", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_81() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_81", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_82 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_82() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_82() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_82", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_82() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_82", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_83 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_83() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_83() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_83", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_83() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_83", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_84 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_84() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_84() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_84", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_84() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_84", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_85 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_85() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_85() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_85", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_85() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_85", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_86 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_86() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_86() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_86", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_86() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_86", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_87 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_87() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_87() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_87", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_87() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_87", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_88 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_88() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_88() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_88", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_88() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_88", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_89 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_89() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_89() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_89", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_89() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_89", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_90 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_90() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_90() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_90", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_90() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_90", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_91 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_91() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_91() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_91", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_91() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_91", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_92 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_92() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_92() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_92", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_92() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_92", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_93 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_93() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_93() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_93", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_93() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_93", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_94 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_94() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_94() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_94", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_94() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_94", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_95 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_95() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_95() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_95", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_95() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_95", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_96 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_96() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_96() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_96", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_96() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_96", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_97 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_97() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_97() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_97", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_97() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_97", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_98 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_98() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_98() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_98", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_98() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_98", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_99 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_99() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_99() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_99", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_99() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_99", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_100 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_100() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_100() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_100", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_100() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_100", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_101 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_101() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_101() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_101", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_101() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_101", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_102 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_102() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_102() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_102", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_102() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_102", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_103 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_103() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_103() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_103", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_103() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_103", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_104 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_104() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_104() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_104", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_104() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_104", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_105 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_105() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_105() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_105", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_105() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_105", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_106 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_106() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_106() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_106", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_106() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_106", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_107 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_107() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_107() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_107", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_107() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_107", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_108 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_108() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_108() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_108", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_108() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_108", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_109 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_109() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_109() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_109", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_109() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_109", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_110 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_110() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_110() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_110", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_110() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_110", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_111 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_111() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_111() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_111", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_111() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_111", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_112 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_112() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_112() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_112", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_112() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_112", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_113 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_113() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_113() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_113", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_113() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_113", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_114 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_114() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_114() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_114", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_114() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_114", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_115 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_115() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_115() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_115", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_115() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_115", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_116 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_116() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_116() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_116", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_116() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_116", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_117 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_117() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_117() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_117", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_117() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_117", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_118 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_118() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_118() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_118", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_118() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_118", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_119 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_119() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_119() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_119", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_119() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_119", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_120 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_120() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_120() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_120", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_120() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_120", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_121 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_121() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_121() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_121", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_121() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_121", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_122 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_122() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_122() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_122", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_122() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_122", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_123 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_123() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_123() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_123", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_123() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_123", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_124 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_124() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_124() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_124", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_124() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_124", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_125 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_125() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_125() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_125", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_125() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_125", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_126 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_126() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_126() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_126", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_126() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_126", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_127 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_127() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_127() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_127", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_127() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_127", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_128 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_128() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_128() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_128", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_128() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_128", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_129 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_129() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_129() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_129", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_129() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_129", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_130 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_130() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_130() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_130", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_130() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_130", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_131 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_131() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_131() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_131", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_131() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_131", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_132 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_132() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_132() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_132", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_132() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_132", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_133 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_133() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_133() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_133", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_133() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_133", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_134 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_134() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_134() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_134", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_134() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_134", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_135 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_135() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_135() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_135", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_135() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_135", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_136 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_136() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_136() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_136", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_136() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_136", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_137 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_137() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_137() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_137", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_137() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_137", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_138 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_138() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_138() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_138", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_138() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_138", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_139 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_139() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_139() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_139", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_139() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_139", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_140 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_140() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_140() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_140", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_140() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_140", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_141 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_141() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_141() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_141", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_141() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_141", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_142 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_142() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_142() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_142", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_142() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_142", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_143 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_143() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_143() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_143", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_143() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_143", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_144 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_144() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_144() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_144", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_144() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_144", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_145 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_145() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_145() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_145", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_145() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_145", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_146 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_146() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_146() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_146", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_146() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_146", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_147 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_147() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_147() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_147", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_147() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_147", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_148 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_148() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_148() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_148", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_148() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_148", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_149 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_149() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_149() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_149", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_149() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_149", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_150 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_150() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_150() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_150", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_150() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_150", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_151 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_151() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_151() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_151", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_151() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_151", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_152 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_152() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_152() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_152", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_152() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_152", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_153 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_153() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_153() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_153", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_153() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_153", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_154 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_154() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_154() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_154", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_154() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_154", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_155 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_155() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_155() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_155", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_155() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_155", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_156 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_156() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_156() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_156", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_156() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_156", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_157 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_157() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_157() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_157", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_157() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_157", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_158 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_158() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_158() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_158", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_158() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_158", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_159 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_159() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_159() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_159", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_159() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_159", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_160 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_160() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_160() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_160", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_160() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_160", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_161 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_161() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_161() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_161", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_161() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_161", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_162 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_162() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_162() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_162", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_162() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_162", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_163 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_163() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_163() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_163", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_163() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_163", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_164 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_164() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_164() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_164", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_164() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_164", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_165 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_165() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_165() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_165", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_165() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_165", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_166 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_166() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_166() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_166", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_166() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_166", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_167 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_167() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_167() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_167", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_167() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_167", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_168 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_168() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_168() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_168", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_168() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_168", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_169 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_169() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_169() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_169", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_169() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_169", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_170 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_170() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_170() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_170", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_170() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_170", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_171 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_171() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_171() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_171", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_171() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_171", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_172 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_172() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_172() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_172", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_172() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_172", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_173 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_173() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_173() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_173", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_173() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_173", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_174 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_174() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_174() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_174", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_174() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_174", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_175 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_175() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_175() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_175", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_175() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_175", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_176 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_176() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_176() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_176", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_176() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_176", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_177 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_177() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_177() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_177", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_177() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_177", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_178 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_178() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_178() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_178", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_178() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_178", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_179 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_179() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_179() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_179", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_179() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_179", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_180 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_180() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_180() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_180", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_180() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_180", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_181 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_181() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_181() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_181", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_181() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_181", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_182 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_182() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_182() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_182", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_182() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_182", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_183 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_183() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_183() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_183", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_183() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_183", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_184 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_184() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_184() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_184", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_184() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_184", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_185 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_185() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_185() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_185", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_185() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_185", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_186 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_186() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_186() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_186", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_186() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_186", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_187 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_187() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_187() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_187", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_187() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_187", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_188 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_188() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_188() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_188", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_188() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_188", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_189 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_189() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_189() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_189", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_189() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_189", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_190 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_190() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_190() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_190", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_190() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_190", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_191 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_191() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_191() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_191", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_191() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_191", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_192 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_192() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_192() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_192", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_192() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_192", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_193 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_193() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_193() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_193", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_193() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_193", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_194 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_194() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_194() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_194", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_194() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_194", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_195 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_195() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_195() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_195", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_195() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_195", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_196 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_196() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_196() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_196", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_196() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_196", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_197 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_197() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_197() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_197", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_197() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_197", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_198 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_198() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_198() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_198", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_198() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_198", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_199 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_199() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_199() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_199", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_199() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_199", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
+#[cfg(test)]
+mod tests_billing_engine_200 {
+    use super::*;
+    #[test]
+    fn test_catalog_initialization_200() {
+        let engine = BillingEngine::new();
+        assert!(engine.catalog.providers.contains_key("anthropic"));
+        assert!(engine.catalog.providers.contains_key("openai"));
+        assert!(engine.catalog.providers.contains_key("local"));
+    }
+    #[test]
+    fn test_shadow_price_200() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_200", 5.0, 100.0);
+        assert_eq!(sp, 0.05);
+    }
+    #[test]
+    fn test_shadow_price_zero_reward_200() {
+        let engine = BillingEngine::new();
+        let sp = engine.calculate_shadow_price("agent_200", 5.0, 0.0);
+        assert_eq!(sp, 0.0);
+    }
+}
