@@ -6,6 +6,9 @@ rust_library(
         "grpc.rs",
         "mod.rs",
         "orchestration.rs",
+        "permissions/manager.rs",
+        "permissions/mod.rs",
+        "permissions/tests.rs",
     ],
     edition = "2024",
     crate_root = "mod.rs",
@@ -29,6 +32,7 @@ rust_library(
         "@crates//:tonic",
         "@crates//:tracing",
         "@crates//:uuid",
+        "@crates//:regex",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
