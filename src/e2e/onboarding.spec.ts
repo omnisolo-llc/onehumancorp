@@ -10,7 +10,7 @@ test.describe('Onboarding Wizard', () => {
     await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Welcome back"')).toBeVisible();
   });
 
   test('Test 1: Sign-Up & Account Creation to Wizard auto-redirect', async ({ page }) => {
@@ -44,7 +44,7 @@ test.describe('Onboarding Wizard', () => {
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
     await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Welcome back"')).toBeVisible();
     await page.click('button:has-text("Start Setup")');
     await expect(page.locator('text="Setup Wizard"')).toBeVisible();
   });

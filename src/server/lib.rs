@@ -1645,9 +1645,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
-                        <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
+                        <h2 style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;">Inbox</h2>
                         <div class="card glass">
-                            <h2>Welcome back, Human.</h2>
+                            <h2>Welcome back</h2>
                             <p>Your agents are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>

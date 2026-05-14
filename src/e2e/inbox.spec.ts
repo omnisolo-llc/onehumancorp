@@ -8,7 +8,7 @@ test('verify omnichannel inbox AI draft flow', async ({ page }) => {
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
     await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Welcome back"')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -37,7 +37,7 @@ test('verify inbox mobile layout constraints', async ({ page }) => {
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
     await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Welcome back"')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -57,7 +57,7 @@ test('verify quick reply usage', async ({ page }) => {
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
     await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Welcome back"')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -76,7 +76,7 @@ test('verify sending custom message clears input', async ({ page }) => {
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
     await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Welcome back"')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -97,7 +97,7 @@ test('verify empty state when no conversation is selected', async ({ page }) => 
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
     await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Welcome back"')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -112,7 +112,7 @@ test('verify connecting social media creates inbox conversation and allows reply
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
     await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Welcome back"')).toBeVisible();
 
     const integrationsMenu = page.locator('text=/Integrations/i, text=/Connect/i').filter({ visible: true }).first();
     if (await integrationsMenu.isVisible()) {

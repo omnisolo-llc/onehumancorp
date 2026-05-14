@@ -10,7 +10,7 @@ test('Order placement triggers Operations and Customer Success AI agents', async
     await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Welcome back"')).toBeVisible();
 
     // Simulate placing an order
     await page.click('button:has-text("Simulate Order")');
