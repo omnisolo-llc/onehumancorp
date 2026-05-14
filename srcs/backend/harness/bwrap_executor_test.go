@@ -1,12 +1,38 @@
 package harness
 
 import (
+	"context"
+	"strings"
 	"testing"
 )
 
 func TestBwrapExecutor_Execute(t *testing.T) {
-	// Skip actual execution in tests unless bwrap is installed
-	t.Skip("Skipping bwrap test as bwrap might not be installed in the CI environment")
+	// Simple mock test since we can't guarantee bwrap exists in CI
+	// We'll test the struct fields and initialization
+	exec := NewBwrapExecutor([]string{"example.com"})
+
+	if len(exec.AllowedDomains) != 1 {
+		t.Fatalf("Expected 1 allowed domain, got %d", len(exec.AllowedDomains))
+	}
+
+	if exec.AllowedDomains[0] != "example.com" {
+		t.Errorf("Expected example.com, got %s", exec.AllowedDomains[0])
+	}
+
+	// Test error behavior when executable is missing/fails
+	ctx := context.Background()
+	_, err := exec.Execute(ctx, "echo test", "http://proxy")
+
+	// err shouldn't be nil if bwrap doesn't exist or fails
+	if err == nil {
+		// bwrap exists and worked, verify output
+		// This path is just for completeness if run locally with bwrap
+	} else {
+		// Verify the error message contains the command failure indication
+		if !strings.Contains(err.Error(), "bwrap execution failed") {
+			t.Errorf("Expected bwrap execution failed error, got: %v", err)
+		}
+	}
 }
 func pad_bwrap_1() {}
 func pad_bwrap_2() {}

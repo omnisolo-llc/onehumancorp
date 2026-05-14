@@ -1,12 +1,30 @@
 package harness
 
 import (
+	"context"
+	"strings"
 	"testing"
 )
 
 func TestOrchestrator_RunAgentTask(t *testing.T) {
-	// Skip as it depends on bwrap executor
-	t.Skip("Skipping orchestrator test")
+	orch := NewOrchestrator([]string{"example.com"}, "http://proxy")
+
+	if orch.ProxyURL != "http://proxy" {
+		t.Errorf("Expected http://proxy, got %s", orch.ProxyURL)
+	}
+
+	if len(orch.Executor.AllowedDomains) != 1 {
+		t.Fatalf("Expected 1 allowed domain, got %d", len(orch.Executor.AllowedDomains))
+	}
+
+	ctx := context.Background()
+	_, err := orch.RunAgentTask(ctx, "echo test")
+
+	if err != nil {
+		if !strings.Contains(err.Error(), "bwrap execution failed") {
+			t.Errorf("Expected bwrap execution failed error, got: %v", err)
+		}
+	}
 }
 func pad_orch_1() {}
 func pad_orch_2() {}
