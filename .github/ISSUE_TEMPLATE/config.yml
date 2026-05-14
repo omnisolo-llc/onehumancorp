@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation Home
+    url: https://github.com/onehumancorp/mono/tree/main/docs
+    about: Review the docs site and task-tracking policy before opening new work.
