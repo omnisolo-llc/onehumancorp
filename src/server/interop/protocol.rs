@@ -317,7 +317,6 @@ impl InteropProtocol {
                                 updated_at: chrono::Utc::now(),
                             };
 
-                            // Only acknowledge if enqueue succeeds
                             if q.enqueue(job).await.is_ok() {
                                 let ack = proto::JobAck {
                                     job_id: job_id.clone(),
@@ -338,13 +337,12 @@ impl InteropProtocol {
                                         }
                                         retries += 1;
                                         tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                                        delay_ms *= 2; // Exponential backoff
+                                        delay_ms *= 2;
                                     }
                                 }
                             }
                         });
                     } else {
-                        // Fallback behavior: just acknowledge receipt if no queue is configured
                         let ack = proto::JobAck {
                             job_id: job_id.clone(),
                             node_id: ack_node_id,
