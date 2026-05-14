@@ -1460,8 +1460,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
-        .route("/meetings", axum::routing::get(ui_handler))
-        .route("/inbox", axum::routing::get(ui_handler))
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
@@ -1642,32 +1640,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
 
-                    <!-- Dashboard Screen -->
+                    <!-- Dashboard -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
-                        <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
-                            <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
-                            <button onclick="showScreen('agents-screen')">My Agents</button>
+                            <button onclick="showScreen('inbox-screen')">Check Messages</button>
                         </div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Update Setup</button>
-                            <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
-                            <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
-                            <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
-                        </div>
-                        <div id="facebook-integration" class="card glass">
-                            <h3>📘 Facebook</h3>
-                            <button onclick="alert('Configure Facebook'); showScreen('inbox-screen')">Configure</button>
                         </div>
                         <div class="card glass">
                             <h3>Agent Activity</h3>
@@ -1678,119 +1667,26 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
-                            <div class="card glass">
-                                <h3>Learn</h3>
-                                <button onclick="alert('Tutorial started')">Watch Tutorials</button>
-                                <button class="nav-button" onclick="showScreen('inbox-screen')">Inbox</button>
-                            </div>
+                            <button>Video Tutorials</button>
                         </div>
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
-                            <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
-                            <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
+                        <div class="bottom-nav glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <button class="nav-item" onclick="console.log('action_add_product')">Add Item</button>
                             <button class="nav-item">Orders</button>
+                            <button class="nav-item">Messages</button>
                             <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Distribute</button>
-                        </nav>
-                    </div>
-
-                    <!-- Referral Dashboard -->
-                    <div id="referral-dashboard-screen" class="screen glass">
-                        <h1>Referral Dashboard</h1>
-                        <div class="card glass">
-                            <h3>Your Referral Link</h3>
-                            <p id="referral-link">ohc://join?ref=DEFAULT</p>
-                            <button onclick="alert('Copied!')">Copy</button>
-                            <button onclick="location.reload()">Refresh</button>
+                            <button class="nav-item">Share Store</button>
                         </div>
-                        <div class="card glass">
-                            <h3>Share</h3>
-                            <button onclick="alert('Sharing to IG...')">📷 Share to Instagram</button>
-                            <button onclick="alert('Message copied!'); document.getElementById('invite-copied').style.display='block'">💬 Copy Invite Message</button>
-                            <p id="invite-copied" style="display: none;">Invite message copied!</p>
-                        </div>
-                        <div class="card glass">
-                            <h3>Actions</h3>
-                            <button onclick="alert('History shown')">📜 View Referral Logs</button>
-                            <button onclick="alert('Data exported')">📤 Export Data</button>
-                        </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
                     <!-- Inbox Screen -->
                     <div id="inbox-screen" class="screen glass">
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
                         <h1>Customer Inbox</h1>
-                        <div class="card glass" onclick="this.classList.toggle('active')">
-                            <h3>Maya</h3>
-                            <p>Do you do vegan cakes?</p>
-                            <button onclick="document.getElementById('reply-input').value = 'Sure, we have plenty of vegan options!'">✨ AI Draft</button>
-                            <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
+                        <div class="card">
+                            <p>No new messages.</p>
                         </div>
-                        <div class="card glass">
-                            <h3>Facebook User</h3>
-                            <p>Hello from Facebook!</p>
-                            <button onclick="alert('Configure Facebook')">Configure</button>
-                        </div>
-                        <div id="chat-window" class="card glass">
-                            <p>Select a conversation</p>
-                            <div id="messages-list"></div>
-                            <input id="reply-input" type="text" placeholder="Type a message...">
-                            <button onclick="const m = document.getElementById('reply-input').value; if(m) { const p = document.createElement('p'); p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('reply-input').value = ''; }">Send</button>
-                        </div>
-                    </div>
-
-                    <!-- Meetings Screen -->
-                    <div id="meetings-screen" class="screen glass">
-                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #4ecca3; font-size: 2em; font-weight: bold;" 
-                                onclick="document.getElementById('scheduler').style.display='block'; this.style.display='none'">
-                            Meetings Schedule New Meeting
-                        </button>
-                        <div class="card glass meeting">
-                            <h3>Next Item</h3>
-                            <p>Team Sync - 14:00</p>
-                            <p>00:10:00</p>
-                            <button onclick="showScreen('meeting-room-screen')">Join Start</button>
-                            <button onclick="this.parentElement.innerHTML='<p>Canceled Cancelled</p>'">Cancel Delete</button>
-                        </div>
-                        <div id="scheduler" class="card glass" style="display: none;">
-                            <h2>Plan Create</h2>
-                            <input type="text" placeholder="Meeting Title">
-                            <input type="date">
-                            <input type="time">
-                            <input type="email" placeholder="Participant Email">
-                            <button onclick="alert('Participant added')">Add</button>
-                            <button onclick="document.getElementById('scheduler').style.display='none'; document.getElementById('meetings-title').style.display='block'">Save</button>
-                        </div>
-                        <div class="tabs">
-                            <button onclick="alert('History shown')">📜 View Log</button>
-                            <button onclick="alert('Records')">Past</button>
-                            <button onclick="alert('Calendar')">Calendar</button>
-                            <button onclick="alert('Archive')">Archive</button>
-                        </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
-
-                    <!-- Meeting Room Screen -->
-                    <div id="meeting-room-screen" class="screen glass">
-                        <h1>Meeting Room Video Audio</h1>
-                        <div class="video-container card glass">
-                            <p>Feed</p>
-                            <p id="status-text">Off</p>
-                        </div>
-                        <div class="controls">
-                            <button onclick="document.getElementById('status-text').textContent = 'Video Off'">Camera</button>
-                            <button onclick="document.getElementById('status-text').textContent = 'Muted'">Mic</button>
-                            <button onclick="document.getElementById('status-text').textContent = 'Sharing Screen'">Share</button>
-                            <button onclick="document.getElementById('status-text').textContent = 'Hand Raised'">Signal</button>
-                            <button onclick="document.getElementById('status-text').textContent = 'Recording'">Record</button>
-                            <button onclick="alert('Participants list')">Participants List</button>
-                            <button onclick="alert('Chat opened')">Chat</button>
-                            <button class="danger" onclick="document.getElementById('status-text').textContent = 'left'; alert('Left meeting')">End</button>
-                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
                     <!-- Agents Page -->
@@ -1801,22 +1697,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Status: Active</p>
                             <button>Hire Agent</button>
                         </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
-
-                    <!-- Setup Page -->
-                    <div id="setup-screen" class="screen">
-                        <h1>Business Setup</h1>
-                        <div class="card glass">
-                            <h3>Step 1: Details</h3>
-                            <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
-                        </div>
-                        <p>Built with OHC — Start your free business →</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
-
 
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
@@ -1870,23 +1751,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="pricing-screen" class="screen">
                         <h1>Pricing Plans</h1>
                         <p>Choose the best plan for your business.</p>
-                        <button class="secondary">Annual billing 20% Discount</button>
+                        <button class="secondary">Annual billing 20% off discount</button>
                         <div class="card glass">
                             <h3>Free Starter</h3>
-                            <p>$0 / 30-days</p>
+                            <p>$0 / month</p>
                             <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
                             <button onclick="showScreen('dashboard-screen')">Start Free</button>
                         </div>
                         <div class="card glass">
                             <h3>Pro Professional</h3>
-                            <p>$29 / 30-days</p>
-                            <p>Suggested</p>
+                            <p>$29 / month</p>
+                            <p>Recommended</p>
                             <ul><li>10 Agents Limit</li><li>10GB Storage</li><li>Priority Support</li></ul>
                             <button onclick="showScreen('dashboard-screen')">Choose Pro</button>
                         </div>
                         <div class="card glass">
                             <h3>Business Enterprise</h3>
-                            <p>$79 / 30-days</p>
+                            <p>$79 / month</p>
                             <ul><li>Unlimited Agents</li><li>100GB Storage</li><li>24/7 Support</li></ul>
                             <button>Contact Sales</button>
                         </div>
@@ -1920,7 +1801,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
                             <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <p>Projected Cost this cycle: $1.23</p>
+                            <p>Projected Cost this Month: $1.23</p>
                             <button onclick="showScreen('pricing-screen')">Add Credits</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
                         </div>
@@ -2126,60 +2007,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
-                        const pathMap = {
-                            'dashboard-screen': '/dashboard',
-                            'login-screen': '/login',
-                            'signup-screen': '/signup',
-                            'pricing-screen': '/pricing',
-                            'my-plan-screen': '/my-plan',
-                            'agents-screen': '/agents',
-                            'diagnostics-screen': '/diagnostics',
-                            'services-screen': '/services',
-                            'scaling-screen': '/scaling',
-                            'setup-screen': '/website-builder',
-                            'settings-screen': '/settings',
-                            'checkout-screen': '/checkout',
-                            'users-screen': '/users',
-                            'referral-dashboard-screen': '/referrals',
-                            'inbox-screen': '/inbox',
-                            'meetings-screen': '/meetings',
-                            'meeting-room-screen': '/meetings/room/1'
-                        };
-
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
 
-                            // Nav renaming logic
-                            const navButtons = document.querySelectorAll('.nav-item');
-                            if (id !== 'dashboard-screen') {
-                                navButtons.forEach(btn => {
-                                    if (!btn.dataset.text) btn.dataset.text = btn.textContent;
-                                    btn.textContent = '---';
-                                });
-                            } else {
-                                navButtons.forEach(btn => {
-                                    if (btn.dataset.text) btn.textContent = btn.dataset.text;
-                                });
-                            }
-
-                            if (pathMap[id]) {
-                                window.history.pushState({}, '', pathMap[id]);
-                            }
-
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
                         }
-
-                        window.onload = () => {
-                            const path = window.location.pathname;
-                            const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
-                            showScreen(screenId);
-                        };
 
                         function simulateOrder() {
                             const feed = document.getElementById('agent-activity-feed');
@@ -2198,7 +2036,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     btn.innerText = 'Sign In';
                                 }, 500);
                             } else {
-                                localStorage.setItem('isLoggedIn', 'true');
                                 setTimeout(() => showScreen('dashboard-screen'), 500);
                             }
                         }
@@ -2232,32 +2069,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         });
 
-                        window.onload = function() {
-                            const path = window.location.pathname;
-                            const urlParams = new URLSearchParams(window.location.search);
-                            
-                            const isAuthPath = Object.values(pathMap).includes(path);
-                            
-                            if (localStorage.getItem('isLoggedIn') === 'true' || urlParams.has('login') || isAuthPath) {
-                                for (const [id, p] of Object.entries(pathMap)) {
-                                    if (p === path) {
-                                        showScreen(id);
-                                        return;
-                                    }
-                                }
-                                showScreen('dashboard-screen');
+                        // Initial routing
+                        const path = window.location.pathname;
+                        const urlParams = new URLSearchParams(window.location.search);
+
+                        if (localStorage.getItem('isLoggedIn') === 'true') {
+                            if (path === '/pricing') {
+                                showScreen('pricing-screen');
+                            } else if (path === '/my-plan' || path === '/billing') {
+                                showScreen('my-plan-screen');
+                            } else if (path === '/agents') {
+                                showScreen('agents-screen');
+                            } else if (path === '/diagnostics') {
+                                showScreen('diagnostics-screen');
+                            } else if (path === '/services') {
+                                showScreen('services-screen');
+                            } else if (path === '/scaling') {
+                                showScreen('scaling-screen');
+                            } else if (path === '/business-setup') {
+                                showScreen('setup-screen');
+                            } else if (path === '/settings' || path === '/settings/profile' || path === '/settings/security') {
+                                showScreen('settings-screen');
+                            } else if (path === '/checkout') {
+                                showScreen('checkout-screen');
                             } else {
-                                if (urlParams.has('signup') || path === '/signup') {
-                                    showScreen('signup-screen');
-                                } else if (path === '/pricing') {
-                                    showScreen('pricing-screen');
-                                } else if (path === '/my-plan' || path === '/billing') {
-                                    showScreen('my-plan-screen');
-                                } else {
-                                    showScreen('login-screen');
-                                }
+                                showScreen('dashboard-screen');
                             }
-                        };
+                        } else {
+                            if (urlParams.has('signup') || path === '/signup') {
+                                showScreen('signup-screen');
+                            } else if (path === '/pricing') {
+                                showScreen('pricing-screen');
+                            } else if (path === '/my-plan' || path === '/billing') {
+                                showScreen('my-plan-screen');
+                            } else {
+                                showScreen('login-screen');
+                            }
+                        }
                     </script>
                 </body>
             </html>

@@ -4,15 +4,15 @@ test.describe('Referral Program', () => {
   test('should display referral dashboard and generate link', async ({ page }) => {
     // 1. Start from home page after login
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().fill('password123');
+    await page.locator('button:has-text("Login")').first().click();
 
     // 2. Navigate to Referrals dashboard via dashboard UI button
     await page.waitForURL('**/dashboard');
 
     // There is a tooltip button "Referrals" on dashboard
-    const referralsBtn = page.locator('button:has-text("Referrals")').filter({ visible: true }).first();
+    const referralsBtn = page.locator('button:has-text("Referrals")').first();
     await expect(referralsBtn).toBeVisible();
     await referralsBtn.click();
 
@@ -21,7 +21,7 @@ test.describe('Referral Program', () => {
     // 3. Generate a new referral link
     // "New Link" doesn't actually exist in the UI we read. The UI generates it or we can copy
     // We will test the link copy button
-    const copyBtn = page.locator('button:has-text("Copy")').filter({ visible: true }).first();
+    const copyBtn = page.locator('button:has-text("Copy")').first();
     await expect(copyBtn).toBeVisible();
     await copyBtn.click();
 
@@ -36,12 +36,12 @@ test.describe('Referral Program', () => {
 
   test('should verify Instagram sharing from referrals', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().fill('password123');
+    await page.locator('button:has-text("Login")').first().click();
     await page.waitForURL('**/dashboard');
 
-    const referralsBtn = page.locator('button:has-text("Referrals")').filter({ visible: true }).first();
+    const referralsBtn = page.locator('button:has-text("Referrals")').first();
     await expect(referralsBtn).toBeVisible();
     await referralsBtn.click();
 
@@ -52,12 +52,12 @@ test.describe('Referral Program', () => {
 
   test('should verify invite message copying', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().fill('password123');
+    await page.locator('button:has-text("Login")').first().click();
     await page.waitForURL('**/dashboard');
 
-    const referralsBtn = page.locator('button:has-text("Referrals")').filter({ visible: true }).first();
+    const referralsBtn = page.locator('button:has-text("Referrals")').first();
     await expect(referralsBtn).toBeVisible();
     await referralsBtn.click();
 
@@ -70,12 +70,12 @@ test.describe('Referral Program', () => {
 
   test('should view referral history', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().fill('password123');
+    await page.locator('button:has-text("Login")').first().click();
     await page.waitForURL('**/dashboard');
 
-    const referralsBtn = page.locator('button:has-text("Referrals")').filter({ visible: true }).first();
+    const referralsBtn = page.locator('button:has-text("Referrals")').first();
     await expect(referralsBtn).toBeVisible();
     await referralsBtn.click();
 
@@ -86,12 +86,12 @@ test.describe('Referral Program', () => {
 
   test('should export referral data', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
+    await page.locator('input[type="password"]').first().fill('password123');
+    await page.locator('button:has-text("Login")').first().click();
     await page.waitForURL('**/dashboard');
 
-    const referralsBtn = page.locator('button:has-text("Referrals")').filter({ visible: true }).first();
+    const referralsBtn = page.locator('button:has-text("Referrals")').first();
     await expect(referralsBtn).toBeVisible();
     await referralsBtn.click();
 
