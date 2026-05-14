@@ -1,4 +1,5 @@
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { UiPricingTier } from "pricing.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 import { AdvancedToggle } from "advanced_toggle.slint";
 import { GlassCard } from "glass_card.slint";
 
@@ -189,86 +190,292 @@ export component Upgrade inherits Window {
     }
 }
 
+
 export component Billing inherits Window {
-    preferred-width: 400px;
+    preferred-width: 500px;
     min-width: 375px;
-    height: 600px;
+    height: 800px;
     title: "Billing & Credits";
-
-    in-out property <bool> is_advanced: false;
-    in-out property <int> step: 0;
-    callback save_state();
-
-    callback add_credits();
-    callback switch_plan();
-    callback return_to_dashboard();
-
-    callback next_step();
-    callback prev_step();
-    next_step => { step = step + 1; }
-    prev_step => { step = step - 1; }
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
+    in-out property <bool> is_annual: false;
+
+    // Billing & Credits Wizard State
+    in-out property <int> step: 0;
+    in-out property <bool> is_advanced: false;
+    callback toggle_advanced();
+    toggle_advanced => { }
+    in property <string> current_usage: "450 / 1000 AI Actions";
+    in property <string> projected_cost: "$9.00 / month";
+    in property <float> usage_progress: 0.45;
+    in property <string> current_storage: "1.2 GB / 5GB";
+    in property <float> storage_progress: 0.24;
+
+    in property <[UiPricingTier]> tiers: [
+        {
+            name: "Free",
+            price: is_annual ? "$0/mo" : "$0/mo",
+            description: "Up to 100 AI Actions, 500MB storage.",
+            is_recommended: false,
+            agent_limit: "1 agent limit",
+            storage_limit: "500MB storage limit",
+            support_level: "Community support",
+            features: ["OHC subdomain", "Standard Agents", "Community Support"],
+        },
+        {
+            name: "Starter",
+            price: is_annual ? "$7/mo (20% off)" : "$9/mo",
+            description: "Up to 1000 AI Actions, 5GB storage.",
+            is_recommended: false,
+            agent_limit: "5 agent limit",
+            storage_limit: "5GB storage limit",
+            support_level: "Email support",
+            features: ["Custom Domain", "Advanced Agents", "Email Support"],
+        },
+        {
+            name: "Pro",
+            price: is_annual ? "$23/mo (20% off)" : "$29/mo",
+            description: "Unlimited AI Actions, 50GB storage.",
+            is_recommended: true,
+            agent_limit: "Unlimited number of agents",
+            storage_limit: "50GB storage limit",
+            support_level: "Priority support",
+            features: ["Multiple Locations", "Pro Agents", "Priority Support"],
+        },
+        {
+            name: "Business",
+            price: is_annual ? "$63/mo (20% off)" : "$79/mo",
+            description: "Business features and support.",
+            is_recommended: false,
+            agent_limit: "Unlimited number of agents",
+            storage_limit: "Unlimited storage limit",
+            support_level: "Dedicated support",
+            features: ["White-label", "Custom Agents", "Dedicated Support"],
+        },
+    ];
+
+    callback save_state();
+    callback return_to_dashboard();
+    callback switch_plan();
+    callback add_credits();
+
     VerticalBox {
         spacing: 20px;
-        padding: 32px;
-        alignment: center;
+        padding: 24px;
 
         HorizontalBox {
-            Text { text: "What does this cost?"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
+            Text { text: "Pricing & Billing"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
             Rectangle {}
             AdvancedToggle {
                 is_advanced <=> root.is_advanced;
-                toggled => { save_state(); }
+                toggled => { save_state(); toggle_advanced(); }
             }
         }
 
+        HorizontalBox {
+            spacing: 10px;
+            alignment: center;
+
+            Rectangle {
+                background: step >= 0 ? #a855f7 : rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                width: 24px;
+                height: 24px;
+                HorizontalBox {
+                    padding: 2px;
+                    Text { text: "1"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: white; horizontal-alignment: center; }
+                }
+            }
+            Text { text: "Usage"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: step == 0 ? white : #94a3b8; }
+
+            Rectangle {
+                background: step >= 1 ? #a855f7 : rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                width: 24px;
+                height: 24px;
+                HorizontalBox {
+                    padding: 2px;
+                    Text { text: "2"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: white; horizontal-alignment: center; }
+                }
+            }
+            Text { text: "Plans"; font-family: "Inter"; font-weight: 700; font-size: 14px; color: step == 1 ? white : #94a3b8; }
+        }
+
+        // Step 0: "What does this cost?" Flow
         if (step == 0) : VerticalBox {
-            spacing: 20px;
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Raw Configuration JSON"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "{\"current_usage\": \"" + current_usage + "\"}"; }
+            }
+            spacing: 16px;
+            Text { text: "Your Current Usage"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
+
             GlassCard {
                 VerticalBox {
                     padding: 16px;
-                    spacing: 8px;
-                    alignment: center;
-                    Text { text: "Current Usage"; color: white; font-family: "Inter"; font-size: 14px; }
-                    Text { text: "$42.50"; font-size: 32px; font-weight: 700; color: #a855f7; font-family: "Outfit"; }
-                    Text { text: "Projected monthly cost: $85.00"; color: #94a3b8; font-size: 12px; font-family: "Inter"; }
+                    spacing: 12px;
+                    Text { text: "AI Actions"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                    Text { text: current_usage; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
 
-                    if (is_advanced) : VerticalBox {
-                        Rectangle { height: 16px; }
-                        Text { text: "Word Usage Breakdown:"; color: white; font-family: "Inter"; font-size: 12px; }
-                        Text { text: "• OpenAI Helper: 1,245,000 words processed"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
-                        Text { text: "• Google Helper: 450,000 words processed"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                    progress_bg := Rectangle {
+                        height: 8px;
+                        border-radius: 4px;
+                        background: rgba(255, 255, 255, 0.1);
+                        Rectangle {
+                            x: 0;
+                            width: usage_progress * progress_bg.width;
+                            height: 100%;
+                            background: #a855f7;
+                            border-radius: 4px;
+                        }
                     }
                 }
             }
-            Text { text: "Your current plan includes 1000 AI tasks per day. You have used 450 today."; color: white; wrap: word-wrap; font-family: "Inter"; font-size: 14px; }
-        }
 
-        if (step == 1) : VerticalBox {
-            spacing: 20px;
             GlassCard {
                 VerticalBox {
                     padding: 16px;
-                    spacing: 8px;
-                    Text { text: "Choose an Action"; color: white; font-family: "Outfit"; font-size: 20px; font-weight: 700; }
-                    Text { text: "You can either add credits to your balance for immediate usage or switch to a higher-tier plan for consistent volume."; color: #cbd5e1; wrap: word-wrap; font-family: "Inter"; font-size: 14px; }
+                    spacing: 12px;
+                    Text { text: "Storage"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                    Text { text: current_storage; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
+
+                    storage_bg := Rectangle {
+                        height: 8px;
+                        border-radius: 4px;
+                        background: rgba(255, 255, 255, 0.1);
+                        Rectangle {
+                            x: 0;
+                            width: storage_progress * storage_bg.width;
+                            height: 100%;
+                            background: #a855f7;
+                            border-radius: 4px;
+                        }
+                    }
                 }
             }
+
+            GlassCard {
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+                    Text { text: "Projected Cost this Month"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                    Text { text: projected_cost; font-family: "Outfit"; font-size: 24px; font-weight: 700; color: white; }
+                }
+            }
+
+            Text { text: "Need more power?"; font-family: "Inter"; font-size: 16px; color: white; }
+
             HorizontalBox {
                 spacing: 16px;
                 GlassCard {
-                    height: 80px;
-                    background: rgba(168, 85, 247, 0.4);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "💳"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; } Text { text: "Add Credits"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; } }
+                    height: 44px;
+                    background: rgba(168, 85, 247, 0.8);
+                    VerticalBox { alignment: center; Text { text: "Add Credits"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
                     TouchArea { clicked => { step = 2; } }
                 }
                 GlassCard {
-                    height: 80px;
-                    background: rgba(16, 185, 129, 0.4);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "⬆️"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; horizontal-alignment: center; } Text { text: "Switch Plan"; font-family: "Inter"; font-size: 14px; color: white; font-weight: 700; horizontal-alignment: center; } }
-                    TouchArea { clicked => { switch_plan(); step = 3; } }
+                    height: 44px;
+                    background: rgba(255, 255, 255, 0.1);
+                    VerticalBox { alignment: center; Text { text: "View Upgrade Plans →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                    TouchArea { clicked => { step = 1; } }
+                }
+            }
+        }
+
+        // Step 1: Plans
+        if (step == 1) : VerticalBox {
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Developer: Override Tier Rules"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "[\"allow_custom_domains\"]"; }
+            }
+            spacing: 16px;
+            Text { text: "Upgrade Plan"; font-family: "Outfit"; font-size: 20px; font-weight: 700; color: white; }
+
+            HorizontalBox {
+                alignment: center;
+                spacing: 10px;
+                width: 100%;
+                Text { text: "Monthly"; font-family: "Inter"; color: is_annual ? #94a3b8 : white; vertical-alignment: center; }
+                GlassCard {
+                    height: 36px;
+                    background: rgba(255, 255, 255, 0.1);
+                    VerticalBox { alignment: center; padding: 12px; Text { text: is_annual ? "Annual (20% off)" : "Monthly"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
+                    TouchArea { clicked => { is_annual = !is_annual; } }
+                }
+            }
+
+            ScrollView {
+                VerticalBox {
+                    width: 100%;
+                    spacing: 16px;
+                    for tier in tiers : GlassCard {
+                        border-color: tier.is_recommended ? #a855f7 : rgba(255, 255, 255, 0.1);
+                        border-width: tier.is_recommended ? 2px : 1px;
+                        width: 100%;
+
+                        VerticalBox {
+                            width: 100%;
+                            padding: 16px;
+                            spacing: 12px;
+
+                            if tier.is_recommended : Rectangle {
+                                background: #a855f7;
+                                border-radius: 4px;
+                                width: 100%;
+                                VerticalBox {
+                                    width: 100%;
+                                    padding: 4px;
+                                    Text { text: "Recommended / Best"; font-family: "Inter"; font-weight: 700; color: white; font-size: 12px; horizontal-alignment: center; }
+                                }
+                            }
+
+                            Text { text: tier.name; font-size: 20px; font-family: "Outfit"; font-weight: 700; color: white; }
+                            Text { text: tier.price; font-family: "Inter"; font-size: 16px; color: #a855f7; font-weight: 700; }
+                            Text { text: tier.description; font-family: "Inter"; color: #94a3b8; wrap: word-wrap; width: 100%; }
+
+                            Text { text: tier.agent_limit; font-family: "Inter"; color: #cbd5e1; }
+                            Text { text: tier.storage_limit; font-family: "Inter"; color: #cbd5e1; }
+                            Text { text: tier.support_level; font-family: "Inter"; color: #cbd5e1; }
+
+                            VerticalBox {
+                                width: 100%;
+                                spacing: 4px;
+                                for feature in tier.features : Text {
+                                    text: "• " + feature;
+                                    font-family: "Inter";
+                                    color: #cbd5e1;
+                                }
+                            }
+
+                            GlassCard {
+                                height: 44px;
+                                background: tier.name == "Business" ? rgba(255, 255, 255, 0.1) : rgba(168, 85, 247, 0.8);
+                                VerticalBox {
+                                    alignment: center;
+                                    Text {
+                                        text: tier.name == "Free" ? "Start Free" : (tier.name == "Business" ? "Contact Sales" : "Choose " + tier.name);
+                                        font-family: "Inter";
+                                        font-weight: 700;
+                                        color: white;
+                                        horizontal-alignment: center;
+                                    }
+                                }
+                                TouchArea { clicked => { switch_plan(); step = 3; } }
+                            }
+                        }
+                    }
+                }
+            }
+
+            HorizontalBox {
+                GlassCard {
+                    width: 80px;
+                    height: 44px;
+                    VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
+                    TouchArea { clicked => { step = 0; } }
                 }
             }
         }
@@ -285,6 +492,15 @@ export component Billing inherits Window {
                     Text { text: "Your new balance is $92.50."; color: #cbd5e1; horizontal-alignment: center; font-family: "Inter"; font-size: 14px; }
                 }
             }
+            HorizontalBox {
+                GlassCard {
+                    width: 140px;
+                    height: 44px;
+                    background: rgba(16, 185, 129, 0.8);
+                    VerticalBox { alignment: center; Text { text: "Finish"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                    TouchArea { clicked => { add_credits(); return_to_dashboard(); } }
+                }
+            }
         }
 
         if (step == 3) : VerticalBox {
@@ -298,45 +514,14 @@ export component Billing inherits Window {
                     Text { text: "Plan Switched Successfully!"; color: white; horizontal-alignment: center; font-family: "Inter"; font-size: 16px; font-weight: 700; }
                 }
             }
-        }
-
-
-        Rectangle {} // Spacer
-
-        HorizontalBox {
-            if (step > 0 && step < 2) : GlassCard {
-                width: 100px;
-                height: 44px;
-                VerticalBox { alignment: center; Text { text: "Back"; font-family: "Inter"; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { prev_step(); } }
-            }
-            if (step == 0) : Rectangle { width: 100px; } // spacer
-            if (step >= 2) : Rectangle {} // push right
-
-            Rectangle {} // Center spacer
-
-            if (step == 0) : GlassCard {
-                width: 140px;
-                height: 44px;
-                background: rgba(168, 85, 247, 0.8);
-                VerticalBox { alignment: center; Text { text: "Manage Usage →"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { next_step(); } }
-            }
-
-            if (step == 2) : GlassCard {
-                width: 140px;
-                height: 44px;
-                background: rgba(16, 185, 129, 0.8);
-                VerticalBox { alignment: center; Text { text: "Finish"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { add_credits(); return_to_dashboard(); } }
-            }
-
-            if (step == 3) : GlassCard {
-                width: 140px;
-                height: 44px;
-                background: rgba(16, 185, 129, 0.8);
-                VerticalBox { alignment: center; Text { text: "Finish"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { return_to_dashboard(); } }
+            HorizontalBox {
+                GlassCard {
+                    width: 140px;
+                    height: 44px;
+                    background: rgba(16, 185, 129, 0.8);
+                    VerticalBox { alignment: center; Text { text: "Finish"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                    TouchArea { clicked => { return_to_dashboard(); } }
+                }
             }
         }
     }
