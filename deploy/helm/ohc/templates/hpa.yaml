@@ -10,8 +10,13 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-backend
+  {{- if .Values.multiTenant }}
+  minReplicas: {{ mul .Values.backend.autoscaling.minReplicas 2 }}
+  maxReplicas: {{ mul .Values.backend.autoscaling.maxReplicas 2 }}
+  {{- else }}
   minReplicas: {{ .Values.backend.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.backend.autoscaling.maxReplicas }}
+  {{- end }}
   metrics:
     - type: Resource
       resource:

@@ -7,7 +7,11 @@ metadata:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   hard:
+    {{- if .Values.multiTenant }}
+    requests.cpu: "100"
+    {{- else }}
     requests.cpu: {{ .Values.resourceQuota.requests.cpu | quote }}
+    {{- end }}
     requests.memory: {{ .Values.resourceQuota.requests.memory | quote }}
     requests.ephemeral-storage: {{ .Values.resourceQuota.requests.ephemeralStorage | quote }}
     limits.cpu: {{ .Values.resourceQuota.limits.cpu | quote }}
