@@ -44,7 +44,8 @@ rust_library(
         "//src/server/domain:srcs",
         "//src/server/services:srcs",
     ],
-    data = ["//src/server/migrations"],
+    compile_data = ["index.html"],
+    data = ["//src/server/migrations", "index.html"],
     edition = "2024",
     proc_macro_deps = [
         "@crates//:async-trait",
@@ -129,7 +130,8 @@ rust_test(
     name = "server_test",
     size = "large",
     crate = ":server_lib",
-    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    compile_data = ["index.html"],
+    data = ["//src/server/migrations", "index.html"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
     env = {
         "RUST_TEST_THREADS": "1",
@@ -170,6 +172,7 @@ rust_test(
 )
 
 exports_files([
+    "index.html",
     "Cargo.toml",
     "Cargo.lock",
 ])
