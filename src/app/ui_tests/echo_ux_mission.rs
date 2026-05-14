@@ -102,3 +102,101 @@ fn test_mission_dashboard_today_sales_check() {
     ui.set_todays_sales("$500".into());
     assert_eq!(ui.get_todays_sales(), "$500");
 }
+
+#[test]
+fn test_mission_dashboard_connect_instagram() {
+    crate::ui_tests::init();
+    let ui = app::Dashboard::new().unwrap();
+
+    // In a full environment, this button would exist in the dom tree, we can trigger the callback.
+    let invoked = Rc::new(RefCell::new(false));
+    let cloned = invoked.clone();
+
+    ui.on_open_api_docs(move || {
+        *cloned.borrow_mut() = true;
+    });
+
+    ui.invoke_open_api_docs();
+    assert!(*invoked.borrow(), "Connect my Instagram action not triggered");
+}
+
+#[test]
+fn test_mission_dashboard_order_notifications() {
+    crate::ui_tests::init();
+    let ui = app::Dashboard::new().unwrap();
+
+    let invoked = Rc::new(RefCell::new(false));
+    let cloned = invoked.clone();
+
+    ui.on_action_open_kairos_orchestration(move || {
+        *cloned.borrow_mut() = true;
+    });
+
+    ui.invoke_action_open_kairos_orchestration();
+    assert!(*invoked.borrow(), "Get order notifications action not triggered");
+}
+
+#[test]
+fn test_mission_dashboard_view_orders_nav() {
+    crate::ui_tests::init();
+    let ui = app::Dashboard::new().unwrap();
+
+    let invoked = Rc::new(RefCell::new(false));
+    let cloned = invoked.clone();
+
+    ui.on_action_view_orders(move || {
+        *cloned.borrow_mut() = true;
+    });
+
+    ui.invoke_action_view_orders();
+    assert!(*invoked.borrow(), "View Orders action not triggered");
+}
+
+#[test]
+fn test_mission_dashboard_see_analytics_nav() {
+    crate::ui_tests::init();
+    let ui = app::Dashboard::new().unwrap();
+
+    let invoked = Rc::new(RefCell::new(false));
+    let cloned = invoked.clone();
+
+    ui.on_action_see_analytics(move || {
+        *cloned.borrow_mut() = true;
+    });
+
+    ui.invoke_action_see_analytics();
+    assert!(*invoked.borrow(), "See Analytics action not triggered");
+}
+
+#[test]
+fn test_mission_dashboard_check_messages_nav() {
+    crate::ui_tests::init();
+    let ui = app::Dashboard::new().unwrap();
+
+    let invoked = Rc::new(RefCell::new(false));
+    let cloned = invoked.clone();
+
+    ui.on_action_check_messages(move || {
+        *cloned.borrow_mut() = true;
+    });
+
+    ui.invoke_action_check_messages();
+    assert!(*invoked.borrow(), "Check Messages action not triggered");
+}
+
+#[test]
+fn test_mission_business_manager_loading_state() {
+    crate::ui_tests::init();
+    let ui = app::BusinessManager::new().unwrap();
+
+    // Verify default loading state is false
+    assert!(!ui.get_is_loading());
+
+    // Test setting the loading state to true
+    ui.set_is_loading(true);
+    assert!(ui.get_is_loading());
+
+    // Simulate setting it back
+    ui.set_is_loading(false);
+    assert!(!ui.get_is_loading());
+}

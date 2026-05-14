@@ -33,6 +33,7 @@ export component BusinessManager inherits Window {
     in-out property <bool> show_offering_hint: false;
     in-out property <bool> show_details_hint: false;
     in-out property <string> service_schedule: "{}";
+    in-out property <bool> is_loading: false;
 
     callback next_step();
     callback prev_step();
@@ -251,9 +252,14 @@ export component BusinessManager inherits Window {
             if (step == 1) : GlassCard {
                 width: 160px;
                 height: 44px;
-                background: rgba(168, 85, 247, 1.0);
-                VerticalBox { alignment: center; Text { text: "Create"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; } }
+                background: is_loading ? rgba(100, 116, 139, 1.0) : rgba(168, 85, 247, 1.0);
+                VerticalBox {
+                    alignment: center;
+                    if (!is_loading) : Text { text: "Create"; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; }
+                    if (is_loading) : Text { text: "Creating..."; font-family: "Inter"; font-weight: 700; color: white; horizontal-alignment: center; }
+                }
                 TouchArea {
+                    enabled: !is_loading;
                     clicked => {
                         submit(selected_type, product_name, product_description, product_price, service_duration, service_schedule);
                         close();
