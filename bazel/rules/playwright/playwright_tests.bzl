@@ -19,7 +19,7 @@ def define_playwright_tests():
         sh_test(
             name = name,
             srcs = ["//bazel/rules/playwright:playwright_test.sh"],
-            args = [spec],
+            args = ["$(rootpath {})".format(spec)],
             data = [
                 spec,
                 "//src/server:server",
@@ -43,7 +43,6 @@ def define_playwright_tests():
                 "no-remote-exec",
                 "requires-docker",
                 "no-sandbox",
-                "local",
             ],
             target_compatible_with = select({
                 "@platforms//os:linux": [],
