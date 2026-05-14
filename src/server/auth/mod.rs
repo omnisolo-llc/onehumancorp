@@ -3,6 +3,7 @@ pub use ::server_ohc as ohc;
 pub use ::server_oidc as oidc;
 
 pub mod orchestration;
+pub mod postgres_store;
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -89,6 +90,20 @@ pub struct User {
     pub oidc_subject: Option<String>,
 }
 
+#[async_trait::async_trait]
+pub trait UserRepository: Send + Sync {
+    async fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String>;
+    async fn issue_token(&self, user: &User) -> Result<String, String>;
+    async fn validate_token(&self, token: &str) -> Result<Claims, String>;
+    async fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String>;
+    async fn get_user(&self, id: &str, org_id: &str) -> Option<User>;
+    async fn list_users(&self, org_id: &str) -> Vec<User>;
+    async fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String>;
+    async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String>;
+    async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String>;
+    async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String>;
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Role {
     pub id: String,
@@ -121,6 +136,41 @@ pub struct Store {
     secret: Vec<u8>,
     #[allow(dead_code)]
     oidc_cfg: RwLock<OIDCConfig>,
+}
+
+#[async_trait::async_trait]
+impl UserRepository for Store {
+    async fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
+        self.authenticate_sync(username, password, org_id)
+    }
+    async fn issue_token(&self, user: &User) -> Result<String, String> {
+        self.issue_token_sync(user)
+    }
+    async fn validate_token(&self, token: &str) -> Result<Claims, String> {
+        self.validate_token_sync(token).await
+    }
+    async fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
+        self.create_user_sync(username, email, password, roles, org_id)
+    }
+    async fn get_user(&self, id: &str, org_id: &str) -> Option<User> {
+        self.get_user_sync(id, org_id)
+    }
+    async fn list_users(&self, org_id: &str) -> Vec<User> {
+        self.list_users_sync(org_id)
+    }
+    async fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String> {
+        self.update_user_sync(id, email_ptr, roles, active_ptr, org_id)
+    }
+    async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
+        self.delete_user_sync(id, org_id)
+    }
+    async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
+        Ok(self.is_revoked_sync(jti, org_id))
+    }
+    async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
+        self.revoke_token_sync(jti, exp, org_id);
+        Ok(())
+    }
 }
 
 impl Store {
@@ -245,7 +295,7 @@ impl Store {
         self.by_email.write().unwrap().insert(TenantKey { org_id: "".to_string(), key: admin_email }, id);
     }
 
-    pub fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
+    pub fn create_user_sync(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
         if username.is_empty() {
             return Err("username is required".to_string());
         }
@@ -292,7 +342,7 @@ impl Store {
         Ok(user)
     }
 
-    pub fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
+    pub fn authenticate_sync(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
         let by_name = self.by_name.read().unwrap();
         let users = self.users.read().unwrap();
 
@@ -323,7 +373,7 @@ impl Store {
         }
     }
 
-    pub fn get_user(&self, id: &str, org_id: &str) -> Option<User> {
+    pub fn get_user_sync(&self, id: &str, org_id: &str) -> Option<User> {
         let users = self.users.read().unwrap();
         let u = users.get(id)?;
 
@@ -339,7 +389,7 @@ impl Store {
         Some(u.clone())
     }
 
-    pub fn list_users(&self, org_id: &str) -> Vec<User> {
+    pub fn list_users_sync(&self, org_id: &str) -> Vec<User> {
         let users = self.users.read().unwrap();
         users.values()
             .filter(|u| {
@@ -349,7 +399,7 @@ impl Store {
             .collect()
     }
 
-    pub fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String> {
+    pub fn update_user_sync(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String> {
         let mut users = self.users.write().unwrap();
         let mut by_email = self.by_email.write().unwrap();
 
@@ -387,7 +437,7 @@ impl Store {
         Ok(u.clone())
     }
 
-    pub fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
+    pub fn delete_user_sync(&self, id: &str, org_id: &str) -> Result<(), String> {
         let mut users = self.users.write().unwrap();
         let mut by_name = self.by_name.write().unwrap();
         let mut by_email = self.by_email.write().unwrap();
@@ -413,7 +463,7 @@ impl Store {
         Ok(())
     }
 
-    pub fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
+    pub fn revoke_token_sync(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
         let mut revoked = self.revoked.write().unwrap();
         revoked.insert(jti, exp);
 
@@ -421,7 +471,7 @@ impl Store {
         revoked.retain(|_, v| *v > now);
     }
 
-    pub fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
+    pub fn is_revoked_sync(&self, jti: &str, _org_id: &str) -> bool {
         let revoked = self.revoked.read().unwrap();
         if let Some(exp) = revoked.get(jti) {
              if exp > &Utc::now() {
@@ -431,7 +481,7 @@ impl Store {
         false
     }
 
-    pub fn issue_token(&self, _user: &User) -> Result<String, String> {
+    pub fn issue_token_sync(&self, _user: &User) -> Result<String, String> {
             let now = chrono::Utc::now();
             let claims = Claims {
                 sub: _user.id.clone(),
@@ -452,7 +502,7 @@ impl Store {
             Ok(token)
     }
 
-    pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
+    pub async fn validate_token_sync(&self, _token: &str) -> Result<Claims, String> {
         if let Ok(header) = jsonwebtoken::decode_header(_token) {
             if header.alg == jsonwebtoken::Algorithm::RS256 {
                 let oidc_cfg_internal = self.oidc_cfg.read().unwrap().clone();
@@ -482,7 +532,7 @@ impl Store {
                     if ::server_config::get().multitenant && data.claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
                         return Err("Invalid token: organization_id is required in cloud mode".to_string());
                     }
-                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
+                    if self.is_revoked_sync(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
                         return Err("token revoked".to_string());
                     }
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
@@ -516,11 +566,11 @@ fn random_bytes(n: usize) -> Vec<u8> {
 
 #[derive(Clone)]
 pub struct AuthServiceServerImpl {
-    pub store: Arc<Store>,
+    pub store: Arc<dyn UserRepository>,
 }
 
 impl AuthServiceServerImpl {
-    pub fn new(store: Arc<Store>) -> Self {
+    pub fn new(store: Arc<dyn UserRepository>) -> Self {
         Self { store }
     }
 }
@@ -562,9 +612,9 @@ impl AuthService for AuthServiceServerImpl {
             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
         }
 
-        match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
+        match self.store.authenticate(&req.username, &req.password, &req.organization_id).await {
             Ok(user) => {
-                match self.store.issue_token(&user) {
+                match self.store.issue_token(&user).await {
                     Ok(token) => {
                          let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
                          Ok(Response::new(LoginResponse {
@@ -591,9 +641,9 @@ impl AuthService for AuthServiceServerImpl {
             req.password,
             vec![ROLE_VIEWER.to_string()],
             req.organization_id.clone(),
-        ).map_err(|e| Status::internal(e))?;
+        ).await.map_err(|e| Status::internal(e))?;
 
-        let token = self.store.issue_token(&user).map_err(|e| Status::internal(e))?;
+        let token = self.store.issue_token(&user).await.map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(LoginResponse {
              token,
@@ -609,7 +659,7 @@ impl AuthService for AuthServiceServerImpl {
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let user = self.store.get_user(&auth_info.spiffe_id, &auth_info.org_id)
+        let user = self.store.get_user(&auth_info.spiffe_id, &auth_info.org_id).await
             .ok_or_else(|| Status::not_found("User not found"))?;
 
         Ok(Response::new(UserProto {
@@ -629,7 +679,7 @@ impl AuthService for AuthServiceServerImpl {
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let users = self.store.list_users(&auth_info.org_id);
+        let users = self.store.list_users(&auth_info.org_id).await;
         let proto_users = users.into_iter().map(|u| UserProto {
             id: u.id,
             username: u.username,
@@ -652,7 +702,7 @@ impl AuthService for AuthServiceServerImpl {
             "temp".to_string(),
             vec![],
             req.organization_id.clone(),
-        ).map_err(|e| Status::internal(e))?;
+        ).await.map_err(|e| Status::internal(e))?;
         Ok(Response::new(UserProto {
             id: user.id,
             username: user.username,
@@ -670,7 +720,7 @@ impl AuthService for AuthServiceServerImpl {
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let user = self.store.get_user(&request.get_ref().id, &auth_info.org_id)
+        let user = self.store.get_user(&request.get_ref().id, &auth_info.org_id).await
             .ok_or_else(|| Status::not_found("User not found"))?;
 
         Ok(Response::new(UserProto {
@@ -692,7 +742,7 @@ impl AuthService for AuthServiceServerImpl {
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
         let req = request.into_inner();
 
-        let user = self.store.update_user(&req.id, req.email, Some(req.roles), req.active, &org_id)
+        let user = self.store.update_user(&req.id, req.email, Some(req.roles), req.active, &org_id).await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(UserProto {
@@ -713,7 +763,7 @@ impl AuthService for AuthServiceServerImpl {
             .map(|ai| ai.org_id.clone())
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        self.store.delete_user(&request.get_ref().id, &org_id)
+        self.store.delete_user(&request.get_ref().id, &org_id).await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(EmptyResponse {}))

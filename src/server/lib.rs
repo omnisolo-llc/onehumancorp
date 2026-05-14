@@ -1497,7 +1497,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
-    let store = std::sync::Arc::new(::server_auth::Store::new());
+    let store: std::sync::Arc<dyn ::server_auth::UserRepository> = match db.store {
+        crate::db::DbStore::Postgres => std::sync::Arc::new(::server_auth::postgres_store::PgUserRepository::new(db.pool.clone())),
+        crate::db::DbStore::Sqlite(_) => std::sync::Arc::new(::server_auth::Store::new()),
+    };
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if ::server_config::get().telemetry_enabled {
