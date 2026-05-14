@@ -5,11 +5,11 @@ test.describe('Dashboard Navigation UX Simplification', () => {
 
   test('Bottom navigation bar is present and has exact required actions', async ({ page }) => {
     // 1. Start from home page (login)
-    await page.goto('/login');
+    await page.goto('/');
 
     // 2. Perform the exact login flow as a user would
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
 
     // 3. Wait for dashboard to load
@@ -17,29 +17,29 @@ test.describe('Dashboard Navigation UX Simplification', () => {
 
     // 4. Verify 5 most-used actions are accessible in the bottom navigation bar
     const addProductBtn = page.locator('text="Add"');
-    await expect(addProductBtn.filter({ visible: true }).first()).toBeVisible();
+    await expect(addProductBtn.first()).toBeVisible();
 
     const viewOrdersBtn = page.locator('text="Orders"').last();
     await expect(viewOrdersBtn).toBeVisible();
 
     const checkMessagesBtn = page.locator('text="Messages"');
-    await expect(checkMessagesBtn.filter({ visible: true }).first()).toBeVisible();
+    await expect(checkMessagesBtn.first()).toBeVisible();
 
     const seeAnalyticsBtn = page.locator('text="Analytics"');
-    await expect(seeAnalyticsBtn.filter({ visible: true }).first()).toBeVisible();
+    await expect(seeAnalyticsBtn.first()).toBeVisible();
 
     const shareStoreBtn = page.locator('text="Share"').last();
     await expect(shareStoreBtn).toBeVisible();
   });
 
   test('Clicking Add Product in bottom nav completes action', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
 
-    const addProductBtn = page.locator('text="Add"').filter({ visible: true }).first();
+    const addProductBtn = page.locator('text="Add"').first();
     await expect(addProductBtn).toBeVisible();
     await addProductBtn.click();
 
@@ -49,9 +49,9 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking View Orders in bottom nav completes action', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
 
@@ -64,13 +64,13 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking Check Messages in bottom nav completes action', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
 
-    const checkMessagesBtn = page.locator('text="Messages"').filter({ visible: true }).first();
+    const checkMessagesBtn = page.locator('text="Messages"').first();
     await expect(checkMessagesBtn).toBeVisible();
     await checkMessagesBtn.click();
 
@@ -78,13 +78,13 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking See Analytics in bottom nav completes action', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
 
-    const seeAnalyticsBtn = page.locator('text="Analytics"').filter({ visible: true }).first();
+    const seeAnalyticsBtn = page.locator('text="Analytics"').first();
     await expect(seeAnalyticsBtn).toBeVisible();
     await seeAnalyticsBtn.click();
 
@@ -92,9 +92,9 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking Share Store in bottom nav completes action', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
 
