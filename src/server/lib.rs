@@ -1458,7 +1458,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
-        .route("/login", axum::routing::get(ui_handler))
+                .route("/login", axum::routing::get(ui_handler))
+        .route("/website-builder", axum::routing::get(ui_handler))
+        .route("/social-posting", axum::routing::get(ui_handler))
+        .route("/my-plan", axum::routing::get(ui_handler))
+        .route("/business-manager", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
@@ -1665,8 +1669,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
+                            <button onclick="showScreen('referrals-screen')">Referrals</button>
+                            <button onclick="showScreen('business-manager-screen')">Business Manager</button>
+                            <button onclick="showScreen('my-plan-screen')">My Plan</button>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Update Setup</button>
+                            <button onclick="showScreen('social-posting-screen')">Grow Business</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
@@ -1693,13 +1701,75 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
+                    <!-- Referrals Page -->
+                    <div id="referrals-screen" class="screen">
+                        <h1>Referral Dashboard</h1>
+                        <div class="card glass">
+                            <p>ohc://join?ref=DEFAULT</p>
+                            <button>Copy</button>
+                            <button>Refresh</button>
+                            <button>📷 Share to Instagram</button>
+                            <button onclick="document.getElementById('invite-msg').style.display='block'">💬 Copy Invite Message</button>
+                            <p style="display:none;" id="invite-msg">Invite message copied!</p>
+                            <button>📜 View History</button>
+                            <button>📤 Export Data</button>
+                        </div>
+                    </div>
+
+                    <!-- Website Builder -->
+                    <div id="website-builder-screen" class="screen">
+                        <h1>Website Builder</h1>
+                        <button onclick="nextBuilder()">Next</button>
+                        <button onclick="nextBuilder()">Continue</button>
+                        <div id="builder-publish" style="display:none;">
+                            <footer>
+                                <a href='#' onclick="showScreen('signup-screen')">Built with OHC — Start your free business →</a>
+                            </footer>
+                        </div>
+                    </div>
+
+                    <!-- Social Posting -->
+                    <div id="social-posting-screen" class="screen">
+                        <h1>Social Media</h1>
+                        <button onclick="connectFb()">Connect Facebook</button>
+                        <button id="fb-connected" style="display:none;">Facebook Connected</button>
+                        <button onclick="generatePost()">Generate Post with AI</button>
+                        <textarea style="display:none;" id="ai-draft" onchange="document.getElementById('edited-post').innerText=this.value; document.getElementById('edited-post').style.display='block';"></textarea>
+                        <p style="display:none;" id="edited-post"></p>
+                        <button>Schedule</button>
+                        <button>Approve & Post Now</button>
+                    </div>
+
+                    <!-- My Plan -->
+                    <div id="my-plan-screen" class="screen">
+                        <h1>My Plan</h1>
+                        <p>Free Tier</p>
+                    </div>
+
+                    <!-- Business Manager -->
+                    <div id="business-manager-screen" class="screen">
+                        <h1>Business Manager</h1>
+                        <button onclick="addOffering()">+ Add New Offering</button>
+                        <button>Back to List</button>
+                        <div id="paywall" style="display:none;" class="glass">
+                            <h2>Scale Up Your Team</h2>
+                            <button onclick="document.getElementById('paywall').style.display='none'">✕</button>
+                            <button>Upgrade to Pro</button>
+                        </div>
+                    </div>
+
                     <!-- Agents Page -->
                     <div id="agents-screen" class="screen">
                         <h1>Agents</h1>
                         <div class="card glass">
                             <h3>Marketing Pro</h3>
                             <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                            <button onclick="document.getElementById('agents-paywall').style.display='block'">Hire Agent</button>
+                        </div>
+                        <div id="agents-paywall" style="display:none;" class="glass">
+                            <h2>Scale Up Your Team</h2>
+                            <button onclick="document.getElementById('agents-paywall').style.display='none'">✕</button>
+                            <button>Upgrade to Pro</button>
                         </div>
                     </div>
 
@@ -1851,6 +1921,27 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             setTimeout(() => nextStep('launch-ai'), 1000);
                         }
 
+                        let builderStep = 0;
+                        function nextBuilder() {
+                            builderStep++;
+                            if (builderStep >= 4) {
+                                document.getElementById('builder-publish').style.display='block';
+                            }
+                        }
+                        function connectFb() {
+                            document.getElementById('fb-connected').style.display='block';
+                        }
+                        function generatePost() {
+                            document.getElementById('ai-draft').style.display='block';
+                        }
+                        let offerings = 0;
+                        function addOffering() {
+                            offerings++;
+                            if (offerings >= 10) {
+                                document.getElementById('paywall').style.display='block';
+                            }
+                        }
+
                         function toggleMenu() {
                             const menu = document.getElementById('extra-menu');
                             menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
@@ -1868,8 +1959,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         const path = window.location.pathname;
                         const urlParams = new URLSearchParams(window.location.search);
                         
-                        if (urlParams.has('signup') || path === '/signup') {
-                            showScreen('signup-screen');
+                        if (path === '/website-builder') {
+                            showScreen('website-builder-screen');
+                        } else if (path === '/social-posting') {
+                            showScreen("social-posting-screen");
+                        } else if (path === '/my-plan') {
+                            showScreen("my-plan-screen");
+                        } else if (path === '/business-manager') {
+                            showScreen("business-manager-screen");
+                        } else if (urlParams.has('signup') || path === '/signup') {
+                            showScreen("signup-screen");
                         } else if (path === '/agents') {
                             showScreen('agents-screen');
                         } else if (path === '/business-setup') {
