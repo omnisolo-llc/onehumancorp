@@ -195,3 +195,41 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
     ui.invoke_configure_integration("WhatsApp".into());
     assert_eq!(*called.borrow(), "WhatsApp");
 }
+
+#[test] fn test_grandmother_integrations_cuj() {
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    crate::ui_tests::init();
+
+    let dashboard = app::Dashboard::new().unwrap();
+    let invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let invoked_clone = invoked.clone();
+
+    dashboard.on_action_grow_business(move || {
+        *invoked_clone.borrow_mut() = true;
+    });
+
+    dashboard.invoke_action_grow_business();
+    assert!(*invoked.borrow(), "Should be able to navigate to integrations from dashboard");
+
+    let ui = app::Integrations::new().unwrap();
+
+    let configure_called = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+    let c = configure_called.clone();
+    ui.on_configure_integration(move |name| {
+        c.borrow_mut().push(name.to_string());
+    });
+
+    let tools_to_configure = vec![
+        "Facebook", "Instagram", "WhatsApp", "Cal.com",
+        "Mailchimp", "Mercado Pago", "Shippo", "Twilio", "Zoom"
+    ];
+
+    for tool in &tools_to_configure {
+        ui.invoke_configure_integration(slint::SharedString::from(*tool));
+    }
+
+    let configured = configure_called.borrow();
+    for tool in &tools_to_configure {
+        assert!(configured.contains(&tool.to_string()), "Failed to trigger configuration for {}", tool);
+    }
+}

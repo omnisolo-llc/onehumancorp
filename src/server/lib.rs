@@ -1394,6 +1394,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         panic!("Failed to initialize Redis client for RateLimiter at {}", redis_url);
     };
 
+    let integrations_state = crate::api::integrations_webhook::IntegrationsWebhookState {
+        pool: db.pool.clone(),
+    };
+
+    let integrations_webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/meta", axum::routing::post(api::integrations_webhook::meta_webhook_handler))
+        .route("/api/v1/webhooks/calcom", axum::routing::post(api::integrations_webhook::calcom_webhook_handler))
+        .route("/api/v1/webhooks/mailchimp", axum::routing::post(api::integrations_webhook::mailchimp_webhook_handler))
+        .route("/api/v1/webhooks/shippo", axum::routing::post(api::integrations_webhook::shippo_webhook_handler))
+        .route("/api/v1/webhooks/zoom", axum::routing::post(api::integrations_webhook::zoom_webhook_handler))
+        .route("/api/v1/webhooks/twilio", axum::routing::post(api::integrations_webhook::twilio_webhook_handler))
+        .with_state(integrations_state);
+
     let webhook_state = crate::api::billing_webhook::WebhookState {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
@@ -1421,7 +1434,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             crate::utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .merge(webhook_router)
+        .merge(webhook_router).merge(integrations_webhook_router)
         .merge(health_router);
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
