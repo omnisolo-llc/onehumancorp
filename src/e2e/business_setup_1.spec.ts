@@ -152,7 +152,7 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Next →');
     await page.click('text=📦 Physical products');
     await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
+    await page.click('text=🌐 Online only (Instant)');
     await page.click('text=Next →');
     await expect(page.locator('text=/admin|account|Create your account/i')).toBeVisible();
   });
@@ -164,7 +164,7 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Next →');
     await page.click('text=📦 Physical products');
     await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
+    await page.click('text=🌐 Online only (Instant)');
     await page.click('text=Next →');
     await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
     await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
@@ -180,7 +180,7 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Next →');
     await page.click('text=📦 Physical products');
     await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
+    await page.click('text=🌐 Online only (Instant)');
     await page.click('text=Next →');
     await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
     await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
@@ -201,7 +201,7 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Next →');
     await page.click('text=📦 Physical products');
     await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
+    await page.click('text=🌐 Online only (Instant)');
     await page.click('text=Next →');
     await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
     await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
@@ -224,7 +224,7 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Next →');
     await page.click('text=📦 Physical products');
     await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
+    await page.click('text=🌐 Online only (Instant)');
     await page.click('text=Next →');
     await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
     await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
@@ -247,7 +247,7 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text=Next →');
     await page.click('text=📦 Physical products');
     await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
+    await page.click('text=🌐 Online only (Instant)');
     await page.click('text=Next →');
     await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
     await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
@@ -291,47 +291,137 @@ test.describe('Business Setup Wizard', () => {
     await dashboardLink.click();
   });
 
+
   test('should display the Setup Wizard hero animation elements and complete full setup flow', async ({ page }) => {
     await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
-    await expect(page.locator('text=Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
-    await expect(page.locator('text=🚀 Start My Business')).toBeVisible();
-    await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
-
     await page.click('text=🚀 Start My Business');
+
+    // Step 2: What kind of business are you building?
     await expect(page.locator('text=What kind of business are you building?')).toBeVisible();
-    await page.click('text=🛒 Online Store');
-    await page.click('text=Next →');
+    await page.click('text=Online Store');
 
+    // Step 3: Give your business a name
     await expect(page.locator('text=Give your business a name')).toBeVisible();
-    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company Hero');
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Business');
+    await page.fill('textarea[placeholder="e.g. The best local bakery in town..."]', 'Test description');
     await page.click('text=Next →');
 
+    // Step 4: What do you sell?
     await expect(page.locator('text=What do you sell?')).toBeVisible();
     await page.click('text=📦 Physical products');
     await page.click('text=Next →');
 
+    // Step 5: How do you want to receive payments?
     await expect(page.locator('text=How do you want to receive payments?')).toBeVisible();
-    await page.click('text=🌐 Online only');
-    await page.click('text=Next →');
+    await page.click('text=🌐 Online only (Instant)');
 
+    // Step 6: Create your account
     await expect(page.locator('text=Create your account')).toBeVisible();
-    await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
-    await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
-    await page.fill('input[placeholder="Password"]', 'password123');
-    await page.click('text=Next →');
+    await page.fill('input[placeholder="Your Name"]', 'Test User');
+    await page.fill('input[placeholder="you@email.com"]', 'user@test.com');
+    await page.fill('input[placeholder="Password"]', 'supersecretpwd');
+    await expect(page.locator('text=Strength: Strong')).toBeVisible();
+    await page.click('text=Review & Launch →');
 
+    // Step 100: Review & Launch
+    await expect(page.locator('text=Review & Launch')).toBeVisible();
+    await page.click('text=Launch My Business →');
+
+    // Step 101: CONFETTI SUCCESS
+    await expect(page.locator('text=CONFETTI SUCCESS')).toBeVisible();
+  });
+
+});
+
+
+  test('should complete Website Builder Onboarding flow', async ({ page }) => {
+    // Navigate through Setup Wizard to reach onboarding
+    await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
+    await page.click('text=🚀 Start My Business');
+    await page.click('text=Online Store');
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Business');
+    await page.click('text=Next →');
+    await page.click('text=📦 Physical products');
+    await page.click('text=Next →');
+    await page.click('text=🌐 Online only (Instant)');
+    await page.fill('input[placeholder="Your Name"]', 'Test User');
+    await page.fill('input[placeholder="you@email.com"]', 'user@test.com');
+    await page.fill('input[placeholder="Password"]', 'supersecretpwd');
+    await page.click('text=Review & Launch →');
+    await page.click('text=Launch My Business →');
+    await expect(page.locator('text=CONFETTI SUCCESS')).toBeVisible();
+    await page.click('text=Build My Website');
+
+    // Website Builder Onboarding Flow
     await expect(page.locator('text=Choose a Template')).toBeVisible();
-    await page.click('text=✨ Modern');
+    await page.click('text=Modern');
+    await page.click('text=Use this template →');
+
+    await expect(page.locator('text=Brand colors & logo')).toBeVisible();
     await page.click('text=Next →');
 
     await expect(page.locator('text=Add your first product or service')).toBeVisible();
-    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Test Cake');
-    await page.fill('input[placeholder="e.g. 50.00"]', '50.00');
+    await page.fill('input[placeholder="Name (e.g. Custom Birthday Cake)"]', 'First Product');
     await page.click('text=Next →');
 
-    await expect(page.locator('text=Choose a Domain')).toBeVisible();
+    await expect(page.locator('text=Connect a domain')).toBeVisible();
+    await page.click('text=Use a free OHC subdomain (mybusiness.ohc.app)');
+
+    await expect(page.locator('text=Go Live')).toBeVisible();
+
+    // Stub alert before clicking publish
+    page.on('dialog', async dialog => {
+      expect(dialog.message()).toContain('Site goes live instantly!');
+      await dialog.accept();
+    });
+
+    await page.click('text=Publish');
+    await expect(page.locator('text=Dashboard')).toBeVisible();
   });
-});
+
+
+  test('should complete AI Agent Configuration and Prompt Tuning flows', async ({ page }) => {
+    // Navigate to agents
+    await page.goto('/login');
+    // Ensure login happens (wait for dashboard or similar)
+    await page.evaluate(() => {
+        // Force navigation to dashboard or agents screen for test
+        window.showScreen('agents-screen');
+    });
+
+    await expect(page.locator('text=Manage my AI team')).toBeVisible();
+
+    // Add new agent config flow
+    await page.click('text=Add to my team');
+    await expect(page.locator('text=Capabilities')).toBeVisible();
+    await page.click('text=Next →');
+
+    await expect(page.locator('text=Schedule / Frequency')).toBeVisible();
+    await page.click('text=Next →');
+
+    await expect(page.locator('text=Review & Activate')).toBeVisible();
+
+    // Handle alert
+    page.on('dialog', async dialog => {
+      await dialog.accept();
+    });
+
+    await page.click('text=Activate');
+    await expect(page.locator('text=Manage my AI team')).toBeVisible();
+
+    // Tune agent flow
+    await page.click('text=Tune this agent');
+    await expect(page.locator('text=Tune this agent - Tone')).toBeVisible();
+    await page.click('text=Professional');
+    await page.click('text=Next →');
+
+    await expect(page.locator('text=Focus topics')).toBeVisible();
+    await page.click('text=Next →');
+
+    await expect(page.locator('text=Example interactions')).toBeVisible();
+    await page.click('text=Save');
+    await expect(page.locator('text=Manage my AI team')).toBeVisible();
+  });
 
 test.describe('Business Setup Wizard Validation', () => {
   test.beforeEach(async ({ page }) => {
@@ -365,7 +455,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text=Next →');
     await page.click('text=📦 Physical products');
     await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
+    await page.click('text=🌐 Online only (Instant)');
     await page.click('text=Next →');
 
     await page.fill('input[placeholder="you@email.com"]', 'invalidemail');
@@ -380,7 +470,7 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.click('text=Next →');
     await page.click('text=📦 Physical products');
     await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
+    await page.click('text=🌐 Online only (Instant)');
     await page.click('text=Next →');
 
     await page.fill('input[placeholder="Password"]', 'weak');

@@ -1628,6 +1628,65 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('setup-screen')">Setup Wizard</a>
                         <a onclick="showScreen('api-screen')">Software</a>
                     </nav>
+                    <!-- Ongoing Wizards -->
+                    <div id="ongoing-wizards-screen" class="screen glass">
+                        <div id="ow-step-fix-1" style="display: none;">
+                            <h1>Agent Error Recovery</h1>
+                            <p>It looks like this agent is having trouble.</p>
+                            <div class="card" style="background: rgba(255,0,0,0.1); border: 1px solid red;">
+                                <p><strong>Error:</strong> Cannot access database.</p>
+                            </div>
+                            <button onclick="owNextStep('fix-2')">Help me fix this</button>
+                            <button class="secondary" onclick="showScreen('agents-screen')">Cancel</button>
+                        </div>
+                        <div id="ow-step-fix-2" style="display: none;">
+                            <h1>Fixing Agent Error</h1>
+                            <p>We are automatically repairing the connection. This takes just a moment.</p>
+                            <button onclick="owNextStep('fix-3')">Continue →</button>
+                        </div>
+                        <div id="ow-step-fix-3" style="display: none;">
+                            <h1>Agent Fixed!</h1>
+                            <p>Your agent is back online and ready to work.</p>
+                            <button onclick="showScreen('agents-screen')">Return to Agents</button>
+                        </div>
+
+                        <div id="ow-step-grow-1" style="display: none;">
+                            <h1>Grow your business</h1>
+                            <p>Here are your suggested next steps:</p>
+                            <div class="card" style="margin-bottom: 10px;">
+                                <h3>📦 Add 5 more products</h3>
+                                <button onclick="alert('Feature coming soon!')">Do this</button>
+                            </div>
+                            <div class="card" style="margin-bottom: 10px;">
+                                <h3>📱 Connect Instagram</h3>
+                                <button onclick="alert('Feature coming soon!')">Do this</button>
+                            </div>
+                            <div class="card" style="margin-bottom: 10px;">
+                                <h3>✉️ Run your first email campaign</h3>
+                                <button onclick="alert('Feature coming soon!')">Do this</button>
+                            </div>
+                            <br/><button class="secondary" onclick="showScreen('dashboard-screen')">Maybe later</button>
+                        </div>
+
+                        <div id="ow-step-billing-1" style="display: none;">
+                            <h1>Billing & Credits</h1>
+                            <div class="card glass">
+                                <h3>Current Usage</h3>
+                                <p>You have used 80% of your included credits this month.</p>
+                                <div style="width: 100%; height: 10px; background: #eee; border-radius: 5px; overflow: hidden;">
+                                    <div style="width: 80%; height: 100%; background: #4caf50;"></div>
+                                </div>
+                            </div>
+                            <div class="card glass">
+                                <h3>Projected Cost</h3>
+                                <p>$0.00 (Free Tier)</p>
+                            </div>
+                            <button onclick="alert('Redirecting to upgrade flow...'); showScreen('pricing-screen');">Upgrade plan</button>
+                            <button class="secondary" onclick="alert('Added 50 credits'); showScreen('dashboard-screen');">Add credits</button>
+                            <br/><br/><button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                        </div>
+                    </div>
+
 
                     <!-- Login Screen -->
                     <div id="login-screen" class="screen glass">
@@ -1669,7 +1728,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Update Setup</button>
-                            <button onclick="showScreen('my-plan-screen')">Billing</button>
+                            <button onclick="triggerOngoingWizard('grow')">Grow my business</button>
+                            <button onclick="triggerOngoingWizard('billing')">Billing details</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
@@ -1696,15 +1756,199 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
+
                     <!-- Agents Page -->
                     <div id="agents-screen" class="screen">
-                        <h1>Agents</h1>
-                        <div class="card glass">
-                            <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h1>Manage my AI team</h1>
+                            <label class="toggle-advanced"><input type="checkbox" onchange="toggleAdvancedMode(this.checked)"> Advanced Mode</label>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="card glass">
+                                <h3>🤖 Customer Support</h3>
+                                <p>Status: Active</p>
+                                <button class="secondary" onclick="triggerOngoingWizard('fix')" style="color: red; border-color: red;">Help me fix this</button>
+                                <button onclick="showScreen('tune-agent-screen')">Tune this agent</button>
+                            </div>
+                            <div class="card glass">
+                                <h3>📱 Social Media Manager</h3>
+                                <button onclick="showScreen('agent-config-screen')">Add to my team</button>
+                            </div>
+                            <div class="card glass">
+                                <h3>📈 SEO Booster</h3>
+                                <button onclick="showScreen('agent-config-screen')">Add to my team</button>
+                            </div>
+                            <div class="card glass">
+                                <h3>📦 Order Manager</h3>
+                                <button onclick="showScreen('agent-config-screen')">Add to my team</button>
+                            </div>
+                            <div class="card glass">
+                                <h3>✉️ Email Marketer</h3>
+                                <button onclick="showScreen('agent-config-screen')">Add to my team</button>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- AI Agent Configuration -->
+                    <div id="agent-config-screen" class="screen glass">
+                        <div id="ac-step-1">
+                            <h1>Capabilities</h1>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <label><input type="checkbox"> Reply to customer messages</label>
+                                <label><input type="checkbox"> Post to Instagram & Facebook</label>
+                                <label><input type="checkbox"> Write product descriptions</label>
+                                <label><input type="checkbox"> Send order updates</label>
+                            </div>
+                            <div class="advanced-fields" style="display: none; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
+                                <h4>Advanced: Technical Permissions</h4>
+                                <label><input type="checkbox"> DB_READ</label>
+                                <label><input type="checkbox"> DB_WRITE</label>
+                            </div>
+                            <br/><button onclick="acNextStep(2)">Next →</button>
+                            <button class="secondary" onclick="showScreen('agents-screen')">Cancel</button>
+                        </div>
+                        <div id="ac-step-2" style="display: none;">
+                            <h1>Schedule / Frequency</h1>
+                            <p>How often should this agent work?</p>
+                            <input type="range" min="1" max="4" value="2" list="tickmarks" style="width: 100%;">
+                            <datalist id="tickmarks">
+                                <option value="1" label="Real-time"></option>
+                                <option value="2" label="Hourly"></option>
+                                <option value="3" label="Daily"></option>
+                                <option value="4" label="Weekly"></option>
+                            </datalist>
+                            <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                                <span>Real-time</span><span>Hourly</span><span>Daily</span><span>Weekly</span>
+                            </div>
+                            <div class="advanced-fields" style="display: none; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
+                                <h4>Advanced: max_sessions_per_day</h4>
+                                <input type="number" value="24" />
+                            </div>
+                            <br/><br/><button onclick="acNextStep(3)">Next →</button>
+                            <button class="secondary" onclick="acNextStep(1)">Back</button>
+                        </div>
+                        <div id="ac-step-3" style="display: none;">
+                            <h1>Review & Activate</h1>
+                            <div class="card glass">
+                                <h3>Agent Summary</h3>
+                                <p>Role: Social Media Manager</p>
+                                <p>Capabilities: Selected</p>
+                                <p>Schedule: Hourly</p>
+                            </div>
+                            <button onclick="activateAgent()">Activate</button>
+                            <button class="secondary" onclick="acNextStep(2)">Back</button>
+                        </div>
+                    </div>
+
+                    <!-- Prompt Tuning -->
+                    <div id="tune-agent-screen" class="screen glass" style="display: flex; gap: 20px;">
+                        <div style="flex: 1;">
+                            <div id="pt-step-1">
+                                <h1>Tune this agent - Tone</h1>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <label><input type="radio" name="tone" checked> Friendly & Warm</label>
+                                    <label><input type="radio" name="tone"> Professional</label>
+                                    <label><input type="radio" name="tone"> Energetic</label>
+                                    <label><input type="radio" name="tone"> Concise</label>
+                                </div>
+                                <div class="advanced-fields" style="display: none; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
+                                    <h4>Advanced: System Prompt Template</h4>
+                                    <textarea style="width: 100%; height: 60px;">You are a friendly customer support agent...</textarea>
+                                </div>
+                                <br/><button onclick="ptNextStep(2)">Next →</button>
+                                <button class="secondary" onclick="showScreen('agents-screen')">Cancel</button>
+                            </div>
+                            <div id="pt-step-2" style="display: none;">
+                                <h1>Focus topics</h1>
+                                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                    <span class="chip" onclick="this.classList.toggle('selected');" style="padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.2); cursor: pointer;">Only about my products</span>
+                                    <span class="chip" onclick="this.classList.toggle('selected');" style="padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.2); cursor: pointer;">Avoid competitor mentions</span>
+                                    <span class="chip" onclick="this.classList.toggle('selected');" style="padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.2); cursor: pointer;">Always reply in Spanish</span>
+                                </div>
+                                <div class="advanced-fields" style="display: none; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
+                                    <h4>Advanced: Clauses appended to prompt</h4>
+                                    <textarea style="width: 100%; height: 60px;">Only discuss products found in DB_READ...</textarea>
+                                </div>
+                                <br/><br/><button onclick="ptNextStep(3)">Next →</button>
+                                <button class="secondary" onclick="ptNextStep(1)">Back</button>
+                            </div>
+                            <div id="pt-step-3" style="display: none;">
+                                <h1>Example interactions</h1>
+                                <div>
+                                    <input type="text" placeholder="User says..." style="width: 100%; margin-bottom: 5px;" />
+                                    <textarea placeholder="Agent replies..." style="width: 100%; height: 50px;"></textarea>
+                                </div>
+                                <div class="advanced-fields" style="display: none; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
+                                    <h4>Advanced: Few-shot JSON format</h4>
+                                    <textarea style="width: 100%; height: 60px;">[{"role":"user","content":"..."},{"role":"assistant","content":"..."}]</textarea>
+                                </div>
+                                <br/><br/>
+                                <button onclick="saveAgentTuning()">Save</button>
+                                <button class="secondary" onclick="ptNextStep(2)">Back</button>
+                            </div>
+                        </div>
+                        <div style="flex: 1; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 20px; display: flex; flex-direction: column;">
+                            <h2>Live preview (Sandbox)</h2>
+                            <div style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px; margin-bottom: 10px; overflow-y: auto;">
+                                <div style="color: #ccc;">Test the tuned agent in real time here...</div>
+                            </div>
+                            <input type="text" placeholder="Type a message..." style="width: 100%;" />
+                        </div>
+                    </div>
+
+                    <!-- Website Builder Onboarding -->
+                    <div id="onboarding-screen" class="screen glass">
+                        <div id="ob-step-1">
+                            <h1>Choose a Template</h1>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="card" onclick="document.querySelectorAll('.card').forEach(c=>c.classList.remove('selected')); this.classList.add('selected'); document.getElementById('btn-use-tpl').classList.add('green');">
+                                    <div style="height: 100px; background: #eee;">[Live Preview: Modern]</div>
+                                    <h3>Modern</h3>
+                                </div>
+                                <div class="card" onclick="document.querySelectorAll('.card').forEach(c=>c.classList.remove('selected')); this.classList.add('selected'); document.getElementById('btn-use-tpl').classList.add('green');">
+                                    <div style="height: 100px; background: #eee;">[Live Preview: Bold]</div>
+                                    <h3>Bold</h3>
+                                </div>
+                            </div>
+                            <br/><button id="btn-use-tpl" onclick="obNextStep(2)">Use this template →</button>
+                        </div>
+                        <div id="ob-step-2" style="display: none;">
+                            <h1>Brand colors & logo</h1>
+                            <div style="display: flex; gap: 10px;">
+                                <div style="width: 40px; height: 40px; background: #ff0000; border-radius: 50%;"></div>
+                                <div style="width: 40px; height: 40px; background: #00ff00; border-radius: 50%;"></div>
+                                <div style="width: 40px; height: 40px; background: #0000ff; border-radius: 50%;"></div>
+                            </div>
+                            <br/>
+                            <button class="secondary">Upload Logo</button>
+                            <button class="secondary">Generate a logo for me</button>
+                            <br/><br/><button onclick="obNextStep(3)">Next →</button>
+                            <button class="secondary" onclick="obNextStep(1)">Back</button>
+                        </div>
+                        <div id="ob-step-3" style="display: none;">
+                            <h1>Add your first product or service</h1>
+                            <input type="text" placeholder="Name (e.g. Custom Birthday Cake)" />
+                            <button class="secondary">Upload Photo</button>
+                            <input type="text" placeholder="Price (e.g. 50.00)" />
+                            <textarea placeholder="Short Description (AI generated...)"></textarea>
+                            <button onclick="obNextStep(4)">Next →</button>
+                            <button class="secondary" onclick="obNextStep(2)">Back</button>
+                        </div>
+                        <div id="ob-step-4" style="display: none;">
+                            <h1>Connect a domain</h1>
+                            <button class="secondary" onclick="obNextStep(5)">Use a free OHC subdomain (mybusiness.ohc.app)</button>
+                            <button class="secondary" onclick="obNextStep(5)">Use my own domain</button>
+                            <button class="secondary" onclick="obNextStep(5)">Buy a domain</button>
+                            <br/><button class="secondary" onclick="obNextStep(3)">Back</button>
+                        </div>
+                        <div id="ob-step-5" style="display: none;">
+                            <h1>Go Live</h1>
+                            <div style="height: 200px; background: #fafafa; border: 1px solid #ccc; margin-bottom: 20px;">[Live Site Preview]</div>
+                            <button onclick="publishSite()">Publish</button>
+                            <button class="secondary" onclick="obNextStep(4)">Back</button>
+                        </div>
+                    </div>
+
 
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
@@ -1767,6 +2011,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="my-plan-screen" class="screen">
                         <h1>My Current Plan</h1>
                         <p>Status: Active</p>
+                                <button class="secondary" onclick="triggerOngoingWizard('fix')" style="color: red; border-color: red;">Help me fix this</button>
                         <p>Next billing: 2024-06-01</p>
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
@@ -1842,7 +2087,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          </div>
                      </div>
 
-                     <!-- Setup Wizard -->
+
+                    <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
@@ -1852,74 +2098,72 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-2" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                <button class="secondary" onclick="nextStep(3)" style="font-size: 24px;">🛒<br/><span style="font-size: 16px;">Online Store</span></button>
+                                <button class="secondary" onclick="nextStep(3)" style="font-size: 24px;">🛠️<br/><span style="font-size: 16px;">Service Business</span></button>
+                                <button class="secondary" onclick="nextStep(3)" style="font-size: 24px;">🍕<br/><span style="font-size: 16px;">Restaurant / Food</span></button>
+                                <button class="secondary" onclick="nextStep(3)" style="font-size: 24px;">🎨<br/><span style="font-size: 16px;">Creative / Portfolio</span></button>
+                                <button class="secondary" onclick="nextStep(3)" style="font-size: 24px;">🏠<br/><span style="font-size: 16px;">Local Business</span></button>
+                                <button class="secondary" onclick="nextStep(3)" style="font-size: 24px;">❓<br/><span style="font-size: 16px;">Other</span></button>
+                            </div>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <input type="text" placeholder="e.g. Maya's Cakes" style="font-size: 18px; padding: 12px; width: 100%;" />
+                            <p>Description & Tagline</p>
+                            <textarea placeholder="e.g. The best local bakery in town..." style="font-size: 16px; padding: 12px; width: 100%; height: 80px;"></textarea>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
-                            <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
-                            <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
-                            <br/><button class="secondary" onclick="nextStep(3)">Back</button>
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                <button class="secondary" onclick="this.classList.toggle('selected');">📦 Physical products</button>
+                                <button class="secondary" onclick="this.classList.toggle('selected');">⬇️ Digital downloads</button>
+                                <button class="secondary" onclick="this.classList.toggle('selected');">📅 Services / appointments</button>
+                                <button class="secondary" onclick="this.classList.toggle('selected');">🍔 Food & beverages</button>
+                                <button class="secondary" onclick="this.classList.toggle('selected');">🔁 Subscriptions</button>
+                            </div>
+                            <br/><button onclick="nextStep(5)">Next →</button>
+                            <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
                         <div id="step-5" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
-                            <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <button class="secondary" onclick="nextStep(6)">🌐 Online only <span style="font-size: 12px; color: #888;">(Instant)</span></button>
+                                <button class="secondary" onclick="nextStep(6)">🏬 In-person (POS) <span style="font-size: 12px; color: #888;">(Instant)</span></button>
+                                <button class="secondary" onclick="nextStep(6)">🌍 Both <span style="font-size: 12px; color: #888;">(Instant)</span></button>
+                                <button class="secondary" onclick="nextStep(6)">⏭️ Skip for now</button>
+                            </div>
                             <br/><button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
                         <div id="step-6" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
+                            <input type="text" placeholder="Your Name" />
                             <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(7)">Next →</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
-                            <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
-                        </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
-                            <input type="text" placeholder="e.g. 50.00" />
-                            <button onclick="nextStep(9)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                        </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
+                            <input type="password" placeholder="Password" oninput="document.getElementById('pwd-str').innerText = 'Strength: ' + (this.value.length > 8 ? 'Strong' : 'Weak')" />
+                            <div id="pwd-str" style="font-size: 12px; color: #aaa; margin-bottom: 10px;">Strength: </div>
+                            <button class="secondary">Use Google or Apple</button>
+                            <br/>
+                            <button onclick="nextStep(100)">Review & Launch →</button>
+                            <button class="secondary" onclick="nextStep(5)">Back</button>
                         </div>
                         <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="nextStep(101)">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                            <h1>Review & Launch</h1>
+                            <div class="card glass">
+                                <h3>Summary</h3>
+                                <p>Business Type: Selected</p>
+                                <p>Name: Entered</p>
+                                <p>Products: Selected</p>
+                            </div>
+                            <button class="pulse-btn" onclick="nextStep(101)">Launch My Business →</button>
                         </div>
                         <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                            <h1>CONFETTI SUCCESS</h1>
+                            <p>Your business is setting up…</p>
+                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+                            <button onclick="showScreen('onboarding-screen')">Build My Website</button>
                         </div>
 
                         <div id="step-ai" style="display: none;">
@@ -1944,12 +2188,37 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
-                            if (screen) screen.style.display = 'block';
+                            if (screen) screen.style.display = (id === 'tune-agent-screen') ? 'flex' : 'block';
                             
                             if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
+                            }
+                        }
+
+
+                        async function saveWizardState(stepId, data) {
+                            try {
+                                await fetch('/api/wizard/state', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ step: stepId, data: data })
+                                });
+                            } catch (e) {
+                                console.error('Failed to save state:', e);
+                            }
+                        }
+
+                        async function saveAdvancedModePref(isAdvanced) {
+                            try {
+                                await fetch('/api/profile/preferences', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ advanced_mode: isAdvanced })
+                                });
+                            } catch (e) {
+                                console.error('Failed to save pref:', e);
                             }
                         }
 
@@ -1969,6 +2238,57 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function handleSignup(btn) {
                             btn.innerText = 'Creating account...';
                             setTimeout(() => showScreen('setup-screen'), 500);
+                        }
+
+
+                        function obNextStep(step) {
+                            document.getElementById('onboarding-screen').querySelectorAll('div[id^="ob-step-"]').forEach(d => d.style.display = 'none');
+                            const target = document.getElementById('ob-step-' + step);
+                            if (target) target.style.display = 'block';
+                        }
+
+
+                        function acNextStep(step) {
+                            document.getElementById('agent-config-screen').querySelectorAll('div[id^="ac-step-"]').forEach(d => d.style.display = 'none');
+                            const target = document.getElementById('ac-step-' + step);
+                            if (target) target.style.display = 'block';
+                        }
+
+                        function owNextStep(step) {
+                            document.getElementById('ongoing-wizards-screen').querySelectorAll('div[id^="ow-step-"]').forEach(d => d.style.display = 'none');
+                            const target = document.getElementById('ow-step-' + step);
+                            if (target) target.style.display = 'block';
+                        }
+                        function triggerOngoingWizard(type) {
+                            showScreen('ongoing-wizards-screen');
+                            owNextStep(type + '-1');
+                        }
+
+                        function ptNextStep(step) {
+                            document.getElementById('tune-agent-screen').querySelectorAll('div[id^="pt-step-"]').forEach(d => d.style.display = 'none');
+                            const target = document.getElementById('pt-step-' + step);
+                            if (target) target.style.display = 'block';
+                        }
+                        function activateAgent() {
+                            alert('Agent activated!');
+                            showScreen('agents-screen');
+                        }
+                        function saveAgentTuning() {
+                            alert('Your agent has been updated ✓');
+                            showScreen('agents-screen');
+                        }
+
+                        function toggleAdvancedMode(isAdvanced) {
+                            document.querySelectorAll('.advanced-fields').forEach(el => {
+                                el.style.display = isAdvanced ? 'block' : 'none';
+                            });
+                            saveAdvancedModePref(isAdvanced);
+                        }
+
+
+                        function publishSite() {
+                            alert('Site goes live instantly! Link copied to clipboard.');
+                            showScreen('dashboard-screen');
                         }
 
                         function nextStep(step) {
