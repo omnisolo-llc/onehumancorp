@@ -292,6 +292,8 @@ mod tests {
                     let content = fs::read_to_string(entry.path()).unwrap_or_default();
                     for (i, line) in content.lines().enumerate() {
                         let lower_line = line.to_lowercase();
+                        let is_logging_or_telemetry = entry.path().display().to_string().contains("telemetry") || entry.path().display().to_string().contains("event_log") || entry.path().display().to_string().contains("hub.rs") || lower_line.contains("tracing::") || lower_line.contains("log.");
+
                         if lower_line.contains("tracing::info!") ||
                            lower_line.contains("etracing::info!") ||
                            lower_line.contains("info!") ||
@@ -302,7 +304,8 @@ mod tests {
                            lower_line.contains("println!") ||
                            lower_line.contains("log.print") ||
                            lower_line.contains("fmt.errorf") || lower_line.contains("fmt.error") || lower_line.contains("log.printf") || lower_line.contains("fmt.print") ||
-                           lower_line.contains("eprintln!")
+                           lower_line.contains("eprintln!") ||
+                           (is_logging_or_telemetry && (lower_line.contains("json.marshal") || lower_line.contains("serde_json::to_string")) && !lower_line.contains("redact"))
                         {
                             if lower_line.contains("tenant_id") ||
                                lower_line.contains("organization_id") ||
