@@ -3627,7 +3627,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(ui) = handle_clone.upgrade() {
                                         ui.set_launching(false);
-                                        ui.set_step(100);
+                                        ui.set_step(10);
                                         ui.set_launch_success(true);
                                         ui.set_launch_status("Onboarding Complete!".into());
                                         ui.set_launch_details(msg.into());
@@ -3951,7 +3951,7 @@ mod growth_e2e_tests {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
                 u.set_launching(false);
-                u.set_step(100);
+                u.set_step(10);
             }
         });
 
@@ -3972,7 +3972,7 @@ mod growth_e2e_tests {
         );
 
         assert!(*launch_called.borrow(), "Setup wizard launch function must be executed");
-        assert_eq!(ui.get_step(), 100);
+        assert_eq!(ui.get_step(), 10);
     }
 
     #[test]
@@ -4524,7 +4524,7 @@ mod e2e_tests {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak.upgrade() {
                 u.set_launching(false);
-                u.set_step(100);
+                u.set_step(10);
             }
         });
 
@@ -4545,7 +4545,7 @@ mod e2e_tests {
         );
 
         assert!(*launch_called.borrow(), "Launch callback should be triggered");
-        assert_eq!(ui.get_step(), 100);
+        assert_eq!(ui.get_step(), 10);
         assert_eq!(ui.get_launching(), false);
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5110,7 +5110,7 @@ mod docs_tests {
             *launch_called_clone.borrow_mut() = true;
             if let Some(u) = ui_weak_launch.upgrade() {
                 u.set_launching(false);
-                u.set_step(100);
+                u.set_step(10);
             }
         });
 
@@ -5130,7 +5130,7 @@ mod docs_tests {
             ui.get_price_type()
         );
 
-        assert_eq!(ui.get_step(), 100);
+        assert_eq!(ui.get_step(), 10);
         assert!(*launch_called.borrow(), "Launch should be called");
 
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -5233,7 +5233,7 @@ mod docs_tests {
                 let link = format!("https://{}.ohc.app", domain_choice);
                 u.invoke_copy_link(link.into());
                 u.set_launching(false);
-                u.set_step(100);
+                u.set_step(10);
             }
         });
 
@@ -5256,7 +5256,7 @@ mod docs_tests {
         assert!(*launch_called.borrow());
         assert!(*link_copied.borrow(), "Shareable link should be automatically copied on launch completion");
         assert_eq!(ui.get_launching(), false);
-        assert_eq!(ui.get_step(), 100);
+        assert_eq!(ui.get_step(), 10);
 
         // Step 7: Go to Dashboard
         let dashboard_opened = std::rc::Rc::new(std::cell::RefCell::new(false));

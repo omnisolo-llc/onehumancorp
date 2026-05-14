@@ -245,7 +245,7 @@ fn test_e2e_onboarding_welcome_checklist() {
     if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
 
     let wizard_ui = crate::app::SetupWizard::new().unwrap();
-    wizard_ui.set_step(100);
+    wizard_ui.set_step(10);
 
     let checklist_called = std::rc::Rc::new(std::cell::RefCell::new(false));
     let checklist_called_clone = checklist_called.clone();
