@@ -138,6 +138,12 @@ service DashboardService {
   rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
   rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse);
   rpc GetVideoTutorials(GetVideoTutorialsRequest) returns (GetVideoTutorialsResponse);
+  rpc GetTooltips(GetTooltipsRequest) returns (GetTooltipsResponse);
+  rpc GetWalkthroughs(GetWalkthroughsRequest) returns (GetWalkthroughsResponse);
+  rpc GetHelpArticles(GetHelpArticlesRequest) returns (GetHelpArticlesResponse);
+  rpc GetApiDocs(GetApiDocsRequest) returns (GetApiDocsResponse);
+  rpc GetReleaseNotes(GetReleaseNotesRequest) returns (GetReleaseNotesResponse);
+  rpc AskAiHelpChat(AiHelpChatRequest) returns (AiHelpChatResponse);
 }
 
 // Onboarding State
@@ -178,4 +184,80 @@ message GetVideoTutorialsRequest {
 
 message GetVideoTutorialsResponse {
   repeated VideoMetadata videos = 1;
+}
+
+// Tooltips
+message Tooltip {
+  string element_id = 1;
+  string plain_text = 2;
+}
+
+message GetTooltipsRequest {}
+message GetTooltipsResponse {
+  repeated Tooltip tooltips = 1;
+}
+
+// Walkthroughs
+message WalkthroughStep {
+  string element_id = 1;
+  string title = 2;
+  string plain_text = 3;
+}
+
+message Walkthrough {
+  string id = 1;
+  string title = 2;
+  repeated WalkthroughStep steps = 3;
+}
+
+message GetWalkthroughsRequest {}
+message GetWalkthroughsResponse {
+  repeated Walkthrough walkthroughs = 1;
+}
+
+// Help Articles
+message HelpArticle {
+  string id = 1;
+  string topic = 2;
+  string title = 3;
+  string plain_text = 4;
+}
+
+message GetHelpArticlesRequest {}
+message GetHelpArticlesResponse {
+  repeated HelpArticle articles = 1;
+}
+
+// API Docs
+message ApiDoc {
+  string endpoint = 1;
+  string method = 2;
+  string plain_description = 3;
+}
+
+message GetApiDocsRequest {}
+message GetApiDocsResponse {
+  repeated ApiDoc docs = 1;
+}
+
+// Release Notes
+message ReleaseNote {
+  string version = 1;
+  string title = 2;
+  string plain_description = 3;
+  int64 date_unix = 4;
+}
+
+message GetReleaseNotesRequest {}
+message GetReleaseNotesResponse {
+  repeated ReleaseNote notes = 1;
+}
+
+// AI Help Chat
+message AiHelpChatRequest {
+  string query = 1;
+}
+message AiHelpChatResponse {
+  string plain_answer = 1;
+  string related_article_url = 2;
 }

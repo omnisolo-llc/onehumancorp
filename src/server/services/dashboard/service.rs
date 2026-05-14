@@ -594,6 +594,136 @@ impl DashboardService for MyDashboardService {
             }
         }
     }
+
+
+    async fn get_tooltips(
+        &self,
+        _request: Request<GetTooltipsRequest>,
+    ) -> Result<Response<GetTooltipsResponse>, Status> {
+        let tooltips = vec![
+            Tooltip {
+                element_id: "dashboard_mrr".to_string(),
+                plain_text: "Your Monthly Recurring Revenue. This is how much money your business makes every month from subscriptions.".to_string(),
+            },
+            Tooltip {
+                element_id: "agent_settings".to_string(),
+                plain_text: "Adjust how your AI helper works. You can tell it what hours to work and what tone of voice to use.".to_string(),
+            },
+            Tooltip {
+                element_id: "referral_score".to_string(),
+                plain_text: "How often your current customers recommend you to new customers.".to_string(),
+            }
+        ];
+        Ok(Response::new(GetTooltipsResponse { tooltips }))
+    }
+
+    async fn get_walkthroughs(
+        &self,
+        _request: Request<GetWalkthroughsRequest>,
+    ) -> Result<Response<GetWalkthroughsResponse>, Status> {
+        let walkthroughs = vec![
+            Walkthrough {
+                id: "setup_store".to_string(),
+                title: "Set up your store".to_string(),
+                steps: vec![
+                    WalkthroughStep {
+                        element_id: "products_tab".to_string(),
+                        title: "1. Add a Product".to_string(),
+                        plain_text: "Click here to add the first item you want to sell. Don't worry, you can change it later.".to_string(),
+                    },
+                    WalkthroughStep {
+                        element_id: "payments_tab".to_string(),
+                        title: "2. Connect Bank".to_string(),
+                        plain_text: "Connect your bank account so you can get paid when someone buys your product.".to_string(),
+                    }
+                ]
+            },
+            Walkthrough {
+                id: "first_payment".to_string(),
+                title: "Accept your first payment".to_string(),
+                steps: vec![
+                    WalkthroughStep {
+                        element_id: "invoice_btn".to_string(),
+                        title: "1. Create Invoice".to_string(),
+                        plain_text: "Click here to send a bill to your customer.".to_string(),
+                    }
+                ]
+            },
+            Walkthrough {
+                id: "activate_ai".to_string(),
+                title: "Activate your AI Support Agent".to_string(),
+                steps: vec![
+                    WalkthroughStep {
+                        element_id: "ai_tab".to_string(),
+                        title: "1. Meet your helper".to_string(),
+                        plain_text: "Click here to turn on your AI assistant. It will help answer simple customer questions for you.".to_string(),
+                    }
+                ]
+            }
+        ];
+        Ok(Response::new(GetWalkthroughsResponse { walkthroughs }))
+    }
+
+    async fn get_help_articles(
+        &self,
+        _request: Request<GetHelpArticlesRequest>,
+    ) -> Result<Response<GetHelpArticlesResponse>, Status> {
+        let articles = vec![
+            HelpArticle {
+                id: "getting_started_1".to_string(),
+                topic: "Getting Started".to_string(),
+                title: "How to open your store".to_string(),
+                plain_text: "To open your store, just add your first product and connect your bank account. Once you do that, you are ready to sell!".to_string(),
+            },
+            HelpArticle {
+                id: "ai_agents_1".to_string(),
+                topic: "AI Agents".to_string(),
+                title: "What is an AI Helper?".to_string(),
+                plain_text: "An AI Helper is like a digital assistant that works for you 24/7. It can reply to common customer emails or chat messages so you can focus on running your business.".to_string(),
+            }
+        ];
+        Ok(Response::new(GetHelpArticlesResponse { articles }))
+    }
+
+    async fn get_api_docs(
+        &self,
+        _request: Request<GetApiDocsRequest>,
+    ) -> Result<Response<GetApiDocsResponse>, Status> {
+        let docs = vec![
+            ApiDoc {
+                endpoint: "/api/sales".to_string(),
+                method: "GET".to_string(),
+                plain_description: "View a list of all your recent sales.".to_string(),
+            }
+        ];
+        Ok(Response::new(GetApiDocsResponse { docs }))
+    }
+
+    async fn get_release_notes(
+        &self,
+        _request: Request<GetReleaseNotesRequest>,
+    ) -> Result<Response<GetReleaseNotesResponse>, Status> {
+        let notes = vec![
+            ReleaseNote {
+                version: "0.4.42".to_string(),
+                title: "New Help Center".to_string(),
+                plain_description: "We added a brand new help center to make it easier for you to find answers to your questions.".to_string(),
+                date_unix: 1715486400,
+            }
+        ];
+        Ok(Response::new(GetReleaseNotesResponse { notes }))
+    }
+
+    async fn ask_ai_help_chat(
+        &self,
+        _request: Request<AiHelpChatRequest>,
+    ) -> Result<Response<AiHelpChatResponse>, Status> {
+        Ok(Response::new(AiHelpChatResponse {
+            plain_answer: "I can help you with that! To add a new product, go to your Store tab and click the 'Add Product' button. Need more details?".to_string(),
+            related_article_url: "https://help.onehumancorp.com/getting-started/add-product".to_string(),
+        }))
+    }
+
 }
 
 #[cfg(test)]
