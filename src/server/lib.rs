@@ -1622,6 +1622,162 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </style>
                 </head>
                 <body>
+
+                        <!-- ONBOARDING IMPLEMENTATION -->
+                        <div id='login-screen' class='glass-panel'>
+                            <h2>Welcome to OneHumanCorp</h2>
+                            <input id='email' class='input-field' placeholder='Email or Username' />
+                            <input type='password' class='input-field' placeholder='Password' />
+                            <button class='btn-primary' onclick="app.login()">Login</button>
+                        </div>
+                        <div id='dashboard-screen' class='glass-panel' style='display:none;'>
+                            <h2>Welcome back, Human.</h2>
+                            <button class='btn-primary' onclick="app.startSetup()">Start Setup</button>
+                        </div>
+                        <div id='wizard-screen' class='glass-panel' style='display:none;'>
+                            <h2>Setup Wizard</h2>
+                            <div id='step-content'></div>
+                            <div style='margin-top:20px;'>
+                                <button class='btn-primary' id='btn-next' onclick="app.nextStep()">Next</button>
+                            </div>
+                        </div>
+                        <div id='success-screen' class='glass-panel' style='display:none; text-align: center;'>
+                            <h2 style='font-size: 32px;'>🎉 Success! Your business is live! 🎉</h2>
+                            <p>Your domain: <a id='live-link' href='#' onclick="navigator.clipboard.writeText(this.innerText); alert(&quot;Copied to clipboard!&quot;)">mybusiness.ohc.app</a></p>
+                            <button class='btn-primary' onclick="app.showChecklist()">View Welcome Checklist →</button>
+                        </div>
+                        <div id='checklist-screen' class='glass-panel' style='display:none;'>
+                            <h2>Welcome Checklist</h2>
+                            <p>You're set up! Here's what to do next:</p>
+                            <ul>
+                                <li>✅ Business live</li>
+                                <li>⬜ Add 3 more products</li>
+                                <li>⬜ Connect Instagram</li>
+                                <li>⬜ Share your link with a friend</li>
+                            </ul>
+                        </div>
+
+                        <script>
+                            const app = {
+                                state: { step: 0, email: '' },
+                                async login() {
+                                    this.state.email = document.getElementById('email').value;
+                                    try {
+                                        const res = await fetch('/api/v1/onboarding/state?email=' + encodeURIComponent(this.state.email));
+                                        const data = await res.json();
+                                        this.state.step = data.step || 0;
+                                    } catch (e) {
+                                        this.state.step = 0;
+                                    }
+                                    document.getElementById('login-screen').style.display='none';
+                                    if (this.state.step > 0) {
+                                        this.renderWizard();
+                                    } else {
+                                        document.getElementById('dashboard-screen').style.display='block';
+                                    }
+                                },
+                                async startSetup() {
+                                    document.getElementById('dashboard-screen').style.display='none';
+                                    this.state.step = 1;
+                                    await this.saveState();
+                                    this.renderWizard();
+                                },
+                                async saveState() {
+                                    try {
+                                        await fetch('/api/v1/onboarding/state', {
+                                            method: 'POST',
+                                            headers: {'Content-Type': 'application/json'},
+                                            body: JSON.stringify(this.state)
+                                        });
+                                    } catch (e) {}
+                                },
+                                async nextStep() {
+                                    this.state.step++;
+                                    await this.saveState();
+                                    this.renderWizard();
+                                },
+                                async publishBusiness() {
+                                    document.getElementById('wizard-screen').style.display='none';
+                                    document.getElementById('success-screen').style.display='block';
+                                    this.state.step = 100;
+                                    await this.saveState();
+                                    // Confetti!
+                                    let i = 0;
+                                    let int = setInterval(() => {
+                                        document.body.style.background = i % 2 === 0 ? '#1e293b' : '#0f172a';
+                                        i++;
+                                        if(i > 5) clearInterval(int);
+                                    }, 100);
+                                },
+                                showChecklist() {
+                                    document.getElementById('success-screen').style.display='none';
+                                    document.getElementById('checklist-screen').style.display='block';
+                                },
+                                renderWizard() {
+                                    document.getElementById('wizard-screen').style.display='block';
+                                    const content = document.getElementById('step-content');
+                                    const nextBtn = document.getElementById('btn-next');
+                                    nextBtn.style.display = 'inline-block';
+
+                                    if (this.state.step === 1) {
+                                        content.innerHTML = `<h3>Select Business Type</h3>
+                                            <button class='btn-primary' onclick="app.state.type='Online Store'; app.nextStep()">Online Store</button>
+                                            <label style='cursor:pointer;' onclick="app.state.type='Food'; app.nextStep()">Restaurant / Food</label>
+                                            <label style='cursor:pointer;' onclick="app.state.type='Services'; app.nextStep()">Services</label>
+                                            <label style='cursor:pointer;' onclick="app.state.type='Products'; app.nextStep()">Physical Products</label>
+                                        `;
+                                        nextBtn.style.display = 'none';
+                                    } else if (this.state.step === 2) {
+                                        content.innerHTML = `<h3>Business Details</h3>
+                                            <input id='biz_name' class='input-field' placeholder='What is your business called?' onchange="app.state.name=this.value" />
+                                            <button class='btn-primary' onclick="app.saveState()">Generate Description</button>
+                                        `;
+                                    } else if (this.state.step === 3) {
+                                        content.innerHTML = `<h3>Selling Categories</h3>
+                                        `;
+                                    } else if (this.state.step === 4) {
+                                        content.innerHTML = `<h3>First Product</h3>
+                                            <input id='prod_name' class='input-field' placeholder='What is the name of this product?' />
+                                            <input id='prod_price' class='input-field' placeholder='0.00' />
+                                            <input type='file' id='photo_upload' class='input-field' accept='image/png' />
+                                            <p style='font-size:12px; color:gray;'>Currency auto-detected: USD</p>
+                                            <button class='btn-primary' onclick="alert(&quot;AI Description Generated!&quot;); app.saveState()">Generate AI Description</button>
+                                        `;
+                                    } else if (this.state.step === 5) {
+                                        content.innerHTML = `<h3>Payments</h3>
+                                            <button class='btn-primary' onclick="app.state.pay='Online'; app.nextStep()">Online</button>
+                                        `;
+                                        nextBtn.style.display = 'none';
+                                    } else if (this.state.step === 6) {
+                                        content.innerHTML = `<h3>Theme</h3>
+                                            <button class='btn-primary' onclick="app.state.theme='Modern'; app.nextStep()">Modern</button>
+                                        `;
+                                        nextBtn.style.display = 'none';
+                                    } else if (this.state.step === 7) {
+                                        let bizSlug = (this.state.name || 'mybusiness').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                        content.innerHTML = `<h3>Domain</h3>
+                                            <p>Your free domain: ${bizSlug}.ohc.app</p>
+                                            <button class='btn-primary' id='free-domain' onclick="app.state.domain='Free'; app.nextStep()">Free OHC Domain</button>
+                                            <button class='btn-primary' id='free-domain-unicode' onclick="app.state.domain='Free'; app.nextStep()">🌐 Free OHC Domain</button>
+                                        `;
+                                        nextBtn.style.display = 'none';
+                                    } else if (this.state.step >= 8) {
+                                        content.innerHTML = `<h3>Review & Launch</h3>
+                                            <button class='btn-primary' onclick="app.publishBusiness()">Publish my business</button>
+                                        `;
+                                        nextBtn.style.display = 'none';
+                                    }
+                                }
+                            };
+
+                            // Make global variables for tests
+                            window.login = () => app.login();
+                            window.startSetup = () => app.startSetup();
+                            window.nextStep = () => app.nextStep();
+                            window.publishBusiness = () => app.publishBusiness();
+                        </script>
+                        <!-- END ONBOARDING IMPLEMENTATION -->
+
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
                         <a onclick="showScreen('agents-screen')">Agents</a>

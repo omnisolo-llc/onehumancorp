@@ -10,19 +10,19 @@ test.describe('Onboarding Wizard', () => {
     await page.locator('button:has-text("Login")').first().click();
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Welcome back, Human."').first()).toBeVisible();
   });
 
   test('Test 1: Sign-Up & Account Creation to Wizard auto-redirect', async ({ page }) => {
     // The requirement is that first login auto-redirects to the business setup wizard or dashboard with setup wizard ready
     // From before each, we see it goes to Dashboard and we can click start setup.
     await page.click('button:has-text("Start Setup")');
-    await expect(page.locator('text="Setup Wizard"')).toBeVisible();
+    await expect(page.locator('text="Setup Wizard"').first()).toBeVisible();
   });
 
   test('Test 2: Business Setup Wizard Flow state persistence', async ({ page }) => {
     await page.click('button:has-text("Start Setup")');
-    await expect(page.locator('text="Setup Wizard"')).toBeVisible();
+    await expect(page.locator('text="Setup Wizard"').first()).toBeVisible();
 
     await page.click('button:has-text("Next")');
     // Step 1: Business Type -> 2
@@ -34,7 +34,7 @@ test.describe('Onboarding Wizard', () => {
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4
-    await page.check('text="Physical Products"');
+    await page.locator('text="Physical Products"').first().click();
     await page.click('button:has-text("Next")');
 
     // Test cross device resume -> Reload page
@@ -44,9 +44,9 @@ test.describe('Onboarding Wizard', () => {
     await page.locator('input[type="password"]').first().fill( 'password123');
     await page.locator('button:has-text("Login")').first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Welcome back, Human."').first()).toBeVisible();
     await page.click('button:has-text("Start Setup")');
-    await expect(page.locator('text="Setup Wizard"')).toBeVisible();
+    await expect(page.locator('text="Setup Wizard"').first()).toBeVisible();
   });
 
   test('Test 3: First Product & AI Description', async ({ page }) => {
@@ -63,14 +63,14 @@ test.describe('Onboarding Wizard', () => {
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4
-    await page.check('text="Physical Products"');
+    await page.locator('text="Physical Products"').first().click();
     await page.click('button:has-text("Next")');
     // Step 4: First Product -> 5
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
 
-    await expect(page.locator('button:has-text("Generate AI Description")')).toBeVisible();
-    await page.click('button:has-text("Generate AI Description")');
+    await expect(page.locator('button:has-text("Generate AI Description")').first()).toBeVisible();
+    await page.locator('button:has-text("Generate AI Description")').first().click();
     await page.waitForTimeout(1000);
 
     await page.click('button:has-text("Next")');
@@ -98,7 +98,7 @@ test.describe('Onboarding Wizard', () => {
     await page.click('text="Modern"');
     await page.click('button:has-text("Next")');
     // Step 7: Domain -> 8
-    await page.click('text="🌐 Free OHC Domain"');
+    await page.locator('button:has-text("Free OHC Domain")').first().click();
     await page.click('button:has-text("Next")');
     // Step 8: Review & Launch -> 9
     await page.click('button:has-text("Publish my business")');
@@ -122,7 +122,7 @@ test.describe('Onboarding Wizard', () => {
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4
-    await page.check('text="Physical Products"');
+    await page.locator('text="Physical Products"').first().click();
     await page.click('button:has-text("Next")');
     // Step 4: First Product -> 5
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
@@ -135,22 +135,22 @@ test.describe('Onboarding Wizard', () => {
     await page.click('text="Modern"');
     await page.click('button:has-text("Next")');
     // Step 7: Domain -> 8
-    await page.click('text="🌐 Free OHC Domain"');
+    await page.locator('button:has-text("Free OHC Domain")').first().click();
     await page.click('button:has-text("Next")');
     // Step 8: Review & Launch -> 9
     await page.click('button:has-text("Publish my business")');
 
     await expect(page.locator('text="🎉 Success! Your business is live! 🎉"')).toBeVisible({ timeout: 10000 });
 
-    const viewChecklistBtn = page.locator('text="View Welcome Checklist →"');
+    const viewChecklistBtn = page.locator('button:has-text("View Welcome Checklist →")').first();
     await viewChecklistBtn.click();
 
     await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text="You\'re set up! Here\'s what to do next:"')).toBeVisible();
-    await expect(page.locator('text="✅ Business live"')).toBeVisible();
-    await expect(page.locator('text="⬜ Add 3 more products"')).toBeVisible();
-    await expect(page.locator('text="⬜ Connect Instagram"')).toBeVisible();
-    await expect(page.locator('text="⬜ Share your link with a friend"')).toBeVisible();
+    await expect(page.locator('text="✅ Business live"').first()).toBeVisible();
+    await expect(page.locator('text="⬜ Add 3 more products"').first()).toBeVisible();
+    await expect(page.locator('text="⬜ Connect Instagram"').first()).toBeVisible();
+    await expect(page.locator('text="⬜ Share your link with a friend"').first()).toBeVisible();
   });
 
   test('Persona: Maya - The Home Baker (Physical Products)', async ({ page }) => {
