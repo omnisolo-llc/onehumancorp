@@ -68,7 +68,6 @@ use tokio::sync::mpsc;
 use std::sync::OnceLock;
 use std::sync::Arc;
 use hub::Hub;
-use sqlx::Row;
 
 static TELEMETRY_CHAN: OnceLock<mpsc::Sender<Box<dyn FnOnce() + Send>>> = OnceLock::new();
 
@@ -222,197 +221,6 @@ impl HubService for MyHubService {
             storage_limit_bytes: storage_limit,
             next_bill_estimated: next_bill_estimated,
         }))
-    }
-
-    async fn update_social_post(
-        &self,
-        request: tonic::Request<::server_ohc::orchestration::UpdateSocialPostRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::SocialPost>, tonic::Status> {
-        let spiffe_id = request.metadata().get("x-spiffe-id").unwrap().to_str().unwrap();
-        let (org_id, _) = ::server_auth::parse_spiffe_id(spiffe_id)?;
-
-        let row = sqlx::query("UPDATE social_posts SET status = $1 WHERE id = $2 AND tenant_id = $3 RETURNING id, platform, content, media_urls, status, scheduled_at, published_at")
-            .bind(&request.get_ref().status)
-            .bind(&request.get_ref().id)
-            .bind(&org_id)
-            .fetch_one(&self.hub.pool)
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-        Ok(tonic::Response::new(SocialPost {
-            id: row.get("id"),
-            platform: row.get("platform"),
-            content: row.get("content"),
-            media_urls: row.get("media_urls"),
-            status: row.get("status"),
-            scheduled_at_unix: row.get::<Option<chrono::DateTime<Utc>>, _>("scheduled_at").map(|t| t.timestamp()).unwrap_or(0),
-            published_at_unix: row.get::<Option<chrono::DateTime<Utc>>, _>("published_at").map(|t| t.timestamp()).unwrap_or(0),
-        }))
-    }
-
-    async fn update_email_campaign(
-        &self,
-        request: tonic::Request<::server_ohc::orchestration::UpdateEmailCampaignRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::EmailCampaign>, tonic::Status> {
-        let spiffe_id = request.metadata().get("x-spiffe-id").unwrap().to_str().unwrap();
-        let (org_id, _) = ::server_auth::parse_spiffe_id(spiffe_id)?;
-
-        let row = sqlx::query("UPDATE email_campaigns SET status = $1 WHERE id = $2 AND tenant_id = $3 RETURNING id, title, subject, content_html, status, total_recipients, open_count, click_count, scheduled_at, sent_at")
-            .bind(&request.get_ref().status)
-            .bind(&request.get_ref().id)
-            .bind(&org_id)
-            .fetch_one(&self.hub.pool)
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-        Ok(tonic::Response::new(EmailCampaign {
-            id: row.get("id"),
-            title: row.get("title"),
-            subject: row.get("subject"),
-            content_html: row.get("content_html"),
-            status: row.get("status"),
-            total_recipients: row.get("total_recipients"),
-            open_count: row.get("open_count"),
-            click_count: row.get("click_count"),
-            scheduled_at_unix: row.get::<Option<chrono::DateTime<Utc>>, _>("scheduled_at").map(|t| t.timestamp()).unwrap_or(0),
-            sent_at_unix: row.get::<Option<chrono::DateTime<Utc>>, _>("sent_at").map(|t| t.timestamp()).unwrap_or(0),
-        }))
-    }
-
-    async fn get_milestones(
-        &self,
-        request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::GetMilestonesResponse>, tonic::Status> {
-        let spiffe_id = request.metadata().get("x-spiffe-id").unwrap().to_str().unwrap();
-        let (org_id, _) = ::server_auth::parse_spiffe_id(spiffe_id)?;
-
-        let rows = sqlx::query("SELECT id, milestone_key, achieved_at, notified FROM business_milestones WHERE tenant_id = $1 AND notified = FALSE")
-            .bind(&org_id)
-            .fetch_all(&self.hub.pool)
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-        let milestones = rows.into_iter().map(|row| {
-            BusinessMilestone {
-                id: row.get("id"),
-                milestone_key: row.get("milestone_key"),
-                achieved_at_unix: row.get::<chrono::DateTime<Utc>, _>("achieved_at").timestamp(),
-                notified: row.get("notified"),
-            }
-        }).collect();
-
-        Ok(tonic::Response::new(GetMilestonesResponse { milestones }))
-    }
-
-    async fn mark_milestone_notified(
-        &self,
-        request: tonic::Request<::server_ohc::orchestration::MarkMilestoneNotifiedRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::EmptyResponse>, tonic::Status> {
-        let spiffe_id = request.metadata().get("x-spiffe-id").unwrap().to_str().unwrap();
-        let (org_id, _) = ::server_auth::parse_spiffe_id(spiffe_id)?;
-
-        sqlx::query("UPDATE business_milestones SET notified = TRUE WHERE id = $1 AND tenant_id = $2")
-            .bind(&request.get_ref().id)
-            .bind(&org_id)
-            .execute(&self.hub.pool)
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-        Ok(tonic::Response::new(EmptyResponse {}))
-    }
-
-    async fn get_social_posts(
-        &self,
-        request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::SocialPostsResponse>, tonic::Status> {
-        let spiffe_id = request.metadata().get("x-spiffe-id").unwrap().to_str().unwrap();
-        let (org_id, _) = ::server_auth::parse_spiffe_id(spiffe_id)?;
-        let posts = crate::services::growth::social_media::get_posts(&self.hub.pool, &org_id).await?;
-        Ok(tonic::Response::new(SocialPostsResponse { posts }))
-    }
-
-    async fn create_social_post(
-        &self,
-        request: tonic::Request<::server_ohc::orchestration::CreateSocialPostRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::SocialPost>, tonic::Status> {
-        let spiffe_id = request.metadata().get("x-spiffe-id").unwrap().to_str().unwrap();
-        let (org_id, _) = ::server_auth::parse_spiffe_id(spiffe_id)?;
-        let post = crate::services::growth::social_media::create_post(&self.hub.pool, &org_id, request.into_inner()).await?;
-        Ok(tonic::Response::new(post))
-    }
-
-    async fn get_email_campaigns(
-        &self,
-        request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::EmailCampaignsResponse>, tonic::Status> {
-        let spiffe_id = request.metadata().get("x-spiffe-id").unwrap().to_str().unwrap();
-        let (org_id, _) = ::server_auth::parse_spiffe_id(spiffe_id)?;
-        let campaigns = crate::services::growth::email_marketing::get_campaigns(&self.hub.pool, &org_id).await?;
-        Ok(tonic::Response::new(EmailCampaignsResponse { campaigns }))
-    }
-
-    async fn create_email_campaign(
-        &self,
-        request: tonic::Request<::server_ohc::orchestration::CreateEmailCampaignRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::EmailCampaign>, tonic::Status> {
-        let spiffe_id = request.metadata().get("x-spiffe-id").unwrap().to_str().unwrap();
-        let (org_id, _) = ::server_auth::parse_spiffe_id(spiffe_id)?;
-        let campaign = crate::services::growth::email_marketing::create_campaign(&self.hub.pool, &org_id, request.into_inner()).await?;
-        Ok(tonic::Response::new(campaign))
-    }
-
-    async fn get_business_metadata(
-        &self,
-        request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::BusinessMetadata>, tonic::Status> {
-        let spiffe_id = request.metadata().get("x-spiffe-id").unwrap().to_str().unwrap();
-        let (org_id, _) = ::server_auth::parse_spiffe_id(spiffe_id)?;
-
-        let row = sqlx::query("SELECT tagline, description, logo_url, cover_image_url FROM business_metadata WHERE tenant_id = $1")
-            .bind(&org_id)
-            .fetch_optional(&self.hub.pool)
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-        if let Some(row) = row {
-            Ok(tonic::Response::new(BusinessMetadata {
-                tagline: row.get("tagline"),
-                description: row.get("description"),
-                logo_url: row.get("logo_url"),
-                cover_image_url: row.get("cover_image_url"),
-                share_url: format!("ohc.app/b/{}", org_id),
-            }))
-        } else {
-            Ok(tonic::Response::new(BusinessMetadata::default()))
-        }
-    }
-
-    async fn update_business_metadata(
-        &self,
-        request: tonic::Request<::server_ohc::orchestration::BusinessMetadata>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::BusinessMetadata>, tonic::Status> {
-        let spiffe_id = request.metadata().get("x-spiffe-id").unwrap().to_str().unwrap();
-        let (org_id, _) = ::server_auth::parse_spiffe_id(spiffe_id)?;
-        let req = request.into_inner();
-
-        sqlx::query(
-            "INSERT INTO business_metadata (tenant_id, tagline, description, logo_url, cover_image_url, updated_at) \
-             VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP) \
-             ON CONFLICT (tenant_id) DO UPDATE SET \
-             tagline = EXCLUDED.tagline, description = EXCLUDED.description, \
-             logo_url = EXCLUDED.logo_url, cover_image_url = EXCLUDED.cover_image_url, \
-             updated_at = CURRENT_TIMESTAMP"
-        )
-        .bind(&org_id)
-        .bind(&req.tagline)
-        .bind(&req.description)
-        .bind(&req.logo_url)
-        .bind(&req.cover_image_url)
-        .execute(&self.hub.pool)
-        .await
-        .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-        Ok(tonic::Response::new(req))
     }
 
     async fn get_cost_dashboard(
@@ -1167,20 +975,11 @@ impl HubService for MyHubService {
         &self,
         request: Request<ReasonRequest>,
     ) -> Result<Response<ReasonResponse>, Status> {
-        let spiffe_id = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("spiffe://onehumancorp.io/system/system");
-        let (org_id, _) = ::server_auth::parse_spiffe_id(spiffe_id)?;
-
         let req = request.into_inner();
         let api_key = self.hub.minimax_api_key().to_string();
         if api_key.is_empty() {
             return Err(Status::failed_precondition("Minimax API key is not configured"));
         }
-
-        // Quota Accounting
-        let _ = sqlx::query("UPDATE tenants SET actions_count_current_month = actions_count_current_month + 1 WHERE id = $1")
-            .bind(&org_id)
-            .execute(&self.hub.pool)
-            .await;
         
         let client = minimax::MinimaxClient::new(api_key);
         match client.reason(&req.prompt).await {
@@ -1466,9 +1265,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     ops_worker.start();
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
-
-    let email_campaign_worker = crate::workers::email_campaign_worker::EmailCampaignWorker::new(db.clone());
-    email_campaign_worker.start();
 
     // Start Maintenance Worker
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
@@ -1962,8 +1758,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
-                            <button onclick="showScreen('social-dashboard-screen')">Social Media</button>
-                            <button onclick="showScreen('email-campaigns-screen')">Email Marketing</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
@@ -1977,11 +1771,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p>No recent activity.</p>
                             </div>
                             <button onclick="simulateOrder()">Simulate Order</button>
-                        </div>
-                        <div id="milestone-toast" class="card glass" style="display: none; position: fixed; bottom: 20px; right: 20px; background: #4ecca3; color: white; border: none; z-index: 1000;">
-                            <h3 id="milestone-title">🎉 Milestone Reached!</h3>
-                            <p id="milestone-msg">Congratulations!</p>
-                            <button class="secondary" onclick="document.getElementById('milestone-toast').style.display='none'">Dismiss</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
@@ -2120,41 +1909,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Continuing...')">Next</button>
                             <button onclick="alert('Continuing...')">Continue</button>
                         </div>
-                        <footer style="margin-top: 50px; padding: 20px; text-align: center; border-top: 1px solid var(--border); font-size: 14px; color: var(--text-secondary);">
-                            Built with <a href="/signup" style="color: var(--primary); text-decoration: none; font-weight: 600;">OneHumanCorp</a> — Start your free business →
-                        </footer>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
-
-                    <!-- Social Dashboard -->
-                    <div id="social-dashboard-screen" class="screen glass">
-                        <h1>Social Media Management</h1>
-                        <div class="card glass">
-                            <h3>Auto-Post Status</h3>
-                            <p>AI Agent: <strong>Active</strong></p>
-                            <p>Platforms: Instagram, Facebook, X</p>
-                        </div>
-                        <div class="card glass">
-                            <h3>Approval Queue</h3>
-                            <div id="social-approval-list">
-                                <p>Loading posts...</p>
-                            </div>
-                        </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
-
-                    <!-- Email Marketing -->
-                    <div id="email-campaigns-screen" class="screen glass">
-                        <h1>Email Campaigns</h1>
-                        <div class="card glass">
-                            <button onclick="createCampaign()">✨ New AI Campaign</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Recent Campaigns</h3>
-                            <div id="email-campaign-list">
-                                <p>Loading campaigns...</p>
-                            </div>
-                        </div>
+                        <p>Built with OHC — Start your free business →</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
@@ -2479,8 +2234,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'checkout-screen': '/checkout',
                             'users-screen': '/users',
                             'referral-dashboard-screen': '/referrals',
-                            'social-dashboard-screen': '/social',
-                            'email-campaigns-screen': '/email',
                             'inbox-screen': '/inbox',
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1'
@@ -2508,88 +2261,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'social-dashboard-screen' || id === 'email-campaigns-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
-
-                            if (id === 'social-dashboard-screen') loadSocialPosts();
-                            if (id === 'email-campaigns-screen') loadEmailCampaigns();
                         }
-
-                        async fn apiCall(method, path, body = null) {
-                            const res = await fetch(path, {
-                                method,
-                                headers: { 'Content-Type': 'application/json' },
-                                body: body ? JSON.stringify(body) : null
-                            });
-                            return res.json();
-                        }
-
-                        async fn loadSocialPosts() {
-                            const list = document.getElementById('social-approval-list');
-                            list.innerHTML = '<p>Loading...</p>';
-                            try {
-                                const posts = await apiCall('GET', '/api/v1/growth/social/posts');
-                                list.innerHTML = posts.map(p => `
-                                    <div class="card glass">
-                                        <p>${p.content}</p>
-                                        <small>Platform: ${p.platform} | Status: ${p.status}</small><br/>
-                                        ${p.status === 'DRAFT' ? `<button onclick="updatePost('${p.id}', 'SCHEDULED')">Approve & Schedule</button>` : ''}
-                                    </div>
-                                `).join('') || '<p>No posts drafted.</p>';
-                            } catch (e) {
-                                list.innerHTML = '<p>Error loading posts.</p>';
-                            }
-                        }
-
-                        async fn updatePost(id, status) {
-                            await apiCall('POST', `/api/v1/growth/social/post/${id}/status`, { status });
-                            loadSocialPosts();
-                        }
-
-                        async fn loadEmailCampaigns() {
-                            const list = document.getElementById('email-campaign-list');
-                            list.innerHTML = '<p>Loading...</p>';
-                            try {
-                                const camps = await apiCall('GET', '/api/v1/growth/email/campaigns');
-                                list.innerHTML = camps.map(c => `
-                                    <div class="card glass">
-                                        <h4>${c.title}</h4>
-                                        <p>Subject: ${c.subject}</p>
-                                        <small>Status: ${c.status} | Sent: ${c.total_recipients}</small>
-                                    </div>
-                                `).join('') || '<p>No campaigns found.</p>';
-                            } catch (e) {
-                                list.innerHTML = '<p>Error loading campaigns.</p>';
-                            }
-                        }
-
-                        async fn createCampaign() {
-                            const title = prompt("Campaign Title:");
-                            const subject = prompt("Subject Line:");
-                            const content = prompt("Content (HTML):");
-                            if (title && subject && content) {
-                                await apiCall('POST', '/api/v1/growth/email/campaign', { title, subject, content_html: content });
-                                loadEmailCampaigns();
-                            }
-                        }
-
-                        async fn checkMilestones() {
-                            try {
-                                const res = await apiCall('GET', '/api/v1/growth/milestones');
-                                if (res.milestones && res.milestones.length > 0) {
-                                    const m = res.milestones[0];
-                                    document.getElementById('milestone-title').innerText = "🎉 Milestone Reached!";
-                                    document.getElementById('milestone-msg').innerText = m.milestone_key.replace(/_/g, ' ');
-                                    document.getElementById('milestone-toast').style.display = 'block';
-                                    await apiCall('POST', `/api/v1/growth/milestones/${m.id}/notified`);
-                                }
-                            } catch (e) {}
-                        }
-
-                        setInterval(checkMilestones, 30000);
 
                         window.onload = () => {
                             const path = window.location.pathname;

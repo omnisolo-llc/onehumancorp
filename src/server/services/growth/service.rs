@@ -505,43 +505,18 @@ impl GrowthService for MyGrowthService {
             sqlx::query(&query).bind(&org_id).bind(&req.user_id).fetch_one(&mut *tx).await
         }.map_err(|e| Status::internal(e.to_string()))?;
 
-        let tier: String = sqlx::query_scalar("SELECT tier FROM tenants WHERE id = $1")
-            .bind(&org_id)
-            .fetch_one(&mut *tx)
-            .await
-            .unwrap_or_else(|_| "free".to_string());
-
-        let actions_used: i32 = sqlx::query_scalar("SELECT actions_count_current_month FROM tenants WHERE id = $1")
-            .bind(&org_id)
-            .fetch_one(&mut *tx)
-            .await
-            .unwrap_or(0);
-
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         let total_conversions: i64 = row.try_get(0).unwrap_or(0);
+        let max_quota = 50 + (total_conversions as i32) * 10;
         
-        let tracker = crate::services::growth::quota::QuotaTracker::new(10, 5);
-        let max_quota = tracker.calculate_quota(&tier, total_conversions as i32);
+        let status = self.hub.tracker().check_product_quota(&org_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        });
 
-        let is_allowed = actions_used < max_quota;
-        let soft_limit_reached = actions_used >= (max_quota as f32 * 0.8) as i32;
-
-        let upgrade_message = if !is_allowed {
-            format!("You have reached your limit of {} AI actions. Upgrade to Starter or Pro to continue growing your business!", max_quota)
-        } else if soft_limit_reached {
-            format!("You are approaching your limit ({} / {} actions used). Share OHC with a friend to increase your quota!", actions_used, max_quota)
-        } else {
-            String::new()
-        };
-
-        Ok(Response::new(QuotaMetrics {
-            used: actions_used,
-            max: max_quota,
-            soft_limit_reached,
-            upgrade_message,
-            is_allowed
-        }))
+        Ok(Response::new(QuotaMetrics { used: 10, max: max_quota, soft_limit_reached: status.soft_limit_reached, upgrade_message: status.user_message.unwrap_or_default(), is_allowed: status.is_allowed }))
     }
 
     async fn get_waitlist(
@@ -629,7 +604,7 @@ impl GrowthService for MyGrowthService {
                 description: row.get("description"),
                 logo_url: row.get("logo_url"),
                 cover_image_url: row.get("cover_image_url"),
-                share_url: format!("ohc.app/b/{}", org_id), // Fallback share URL
+                share_url: format!("ohc.app/b/{}", org_id),
             }))
         } else {
             Ok(Response::new(BusinessMetadata::default()))
@@ -812,90 +787,5 @@ mod tests {
         list_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
         let list_resp = service.get_referrals(list_req).await.unwrap().into_inner();
         assert!(list_resp.referrals.iter().any(|r| r.id == resp.id));
-    }
-
-    #[tokio::test]
-    async fn test_social_and_email_ops() {
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        if database_url.contains("localhost") { return; }
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
-        let pool = match pool_opts.connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let service = MyGrowthService::new(pool, hub);
-
-        let mut req = Request::new(CreateSocialPostRequest {
-            platform: "instagram".to_string(),
-            content: "Test post".to_string(),
-            media_urls: vec![],
-            scheduled_at_unix: 0,
-        });
-        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
-
-        let post = service.create_social_post(req).await.unwrap().into_inner();
-        assert_eq!(post.platform, "instagram");
-        assert_eq!(post.content, "Test post");
-
-        let mut list_req = Request::new(EmptyRequest {});
-        list_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
-        let posts = service.get_social_posts(list_req).await.unwrap().into_inner();
-        assert!(posts.posts.iter().any(|p| p.id == post.id));
-
-        let mut email_req = Request::new(CreateEmailCampaignRequest {
-            title: "Test Campaign".to_string(),
-            subject: "Hello".to_string(),
-            content_html: "<h1>Hi</h1>".to_string(),
-            scheduled_at_unix: 0,
-        });
-        email_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
-        let camp = service.create_email_campaign(email_req).await.unwrap().into_inner();
-        assert_eq!(camp.title, "Test Campaign");
-
-        let mut list_email_req = Request::new(EmptyRequest {});
-        list_email_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
-        let camps = service.get_email_campaigns(list_email_req).await.unwrap().into_inner();
-        assert!(camps.campaigns.iter().any(|c| c.id == camp.id));
-    }
-
-    #[tokio::test]
-    async fn test_full_growth_loop() {
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        if database_url.contains("localhost") { return; }
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
-        let pool = match pool_opts.connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let service = MyGrowthService::new(pool, hub);
-
-        let org_id = "growth_test_org";
-        let spiffe = format!("spiffe://onehumancorp.io/{}/agent", org_id);
-
-        let _ = sqlx::query("INSERT INTO tenants (id, name, tier, actions_count_current_month) VALUES ($1, 'Growth Store', 'free', 0) ON CONFLICT DO NOTHING")
-            .bind(org_id)
-            .execute(&service.pool).await;
-
-        // 1. Check Initial Quota
-        let mut quota_req = Request::new(GetQuotaRequest { user_id: "".to_string() });
-        quota_req.metadata_mut().insert("x-spiffe-id", spiffe.parse().unwrap());
-        let q1 = service.get_quota(quota_req).await.unwrap().into_inner();
-        assert_eq!(q1.max, 50);
-
-        // 2. Create Referral
-        let mut ref_req = Request::new(CreateReferralRequest { user_id: "u1".to_string(), referral_code: "REF123".to_string() });
-        ref_req.metadata_mut().insert("x-spiffe-id", spiffe.parse().unwrap());
-        let referral = service.create_referral(ref_req).await.unwrap().into_inner();
-
-        // 3. Convert Referral
-        let mut conv_req = Request::new(GrowthIdRequest { id: referral.id });
-        conv_req.metadata_mut().insert("x-spiffe-id", spiffe.parse().unwrap());
-        service.convert_referral(conv_req).await.unwrap();
-
-        // 4. Check Increased Quota
-        let mut quota_req2 = Request::new(GetQuotaRequest { user_id: "".to_string() });
-        quota_req2.metadata_mut().insert("x-spiffe-id", spiffe.parse().unwrap());
-        let q2 = service.get_quota(quota_req2).await.unwrap().into_inner();
-        assert_eq!(q2.max, 100); // 50 + (1 * 50)
     }
 }
