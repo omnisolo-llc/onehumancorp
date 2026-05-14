@@ -86,13 +86,18 @@ echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 # Launch the Prometheus agent
 if [ "$OHC_TELEMETRY_ENABLED" = "true" ]; then
   docker rm -f ohc-prometheus-agent >/dev/null 2>&1 || true
+  # Optimize Prometheus Agent footprint for Standalone Mode by further constraining CPU/Memory usage and reducing retention/scrape intervals
   docker run -d --name ohc-prometheus-agent \
-    --memory="32m" --cpus="0.05" \
-    --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
+    --memory="16m" --memory-swap="16m" --cpus="0.02" \
+    --log-driver json-file --log-opt max-size=5m --log-opt max-file=2 \
     --network host \
     -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml \
-    prom/prometheus:latest --config.file=/etc/prometheus/prometheus.yml --enable-feature=agent > /dev/null 2>&1
-  echo -e "  ${GREEN}✓ Prometheus agent started in Docker (resource constrained)${RESET}"
+    prom/prometheus:latest \
+    --config.file=/etc/prometheus/prometheus.yml \
+    --enable-feature=agent \
+    --storage.agent.retention.min-time=5m \
+    --storage.agent.retention.max-time=15m > /dev/null 2>&1
+  echo -e "  ${GREEN}✓ Prometheus agent started in Docker (ultra-low resource footprint)${RESET}"
 fi
 
 # Trap INT and EXIT signals to gracefully shutdown all local processes

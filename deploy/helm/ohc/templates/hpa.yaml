@@ -25,6 +25,15 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}
+{{- if .Values.multiTenant.enabled }}
+    - type: Pods
+      pods:
+        metric:
+          name: ohc_active_tenants
+        target:
+          type: AverageValue
+          averageValue: 50
+{{- end }}
 {{- end }}
 ---
 {{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}
@@ -54,6 +63,15 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.ohcCore.autoscaling.targetMemoryUtilizationPercentage }}
+{{- if .Values.multiTenant.enabled }}
+    - type: Pods
+      pods:
+        metric:
+          name: ohc_core_queue_length
+        target:
+          type: AverageValue
+          averageValue: 100
+{{- end }}
 {{- end }}
 ---
 {{- if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled }}

@@ -71,7 +71,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div style=\"text-align: center;\">\n  <h1 style=\"color: #00d3ff; font-weight: 800; letter-spacing: 2px;\">OHC HYBRID DATABASE METRICS</h1>\n  <p style=\"color: #a9a9a9; font-size: 14px;\">Cloud-Native (PostgreSQL) vs Standalone (SQLite) Telemetry</p>\n</div>",
+        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div style=\"text-align: center;\">\n  <h1 style=\"color: #00d3ff; font-weight: 800; letter-spacing: 2px;\">OHC STANDALONE TELEMETRY</h1>\n  <p style=\"color: #a9a9a9; font-size: 14px;\">Desktop Wrapper Resource & Process Lifecycle Observability</p>\n</div>",
         "mode": "html"
       },
       "pluginVersion": "10.0.0",
@@ -161,13 +161,13 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(db_client_operation_duration_seconds_count[1m])) by (mode)",
-          "legendFormat": "{{mode}}",
+          "expr": "process_resident_memory_bytes{job=\"standalone_wrapper\"}",
+          "legendFormat": "Memory Usage (RSS)",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Total Query QPS by Mode",
+      "title": "Standalone Process Memory Usage",
       "type": "timeseries"
     },
     {
@@ -253,13 +253,13 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(db_client_operation_errors_total[1m])) by (operation)",
-          "legendFormat": "{{operation}}",
+          "expr": "rate(process_cpu_seconds_total{job=\"standalone_wrapper\"}[1m])",
+          "legendFormat": "CPU Usage Rate",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Error Rate by Operation",
+      "title": "Standalone Process CPU Usage",
       "type": "timeseries"
     },
     {
@@ -345,35 +345,13 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le))",
-          "legendFormat": "P99 Latency",
+          "expr": "up{job=\"standalone_wrapper\"}",
+          "legendFormat": "Uptime Status",
           "range": true,
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.90, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le))",
-          "legendFormat": "P90 Latency",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le))",
-          "legendFormat": "P50 Latency",
-          "range": true,
-          "refId": "C"
         }
       ],
-      "title": "Total Query Latency",
+      "title": "Standalone Process Health",
       "type": "timeseries"
     },
     {
@@ -459,13 +437,13 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(sqlite_lock_contention_total[1m])) by (operation)",
-          "legendFormat": "{{operation}}",
+          "expr": "sum(rate(ohc_sub_agent_queue_length[1m]))",
+          "legendFormat": "Queue Length",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "SQLite Lock Contention",
+      "title": "Standalone Local Queue Status",
       "type": "timeseries"
     }
   ],
@@ -481,7 +459,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "OHC Hybrid Database Metrics",
-  "uid": "ohc-hybrid-db-metrics",
+  "title": "OHC Standalone Telemetry",
+  "uid": "ohc-standalone-telemetry",
   "version": 1
 }
