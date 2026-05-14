@@ -66,10 +66,6 @@ func (s *Scheduler) claimTaskPostgres(ctx context.Context, agentID string, table
 	}
 	defer tx.Rollback()
 
-	// Find unblocked PENDING tasks using FOR UPDATE SKIP LOCKED. Fetch up to 10.
-	// To avoid locking all pending rows and starving other workers, we limit the query to 10 rows.
-	// A robust production implementation would use a recursive CTE to check dependencies inside SQL,
-	// but scanning 10 tasks and breaking early provides high enough lock-free concurrency for KAIROS.
 	// Find unblocked PENDING tasks using FOR UPDATE SKIP LOCKED.
 	// We use a CTE to filter out tasks that have incomplete dependencies.
 	query := fmt.Sprintf(`

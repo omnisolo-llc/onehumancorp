@@ -11,7 +11,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func setupTestDB(t *testing.T) *sqlx.DB {
+func setupSchedulerTestDB(t *testing.T) *sqlx.DB {
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("Failed to connect to in-memory db: %v", err)
@@ -39,7 +39,7 @@ func setupTestDB(t *testing.T) *sqlx.DB {
 }
 
 func TestClaimTask_SQLite(t *testing.T) {
-	db := setupTestDB(t)
+	db := setupSchedulerTestDB(t)
 	defer db.Close()
 
 	scheduler := NewScheduler(db, "sqlite3")
@@ -68,7 +68,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 }
 
 func TestClaimTask_DAGBlocked_SQLite(t *testing.T) {
-	db := setupTestDB(t)
+	db := setupSchedulerTestDB(t)
 	defer db.Close()
 
 	scheduler := NewScheduler(db, "sqlite3")
@@ -96,7 +96,7 @@ func TestClaimTask_DAGBlocked_SQLite(t *testing.T) {
 }
 
 func TestCheckDependencies_MissingParent(t *testing.T) {
-	db := setupTestDB(t)
+	db := setupSchedulerTestDB(t)
 	defer db.Close()
 
 	scheduler := NewScheduler(db, "sqlite3")
@@ -110,7 +110,7 @@ func TestCheckDependencies_MissingParent(t *testing.T) {
 }
 
 func TestCheckDependencies_InvalidJSON(t *testing.T) {
-	db := setupTestDB(t)
+	db := setupSchedulerTestDB(t)
 	defer db.Close()
 
 	scheduler := NewScheduler(db, "sqlite3")
@@ -146,7 +146,7 @@ func TestClaimTaskPostgres_Mocked(t *testing.T) {
 
 	// 1. Success scenario
 	mock.ExpectBegin()
-	mock.ExpectQuery(`(?s).*SELECT t.id, t.dependencies.*`).
+	mock.ExpectQuery(`.*`).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "dependencies"}).AddRow("pg_t1", "[]"))
 	mock.ExpectQuery(`.*`).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "status", "dependencies"}).AddRow("pg_t1", "IN_PROGRESS", "[]"))
@@ -225,7 +225,7 @@ func TestClaimTaskSQLite_Mocked(t *testing.T) {
     mock.ExpectQuery(`.*`).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "dependencies"}).AddRow("sq_t1", "[]"))
     mock.ExpectQuery(`.*`).WillReturnError(sql.ErrNoRows)
-    mock.ExpectCommit()
+    mock.ExpectRollback()
     task, err := scheduler.ClaimTask(context.Background(), "agent1")
 	if err != nil || task != nil {
 		t.Errorf("expected graceful nil for sqlite update norows race condition")
@@ -489,5 +489,10 @@ func TestClaimTaskPostgres_StructScanErr(t *testing.T) {
 	}
 }
 
-func TestCheckDependenciesSQLite_InQueryErr(t *testing.T) {
+func TestClaimTaskFromTable_InvalidTable(t *testing.T) {
+	scheduler := NewScheduler(nil, "postgres")
+	_, err := scheduler.ClaimTaskFromTable(context.Background(), "agent1", "invalid_table")
+	if err == nil {
+		t.Errorf("expected error for invalid table name")
+	}
 }

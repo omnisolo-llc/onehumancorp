@@ -1,6 +1,8 @@
 filegroup(
     name = "srcs",
     srcs = [
+        "scheduler.go",
+        "scheduler_test.go",
         "chaos_test.rs",
         "handoff.rs",
         "health.rs",
@@ -15,4 +17,29 @@ filegroup(
         "//src/server/orchestration/departments:srcs",        "//src/server/orchestration/queue:srcs",        "//src/server/orchestration/state:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
+)
+
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "orchestration_go",
+    srcs = ["scheduler.go", "sync_daemon.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/orchestration",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_jmoiron_sqlx//:sqlx",
+        "@com_github_lib_pq//:pq",
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
+    ],
+)
+
+go_test(
+    name = "orchestration_test",
+    srcs = ["scheduler_test.go", "sync_daemon_test.go"],
+    embed = [":orchestration_go"],
+    deps = [
+        "@com_github_data_dog_go_sqlmock//:go-sqlmock",
+        "@com_github_jmoiron_sqlx//:sqlx",
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
+    ],
 )
