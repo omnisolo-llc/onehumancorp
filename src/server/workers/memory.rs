@@ -99,7 +99,9 @@ mod tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         )
         .execute(&pool)
@@ -122,6 +124,8 @@ mod tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
         repo.upsert(&stale_record).await.expect("Failed to upsert stale record");
 
@@ -166,7 +170,9 @@ mod tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         )
         .execute(&pool)
@@ -189,6 +195,8 @@ mod tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         // Insert two conflicting records
@@ -205,6 +213,8 @@ mod tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         let conflict_winner = ohc_builtin_agent::memory_store::EmbeddingRecord {
@@ -220,6 +230,8 @@ mod tests {
             reliability_score: 90, // Higher score = winner
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&stale_record).await.unwrap();

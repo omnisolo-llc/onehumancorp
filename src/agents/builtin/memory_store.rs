@@ -16,6 +16,8 @@ pub struct EmbeddingRecord {
     pub reliability_score: i32,
     pub owner_override: bool,
     pub metadata: Option<String>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub version: i64,
 }
 
 pub enum VectorMemoryStore {
@@ -47,8 +49,8 @@ impl VectorRepository {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query(
-                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
-                     VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9, $10, $11, $12) \
+                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, updated_at, version) \
+                     VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
                      ON CONFLICT(id) DO UPDATE SET \
                          content=excluded.content, \
                          embedding=excluded.embedding, \
@@ -57,7 +59,9 @@ impl VectorRepository {
                          reference_count=excluded.reference_count, \
                          reliability_score=excluded.reliability_score, \
                          owner_override=excluded.owner_override, \
-                         metadata=excluded.metadata"
+                         metadata=excluded.metadata, \
+                         updated_at=CURRENT_TIMESTAMP, \
+                         version=consolidated_memory.version + 1"
                 )
                 .bind(&record.id)
                 .bind(&record.tenant_id)
@@ -71,14 +75,16 @@ impl VectorRepository {
                 .bind(record.reliability_score)
                 .bind(record.owner_override)
                 .bind(&record.metadata)
+                .bind(record.updated_at)
+                .bind(record.version)
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
                 sqlx::query(
-                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
+                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, updated_at, version) \
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
                      ON CONFLICT(id) DO UPDATE SET \
                          content=excluded.content, \
                          embedding=excluded.embedding, \
@@ -87,7 +93,9 @@ impl VectorRepository {
                          reference_count=excluded.reference_count, \
                          reliability_score=excluded.reliability_score, \
                          owner_override=excluded.owner_override, \
-                         metadata=excluded.metadata"
+                         metadata=excluded.metadata, \
+                         updated_at=CURRENT_TIMESTAMP, \
+                         version=consolidated_memory.version + 1"
                 )
                 .bind(&record.id)
                 .bind(&record.tenant_id)
@@ -101,6 +109,8 @@ impl VectorRepository {
                 .bind(record.reliability_score)
                 .bind(record.owner_override)
                 .bind(&record.metadata)
+                .bind(record.updated_at)
+                .bind(record.version)
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -122,7 +132,7 @@ impl VectorRepository {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 let rows = sqlx::query(
-                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, updated_at, version \
                      FROM consolidated_memory \
                      WHERE tenant_id = $1 \
                      ORDER BY embedding <=> $2::vector \
@@ -167,7 +177,9 @@ impl VectorRepository {
                         reliability_score,
                         owner_override,
                         metadata,
-                    });
+                            updated_at: created_at,
+                            version: 1,
+                        });
                 }
 
                 if !ids_to_update.is_empty() {
@@ -187,7 +199,7 @@ impl VectorRepository {
 
                 if has_vec_extension {
                     let rows = sqlx::query(
-                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, updated_at, version \
                          FROM consolidated_memory \
                          WHERE tenant_id = ? \
                          ORDER BY vec_distance_cosine(embedding, ?) \
@@ -232,6 +244,8 @@ impl VectorRepository {
                             reliability_score,
                             owner_override,
                             metadata,
+                            updated_at: created_at,
+                            version: 1,
                         });
                     }
 
@@ -246,7 +260,7 @@ impl VectorRepository {
                     }
                 } else {
                     let rows = sqlx::query(
-                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, updated_at, version \
                          FROM consolidated_memory \
                          WHERE tenant_id = ? \
                          LIMIT 1000"
@@ -274,6 +288,8 @@ impl VectorRepository {
                             reliability_score: row.get("reliability_score"),
                             owner_override: row.get("owner_override"),
                             metadata: row.get("metadata"),
+                            updated_at: row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+                            version: row.try_get::<i64, _>("version").unwrap_or(1),
                         };
                         all_records.push(record);
                     }
@@ -423,8 +439,8 @@ impl VectorRepository {
             VectorMemoryStore::Postgres(pool) => {
                 let query = "
                     SELECT
-                        a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding::text AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
-                        b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
+                        a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding::text AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata, a.updated_at AS a_updated_at, a.version AS a_version,
+                        b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata, b.updated_at AS b_updated_at, b.version AS b_version
                     FROM consolidated_memory a
                     JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
                     WHERE a.embedding <=> b.embedding < 0.05
@@ -455,6 +471,8 @@ impl VectorRepository {
                         reliability_score: row.get("a_reliability_score"),
                         owner_override: row.get("a_owner_override"),
                         metadata: row.get("a_metadata"),
+                            updated_at: row.try_get::<chrono::DateTime<chrono::Utc>, _>("a_updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+                            version: row.try_get::<i64, _>("a_version").unwrap_or(1),
                     };
 
                     let b = EmbeddingRecord {
@@ -470,6 +488,8 @@ impl VectorRepository {
                         reliability_score: row.get("b_reliability_score"),
                         owner_override: row.get("b_owner_override"),
                         metadata: row.get("b_metadata"),
+                            updated_at: row.try_get::<chrono::DateTime<chrono::Utc>, _>("b_updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+                            version: row.try_get::<i64, _>("b_version").unwrap_or(1),
                     };
 
                     conflicts.push((a, b));
@@ -485,8 +505,8 @@ impl VectorRepository {
                 if has_vec_extension {
                     let query = "
                         SELECT
-                            a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
-                            b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
+                            a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata, a.updated_at AS a_updated_at, a.version AS a_version,
+                            b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata, b.updated_at AS b_updated_at, b.version AS b_version
                         FROM consolidated_memory a
                         JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
                         WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.05
@@ -517,6 +537,8 @@ impl VectorRepository {
                             reliability_score: row.get("a_reliability_score"),
                             owner_override: row.get("a_owner_override"),
                             metadata: row.get("a_metadata"),
+                            updated_at: row.try_get::<chrono::DateTime<chrono::Utc>, _>("a_updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+                            version: row.try_get::<i64, _>("a_version").unwrap_or(1),
                         };
 
                         let b = EmbeddingRecord {
@@ -532,6 +554,8 @@ impl VectorRepository {
                             reliability_score: row.get("b_reliability_score"),
                             owner_override: row.get("b_owner_override"),
                             metadata: row.get("b_metadata"),
+                            updated_at: row.try_get::<chrono::DateTime<chrono::Utc>, _>("b_updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+                            version: row.try_get::<i64, _>("b_version").unwrap_or(1),
                         };
 
                         conflicts.push((a, b));
@@ -540,7 +564,7 @@ impl VectorRepository {
                     // Fallback for tests environments without sqlite-vec loaded:
                     let query = "
                         SELECT
-                            id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata
+                            id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, updated_at, version
                         FROM consolidated_memory LIMIT 1000
                     ";
                     let rows = sqlx::query(query)
@@ -566,6 +590,8 @@ impl VectorRepository {
                             reliability_score: row.get("reliability_score"),
                             owner_override: row.get("owner_override"),
                             metadata: row.get("metadata"),
+                            updated_at: row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+                            version: row.try_get::<i64, _>("version").unwrap_or(1),
                         };
                         all_records.push(record);
                     }
@@ -691,6 +717,8 @@ mod tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         let json = serde_json::to_string(&record).unwrap();
@@ -822,6 +850,8 @@ impl LongTermMemory for PersistentMemoryStore {
             reliability_score: 100,
             owner_override: false,
             metadata: Some(serde_json::to_string(&tags).unwrap_or_default()),
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
         self.repo.upsert(&record).await
     }
@@ -1089,7 +1119,9 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -1108,6 +1140,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: true,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
         let r2 = EmbeddingRecord {
             id: "rec2".to_string(),
@@ -1122,6 +1156,8 @@ mod get_conflicts_tests {
             reliability_score: 100,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&r1).await.unwrap();
@@ -1163,7 +1199,9 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -1183,6 +1221,8 @@ mod get_conflicts_tests {
             reliability_score: 90,
             owner_override: true,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         let loser = EmbeddingRecord {
@@ -1198,6 +1238,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&winner).await.unwrap();
@@ -1240,7 +1282,9 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -1261,6 +1305,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
         let r2 = EmbeddingRecord {
             id: "rec1_b".to_string(),
@@ -1275,6 +1321,8 @@ mod get_conflicts_tests {
             reliability_score: 40,
             owner_override: true, // Should win
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         // 2. Conflict resolved by reliability_score
@@ -1291,6 +1339,8 @@ mod get_conflicts_tests {
             reliability_score: 80, // Should win
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
         let r4 = EmbeddingRecord {
             id: "rec2_b".to_string(),
@@ -1305,6 +1355,8 @@ mod get_conflicts_tests {
             reliability_score: 60,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         // 3. Conflict resolved by recency
@@ -1322,6 +1374,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
         let r6 = EmbeddingRecord {
             id: "rec3_b".to_string(),
@@ -1336,6 +1390,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&r1).await.unwrap();
@@ -1390,7 +1446,9 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -1412,6 +1470,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         // Record 2: Old enough, source_type is TASK_SUMMARY, but owner_override = TRUE -> Should be kept
@@ -1428,6 +1488,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: true,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         // Record 3: Old enough, source_type is TASK_SUMMARY, but reference_count >= 5 -> Should be kept
@@ -1444,6 +1506,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         // Record 4: Old enough, but source_type is NOT TASK_SUMMARY -> Should be kept
@@ -1460,6 +1524,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&record1).await.unwrap();
@@ -1504,7 +1570,9 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -1525,6 +1593,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
         let r2 = EmbeddingRecord {
             id: "rec4_b".to_string(),
@@ -1539,6 +1609,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&r1).await.unwrap();
@@ -1581,7 +1653,9 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -1603,6 +1677,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         let record2 = EmbeddingRecord {
@@ -1618,6 +1694,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&record1).await.unwrap();
@@ -1661,7 +1739,9 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -1681,6 +1761,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&record1).await.unwrap();
@@ -1717,7 +1799,9 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -1737,6 +1821,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         let record2 = EmbeddingRecord {
@@ -1752,6 +1838,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&record1).await.unwrap();
@@ -1788,7 +1876,9 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -1808,6 +1898,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         let record_dept_b = EmbeddingRecord {
@@ -1823,6 +1915,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         let record_other_tenant = EmbeddingRecord {
@@ -1838,6 +1932,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&record_dept_a).await.unwrap();
@@ -1881,7 +1977,9 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -1901,6 +1999,8 @@ mod get_conflicts_tests {
             reliability_score: 80,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&record1).await.unwrap();
@@ -1952,7 +2052,9 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -2034,7 +2136,9 @@ mod anthropic_memory_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -2053,6 +2157,8 @@ mod anthropic_memory_tests {
             reliability_score: 80,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         let advisory_record = EmbeddingRecord {
@@ -2068,6 +2174,8 @@ mod anthropic_memory_tests {
             reliability_score: 90,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&cs_record).await.unwrap();
@@ -2104,7 +2212,9 @@ mod anthropic_memory_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -2127,6 +2237,8 @@ mod anthropic_memory_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         let new_record = super::EmbeddingRecord {
@@ -2142,6 +2254,8 @@ mod anthropic_memory_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&old_record).await.unwrap();
@@ -2181,7 +2295,9 @@ mod anthropic_memory_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await;
 
@@ -2202,6 +2318,8 @@ mod anthropic_memory_tests {
             reliability_score: 50,
             owner_override: true, // This should prevent it from being pruned
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&record1).await.unwrap();
@@ -2243,6 +2361,8 @@ mod determine_conflict_winner_tests {
             reliability_score,
             owner_override,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         }
     }
 
@@ -2313,7 +2433,9 @@ mod e2e_consolidation_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await.unwrap();
 
@@ -2343,6 +2465,8 @@ mod e2e_consolidation_tests {
             reliability_score: 80,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         let advisory_record = EmbeddingRecord {
@@ -2358,6 +2482,8 @@ mod e2e_consolidation_tests {
             reliability_score: 90,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&cs_record).await.unwrap();
@@ -2396,6 +2522,8 @@ mod e2e_consolidation_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         let record_b = EmbeddingRecord {
@@ -2411,6 +2539,8 @@ mod e2e_consolidation_tests {
             reliability_score: 80,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&record_a).await.unwrap();
@@ -2447,6 +2577,8 @@ mod e2e_consolidation_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         let record_bob = EmbeddingRecord {
@@ -2462,6 +2594,8 @@ mod e2e_consolidation_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&record_maya).await.unwrap();
@@ -2508,6 +2642,8 @@ mod e2e_consolidation_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         // Old, owner override -> Keep
@@ -2524,6 +2660,8 @@ mod e2e_consolidation_tests {
             reliability_score: 50,
             owner_override: true,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         // Newer -> Keep
@@ -2540,6 +2678,8 @@ mod e2e_consolidation_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&prune_me).await.unwrap();
@@ -2583,6 +2723,8 @@ mod e2e_consolidation_tests {
             reliability_score: 50,
             owner_override: true, // both have override
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         let record_b = EmbeddingRecord {
@@ -2598,6 +2740,8 @@ mod e2e_consolidation_tests {
             reliability_score: 50,
             owner_override: true, // both have override
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&record_a).await.unwrap();
@@ -2636,7 +2780,9 @@ mod additional_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await.unwrap();
 
@@ -2656,6 +2802,8 @@ mod additional_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
         repo.upsert(&record).await.unwrap();
 

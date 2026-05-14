@@ -40,7 +40,9 @@ impl Department for CustomerSuccessAgent {
                 reliability_score: 80,
                 owner_override: false,
                 metadata: None,
-            };
+            updated_at: chrono::Utc::now(),
+            version: 1,
+        };
             self.orchestrator.write_long_term_memory(record).await?;
 
             let follow_up = DepartmentEvent {

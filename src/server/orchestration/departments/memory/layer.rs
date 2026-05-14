@@ -31,7 +31,9 @@ mod tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         )
         .execute(&pool)
@@ -61,6 +63,8 @@ mod tests {
             reliability_score: 80,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
         repo.upsert(&rec1).await.expect("Failed to upsert Dept A record");
 
@@ -78,6 +82,8 @@ mod tests {
             reliability_score: 80,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
         repo.upsert(&rec2).await.expect("Failed to upsert Dept B record");
 

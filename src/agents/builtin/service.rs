@@ -667,6 +667,8 @@ impl AgentService for AgentServiceImpl {
                     reliability_score: 50,
                     owner_override: false,
                     metadata: None,
+                    updated_at: chrono::Utc::now(),
+                    version: 1,
                 };
                 let _ = store.upsert(&record).await;
             }

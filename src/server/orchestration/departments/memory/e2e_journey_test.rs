@@ -26,7 +26,9 @@ async fn test_full_consolidated_memory_e2e_journey() {
             reference_count INTEGER DEFAULT 0,
             reliability_score INTEGER DEFAULT 50,
             owner_override BOOLEAN DEFAULT FALSE,
-            metadata TEXT
+            metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
         );"
     )
     .execute(&pool)
@@ -52,7 +54,9 @@ async fn test_full_consolidated_memory_e2e_journey() {
         reliability_score: 50,
         owner_override: false,
         metadata: None,
-    };
+            updated_at: chrono::Utc::now(),
+            version: 1,
+        };
     repo.upsert(&marketing_stale).await.expect("Failed to upsert marketing record");
 
     // 2. Sales adds a pricing note (Day 1)
@@ -69,7 +73,9 @@ async fn test_full_consolidated_memory_e2e_journey() {
         reliability_score: 60,
         owner_override: false,
         metadata: None,
-    };
+            updated_at: chrono::Utc::now(),
+            version: 1,
+        };
     repo.upsert(&sales_day1).await.expect("Failed to upsert sales day 1 record");
 
     // 3. Marketing adds a product context (Day 2)
@@ -86,7 +92,9 @@ async fn test_full_consolidated_memory_e2e_journey() {
         reliability_score: 70,
         owner_override: false,
         metadata: None,
-    };
+            updated_at: chrono::Utc::now(),
+            version: 1,
+        };
     repo.upsert(&marketing_day2).await.expect("Failed to upsert marketing day 2 record");
 
     // 4. Sales updates the pricing (Day 3, generating a conflict with Day 1)
@@ -104,7 +112,9 @@ async fn test_full_consolidated_memory_e2e_journey() {
         reliability_score: 90, // Higher reliability score makes it the winner
         owner_override: false,
         metadata: None,
-    };
+            updated_at: chrono::Utc::now(),
+            version: 1,
+        };
     repo.upsert(&sales_day3).await.expect("Failed to upsert sales day 3 record");
 
     // Verify initial count (should be 4)
@@ -157,7 +167,9 @@ async fn test_tenant_isolation_e2e_journey() {
             reference_count INTEGER DEFAULT 0,
             reliability_score INTEGER DEFAULT 50,
             owner_override BOOLEAN DEFAULT FALSE,
-            metadata TEXT
+            metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
         );"
     )
     .execute(&pool)
@@ -182,7 +194,9 @@ async fn test_tenant_isolation_e2e_journey() {
         reliability_score: 99,
         owner_override: true,
         metadata: None,
-    };
+            updated_at: chrono::Utc::now(),
+            version: 1,
+        };
     repo.upsert(&tenant_a_record).await.expect("Failed to upsert Tenant A record");
 
     // 2. Tenant B (Bob's Burgers) memory
@@ -199,7 +213,9 @@ async fn test_tenant_isolation_e2e_journey() {
         reliability_score: 99,
         owner_override: true,
         metadata: None,
-    };
+            updated_at: chrono::Utc::now(),
+            version: 1,
+        };
     repo.upsert(&tenant_b_record).await.expect("Failed to upsert Tenant B record");
 
     // Verify Tenant A search only gets Tenant A records

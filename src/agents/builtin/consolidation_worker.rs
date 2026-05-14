@@ -65,7 +65,9 @@ mod tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
+                metadata TEXT,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                version INTEGER DEFAULT 1
             );"
         ).execute(&pool).await.unwrap();
 
@@ -96,6 +98,8 @@ mod tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            updated_at: chrono::Utc::now(),
+            version: 1,
         };
 
         repo.upsert(&prune_me).await.unwrap();
