@@ -1249,7 +1249,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
         crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
-    let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
+    let memory_embedding_api = Arc::new(crate::workers::memory::DefaultMemoryEmbeddingApi::new());
+    let consolidation_worker = Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo, db.clone(), memory_embedding_api, None));
     consolidation_worker.start();
 
     // Start Competitor Audit Worker
@@ -1268,19 +1269,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();
 
-    // Start Agent Memory Pipeline
     hub.clone().start_token_burn_rate_worker();
-    let memory_embedding_api = Arc::new(crate::workers::agent_memory_pipeline::DefaultMemoryEmbeddingApi::new());
-    let agent_memory_pipeline = Arc::new(crate::workers::agent_memory_pipeline::AgentMemoryPipeline::new(db.clone(), memory_embedding_api));
-    let agent_memory_pipeline_clone = agent_memory_pipeline.clone();
-    tokio::spawn(async move {
-        loop {
-            if let Err(e) = agent_memory_pipeline_clone.run().await {
-                tracing::error!("Agent Memory Pipeline error: {}", e);
-            }
-            tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-        }
-    });
 
     // Ensure local database permissions are secure in standalone mode
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
