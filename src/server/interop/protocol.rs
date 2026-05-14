@@ -723,8 +723,8 @@ mod tests {
         assert!(result.unwrap_err().contains("Failed to publish state handoff after retries"));
     }
 
-    struct MockFailingBus {
-        failures_left: std::sync::atomic::AtomicUsize,
+    pub struct MockFailingBus {
+        pub failures_left: std::sync::atomic::AtomicUsize,
     }
     #[async_trait::async_trait]
     impl crate::msgbus::Bus for MockFailingBus {
@@ -954,8 +954,8 @@ mod tests {
         })).await.unwrap();
 
         let ping = proto::HealthPing {
-            source_node_id: "sender_node".to_string(),
             current_mode: 0,
+            source_node_id: "sender_node".to_string(),
             timestamp_ms: 1000,
         };
         use prost::Message as ProstMessage;
@@ -1091,4 +1091,5 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         assert!(received.load(Ordering::SeqCst));
-    }
+
+}
